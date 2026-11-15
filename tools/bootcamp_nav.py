@@ -112,7 +112,9 @@ WEEK_RECORDINGS = {
         ("Week 2 · session 2", _REC.format("ai-bootcamp-4")),
     ],
     # an empty list shows "link coming soon"
-    "week-3": [],
+    "week-3": [
+        ("Week 3 · session 1", _REC.format("ai-bootcamp-5")),
+    ],
 }
 RECORDINGS = {folder: WEEK_RECORDINGS[wdir] for folder, *_, wdir in SEQ}
 

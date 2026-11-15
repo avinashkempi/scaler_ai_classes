@@ -57,8 +57,7 @@ GitHub link as the fallback.
 - [x] `AWS-Bootcamp/week-3/` is live with Lesson 8, Building blocks of LLM systems (`AWS-Bootcamp/llm-building-blocks/`, no code),
       and Lesson 9, Agentic bug fixing (`AWS-Bootcamp/agentic-bug-fixing/`,
       code in `zips/Code/Aws-Bootcamp/section-08-agentic-bug-fixing/`).
-- [ ] Week 3 recordings: fill `WEEK_RECORDINGS["week-3"]` in `tools/bootcamp_nav.py` (shows "link coming soon"
-      until then), and drop "Recordings coming soon" from the Week 3 card on `AWS-Bootcamp/index.html`.
+- [x] Week 3 recording: session 1 (ai-bootcamp-5) is in `WEEK_RECORDINGS["week-3"]`; add more sessions there as they come.
 - [ ] More Week 3 lessons: add each one to `WEEK3` and a card on `AWS-Bootcamp/week-3/index.html`.
 
 ## 2c. Bootcamp Week 3, continued (was published as Week 4, merged into Week 3)
