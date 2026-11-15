@@ -30,19 +30,15 @@ WEEK2 = [
     ("shipping-agents-to-production", "6", "Lesson 6", "Shipping agents to production"),
     ("evals-observability-governance", "7", "Lesson 7", "Evals, observability and governance"),
 ]
+# Week 3: Lessons 8-23, then the homework reading ("H" steps, numbered within the week)
 WEEK3 = [
     ("llm-building-blocks", "8", "Lesson 8", "Building blocks of LLM systems"),
     ("agentic-bug-fixing", "9", "Lesson 9", "Agentic bug fixing"),
-]
-WEEK4 = [
     ("observability-explained", "10", "Lesson 10", "Observability, explained simply"),
     ("observability-langsmith", "11", "Lesson 11", "Observability demo with LangSmith"),
     ("guardrails-explained", "12", "Lesson 12", "Guardrails, explained simply"),
     ("guardrails-nemo", "13", "Lesson 13", "Guardrails demo with NeMo"),
     ("inventory-agent", "14", "Lesson 14", "Inventory agent, v0 to v7"),
-]
-# Week 5: lessons, then the homework reading ("H" steps, numbered within the week)
-WEEK5 = [
     ("memory-explained", "15", "Lesson 15", "Memory, explained simply"),
     ("mcp-explained", "16", "Lesson 16", "MCP, explained simply"),
     ("memory-mcp-code", "17", "Lesson 17", "Memory and MCP in code"),
@@ -60,8 +56,7 @@ WEEK5 = [
     ("ai-evals-governance", "H5", "Homework 5", "AI Evals 5 · Tools and governance"),
 ]
 # (label, folder of the week page, lessons)
-WEEKS = [("Week 1", "week-1", WEEK1), ("Week 2", "week-2", WEEK2), ("Week 3", "week-3", WEEK3), ("Week 4", "week-4", WEEK4),
-         ("Week 5", "week-5", WEEK5)]
+WEEKS = [("Week 1", "week-1", WEEK1), ("Week 2", "week-2", WEEK2), ("Week 3", "week-3", WEEK3)]
 # Every page in order across the weeks: (folder, step, kind, title, week label, week folder)
 SEQ = [(*item, week, wdir) for week, wdir, items in WEEKS for item in items]
 
@@ -76,7 +71,7 @@ CAPSTONE = [
     ("agentic-rag", "P5", "Agentic RAG"),
     ("deep-search-agents", "P6", "Deep search agents"),
     ("vendor-risk-assessor", "P7", "Capstone · AI vendor risk assessor"),
-    # row 4: AWS Week 5 projects (Parts 2-7 of the AI agents in finance course; Part 1 is P2), and a design case study
+    # row 4: AWS Week 3 projects (Parts 2-7 of the AI agents in finance course; Part 1 is P2), and a design case study
     ("finance-part-2-frameworks", "P8", "Finance Part 2 · Agent frameworks"),
     ("finance-part-3-deep-search", "P9", "Finance Part 3 · Deep search"),
     ("finance-part-4-reasoning", "P10", "Finance Part 4 · Reasoning paradigms"),
@@ -109,8 +104,6 @@ WEEK_RECORDINGS = {
     ],
     # an empty list shows "link coming soon"
     "week-3": [],
-    "week-4": [],
-    "week-5": [],
 }
 RECORDINGS = {folder: WEEK_RECORDINGS[wdir] for folder, *_, wdir in SEQ}
 

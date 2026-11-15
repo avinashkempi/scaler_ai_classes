@@ -61,22 +61,19 @@ GitHub link as the fallback.
       until then), and drop "Recordings coming soon" from the Week 3 card on `AWS-Bootcamp/index.html`.
 - [ ] More Week 3 lessons: add each one to `WEEK3` and a card on `AWS-Bootcamp/week-3/index.html`.
 
-## 2c. Bootcamp Week 4
+## 2c. Bootcamp Week 3, continued (was published as Week 4, merged into Week 3)
 
-- [x] `AWS-Bootcamp/week-4/` is live with Lessons 10-14 (observability and guardrails): two
+- [x] Lessons 10-14 are live in Week 3 (observability and guardrails): two
       "explained simply" pages (no code), the LangSmith and NeMo Guardrails demos and the inventory
       agent, code in `zips/Code/Aws-Bootcamp/section-11-*`, `section-13-*`, `section-14-*`.
-- [ ] Week 4 recordings: fill `WEEK_RECORDINGS["week-4"]` and drop "Recordings coming soon" from the
-      Week 4 card on `AWS-Bootcamp/index.html`.
 
-## 2d. Bootcamp Week 5 and Capstone row 4
+## 2d. Bootcamp Week 3, continued (was published as Week 5), and Capstone row 4
 
-- [x] `AWS-Bootcamp/week-5/`: Lessons 15-19 (memory, MCP, evals) and homework H1-H5 (the AI Evals in
+- [x] Week 3: Lessons 15-23 (memory, MCP, evals) and homework H1-H5 (the AI Evals in
       Practice chapters, sharing `zips/Code/Aws-Bootcamp/homework-ai-evals-in-practice/`).
-- [x] `AWS-Capstone/` row 4 "AWS Week 5 projects": AI agents in finance Parts 2-7 (P8-P13) and the
+- [x] `AWS-Capstone/` row 4 "AWS Week 3 projects": AI agents in finance Parts 2-7 (P8-P13) and the
       adaptive learning app case study (P14). None of them has code yet.
-- [ ] Week 5 recordings: fill `WEEK_RECORDINGS["week-5"]` and drop "Recordings coming soon" from the
-      Week 5 card on `AWS-Bootcamp/index.html`.
+- [x] There is no Week 4 or 5: `AWS-Bootcamp/week-4/` and `week-5/` are redirects to the matching Week 3 sections.
 
 ## 3. Other placeholders
 
