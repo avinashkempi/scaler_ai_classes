@@ -36,7 +36,7 @@ STAGE = DUMP / ".staging"
 DONE = DUMP / "_done"
 MANIFEST = ROOT / "tools" / "ingested.json"
 sys.path.insert(0, str(ROOT / "tools"))
-from bootcamp_nav import CAPSTONE, WEEKS  # noqa: E402
+from bootcamp_nav import CAP_PROJECTS, CAPSTONE, WEEKS  # noqa: E402,F401
 
 CODE_EXT = {".py", ".ipynb", ".txt", ".md", ".toml", ".cfg", ".yaml", ".yml", ".json", ".csv", ".sql", ".sh", ".js", ".ts"}
 CODE_NAMES = {"requirements.txt", ".env.example", ".env.sample", "dockerfile", "makefile", "pyproject.toml"}
@@ -193,7 +193,7 @@ def plan(week=None):
             items.append(entry)
 
     out = {"week": week, "next_lesson_number": 1 + max(int(s[1]) for _, _, ls in WEEKS for s in ls if s[1].isdigit()),
-           "next_project_number": 1 + len(CAPSTONE), "items": items}
+           "next_project_number": 1 + CAP_PROJECTS, "items": items}
     (STAGE / "plan.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
 
     print(f"Target: Week {week} · next lesson {out['next_lesson_number']} · next project P{out['next_project_number']}")

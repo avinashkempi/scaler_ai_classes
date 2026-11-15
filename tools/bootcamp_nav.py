@@ -88,7 +88,24 @@ CAPSTONE = [
     ("inventory-aws-understand", "P16", "Inventory agent on AWS · 1 Understand the system"),
     ("inventory-aws-deploy", "P17", "Inventory agent on AWS · 2 Deploy by hand"),
     ("inventory-aws-github-actions", "P18", "Inventory agent on AWS · 3 Automate with GitHub Actions"),
+    # row 5: Live Auction House, one project in three parts (P19.1-P19.3), built from the master.dev Codex course
+    ("live-auction-setup", "P19.1", "Live Auction House · Set up and learn the agent"),
+    ("live-auction-build", "P19.2", "Live Auction House · Build it: Parts 1–4"),
+    ("live-auction-ship", "P19.3", "Live Auction House · Ship it: Parts 5–8"),
 ]
+
+
+def cap_label(step):
+    """"P7" -> "Project 7"; "P19.2" -> "Project 19 · Part 2 of 3" (a project split into parts)."""
+    num, _, part = step[1:].partition(".")
+    if not part:
+        return f"Project {num}"
+    parts = sum(1 for _, st, _ in CAPSTONE if st.startswith(f"P{num}."))
+    return f"Project {num} · Part {part} of {parts}"
+
+
+# the hub counts projects, not pages: P19.1-P19.3 are one project
+CAP_PROJECTS = len({st.partition(".")[0] for _, st, _ in CAPSTONE})
 
 # Lessons that keep Scaler's original page at <folder>/ and our reworked page at <folder>-v2/.
 # The bottom nav on each links to the other version.
@@ -155,6 +172,9 @@ LEARN_TITLES = {
 # zips/Code/Zips/. An empty string shows "GitHub link coming soon".
 _REPO = "https://github.com/balajiraghuram92/balajiraghuram92.github.io/tree/main/zips/Code"
 _CAP_REPO = f"{_REPO}/Capstone-Projects"
+_AUCTION_REPO = "https://github.com/schneidenbach/master-dot-dev-codex-course-live"
+# repos whose default branch is not main: GitHub's zip of that branch
+REPO_BRANCH = {_AUCTION_REPO: "master"}
 # page key -> (folder under zips/Code, zip in zips/Code/Zips)
 _CODE = {
     "part-00-AWS-Revision": ("Aws-Bootcamp/section-00-AWS-Revision", "aws-bootcamp-section-00-aws-revision"),
@@ -205,6 +225,8 @@ GITHUB = {
     **{f"Class-{n}": "" for n in ("1", "2", "3-4", "5", "6", "7", "8", "9", "10")},
     **{key: f"{_REPO}/{src}" for key, (src, _) in _CODE.items() if src},
     "trip-buddy": "https://github.com/balajiraghuram92/Scaler-AI-Infusion-Bootcamp/tree/main/excersices/Lab-project/Trip-Buddy",
+    # Live Auction House links the course author's own public repo instead of copying it here
+    **{f: _AUCTION_REPO for f in ("live-auction-setup", "live-auction-build", "live-auction-ship")},
     # Lesson 7 is its own repo (InterviewIQ); the site keeps a zip of it
     "Class-7": "https://github.com/22f1001418/InterviewIQ",
 }
@@ -231,7 +253,8 @@ INMAIN = FINANCE | {"llm-building-blocks", "agentic-bug-fixing", "observability-
                     "memory-mcp-code", "evals-explained", "component-evals", "ai-evals-why", "ai-evals-methods",
                     "ai-evals-quantitative", "ai-evals-after-launch", "ai-evals-governance", "adaptive-learning-case-study",
                     "embeddings-reranking", "chunking-hyde", "tool-calling-basics", "inventory-agent-steps",
-                    "embeddings-exercises", "chunking-exercises", "tool-calling-exercises", "inventory-agent-exercises"}
+                    "embeddings-exercises", "chunking-exercises", "tool-calling-exercises", "inventory-agent-exercises",
+                    "live-auction-setup", "live-auction-build", "live-auction-ship"}
 # Reading chapters with no code: no Project files box.
 NOCODE = {"llm-building-blocks", "observability-explained", "guardrails-explained", "memory-explained", "mcp-explained",
           "evals-explained", "finance-part-2-frameworks", "finance-part-3-deep-search", "finance-part-4-reasoning",
@@ -360,7 +383,7 @@ def files_box(key, cls):
         download = (f'<a class="{fb}" href="../../zips/{e(zip_name)}" download>⬇ Download all'
                     f'<small>.zip</small></a>')
     elif repo:
-        download = (f'<a class="{fb}" href="{e(repo)}/archive/refs/heads/main.zip">⬇ Download all'
+        download = (f'<a class="{fb}" href="{e(repo)}/archive/refs/heads/{REPO_BRANCH.get(repo, "main")}.zip">⬇ Download all'
                     f'<small>.zip from GitHub</small></a>')
     else:
         download = f'<span class="{fb}" data-todo="github">⬇ Download all<small>coming soon</small></span>'
@@ -496,7 +519,7 @@ def cap_side(i, cls, label):
         return f'<span class="awsq-l {cls}"><span class="awsq-d">{label}</span><span class="awsq-t">{msg}</span></span>'
     folder, step, title = CAPSTONE[i]
     return (f'<a class="awsq-l {cls}" href="../{folder}/"><span class="awsq-d">{label}</span>'
-            f'<span class="awsq-t">Project {step[1:]} · {e(title)}</span></a>')
+            f'<span class="awsq-t">{cap_label(step)} · {e(title)}</span></a>')
 
 
 def cap_nav(i, where):
@@ -507,14 +530,15 @@ def cap_nav(i, where):
         if f == "vendor-risk-assessor":
             cls = f"{cls} key".strip()
         cur = ' aria-current="page"' if j == i else ""
-        steps.append(f'<li><a class="{cls}" href="../{f}/" title="Project {st[1:]} · {e(t)}"{cur}>{st}{" ★" if f == "vendor-risk-assessor" else ""}</a></li>')
+        steps.append(f'<li><a class="{cls}" href="../{f}/" title="{cap_label(st)} · {e(t)}"{cur}>{st.replace(".", "·")}{" ★" if f == "vendor-risk-assessor" else ""}</a></li>')
     extra = " awsq-inmain" if folder in INMAIN and where == "top" else ""
     own = " awsq-own" if folder in CAP_OWN else ""
-    cap = f"{CAP_BRAND} · Project {step[1:]} of {len(CAPSTONE)}"
+    num, _, part = step[1:].partition(".")
+    cap = f"{CAP_BRAND} · Project {num} of {CAP_PROJECTS}" + (f" · {cap_label(step).split(' · ', 1)[1]}" if part else "")
     return (f'<div class="awsq awsq-{where}{extra}{own}" role="navigation" aria-label="Capstone navigation ({where})"><div class="awsq-box">'
             f'<div class="awsq-head"><span class="awsq-cap">{e(cap)}</span>{HOME_BTN}</div>'
             f'<div class="awsq-row">{cap_side(i - 1, "awsq-prev", "← Previous")}'
-            f'<a class="awsq-home" href="../"><b>{CAP_BRAND}</b>All {len(CAPSTONE)} projects</a>'
+            f'<a class="awsq-home" href="../"><b>{CAP_BRAND}</b>All {CAP_PROJECTS} projects</a>'
             f'{cap_side(i + 1, "awsq-next", "Next →")}</div>'
             f'<ol class="awsq-steps" aria-label="All projects">{"".join(steps)}</ol>'
             f'{files_box(folder, "awsq")}</div></div>')
@@ -523,7 +547,7 @@ def cap_nav(i, where):
 def build_capstone():
     for i, (folder, step, title) in enumerate(CAPSTONE):
         p = ROOT / "AWS-Capstone" / folder / "index.html"
-        s = set_title(p.read_text(encoding="utf-8"), f"Project {step[1:]} · {title} · {CAP_BRAND}")
+        s = set_title(p.read_text(encoding="utf-8"), f"{cap_label(step).replace(' of 3', '').replace(' of 2', '')} · {title} · {CAP_BRAND}")
         style = AWSQ_STYLE + ("\n" + CAP_STYLE if folder in CAP_OWN else "")
         top = f"<!-- awsq:top -->\n{style}\n{cap_nav(i, 'top')}\n<!-- /awsq:top -->\n"
         bottom = f"<!-- awsq:bottom -->\n{cap_nav(i, 'bottom')}\n<!-- /awsq:bottom -->\n"

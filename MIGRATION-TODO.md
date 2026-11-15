@@ -78,6 +78,10 @@ GitHub link as the fallback.
       `zips/Code/Aws-Bootcamp/section-2x-*/2_SHARE_AFTER_Solution_Code/`.
 - [x] `AWS-Capstone/` row 4 also has P15-P18, the Inventory Planning Agent on AWS guide (start here, understand,
       deploy by hand, GitHub Actions), code in `zips/Code/Capstone-Projects/inventory-agent-aws/` (no `.env`).
+- [x] `AWS-Capstone/` Row 5 "Build with AI coding agents": P19 Live Auction House in three parts (`live-auction-setup`,
+      `live-auction-build`, `live-auction-ship`, shared `live-auction-assets/`), from the master.dev course
+      *Build a Fullstack App with Codex*. Code links point at the author's public repo (branch `master`); nothing is copied.
+      Content and design sources are in `data-dump/live-auction/` (local only).
 - [x] There is no Week 4 or 5: `AWS-Bootcamp/week-4/` and `week-5/` are redirects to the matching Week 3 sections.
 
 ## 3. Other placeholders
