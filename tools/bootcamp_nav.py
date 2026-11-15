@@ -46,9 +46,13 @@ WEEK3 = [
     ("component-evals", "19", "Lesson 19", "Component evals in code"),
     # hands-on: RAG and tool calling (code-first workshop modules)
     ("embeddings-reranking", "20", "Lesson 20", "Embeddings, similarity and reranking"),
+    ("embeddings-exercises", "E1", "Exercises 1", "Embeddings and reranking: exercises"),
     ("chunking-hyde", "21", "Lesson 21", "Chunking strategies and HyDE"),
+    ("chunking-exercises", "E2", "Exercises 2", "Chunking and HyDE: exercises"),
     ("tool-calling-basics", "22", "Lesson 22", "Tool calling basics"),
+    ("tool-calling-exercises", "E3", "Exercises 3", "Tool calling: exercises"),
     ("inventory-agent-steps", "23", "Lesson 23", "Inventory agent, step by step"),
+    ("inventory-agent-exercises", "E4", "Exercises 4", "Inventory agent: exercises"),
     ("ai-evals-why", "H1", "Homework 1", "AI Evals 1 · Why AI evals"),
     ("ai-evals-methods", "H2", "Homework 2", "AI Evals 2 · Evaluation methods"),
     ("ai-evals-quantitative", "H3", "Homework 3", "AI Evals 3 · Metrics, judges, test sets"),
@@ -79,6 +83,11 @@ CAPSTONE = [
     ("finance-part-6-agentic-rag", "P12", "Finance Part 6 · Agentic RAG"),
     ("finance-part-7-production", "P13", "Finance Part 7 · Evaluation and production"),
     ("adaptive-learning-case-study", "P14", "Case study · Adaptive learning app"),
+    # the Inventory Planning Agent on AWS guide (Lessons 14 and 23 build the agent; this ships it to AWS)
+    ("inventory-aws-start", "P15", "Inventory agent on AWS · Start here"),
+    ("inventory-aws-understand", "P16", "Inventory agent on AWS · 1 Understand the system"),
+    ("inventory-aws-deploy", "P17", "Inventory agent on AWS · 2 Deploy by hand"),
+    ("inventory-aws-github-actions", "P18", "Inventory agent on AWS · 3 Automate with GitHub Actions"),
 ]
 
 # Lessons that keep Scaler's original page at <folder>/ and our reworked page at <folder>-v2/.
@@ -164,6 +173,11 @@ _CODE = {
     "chunking-hyde": ("Aws-Bootcamp/section-21-chunking-hyde", "aws-bootcamp-section-21-chunking-hyde"),
     "tool-calling-basics": ("Aws-Bootcamp/section-22-tool-calling", "aws-bootcamp-section-22-tool-calling"),
     "inventory-agent-steps": ("Aws-Bootcamp/section-23-inventory-agent-steps", "aws-bootcamp-section-23-inventory-agent-steps"),
+    # each exercise set shares its lesson's folder (starter code + 2_SHARE_AFTER_Solution_Code/)
+    "embeddings-exercises": ("Aws-Bootcamp/section-20-embeddings-reranking", "aws-bootcamp-section-20-embeddings-reranking"),
+    "chunking-exercises": ("Aws-Bootcamp/section-21-chunking-hyde", "aws-bootcamp-section-21-chunking-hyde"),
+    "tool-calling-exercises": ("Aws-Bootcamp/section-22-tool-calling", "aws-bootcamp-section-22-tool-calling"),
+    "inventory-agent-exercises": ("Aws-Bootcamp/section-23-inventory-agent-steps", "aws-bootcamp-section-23-inventory-agent-steps"),
     # the five AI Evals homework chapters share one code folder
     **{f: ("Aws-Bootcamp/homework-ai-evals-in-practice", "aws-bootcamp-homework-ai-evals-in-practice")
        for f in ("ai-evals-why", "ai-evals-methods", "ai-evals-quantitative", "ai-evals-after-launch", "ai-evals-governance")},
@@ -179,6 +193,9 @@ _CODE = {
     "agentic-rag": ("Capstone-Projects/Agentic_RAG_Study_Kit/code", "Agentic_RAG_Study_Kit-code"),
     "deep-search-agents": ("Capstone-Projects/shivank-deep-search-agent/code", "shivank-deep-search-agent-code"),
     "vendor-risk-assessor": ("Capstone-Projects/project-vendor-risk-assessor/code", "project-vendor-risk-assessor-code"),
+    # the four Inventory agent on AWS pages share one project folder
+    **{f: ("Capstone-Projects/inventory-agent-aws", "inventory-agent-aws-code")
+       for f in ("inventory-aws-start", "inventory-aws-understand", "inventory-aws-deploy", "inventory-aws-github-actions")},
 }
 GITHUB = {
     **{folder: "" for folder, *_ in SEQ},
@@ -211,7 +228,8 @@ INMAIN = FINANCE | {"llm-building-blocks", "agentic-bug-fixing", "observability-
                     "guardrails-explained", "guardrails-nemo", "inventory-agent", "memory-explained", "mcp-explained",
                     "memory-mcp-code", "evals-explained", "component-evals", "ai-evals-why", "ai-evals-methods",
                     "ai-evals-quantitative", "ai-evals-after-launch", "ai-evals-governance", "adaptive-learning-case-study",
-                    "embeddings-reranking", "chunking-hyde", "tool-calling-basics", "inventory-agent-steps"}
+                    "embeddings-reranking", "chunking-hyde", "tool-calling-basics", "inventory-agent-steps",
+                    "embeddings-exercises", "chunking-exercises", "tool-calling-exercises", "inventory-agent-exercises"}
 # Reading chapters with no code: no Project files box.
 NOCODE = {"llm-building-blocks", "observability-explained", "guardrails-explained", "memory-explained", "mcp-explained",
           "evals-explained", "finance-part-2-frameworks", "finance-part-3-deep-search", "finance-part-4-reasoning",
@@ -363,8 +381,8 @@ def caption(i, v2=False):
     tag = " · v2" if v2 else ""
     if step == "0":
         return f"{BRAND} · {week} · Revision{tag}"
-    if step[0] in "PH":
-        # projects and homework are numbered within their week
+    if step[0] in "PHE":
+        # projects, exercise sets and homework are numbered within their week
         n = sum(1 for s in week_items(wdir) if s[1][0] == step[0])
         return f"{BRAND} · {week} · {kind} of {n}{tag}"
     # lessons are numbered across the whole course, so count them across every week

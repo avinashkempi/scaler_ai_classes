@@ -35,6 +35,7 @@ ZIPS = {
     "aws-bootcamp-section-22-tool-calling": "Aws-Bootcamp/section-22-tool-calling",
     "aws-bootcamp-section-23-inventory-agent-steps": "Aws-Bootcamp/section-23-inventory-agent-steps",
     "aws-bootcamp-setup": "Aws-Bootcamp/setup",
+    "inventory-agent-aws-code": "Capstone-Projects/inventory-agent-aws",
     "ai-infusion-lesson-1": "Ai-Infusion/lesson-1",
     "ai-infusion-lesson-2": "Ai-Infusion/lesson-2",
     "ai-infusion-lesson-3-4": "Ai-Infusion/lesson-3",

@@ -73,6 +73,12 @@ GitHub link as the fallback.
       Practice chapters, sharing `zips/Code/Aws-Bootcamp/homework-ai-evals-in-practice/`).
 - [x] `AWS-Capstone/` row 4 "AWS Week 3 projects": AI agents in finance Parts 2-7 (P8-P13) and the
       adaptive learning app case study (P14). None of them has code yet.
+- [x] Week 3 exercise sets E1-E4 (`embeddings-exercises`, `chunking-exercises`, `tool-calling-exercises`,
+      `inventory-agent-exercises`), one after each of Lessons 20-23: the workshop's exercise sheets with the solution
+      explainer and full solution file in a "View code" dropdown under each exercise. Solution code is in each lesson's
+      `zips/Code/Aws-Bootcamp/section-2x-*/2_SHARE_AFTER_Solution_Code/`.
+- [x] `AWS-Capstone/` row 4 also has P15-P18, the Inventory Planning Agent on AWS guide (start here, understand,
+      deploy by hand, GitHub Actions), code in `zips/Code/Capstone-Projects/inventory-agent-aws/` (no `.env`).
 - [x] There is no Week 4 or 5: `AWS-Bootcamp/week-4/` and `week-5/` are redirects to the matching Week 3 sections.
 
 ## 3. Other placeholders
