@@ -92,6 +92,19 @@ CAPSTONE = [
     ("live-auction-setup", "P19.1", "Live Auction House · Set up and learn the agent"),
     ("live-auction-build", "P19.2", "Live Auction House · Build it: Parts 1–4"),
     ("live-auction-ship", "P19.3", "Live Auction House · Ship it: Parts 5–8"),
+    # row 6: four portfolio projects by Shivank Agrawal (bootcamp Day 6), each a problem statement,
+    # a solution walkthrough and a simulated run
+    ("nova-brown-problem", "P20.1", "Nova + Brown blog writer · Problem statement"),
+    ("nova-brown-solution", "P20.2", "Nova + Brown blog writer · Solution walkthrough"),
+    ("nova-brown-run", "P20.3", "Nova + Brown blog writer · Simulated run"),
+    ("ai-tutor-problem", "P21.1", "AI Tutor (agentic RAG) · Problem statement"),
+    ("ai-tutor-code", "P21.2", "AI Tutor (agentic RAG) · Code explainer"),
+    ("ai-tutor-run", "P21.3", "AI Tutor (agentic RAG) · Simulated run"),
+    ("claimsense-problem", "P22.1", "ClaimSense claims agent · Problem statement"),
+    ("claimsense-solution", "P22.2", "ClaimSense claims agent · Solution guide"),
+    ("mini-cursor-problem", "P23.1", "Mini Cursor coding agent · Problem statement"),
+    ("mini-cursor-code", "P23.2", "Mini Cursor coding agent · Code explainer"),
+    ("mini-cursor-run", "P23.3", "Mini Cursor coding agent · Simulator"),
 ]
 
 
@@ -219,6 +232,11 @@ _CODE = {
     # the four Inventory agent on AWS pages share one project folder
     **{f: ("Capstone-Projects/inventory-agent-aws", "inventory-agent-aws-code")
        for f in ("inventory-aws-start", "inventory-aws-understand", "inventory-aws-deploy", "inventory-aws-github-actions")},
+    # Row 6: each project's pages share its code folder
+    **{f"nova-brown-{p}": ("Capstone-Projects/nova-brown-blog-agent", "nova-brown-blog-agent-code") for p in ("problem", "solution", "run")},
+    **{f"ai-tutor-{p}": ("Capstone-Projects/ai-tutor-app", "ai-tutor-app-code") for p in ("problem", "code", "run")},
+    **{f"claimsense-{p}": ("Capstone-Projects/claimsense", "claimsense-code") for p in ("problem", "solution")},
+    **{f"mini-cursor-{p}": ("Capstone-Projects/mini-cursor", "mini-cursor-code") for p in ("problem", "code", "run")},
 }
 GITHUB = {
     **{folder: "" for folder, *_ in SEQ},
@@ -238,6 +256,10 @@ ZIPS = {
 }
 # Extra links in the Project files box: (label, small note, url). Slides are linked, not copied in.
 LINKS = {
+    "part-00-AWS-Revision": [
+        ("▤ Free AWS account setup", "PDF · AWS CLI, Bedrock, Strands", "../../zips/Guides/aws-free-account-bedrock-strands-setup.pdf"),
+        ("▤ Run Section 1 on your computer", "Word guide", "../../zips/Guides/setup-guide-run-section-1.docx"),
+    ],
     "evals-observability-governance": [
         ("▦ Session 7 slides", "opens in a new tab", "https://scaler2101.github.io/Section7.github.io/#/1/0"),
         ("↗ Original lesson", "Scaler", "https://scaler-content.github.io/evals-observability-governance/"),

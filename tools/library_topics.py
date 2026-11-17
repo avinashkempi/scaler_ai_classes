@@ -162,7 +162,7 @@ def assign(repos):
     return placed, rest
 
 
-# Deeper Study: hand-picked cards (card keys, see group_key) in a suggested order.
+# Agentic AI in-Depth: hand-picked cards (card keys, see group_key) in a suggested order.
 DEEPER = [
     ("basics", "Basics", "Start here",
      "The foundation the AI lessons assume: a working laptop and Git, enough Python, how LLMs and prompts work, and what an agent is.",

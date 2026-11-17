@@ -1,9 +1,9 @@
 """Build the AI/ML Learnings library (AI-ML-Learnings/) from the scaler-content repos.
 
     python -I tools/build_library.py --src DIR   # copy each repo from DIR (a folder of clones), then build
-    python -I tools/build_library.py             # rebuild the hub, topic and Deeper Study pages and the lesson bars
+    python -I tools/build_library.py             # rebuild the main, topic and Agentic AI in-Depth pages and the lesson bars
 
-Topics, sections, Deeper Study and the AWS add-ons live in tools/library_topics.py; card titles,
+Topics, sections, Agentic AI in-Depth and the AWS add-ons live in tools/library_topics.py; card titles,
 summaries, levels and tags in tools/library_cards.json. Lesson pages are Scaler's own pages, copied
 as they are into AI-ML-Learnings/pages/<repo>/; the only change is a nav bar at the top and a source
 note at the bottom, between <!-- aml:bar --> / <!-- aml:foot --> markers (safe to rebuild).
@@ -149,42 +149,15 @@ def card_html(c, frm, n=None, show_topic=False):
 
 # ---------- pages ----------
 
-def build_hub(cards):
-    frm = "AI-ML-Learnings/index.html"
-    n_pages = sum(len(c["parts"]) for c in cards)
-    picks = sum(len(x[4]) for x in DEEPER)
-    body = f"""<div class="aml-doors">
-  <a class="aml-door" href="lessons/">
-    <span class="n">All lessons</span>
-    <h2>AI/ML <em>Lessons</em></h2>
-    <p>Every lesson, sorted into {len(TOPICS)} topics: Python, GenAI and prompting, RAG, agents, automation, AI system design, MLOps, machine learning, deep learning, computer vision, maths and data analytics.</p>
-    <ul><li>{len(cards)} lessons</li><li>{n_pages} pages</li><li>{len(TOPICS)} topics</li><li>Search</li></ul>
-    <span class="go">Browse the topics →</span>
-  </a>
-  <a class="aml-door aml-door-deep" href="deeper/">
-    <span class="n">Hand-picked</span>
-    <h2>Deeper <em>Study</em></h2>
-    <p>A shorter path: the lessons that matter most, in order, at three levels. Basics to get started, Advanced to build properly, Deeper for the maths and ML underneath, plus add-ons for each AWS Bootcamp lesson.</p>
-    <ul><li>Basics</li><li>Advanced</li><li>Deeper</li><li>AWS Bootcamp add-ons</li></ul>
-    <span class="go">Pick a level →</span>
-  </a>
-</div>
-<p class="aml-note">{picks} lessons are hand-picked in Deeper Study. Every one of them is also in AI/ML Lessons, so you can switch between the two at any time.</p>"""
-    out = page(frm, "AI/ML Learnings", f"AI/ML Learnings: {len(cards)} Scaler lessons sorted into {len(TOPICS)} topics, plus a hand-picked Deeper Study path at basic, advanced and deeper levels.",
-               "AI/ML Learnings · the Scaler library", "Everything Scaler teaches, <em>in one place</em>",
-               "Two ways in. Browse every lesson by topic, or follow a hand-picked path at the level you need.", body)
-    (LIB / "index.html").write_text(out, encoding="utf-8")
-
-
 def build_lessons(cards):
-    frm = "AI-ML-Learnings/lessons/index.html"
+    frm = "AI-ML-Learnings/index.html"
     tiles = []
     for slug, title, line, sections in TOPICS:
         mine = [c for c in cards if c["topic"] == slug]
         lv = {k: sum(c["level"] == k for c in mine) for k in LEVEL_LABEL}
         mix = "".join(f'<li class="lv-{k}">{v} {LEVEL_LABEL[k].lower()}</li>' for k, v in lv.items() if v)
         secs = " · ".join(e(s) for s, _ in sections if any(c["section"] == s for c in mine))
-        tiles.append(f'<a class="tc" href="{slug}/"><p class="tc-k">{len(mine)} lessons</p><h2>{e(title)}</h2>'
+        tiles.append(f'<a class="tc" href="lessons/{slug}/"><p class="tc-k">{len(mine)} lessons</p><h2>{e(title)}</h2>'
                      f'<p>{e(line)}</p><p class="tc-s">{secs}</p><ul>{mix}</ul><span class="go">Open →</span></a>')
     index = [{"t": c["title"], "s": c["summary"], "g": " ".join(c["tags"]), "l": c["level"],
               "o": TOPIC[c["topic"]][1], "u": rel(repo_url(main_part(c)), frm)} for c in cards]
@@ -199,12 +172,21 @@ def build_lessons(cards):
               "const r=L.filter(x=>{const h=(x.t+' '+x.s+' '+x.g+' '+x.o).toLowerCase();return w.every(v=>h.includes(v))}).slice(0,40);"
               "o.innerHTML=r.length?r.map(x=>'<li><a href=\"'+x.u+'\">'+esc(x.t)+'</a><span>'+esc(x.o)+' · '+x.l+'</span><p>'+esc(x.s)+'</p></li>').join(''):'<li class=\"none\">No lesson matches.</li>';"
               "o.hidden=false})})();\n</script>\n")
-    out = page(frm, "AI/ML Lessons · AI/ML Learnings", f"All {len(cards)} AI/ML lessons from Scaler, sorted into {len(TOPICS)} topics, with search.",
-               '<a href="../">AI/ML Learnings</a> · All lessons', "AI/ML <em>Lessons</em>",
+    picks = sum(len(x[4]) for x in DEEPER)
+    body += (f'\n<p class="aml-note">Want a shorter path? <a href="deeper/">Agentic AI in-Depth</a> hand-picks {picks} of these lessons '
+             f'at three levels (basics, advanced, deeper), with add-ons for each AWS Bootcamp lesson.</p>')
+    out = page(frm, "AI/ML Learnings", f"AI/ML Learnings: all {len(cards)} Scaler AI and ML lessons, sorted into {len(TOPICS)} topics, with search.",
+               "AI/ML Learnings · the Scaler library", "AI/ML <em>Lessons</em>",
                f"{len(cards)} lessons in {len(TOPICS)} topics. Open a topic to see its lessons grouped by sub-topic, with a level and a one-line summary for each.",
                body, script)
+    (LIB / "index.html").write_text(out, encoding="utf-8")
+    # the old address of this page
     (LIB / "lessons").mkdir(parents=True, exist_ok=True)
-    (LIB / "lessons" / "index.html").write_text(out, encoding="utf-8")
+    (LIB / "lessons" / "index.html").write_text(
+        '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+        '<title>AI/ML Lessons · AI/ML Learnings</title>\n<meta name="description" content="Moved to the AI/ML Learnings main page.">\n'
+        '<meta http-equiv="refresh" content="0; url=../">\n<link rel="canonical" href="../">\n</head>\n'
+        '<body><p>AI/ML Lessons is now the <a href="../">AI/ML Learnings</a> main page.</p></body>\n</html>\n', encoding="utf-8")
 
 
 FILTER_JS = """<script>
@@ -234,38 +216,92 @@ def build_topic(cards, i):
             + "".join(f'<button type="button" data-v="{k}" aria-pressed="false">{LEVEL_LABEL[k]}</button>' for k in have) + "</div>")
     prev_t, next_t = TOPICS[i - 1] if i else None, TOPICS[i + 1] if i + 1 < len(TOPICS) else None
     pn = '<nav class="aml-pn" aria-label="Topics">'
-    pn += f'<a href="../{prev_t[0]}/">← {e(prev_t[1])}</a>' if prev_t else '<a href="../">← All topics</a>'
-    pn += f'<a href="../{next_t[0]}/">{e(next_t[1])} →</a>' if next_t else '<a href="../../deeper/">Deeper Study →</a>'
+    pn += f'<a href="../{prev_t[0]}/">← {e(prev_t[1])}</a>' if prev_t else '<a href="../../">← All topics</a>'
+    pn += f'<a href="../{next_t[0]}/">{e(next_t[1])} →</a>' if next_t else '<a href="../../deeper/">Agentic AI in-Depth →</a>'
     pn += "</nav>"
     body = f'<nav class="aml-toc" aria-label="Sub-topics">{"".join(toc)}</nav>\n{filt}\n' + "\n".join(secs) + "\n" + pn
     out = page(frm, f"{title} · AI/ML Learnings", f"{title}: {len(mine)} Scaler lessons. {line}",
-               f'<a href="../../">AI/ML Learnings</a> · <a href="../">All lessons</a> · Topic {i + 1} of {len(TOPICS)}',
+               f'<a href="../../">AI/ML Learnings</a> · Topic {i + 1} of {len(TOPICS)}',
                e(title), e(line), body, FILTER_JS)
     (LIB / "lessons" / slug).mkdir(parents=True, exist_ok=True)
     (LIB / "lessons" / slug / "index.html").write_text(out, encoding="utf-8")
 
 
 def build_deeper(cards):
-    frm = "AI-ML-Learnings/deeper/index.html"
+    """Agentic AI in-Depth: a main page (what it is + one card per level) and one page per level."""
     by = {c["key"]: c for c in cards}
-    tabs, secs = [], []
-    for sid, name, kicker, line, keys in DEEPER:
-        tabs.append(f'<a href="#{sid}"><b>{name}</b><span>{kicker} · {len(keys)} lessons</span></a>')
-        secs.append(f'<section class="dsec dsec-{sid}" id="{sid}"><p class="dk">{kicker}</p><h2>{name}</h2><p>{e(line)}</p><div class="lcs">'
-                    + "".join(card_html(by[k], frm, n + 1, show_topic=True) for n, k in enumerate(keys)) + "</div></section>")
-    tabs.append(f'<a href="#aws"><b>AWS Bootcamp add-ons</b><span>{len(ADDONS)} lessons and projects</span></a>')
-    rows = []
-    for name, target, keys in ADDONS:
-        chips = "".join(f'<a class="chip" href="{rel(repo_url(main_part(by[k])), frm)}">{level_badge(by[k]["level"])}{e(by[k]["title"])}</a>' for k in keys)
-        rows.append(f'<div class="addon"><h3><a href="{rel(target, frm)}">{e(name)} <span>↗</span></a></h3><div class="chips">{chips}</div></div>')
-    secs.append('<section class="dsec" id="aws"><p class="dk">For the Scaler AWS AI Bootcamp</p><h2>AWS Bootcamp add-ons</h2>'
-                '<p>For each bootcamp lesson or capstone project, the library lessons that prepare you for it or take it further. '
-                'The heading opens the bootcamp page; each tag opens the library lesson.</p>' + "".join(rows) + "</section>")
-    body = f'<nav class="dtabs" aria-label="Levels">{"".join(tabs)}</nav>\n' + "\n".join(secs)
-    out = page(frm, "Deeper Study · AI/ML Learnings",
-               "Deeper Study: hand-picked Scaler AI/ML lessons at three levels (basics, advanced, deeper) and add-ons for each AWS AI Bootcamp lesson.",
-               '<a href="../">AI/ML Learnings</a> · Deeper Study', "Deeper <em>Study</em>",
-               "Pick the level you need. Each path is a short, ordered list of the lessons that matter most; the numbers are a suggested order.", body)
+    picks = sum(len(x[4]) for x in DEEPER)
+    title = "Agentic AI in-Depth"
+    # (slug, name, kicker, line, html builder)
+    levels = [(sid, name, kicker, line, keys) for sid, name, kicker, line, keys in DEEPER]
+    aws_line = ("For each bootcamp lesson or capstone project, the library lessons that prepare you for it or take it further. "
+                "The heading opens the bootcamp page; each tag opens the library lesson.")
+    pages = [(sid, name, kicker, line, len(keys)) for sid, name, kicker, line, keys in levels]
+    pages.append(("aws", "AWS Bootcamp add-ons", "For the bootcamp", aws_line, len(ADDONS)))
+
+    # ---- one page per level
+    for i, (sid, name, kicker, line, count) in enumerate(pages):
+        frm = f"AI-ML-Learnings/deeper/{sid}/index.html"
+        if sid == "aws":
+            rows = []
+            for aname, target, keys in ADDONS:
+                chips = "".join(f'<a class="chip" href="{rel(repo_url(main_part(by[k])), frm)}">{level_badge(by[k]["level"])}{e(by[k]["title"])}</a>'
+                                for k in keys)
+                rows.append(f'<div class="addon"><h3><a href="{rel(target, frm)}">{e(aname)} <span>↗</span></a></h3><div class="chips">{chips}</div></div>')
+            inner = "".join(rows)
+        else:
+            keys = levels[i][4]
+            inner = '<div class="lcs">' + "".join(card_html(by[k], frm, n + 1, show_topic=True) for n, k in enumerate(keys)) + "</div>"
+        prev_p = pages[i - 1] if i else None
+        next_p = pages[i + 1] if i + 1 < len(pages) else None
+        pn = '<nav class="aml-pn" aria-label="Levels">'
+        pn += f'<a href="../{prev_p[0]}/">← {e(prev_p[1])}</a>' if prev_p else f'<a href="../">← {title}</a>'
+        pn += f'<a href="../{next_p[0]}/">{e(next_p[1])} →</a>' if next_p else f'<a href="../">{title} →</a>'
+        pn += "</nav>"
+        body = f'<section class="dsec dsec-{sid}">{inner}</section>\n{pn}'
+        unit = "lessons and projects" if sid == "aws" else "lessons"
+        out = page(frm, f"{name} · {title} · AI/ML Learnings",
+                   f"{title} · {name}: {count} {unit}. {line}",
+                   f'<a href="../../">AI/ML Learnings</a> · <a href="../">{title}</a> · {e(kicker)}',
+                   e(name), f"{e(line)} {count} {unit}" + ("; the numbers are a suggested order." if sid != "aws" else "."), body)
+        (LIB / "deeper" / sid).mkdir(parents=True, exist_ok=True)
+        (LIB / "deeper" / sid / "index.html").write_text(out, encoding="utf-8")
+
+    # ---- the main page
+    frm = "AI-ML-Learnings/deeper/index.html"
+    tiles = []
+    for i, (sid, name, kicker, line, count) in enumerate(pages):
+        if sid == "aws":
+            mix = f"<li>{len(ADDONS)} bootcamp lessons and projects</li>"
+            unit = "groups"
+        else:
+            ks = levels[i][4]
+            lv = {k: sum(by[x]["level"] == k for x in ks) for k in LEVEL_LABEL}
+            mix = "".join(f'<li class="lv-{k}">{v} {LEVEL_LABEL[k].lower()}</li>' for k, v in lv.items() if v)
+            unit = "lessons"
+        tiles.append(f'<a class="tc dl dl-{sid}" href="{sid}/"><p class="tc-k">{e(kicker)} · {count} {unit}</p><h2>{e(name)}</h2>'
+                     f'<p>{e(line)}</p><ul>{mix}</ul><span class="go">Open {e(name)} →</span></a>')
+    about = (f'<section class="dabout" aria-labelledby="about-h"><h2 id="about-h">What this page is</h2>'
+             f'<div class="dabout-g">'
+             f'<div><h3>A study path for agentic AI</h3><p>The Scaler library has {len(cards)} lessons. To build and ship AI agents you '
+             f'don\'t need all of them, so this page hand-picks the {picks} that matter most and puts them in order, at three levels. '
+             f'Every one of them is also in <a href="../">AI/ML Learnings</a>.</p></div>'
+             f'<div><h3>Who it is for</h3><p>Anyone doing the Scaler AWS AI Bootcamp or the AWS AI Capstone who wants to fill a gap '
+             f'or go further than a lesson did: from your first Python script to the maths under embeddings.</p></div>'
+             f'<div><h3>How to use it</h3><ol><li>Pick a level below. Start with Basics if anything in it is new to you.</li>'
+             f'<li>Work through its lessons in number order; the number is a suggested order.</li>'
+             f'<li>Each lesson card shows its level and topic and opens the Scaler lesson.</li>'
+             f'<li>Doing the bootcamp? Open <a href="aws/">AWS Bootcamp add-ons</a> for the lessons that go with each bootcamp lesson.</li></ol></div>'
+             f'</div></section>')
+    body = about + '\n<h2 class="dpick">Pick a level</h2>\n<div class="tcs dls">' + "".join(tiles) + "</div>"
+    # old links such as deeper/#basics open the level's own page
+    script = ("<script>(function(){var h=location.hash.slice(1);if(" + json.dumps([p[0] for p in pages])
+              + ".indexOf(h)>=0)location.replace(h+'/');})();</script>\n")
+    out = page(frm, f"{title} · AI/ML Learnings",
+               f"{title}: {picks} hand-picked Scaler lessons for building AI agents, at three levels (basics, advanced, deeper), plus add-ons for each AWS AI Bootcamp lesson.",
+               f'<a href="../">AI/ML Learnings</a> · {title}', "Agentic AI <em>in-Depth</em>",
+               "A guided path through the Scaler library for people building AI agents: the lessons that matter most, in order, at the level you need.",
+               body, script)
     (LIB / "deeper").mkdir(parents=True, exist_ok=True)
     (LIB / "deeper" / "index.html").write_text(out, encoding="utf-8")
 
@@ -372,7 +408,6 @@ def main():
     if "--src" in sys.argv:
         copy_repos(sys.argv[sys.argv.index("--src") + 1])
     cards = catalogue()
-    build_hub(cards)
     build_lessons(cards)
     for i in range(len(TOPICS)):
         build_topic(cards, i)
