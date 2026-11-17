@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clustering & K-Means — Building ClusterMart's Segmentation Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,340;9..144,460;9..144,600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================= TOKENS ============================= */
+:root{
+  --paper:#f4fbfa;
+  --paper-raised:#ffffff;
+  --ink:#082430;
+  --ink-soft:#3f6068;
+  --ink-faint:#6f8a90;
+  --cyan-900:#073b44;
+  --cyan-700:#0a7480;
+  --cyan-600:#0d8f9c;
+  --cyan-500:#12b6c4;
+  --cyan-300:#8fe3e8;
+  --cyan-150:#dff5f5;
+  --cyan-100:#ecf9f9;
+  --line:#c9e5e4;
+  --line-soft:#dcedec;
+  --amber:#c76a2c;
+  --amber-soft:#f6e3d2;
+  --shadow: 0 1px 2px rgba(7,59,68,.06), 0 8px 24px rgba(7,59,68,.06);
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-body: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+  --rail-w: 232px;
+  --content-w: 720px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto;}
+  *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:17px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{ background:var(--cyan-300); color:var(--cyan-900); }
+
+a{ color:var(--cyan-700); }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible{
+  outline:2px solid var(--cyan-700);
+  outline-offset:3px;
+  border-radius:3px;
+}
+
+h1,h2,h3,h4{ font-family:var(--font-display); color:var(--cyan-900); margin:0 0 .5em 0; font-weight:600; letter-spacing:-.01em; }
+
+/* ============================= LAYOUT ============================= */
+.page{
+  display:grid;
+  grid-template-columns: var(--rail-w) 1fr;
+  max-width:1180px;
+  margin:0 auto;
+  align-items:start;
+}
+.rail{
+  position:sticky;
+  top:0;
+  height:100vh;
+  padding:40px 10px 40px 28px;
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+}
+.rail-brand{
+  font-family:var(--font-mono);
+  font-size:12px;
+  letter-spacing:.08em;
+  color:var(--cyan-700);
+  text-transform:uppercase;
+}
+.ruler{
+  position:relative;
+  padding-left:14px;
+  border-left:2px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  overflow-y:auto;
+}
+.ruler a{
+  position:relative;
+  display:block;
+  text-decoration:none;
+  color:var(--ink-faint);
+  font-size:12.5px;
+  font-family:var(--font-mono);
+  padding:6px 0 6px 14px;
+  line-height:1.3;
+  transition:color .15s ease;
+}
+.ruler a::before{
+  content:"";
+  position:absolute;
+  left:-17px;
+  top:50%;
+  transform:translateY(-50%);
+  width:8px;
+  height:2px;
+  background:var(--line);
+  transition:all .15s ease;
+}
+.ruler a.active{ color:var(--cyan-900); font-weight:600; }
+.ruler a.active::before{ background:var(--cyan-500); width:12px; height:3px; left:-19px;}
+.ruler a:hover{ color:var(--cyan-700); }
+
+.mobile-progress{
+  display:none;
+  position:sticky; top:0; left:0; right:0;
+  height:4px; background:var(--line-soft); z-index:50;
+}
+.mobile-progress-bar{ height:100%; width:0%; background:var(--cyan-500); transition:width .1s linear; }
+
+main{ min-width:0; padding:40px 40px 120px 40px; }
+
+.section{ scroll-margin-top:24px; padding:64px 0; border-top:1px solid var(--line-soft); max-width:var(--content-w); }
+.section:first-of-type{ border-top:none; }
+.section-eyebrow{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--cyan-700);
+  margin-bottom:10px;
+  display:flex; align-items:center; gap:8px;
+}
+.section-eyebrow .tick{ width:16px; height:2px; background:var(--cyan-500); display:inline-block; }
+.section h2{ font-size:clamp(1.5rem, 2.4vw, 1.9rem); margin-bottom:.4em; }
+.section .dek{ color:var(--ink-soft); font-size:1.05rem; max-width:58ch; margin-bottom:1.6em; }
+.section p{ margin:0 0 1.1em 0; }
+.section ul, .section ol{ margin:0 0 1.2em 0; padding-left:1.3em; }
+.section li{ margin-bottom:.45em; }
+strong{ color:var(--cyan-900); }
+code, .mono{ font-family:var(--font-mono); }
+
+/* ============================= HERO ============================= */
+.hero{
+  padding:88px 0 56px 0;
+  max-width:var(--content-w);
+  border-top:none;
+}
+.hero-kicker{
+  font-family:var(--font-mono);
+  font-size:13px;
+  color:var(--cyan-700);
+  text-transform:uppercase;
+  letter-spacing:.1em;
+  margin-bottom:18px;
+}
+.hero h1{
+  font-size:clamp(2.3rem, 5vw, 3.4rem);
+  line-height:1.05;
+  margin-bottom:.3em;
+}
+.hero h1 em{ font-style:italic; color:var(--cyan-600); }
+.hero .sub{
+  font-size:1.2rem;
+  color:var(--ink-soft);
+  max-width:56ch;
+  margin-bottom:0;
+}
+.hero-scatter{ margin-top:36px; }
+
+/* ============================= CARDS / PRIMITIVES ============================= */
+.memo{
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-left:4px solid var(--cyan-500);
+  border-radius:6px;
+  padding:22px 26px;
+  box-shadow:var(--shadow);
+  margin:1.6em 0;
+  position:relative;
+}
+.memo-label{
+  font-family:var(--font-mono);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--cyan-700);
+  margin-bottom:8px;
+}
+.memo p{ font-family:var(--font-display); font-size:1.14rem; font-style:italic; color:var(--ink); margin:0; line-height:1.5;}
+.memo p + p{ margin-top:.7em; }
+
+.insight{
+  background:var(--cyan-100);
+  border:1px solid var(--cyan-150);
+  border-radius:8px;
+  padding:18px 22px;
+  margin:1.6em 0;
+}
+.insight-label{
+  font-family:var(--font-mono);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--cyan-700);
+  margin-bottom:6px;
+  display:flex; align-items:center; gap:6px;
+}
+.insight p:last-child{ margin-bottom:0; }
+
+.card-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:14px;
+  margin:1.4em 0;
+}
+@media (max-width:640px){ .card-grid{ grid-template-columns:1fr; } }
+.card{
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:18px 20px;
+}
+.card h4{ font-size:1rem; margin-bottom:.35em; color:var(--cyan-900); }
+.card p{ font-size:.94rem; color:var(--ink-soft); margin:0; }
+
+.formula{
+  font-family:var(--font-mono);
+  background:var(--cyan-900);
+  color:var(--cyan-150);
+  border-radius:8px;
+  padding:18px 22px;
+  font-size:1rem;
+  overflow-x:auto;
+  margin:1.4em 0;
+  letter-spacing:.02em;
+}
+.formula .sym{ color:var(--cyan-300); }
+
+table{ width:100%; border-collapse:collapse; margin:1.4em 0; font-size:.92rem; }
+caption{ text-align:left; font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); margin-bottom:8px;}
+th,td{ text-align:left; padding:9px 12px; border-bottom:1px solid var(--line-soft); }
+th{ font-family:var(--font-mono); font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--cyan-700); font-weight:600;}
+tbody tr:hover{ background:var(--cyan-100); }
+td.num{ font-family:var(--font-mono); }
+.k-dot-inline{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; }
+
+.btnrow{ display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
+button.chip{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  border:1px solid var(--line);
+  background:var(--paper-raised);
+  color:var(--ink-soft);
+  padding:8px 14px;
+  border-radius:999px;
+  cursor:pointer;
+  transition:all .15s ease;
+}
+button.chip:hover{ border-color:var(--cyan-500); color:var(--cyan-700); }
+button.chip.active{ background:var(--cyan-700); border-color:var(--cyan-700); color:#fff; }
+button.chip:disabled{ opacity:.4; cursor:not-allowed; }
+
+button.primary{
+  font-family:var(--font-mono);
+  font-size:13px;
+  border:1px solid var(--cyan-700);
+  background:var(--cyan-700);
+  color:#fff;
+  padding:9px 16px;
+  border-radius:6px;
+  cursor:pointer;
+  transition:all .15s ease;
+}
+button.primary:hover{ background:var(--cyan-900); border-color:var(--cyan-900); }
+button.primary:disabled{ opacity:.35; cursor:not-allowed; }
+button.ghost{
+  font-family:var(--font-mono);
+  font-size:13px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--ink-soft);
+  padding:9px 16px;
+  border-radius:6px;
+  cursor:pointer;
+}
+button.ghost:hover{ border-color:var(--cyan-500); color:var(--cyan-700); }
+
+.viz-frame{
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:20px;
+  box-shadow:var(--shadow);
+  margin:1.4em 0;
+}
+.viz-caption{ font-size:.86rem; color:var(--ink-faint); margin-top:10px; }
+.viz-caption .k-dot{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; position:relative; top:1px; }
+
+svg text{ font-family:var(--font-mono); }
+
+/* ============================= QUIZ ============================= */
+.quiz{
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--paper-raised);
+  margin:1.8em 0;
+  overflow:hidden;
+}
+.quiz-head{
+  padding:16px 20px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+  user-select:none;
+}
+.quiz-head .qmark{
+  font-family:var(--font-display);
+  font-style:italic;
+  font-size:1.3rem;
+  color:var(--cyan-500);
+  width:26px; text-align:center;
+}
+.quiz-head .qtext{ font-weight:600; color:var(--cyan-900); font-size:1rem; flex:1; }
+.quiz-body{ padding:0 20px 20px 20px; }
+.quiz-opt{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  margin-bottom:8px;
+  cursor:pointer;
+  font-size:.94rem;
+  transition:all .15s ease;
+  background:var(--paper);
+}
+.quiz-opt:hover{ border-color:var(--cyan-500); }
+.quiz-opt .mark{ font-family:var(--font-mono); font-size:12px; color:var(--ink-faint); flex-shrink:0; margin-top:1px; }
+.quiz-opt.correct{ background:var(--cyan-100); border-color:var(--cyan-500); }
+.quiz-opt.correct .mark{ color:var(--cyan-700); }
+.quiz-opt.incorrect{ background:var(--amber-soft); border-color:var(--amber); opacity:.75; }
+.quiz-explain{
+  margin-top:10px;
+  font-size:.9rem;
+  color:var(--ink-soft);
+  background:var(--cyan-100);
+  border-radius:7px;
+  padding:12px 14px;
+  display:none;
+}
+.quiz-explain.show{ display:block; }
+
+/* ============================= FOOTER ============================= */
+footer{
+  max-width:var(--content-w);
+  padding:60px 0 30px 0;
+  color:var(--ink-faint);
+  font-size:.85rem;
+  font-family:var(--font-mono);
+}
+
+@media (max-width:900px){
+  .rail{ display:none; }
+  .page{ grid-template-columns:1fr; }
+  .mobile-progress{ display:block; }
+  main{ padding:28px 20px 100px 20px; }
+  .hero{ padding-top:36px; }
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Clustering · Intro to clustering and K-means</span><span class="pn"><a href="../K-means-and-K-means-Clustering/" title="Clustering · K-means limits and K-means++">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="mobile-progress"><div class="mobile-progress-bar" id="mobileProgress"></div></div>
+
+<div class="page">
+  <nav class="rail" aria-label="Section navigation">
+    <div class="rail-brand">Intro to Clustering &amp; K-Means</div>
+    <div class="ruler" id="ruler"></div>
+  </nav>
+
+  <main>
+
+    <!-- ============================= HERO ============================= -->
+    <section class="hero section" id="hero">
+      <div class="hero-kicker">Intro to Clustering &amp; K-Means · Post-Read</div>
+      <h1>Finding groups <em>nobody labeled</em></h1>
+      <p class="sub">How a retailer with millions of anonymous transactions learns who its customers actually are — and how the K-Means algorithm gets there, from first principles to a working segmentation engine.</p>
+      <div class="hero-scatter" id="heroScatterMount"></div>
+    </section>
+
+    <!-- ============================= THE PROBLEM ============================= -->
+    <section class="section" id="problem">
+      <div class="section-eyebrow"><span class="tick"></span>The Business Problem</div>
+      <h2>Millions of customers. Zero labels.</h2>
+      <p>ClusterMart is a fast-growing e-commerce company with years of purchase history and no idea who its customers really are. Marketing wants to run personalized campaigns — treating Premium Customers differently from Discount Hunters — but no one has ever sorted customers into those groups. There is no "customer type" column anywhere in the database.</p>
+
+      <div class="memo">
+        <div class="memo-label">The CEO, day one</div>
+        <p>"We have lots of customer data, but we don't actually know who our customers really are. We want to target our Premium Customers differently from our Discount Hunters — but nobody has ever labeled our customers into these groups."</p>
+      </div>
+
+      <p>There are no categories to learn from — only raw attributes: how much each customer spends, how often they visit, how many items they buy. The task is to group similar customers together <strong>without being told what the groups are</strong>.</p>
+
+      <div class="viz-frame" id="scatterUnlabeledMount"></div>
+
+      <div class="insight">
+        <div class="insight-label">Why this is hard</div>
+        <p>People can eyeball two-dimensional data and roughly agree on clusters. But real ClusterMart data has dozens of features — spend, frequency, recency, category preference, return rate — far beyond what anyone can eyeball. The computer needs a defined <em>rule</em>, not a hunch.</p>
+      </div>
+    </section>
+
+    <!-- ============================= SUPERVISED VS UNSUPERVISED ============================= -->
+    <section class="section" id="learning-types">
+      <div class="section-eyebrow"><span class="tick"></span>Framing the Problem</div>
+      <h2>Why supervised learning can't help here</h2>
+      <p class="dek">In <strong>supervised learning</strong>, a model learns a mapping from inputs to known, correct outputs — it needs labeled examples to learn from. ClusterMart's customer data has no labels at all.</p>
+
+      <div class="btnrow" role="tablist" aria-label="Learning type comparison">
+        <button class="chip active" data-tab="sup" role="tab" aria-selected="true">Supervised — spam filter</button>
+        <button class="chip" data-tab="unsup" role="tab" aria-selected="false">Unsupervised — customers</button>
+      </div>
+      <div class="viz-frame" id="supUnsupMount"></div>
+
+      <p>Below are four scenarios. For each, decide whether it needs labels to solve (supervised) or not (unsupervised) — click to check yourself.</p>
+      <div id="scenarioMount"></div>
+
+      <div class="quiz" data-quiz="q1">
+        <div class="quiz-head">
+          <span class="qmark">?</span>
+          <span class="qtext">Why is supervised learning not suitable for a customer-segmentation problem solved with K-Means?</span>
+        </div>
+        <div class="quiz-body">
+          <div class="quiz-opt" data-correct="true">
+            <span class="mark">A</span><span>Because the dataset does not contain labeled target values.</span>
+          </div>
+          <div class="quiz-opt">
+            <span class="mark">B</span><span>Because the dataset has too many features.</span>
+          </div>
+          <div class="quiz-opt">
+            <span class="mark">C</span><span>Because K-Means requires labeled training data.</span>
+          </div>
+          <div class="quiz-opt">
+            <span class="mark">D</span><span>Because supervised learning cannot handle numerical data.</span>
+          </div>
+          <div class="quiz-explain">Supervised learning requires labeled target values to learn from. In customer segmentation, the goal is to discover hidden groups in unlabeled data — which is exactly what unsupervised learning methods like K-Means are built for.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= INTRODUCING CLUSTERING ============================= -->
+    <section class="section" id="clustering">
+      <div class="section-eyebrow"><span class="tick"></span>Core Concept</div>
+      <h2>What clustering actually does</h2>
+      <p><strong>Clustering</strong> is the task of grouping data points so that points in the same group are more similar to each other than to points in other groups — using only the raw features, no labels required.</p>
+
+      <p>It shows up constantly:</p>
+      <div class="card-grid">
+        <div class="card"><h4>Playlists</h4><p>Grouping listeners with similar taste for recommendations.</p></div>
+        <div class="card"><h4>Watch history</h4><p>Grouping viewers with similar streaming behavior.</p></div>
+        <div class="card"><h4>Photo albums</h4><p>Grouping photos of the same person automatically.</p></div>
+        <div class="card"><h4>Image compression</h4><p>Grouping similar pixel colors into a smaller palette.</p></div>
+      </div>
+
+      <div class="viz-frame" id="clusterRevealMount"></div>
+      <p class="viz-caption" style="margin-top:-8px;">Drag the slider to reveal how the same raw points resolve into groups once similarity is made explicit.</p>
+
+      <div class="insight">
+        <div class="insight-label">The intuition</div>
+        <p>Whatever grouping felt natural above was almost certainly based on <strong>closeness</strong> — points that sit near each other visually. That intuitive idea of closeness is exactly what clustering algorithms formalize mathematically. The next question: how do we measure "close" precisely?</p>
+      </div>
+    </section>
+
+    <!-- ============================= MEASURING SIMILARITY ============================= -->
+    <section class="section" id="distance">
+      <div class="section-eyebrow"><span class="tick"></span>Core Concept</div>
+      <h2>Measuring similarity with distance</h2>
+      <p>Every customer can be represented as a point in <strong>feature space</strong> — for example, (Annual Spend, Purchase Frequency). If two customers are similar, their points should sit close together in that space.</p>
+
+      <p>The standard way to measure closeness is <strong>Euclidean distance</strong> — the straight-line, "as the crow flies" distance between two points:</p>
+      <div class="formula">d(p, q) &nbsp;=&nbsp; <span class="sym">√</span>&nbsp;(p<sub>1</sub>−q<sub>1</sub>)² + (p<sub>2</sub>−q<sub>2</sub>)² + ⋯ + (p<sub>n</sub>−q<sub>n</sub>)²</div>
+
+      <p>Try it below with three example customers. Click a pair to measure the distance between them.</p>
+      <div class="viz-frame" id="distanceDemoMount"></div>
+    </section>
+
+    <!-- ============================= GOOD VS BAD CLUSTERS ============================= -->
+    <section class="section" id="quality">
+      <div class="section-eyebrow"><span class="tick"></span>Core Concept</div>
+      <h2>What makes a clustering good?</h2>
+      <p>Two analysts each submit a customer segmentation from the same raw data. Which one is better — and how would you know?</p>
+
+      <div class="btnrow" role="tablist" aria-label="Analyst comparison">
+        <button class="chip active" data-analyst="A">Analyst A's clustering</button>
+        <button class="chip" data-analyst="B">Analyst B's clustering</button>
+      </div>
+      <div class="viz-frame" id="analystMount"></div>
+
+      <div class="card-grid">
+        <div class="card"><h4>Intra-cluster distance</h4><p>How spread out points are <em>within</em> the same cluster. Smaller means tighter, more cohesive groups.</p></div>
+        <div class="card"><h4>Inter-cluster distance</h4><p>How far apart <em>different</em> clusters sit from each other. Larger means more distinct, separable groups.</p></div>
+      </div>
+
+      <div class="insight">
+        <div class="insight-label">A good clustering has</div>
+        <p>Small intra-cluster distance (points within a group sit close together) <strong>and</strong> large inter-cluster distance (different groups sit far apart). Analyst A's clustering is tight and well separated; Analyst B's is closer to random noise. Ideally, the resulting clusters should also make business sense — a shirt manufacturer wants small/medium/large, not a hundred micro-clusters.</p>
+      </div>
+    </section>
+
+    <!-- ============================= INVENTING K-MEANS ============================= -->
+    <section class="section" id="inventing">
+      <div class="section-eyebrow"><span class="tick"></span>The Algorithm</div>
+      <h2>Inventing K-Means from first principles</h2>
+      <p>Suppose you had to automate this clustering process yourself. What steps would you write?</p>
+
+      <p>Most people arrive at something close to this — and if they do, they've just invented K-Means, one of the most widely used clustering algorithms since the 1960s:</p>
+
+      <ol id="algoSteps">
+        <li><strong>Initialize</strong> — pick some starting "center" points.</li>
+        <li><strong>Assign</strong> — assign every customer to their nearest center.</li>
+        <li><strong>Update</strong> — move each center to the average position of the customers assigned to it.</li>
+        <li><strong>Repeat</strong> — repeat the assign/update steps until nothing changes.</li>
+      </ol>
+
+      <div class="insight">
+        <div class="insight-label">Why it works</div>
+        <p>K-Means isn't magic — it's a logical, iterative process. Each round it tightens the fit between points and centers, and it's guaranteed to keep improving (or hold steady) until it settles.</p>
+      </div>
+    </section>
+
+    <!-- ============================= K-MEANS IN ACTION (SIGNATURE) ============================= -->
+    <section class="section" id="action">
+      <div class="section-eyebrow"><span class="tick"></span>Interactive Simulator</div>
+      <h2>Watch K-Means converge</h2>
+      <p class="dek">This is the algorithm running on a sample of ClusterMart customers, one step at a time. Each step alternates between the two moves from the previous section: assigning points to their nearest center, then moving each center to the mean of its assigned points.</p>
+
+      <div class="viz-frame" id="kmeansSimMount"></div>
+
+      <p>Random initialization is one of vanilla K-Means's biggest weaknesses: starting from different random centers can converge to different final groupings on the same data. Click <span class="mono">Reset</span> a few times to see it happen.</p>
+    </section>
+
+    <!-- ============================= WHY THE MEAN ============================= -->
+    <section class="section" id="mean">
+      <div class="section-eyebrow"><span class="tick"></span>Core Concept</div>
+      <h2>Why the centroid moves to the mean</h2>
+      <p>Why the <em>average</em> position, specifically — why not the median, or some other point? Drag the marker below along a line through a small cluster of points and watch the total squared distance from that point to every member of the cluster.</p>
+
+      <div class="viz-frame" id="wcssMount"></div>
+      <p class="viz-caption"><a href="https://aiml-vizs-new.vercel.app/un-supervised-learning/wcss-minimization-by-the-mean/" target="_blank" rel="noopener">Explore this further in the WCSS-minimization-by-the-mean visualizer ↗</a></p>
+
+      <p>This total is called the <strong>Within-Cluster Sum of Squares (WCSS)</strong>:</p>
+      <div class="formula">WCSS &nbsp;=&nbsp; <span class="sym">Σ</span><sub>p in cluster</sub> ‖p − centroid‖²</div>
+      <p>The curve always bottoms out exactly at the mean — that's not a coincidence. The mean is the single point that minimizes WCSS for a set of points, which is exactly why K-Means' update step moves each centroid there.</p>
+
+      <div class="quiz" data-quiz="q2">
+        <div class="quiz-head">
+          <span class="qmark">?</span>
+          <span class="qtext">Why does the centroid move to the mean during the update step, instead of the median?</span>
+        </div>
+        <div class="quiz-body">
+          <div class="quiz-opt" data-correct="true"><span class="mark">A</span><span>Because the mean minimizes the total squared distance (WCSS).</span></div>
+          <div class="quiz-opt"><span class="mark">B</span><span>Because the median is computationally expensive.</span></div>
+          <div class="quiz-opt"><span class="mark">C</span><span>Because the mean is always one of the data points.</span></div>
+          <div class="quiz-opt"><span class="mark">D</span><span>Because K-Means requires an odd number of points.</span></div>
+          <div class="quiz-explain">K-Means' objective is to minimize WCSS. The arithmetic mean is the point that minimizes that sum of squared distances, which makes it the optimal centroid update.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= CHOOSING K ============================= -->
+    <section class="section" id="choosing-k">
+      <div class="section-eyebrow"><span class="tick"></span>Model Selection</div>
+      <h2>Choosing the number of clusters</h2>
+      <p>K-Means requires deciding K in advance. Two or five or ten groups are all technically valid outputs — but which is right? K can come from domain knowledge (a shirt maker fixes K=3 for small/medium/large) or be estimated from the data using two complementary methods.</p>
+
+      <h3 style="margin-top:1.6em;">The Elbow Method</h3>
+      <p>WCSS always decreases as K increases — more clusters means points sit closer to their own center, all the way down to zero once every point is its own cluster. That extreme isn't useful, so instead of chasing the lowest WCSS, look for the point of <strong>diminishing returns</strong>: the "elbow" where adding clusters stops buying much improvement.</p>
+      <div class="viz-frame" id="elbowMount"></div>
+
+      <div class="quiz" data-quiz="q3">
+        <div class="quiz-head">
+          <span class="qmark">?</span>
+          <span class="qtext">What happens to WCSS as K increases, with the dataset held fixed?</span>
+        </div>
+        <div class="quiz-body">
+          <div class="quiz-opt"><span class="mark">A</span><span>Always increases.</span></div>
+          <div class="quiz-opt" data-correct="true"><span class="mark">B</span><span>Always decreases (or stays the same).</span></div>
+          <div class="quiz-opt"><span class="mark">C</span><span>Increases then decreases.</span></div>
+          <div class="quiz-opt"><span class="mark">D</span><span>Unpredictable.</span></div>
+          <div class="quiz-explain">More clusters means every point is always at least as close to some center as before, so WCSS is monotonically non-increasing in K.</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:1.8em;">The Silhouette Score</h3>
+      <p>For a single point, compare its average distance to other points in its <strong>own</strong> cluster (<em>a</em>) against its average distance to the <strong>nearest other</strong> cluster (<em>b</em>):</p>
+      <div class="formula">s &nbsp;=&nbsp; (b − a) / max(a, b)</div>
+      <ul>
+        <li><strong>Close to +1</strong> — well inside its own cluster, far from others: great clustering.</li>
+        <li><strong>Close to 0</strong> — sitting right on the border between two clusters.</li>
+        <li><strong>Negative</strong> — probably assigned to the wrong cluster.</li>
+      </ul>
+      <p>Averaged across every point, this gives an overall Silhouette Score from −1 to +1 for a given K. Hover the chart below — these are the actual scores from ClusterMart's data:</p>
+      <div class="viz-frame" id="silhouetteMount"></div>
+      <p class="viz-caption"><a href="https://aiml-vizs-new.vercel.app/un-supervised-learning/silhouette-score-a-vs-b-intuition-tug-of-war-a-versus-b/" target="_blank" rel="noopener">Explore this further in the a-vs-b tug-of-war visualizer ↗</a></p>
+
+      <div class="insight">
+        <div class="insight-label">Putting both together</div>
+        <p>The elbow in the WCSS curve appears around <strong>K = 4</strong>. K = 2 technically has the single highest silhouette score, but K = 4 still scores strongly <em>and</em> captures the natural four-segment structure the elbow method points to. There's rarely one metric that gives a perfect answer — considering both together, <strong>K = 4</strong> is the most defensible choice for this dataset.</p>
+      </div>
+    </section>
+
+    <!-- ============================= BUILDING THE PIPELINE ============================= -->
+    <section class="section" id="pipeline">
+      <div class="section-eyebrow"><span class="tick"></span>Applied</div>
+      <h2>Building the segmentation engine</h2>
+      <p>With the mechanics in place, it's time to run K-Means on an actual sample of ClusterMart customer data — three features per customer: <span class="mono">annual_spend</span>, <span class="mono">purchase_frequency</span>, and <span class="mono">discount_usage_pct</span>.</p>
+
+      <h3 style="margin-top:1.4em;">Feature scaling comes first</h3>
+      <p><span class="mono">annual_spend</span> ranges into the thousands, while <span class="mono">discount_usage_pct</span> ranges 0–100. Because K-Means relies on Euclidean distance, an unscaled <span class="mono">annual_spend</span> would completely dominate the distance calculation. Every feature is standardized (mean 0, standard deviation 1) before clustering:</p>
+
+      <table>
+        <caption>Feature statistics, before and after standardization</caption>
+        <thead><tr><th>Feature</th><th>Mean (before)</th><th>Std (before)</th><th>Mean (after)</th><th>Std (after)</th></tr></thead>
+        <tbody>
+          <tr><td>annual_spend</td><td class="num">3471.8</td><td class="num">2824.1</td><td class="num">0.0</td><td class="num">1.0</td></tr>
+          <tr><td>purchase_frequency</td><td class="num">20.3</td><td class="num">12.7</td><td class="num">0.0</td><td class="num">1.0</td></tr>
+          <tr><td>discount_usage_pct</td><td class="num">30.8</td><td class="num">24.6</td><td class="num">0.0</td><td class="num">1.0</td></tr>
+        </tbody>
+      </table>
+
+      <div class="quiz" data-quiz="q4">
+        <div class="quiz-head">
+          <span class="qmark">?</span>
+          <span class="qtext">Why is feature scaling important before running K-Means?</span>
+        </div>
+        <div class="quiz-body">
+          <div class="quiz-opt"><span class="mark">A</span><span>It makes the algorithm run faster.</span></div>
+          <div class="quiz-opt" data-correct="true"><span class="mark">B</span><span>It ensures features with larger scales do not dominate the distance calculation.</span></div>
+          <div class="quiz-opt"><span class="mark">C</span><span>It automatically chooses the best value of K.</span></div>
+          <div class="quiz-opt"><span class="mark">D</span><span>It guarantees better clustering results.</span></div>
+          <div class="quiz-explain">K-Means relies on Euclidean distance. Without scaling, features with larger numerical ranges dominate the distance calculation and disproportionately influence the clustering — it doesn't guarantee a better result, just a fairer one.</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:1.8em;">Four segments emerge</h3>
+      <p>Running K-Means with K = 4 on the scaled data and averaging each feature within each resulting cluster produces a business-readable profile:</p>
+
+      <table>
+        <caption>Cluster profile — averages per group</caption>
+        <thead><tr><th>Segment</th><th>Avg. annual spend</th><th>Avg. purchase frequency</th><th>Avg. discount usage</th><th>Customers</th></tr></thead>
+        <tbody>
+          <tr><td><span class="k-dot-inline" style="background:#c76a2c"></span>Occasional Visitors</td><td class="num">$588.10</td><td class="num">3.4 / yr</td><td class="num">29.3%</td><td class="num">92</td></tr>
+          <tr><td><span class="k-dot-inline" style="background:#0d8f9c"></span>Frequent Buyers</td><td class="num">$3,564.10</td><td class="num">34.7 / yr</td><td class="num">19.4%</td><td class="num">100</td></tr>
+          <tr><td><span class="k-dot-inline" style="background:#7a5cc9"></span>Discount Hunters</td><td class="num">$1,736.60</td><td class="num">14.1 / yr</td><td class="num">66.4%</td><td class="num">108</td></tr>
+          <tr><td><span class="k-dot-inline" style="background:#073b44"></span>Premium Customers</td><td class="num">$7,906.50</td><td class="num">28.1 / yr</td><td class="num">5.3%</td><td class="num">100</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:.86rem;color:var(--ink-faint);margin-top:-.6em;">Names are assigned by matching each cluster's actual averages to a plain-language description: high spend and low discount use reads as Premium; moderate spend with the highest visit frequency reads as Frequent; low-to-moderate spend with heavy discount use reads as Discount Hunters; low spend and low frequency reads as Occasional.</p>
+
+      <div class="viz-frame" id="segmentBarMount"></div>
+
+      <table>
+        <caption>Segment traits at a glance</caption>
+        <thead><tr><th>Cluster trait</th><th>Likely segment</th><th>Marketing idea</th></tr></thead>
+        <tbody>
+          <tr><td>High spend, high frequency, low discount use</td><td>Premium Customers</td><td>VIP loyalty perks, early access to new products</td></tr>
+          <tr><td>Moderate spend, very high frequency</td><td>Frequent Buyers</td><td>Subscribe &amp; save, bundle deals</td></tr>
+          <tr><td>Low–moderate spend, high discount use</td><td>Discount Hunters</td><td>Flash sales, coupon campaigns</td></tr>
+          <tr><td>Low spend, low frequency</td><td>Occasional Visitors</td><td>Re-engagement email campaigns, win-back offers</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================= ASSUMPTIONS ============================= -->
+    <section class="section" id="assumptions">
+      <div class="section-eyebrow"><span class="tick"></span>Limitations</div>
+      <h2>What K-Means assumes — and when it breaks</h2>
+      <p>K-Means is powerful, but it isn't neutral. It carries built-in assumptions worth knowing before reaching for it on the next dataset:</p>
+
+      <div class="card-grid">
+        <div class="card"><h4>Spherical clusters</h4><p>Because it measures distance to a single center, K-Means can't represent curved or elongated cluster shapes.</p></div>
+        <div class="card"><h4>Similar cluster sizes</h4><p>The "average" gets pulled around by imbalanced group sizes and densities.</p></div>
+        <div class="card"><h4>Euclidean distance is meaningful</h4><p>This breaks down for some data types — categorical data, or data that lives on a circle or sphere.</p></div>
+        <div class="card"><h4>Sensitive to outliers</h4><p>Since it uses the mean, a handful of extreme points can drag a centroid away from the real cluster center.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= WRAP UP ============================= -->
+    <section class="section" id="wrapup">
+      <div class="section-eyebrow"><span class="tick"></span>Summary</div>
+      <h2>What the segmentation engine delivers</h2>
+      <p>The finished pipeline hands back four clearly interpretable customer segments, a quantitative justification for choosing four groups over any other number, and a working understanding of where this approach holds up and where it doesn't.</p>
+
+      <div class="insight">
+        <div class="insight-label">Key ideas, in order</div>
+        <ul style="margin-bottom:0;">
+          <li>Clustering finds structure in data with <strong>no labels</strong> — a fundamentally different problem from supervised learning.</li>
+          <li><strong>Distance</strong> (typically Euclidean) is how "similar" gets defined mathematically.</li>
+          <li>A good clustering has <strong>low intra-cluster</strong> and <strong>high inter-cluster</strong> distance.</li>
+          <li><strong>K-Means</strong> alternates assigning points to the nearest center and moving each center to the mean of its group, until nothing changes.</li>
+          <li>The centroid moves to the <strong>mean</strong> because the mean is what minimizes WCSS.</li>
+          <li><strong>K</strong> is chosen with the Elbow Method and the Silhouette Score together, not either alone.</li>
+          <li><strong>Feature scaling</strong> matters whenever features live on different numeric scales.</li>
+          <li>Clusters only become useful once they're translated into <strong>business-readable segments</strong>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer>Intro to Clustering &amp; K-Means · Post-Read</footer>
+
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   Utilities: seeded random, gaussian blobs, coordinate scaling
+   ============================================================ */
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rng){
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function makeBlobs(centers, n, std, seed){
+  const rng = mulberry32(seed);
+  const pts = [];
+  centers.forEach((c, ci) => {
+    for (let i = 0; i < n; i++){
+      pts.push({ x: c[0] + gaussian(rng) * std, y: c[1] + gaussian(rng) * std, trueCluster: ci });
+    }
+  });
+  return pts;
+}
+function dist(a, b){ return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2); }
+
+function fitScale(points, w, h, pad){
+  const xs = points.map(p => p.x), ys = points.map(p => p.y);
+  const xmin = Math.min(...xs), xmax = Math.max(...xs);
+  const ymin = Math.min(...ys), ymax = Math.max(...ys);
+  const xr = (xmax - xmin) || 1, yr = (ymax - ymin) || 1;
+  return function(p){
+    return {
+      x: pad + (p.x - xmin) / xr * (w - 2 * pad),
+      y: h - pad - (p.y - ymin) / yr * (h - 2 * pad)
+    };
+  };
+}
+
+const CLUSTER_COLORS = ['#0d8f9c', '#c76a2c', '#7a5cc9', '#073b44', '#2f8f5b'];
+
+function el(html){
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+function mount(id, node){
+  const target = document.getElementById(id);
+  if (target) { target.innerHTML = ''; target.appendChild(node); }
+}
+
+/* ============================================================
+   1. Scroll rail / ruler nav
+   ============================================================ */
+const SECTIONS = [
+  { id: 'hero', label: 'Start' },
+  { id: 'problem', label: 'The Problem' },
+  { id: 'learning-types', label: 'Supervised vs Not' },
+  { id: 'clustering', label: 'What Is Clustering' },
+  { id: 'distance', label: 'Measuring Distance' },
+  { id: 'quality', label: 'Good vs Bad' },
+  { id: 'inventing', label: 'Inventing K-Means' },
+  { id: 'action', label: 'K-Means Live' },
+  { id: 'mean', label: 'Why the Mean' },
+  { id: 'choosing-k', label: 'Choosing K' },
+  { id: 'pipeline', label: 'The Real Pipeline' },
+  { id: 'assumptions', label: 'Assumptions' },
+  { id: 'wrapup', label: 'Summary' }
+];
+function buildRuler(){
+  const ruler = document.getElementById('ruler');
+  if (!ruler) return;
+  SECTIONS.forEach(s => {
+    const a = document.createElement('a');
+    a.href = '#' + s.id;
+    a.textContent = s.label;
+    a.dataset.target = s.id;
+    ruler.appendChild(a);
+  });
+  const links = Array.from(ruler.querySelectorAll('a'));
+  const progressBar = document.getElementById('mobileProgress');
+
+  function onScroll(){
+    const scrollTop = window.scrollY;
+    const docH = document.documentElement.scrollHeight - window.innerHeight;
+    if (progressBar && docH > 0) progressBar.style.width = Math.min(100, (scrollTop / docH) * 100) + '%';
+
+    let current = SECTIONS[0].id;
+    for (const s of SECTIONS){
+      const node = document.getElementById(s.id);
+      if (node && node.getBoundingClientRect().top - 120 <= 0) current = s.id;
+    }
+    links.forEach(a => a.classList.toggle('active', a.dataset.target === current));
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+}
+
+/* ============================================================
+   2. Hero scatter (decorative, static)
+   ============================================================ */
+function renderHeroScatter(){
+  const w = 640, h = 190, pad = 14;
+  const pts = makeBlobs([[0,0],[6,5],[2,7],[8,1]], 14, 0.85, 7);
+  const s = fitScale(pts, w, h, pad);
+  const circles = pts.map(p => {
+    const c = s(p);
+    return `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="4.2" fill="${CLUSTER_COLORS[p.trueCluster % CLUSTER_COLORS.length]}" opacity="0.85"/>`;
+  }).join('');
+  const svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Decorative scatter of colored customer data points">${circles}</svg>`;
+  mount('heroScatterMount', el(`<div>${svg}</div>`));
+}
+
+/* ============================================================
+   3. Unlabeled scatter (the problem section)
+   ============================================================ */
+function renderUnlabeledScatter(){
+  const w = 640, h = 320, pad = 30;
+  const pts = makeBlobs([[0,0],[7,6],[1,8],[8,-1]], 22, 1.0, 7);
+  const s = fitScale(pts, w, h, pad);
+  const circles = pts.map(p => {
+    const c = s(p);
+    return `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="5" fill="#3f6068" stroke="#fff" stroke-width="0.7" opacity="0.85"/>`;
+  }).join('');
+  const svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Scatter plot of customers by annual spend and purchase frequency, all shown in a single color because there are no labels">
+    <text x="${pad}" y="18" fill="#6f8a90" font-size="12">Annual Spend (scaled) →</text>
+    ${circles}
+  </svg>`;
+  mount('scatterUnlabeledMount', el(`<div>${svg}<div class="viz-caption">Annual Spend vs. Purchase Frequency for a sample of ClusterMart customers. Every point is the same color — there is no "type" column in this dataset.</div></div>`));
+}
+
+/* ============================================================
+   4. Supervised vs unsupervised tabs
+   ============================================================ */
+function renderSupUnsup(){
+  const wrap = el(`<div></div>`);
+  const supPts = [];
+  const rng = mulberry32(3);
+  for (let i=0;i<40;i++){
+    supPts.push({x: gaussian(rng)*2, y: gaussian(rng)*2, label: i % 3 === 0 ? 'spam' : 'ok'});
+  }
+  const unsupPts = makeBlobs([[0,0],[5,4],[1,6]], 13, 0.9, 9);
+
+  function panelSup(){
+    const w=560,h=260,pad=24;
+    const s = fitScale(supPts, w, h, pad);
+    const circles = supPts.map(p=>{
+      const c = s(p);
+      const color = p.label === 'spam' ? '#c76a2c' : '#0d8f9c';
+      return `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="5" fill="${color}" opacity="0.85"/>`;
+    }).join('');
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Labeled email dataset: spam versus not spam">${circles}
+      <g transform="translate(${pad},${pad})">
+        <circle cx="6" cy="0" r="5" fill="#c76a2c"/><text x="16" y="4" font-size="12" fill="#3f6068">Spam (labeled)</text>
+        <circle cx="6" cy="20" r="5" fill="#0d8f9c"/><text x="16" y="24" font-size="12" fill="#3f6068">Not spam (labeled)</text>
+      </g></svg>`;
+  }
+  function panelUnsup(){
+    const w=560,h=260,pad=24;
+    const s = fitScale(unsupPts, w, h, pad);
+    const circles = unsupPts.map(p=>{
+      const c = s(p);
+      return `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="5" fill="#6f8a90" opacity="0.85"/>`;
+    }).join('');
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Unlabeled customer dataset, type unknown">${circles}
+      <g transform="translate(${pad},${pad})">
+        <circle cx="6" cy="0" r="5" fill="#6f8a90"/><text x="16" y="4" font-size="12" fill="#3f6068">Customer type: unknown</text>
+      </g></svg>`;
+  }
+
+  const content = el(`<div></div>`);
+  content.innerHTML = panelSup();
+  wrap.appendChild(content);
+  mount('supUnsupMount', wrap);
+
+  document.querySelectorAll('#learning-types [data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#learning-types [data-tab]').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+      btn.classList.add('active'); btn.setAttribute('aria-selected','true');
+      content.innerHTML = btn.dataset.tab === 'sup' ? panelSup() : panelUnsup();
+    });
+  });
+}
+
+/* ============================================================
+   5. Scenario click-to-reveal (supervised vs unsupervised)
+   ============================================================ */
+function renderScenarios(){
+  const scenarios = [
+    { text: 'Predicting whether a loan applicant will default, using historical approved and defaulted loans.', answer: 'Supervised', why: 'Historical default outcomes are available as labels.' },
+    { text: 'Grouping news articles into topics, with no topic labels provided.', answer: 'Unsupervised', why: 'No topic labels exist to learn from.' },
+    { text: 'Predicting house prices from square footage, location, and historical sale prices.', answer: 'Supervised', why: 'Historical sale prices serve as labels.' },
+    { text: 'Grouping ClusterMart customers by purchasing behavior, with no "customer type" column.', answer: 'Unsupervised', why: 'There is no customer-type label — this is the clustering problem at hand.' }
+  ];
+  const wrap = el(`<div class="card-grid" style="grid-template-columns:1fr;"></div>`);
+  scenarios.forEach(sc => {
+    const card = el(`
+      <div class="card" style="cursor:pointer;" tabindex="0" role="button">
+        <p style="margin:0 0 8px 0;color:var(--ink);font-size:.95rem;">${sc.text}</p>
+        <div class="reveal" style="display:none;">
+          <div style="font-family:var(--font-mono);font-size:12px;color:var(--cyan-700);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">${sc.answer}</div>
+          <p style="margin:0;font-size:.86rem;">${sc.why}</p>
+        </div>
+        <div class="prompt" style="font-family:var(--font-mono);font-size:11.5px;color:var(--ink-faint);">Click to check →</div>
+      </div>`);
+    function toggle(){
+      const reveal = card.querySelector('.reveal');
+      const prompt = card.querySelector('.prompt');
+      const showing = reveal.style.display !== 'none';
+      reveal.style.display = showing ? 'none' : 'block';
+      prompt.style.display = showing ? 'block' : 'none';
+    }
+    card.addEventListener('click', toggle);
+    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+    wrap.appendChild(card);
+  });
+  mount('scenarioMount', wrap);
+}
+
+/* ============================================================
+   6. Cluster reveal slider
+   ============================================================ */
+function renderClusterReveal(){
+  const w = 640, h = 300, pad = 26;
+  const pts = makeBlobs([[0,0],[6,5],[1,7]], 30, 0.9, 11);
+  const s = fitScale(pts, w, h, pad);
+  const centers = [0,1,2].map(ci => {
+    const members = pts.filter(p => p.trueCluster === ci);
+    const mx = members.reduce((a,p)=>a+p.x,0)/members.length;
+    const my = members.reduce((a,p)=>a+p.y,0)/members.length;
+    return s({x:mx,y:my});
+  });
+
+  const wrap = el(`
+    <div>
+      <div class="svgHost"></div>
+      <input type="range" min="0" max="2" step="1" value="0" style="width:100%;margin-top:14px;accent-color:#0d8f9c;" aria-label="Reveal stage: raw points, grouped, or grouped with centers">
+      <div class="viz-caption" id="clusterRevealCaption"></div>
+    </div>`);
+  const host = wrap.querySelector('.svgHost');
+  const range = wrap.querySelector('input');
+  const caption = wrap.querySelector('#clusterRevealCaption');
+  const captions = [
+    'Stage 1 — raw, unlabeled points.',
+    'Stage 2 — the same points, colored by natural group.',
+    'Stage 3 — groups plus their centers (✕).'
+  ];
+
+  function render(stage){
+    let circles = pts.map(p => {
+      const c = s(p);
+      const color = stage >= 1 ? CLUSTER_COLORS[p.trueCluster] : '#6f8a90';
+      return `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="5" fill="${color}" opacity="0.85"/>`;
+    }).join('');
+    let marks = '';
+    if (stage === 2){
+      marks = centers.map((c,i) => `
+        <line x1="${c.x-7}" y1="${c.y-7}" x2="${c.x+7}" y2="${c.y+7}" stroke="${CLUSTER_COLORS[i]}" stroke-width="3"/>
+        <line x1="${c.x-7}" y1="${c.y+7}" x2="${c.x+7}" y2="${c.y-7}" stroke="${CLUSTER_COLORS[i]}" stroke-width="3"/>
+      `).join('');
+    }
+    host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="${captions[stage]}">${circles}${marks}</svg>`;
+    caption.textContent = captions[stage];
+  }
+  range.addEventListener('input', () => render(Number(range.value)));
+  render(0);
+  mount('clusterRevealMount', wrap);
+}
+
+/* ============================================================
+   7. Distance demo
+   ============================================================ */
+function renderDistanceDemo(){
+  const A = {x:1.0, y:2.0, label:'A'};
+  const B = {x:1.5, y:2.3, label:'B'};
+  const C = {x:6.0, y:7.0, label:'C'};
+  const pts = [A,B,C];
+  const w = 560, h = 320, pad = 40;
+  const s = fitScale(pts, w, h, pad);
+  const colors = { A:'#0d8f9c', B:'#2f8f5b', C:'#c76a2c' };
+
+  const wrap = el(`
+    <div>
+      <div class="btnrow">
+        <button class="chip active" data-pair="AB">Compare A ↔ B</button>
+        <button class="chip" data-pair="AC">Compare A ↔ C</button>
+      </div>
+      <div class="svgHost"></div>
+    </div>`);
+  const host = wrap.querySelector('.svgHost');
+
+  function render(pair){
+    const p1 = A, p2 = pair === 'AB' ? B : C;
+    const c1 = s(p1), c2 = s(p2);
+    const d = dist(p1, p2);
+    const dots = pts.map(p => {
+      const c = s(p);
+      return `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="9" fill="${colors[p.label]}"/>
+              <text x="${c.x.toFixed(1)}" y="${(c.y-16).toFixed(1)}" font-size="13" fill="#082430" text-anchor="middle" font-weight="600">Customer ${p.label}</text>`;
+    }).join('');
+    const line = `<line x1="${c1.x}" y1="${c1.y}" x2="${c2.x}" y2="${c2.y}" stroke="#c9e5e4" stroke-width="2" stroke-dasharray="5,4"/>`;
+    const mid = { x: (c1.x + c2.x)/2, y: (c1.y + c2.y)/2 };
+    const label = `<rect x="${mid.x-46}" y="${mid.y-14}" width="92" height="24" rx="12" fill="#073b44"/>
+                   <text x="${mid.x}" y="${mid.y+3}" font-size="12.5" fill="#dff5f5" text-anchor="middle">d = ${d.toFixed(2)}</text>`;
+    host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Distance between customer ${p1.label} and customer ${p2.label} is ${d.toFixed(2)}">${line}${dots}${label}</svg>
+      <div class="viz-caption">${pair === 'AB' ? 'Customers A and B sit close together — small distance, high similarity.' : 'Customers A and C sit far apart — large distance, low similarity.'}</div>`;
+  }
+  wrap.querySelectorAll('[data-pair]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      wrap.querySelectorAll('[data-pair]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render(btn.dataset.pair);
+    });
+  });
+  render('AB');
+  mount('distanceDemoMount', wrap);
+}
+
+/* ============================================================
+   8. Analyst A vs B (good vs bad clustering)
+   ============================================================ */
+function renderAnalystCompare(){
+  const w = 620, h = 300, pad = 26;
+  const pts = makeBlobs([[0,0],[6,5],[1,7]], 24, 0.85, 21);
+  const s = fitScale(pts, w, h, pad);
+  const rng = mulberry32(1);
+  const badLabels = pts.map(() => Math.floor(rng()*3));
+
+  const wrap = el(`<div class="svgHost"></div>`);
+
+  function render(which){
+    const circles = pts.map((p,i) => {
+      const c = s(p);
+      const cluster = which === 'A' ? p.trueCluster : badLabels[i];
+      return `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="5.5" fill="${CLUSTER_COLORS[cluster]}" opacity="0.85"/>`;
+    }).join('');
+    const note = which === 'A'
+      ? 'Three clear, compact, well-separated groups — low intra-cluster distance, high inter-cluster distance.'
+      : 'Points from different natural groups are mixed together — the clusters overlap and fail to capture real structure.';
+    wrap.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Analyst ${which}'s clustering">${circles}</svg>
+      <div class="viz-caption">${note}</div>`;
+  }
+  render('A');
+  mount('analystMount', wrap);
+
+  document.querySelectorAll('#quality [data-analyst]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#quality [data-analyst]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render(btn.dataset.analyst);
+    });
+  });
+}
+
+/* ============================================================
+   9. K-Means live simulator (signature piece)
+   ============================================================ */
+function renderKMeansSim(){
+  const w = 620, h = 380, pad = 30;
+  let K = 4;
+  const basePts = makeBlobs([[0,0],[9,7],[1,9],[9,-1]], 15, 0.9, 8);
+  const s = fitScale(basePts, w, h, pad);
+
+  let centroids = [];
+  let labels = new Array(basePts.length).fill(0);
+  let iteration = 0;
+  let converged = false;
+  let playTimer = null;
+
+  const wrap = el(`
+    <div>
+      <div class="btnrow">
+        <span style="font-family:var(--font-mono);font-size:12.5px;color:var(--ink-faint);align-self:center;">K =</span>
+        <button class="chip" data-k="2">2</button>
+        <button class="chip" data-k="3">3</button>
+        <button class="chip active" data-k="4">4</button>
+        <button class="chip" data-k="5">5</button>
+      </div>
+      <div class="svgHost"></div>
+      <div class="btnrow">
+        <button class="primary" id="simStep">Step →</button>
+        <button class="ghost" id="simPlay">Auto play</button>
+        <button class="ghost" id="simReset">Reset (new centers)</button>
+        <span id="simStatus" style="font-family:var(--font-mono);font-size:12.5px;color:var(--ink-faint);align-self:center;margin-left:6px;"></span>
+      </div>
+    </div>`);
+  const host = wrap.querySelector('.svgHost');
+  const statusEl = wrap.querySelector('#simStatus');
+  const stepBtn = wrap.querySelector('#simStep');
+  const playBtn = wrap.querySelector('#simPlay');
+  const resetBtn = wrap.querySelector('#simReset');
+
+  let seedCounter = 100;
+  function initCentroids(){
+    const rng = mulberry32(seedCounter++);
+    const idx = new Set();
+    while (idx.size < K) idx.add(Math.floor(rng() * basePts.length));
+    centroids = Array.from(idx).map(i => ({ x: basePts[i].x, y: basePts[i].y }));
+    labels = basePts.map(() => -1);
+    iteration = 0;
+    converged = false;
+  }
+
+  function assignStep(){
+    labels = basePts.map(p => {
+      let best = 0, bestD = Infinity;
+      centroids.forEach((c, ci) => { const d = dist(p, c); if (d < bestD) { bestD = d; best = ci; } });
+      return best;
+    });
+  }
+  function updateStep(){
+    const newC = centroids.map((c, ci) => {
+      const members = basePts.filter((p, i) => labels[i] === ci);
+      if (members.length === 0) return c;
+      return {
+        x: members.reduce((a,p)=>a+p.x,0)/members.length,
+        y: members.reduce((a,p)=>a+p.y,0)/members.length
+      };
+    });
+    let moved = 0;
+    newC.forEach((c,i) => moved += dist(c, centroids[i]));
+    centroids = newC;
+    if (moved < 0.01) converged = true;
+  }
+
+  function doStep(){
+    if (converged) return;
+    assignStep();
+    updateStep();
+    iteration++;
+    render();
+    if (converged){
+      stopPlay();
+      stepBtn.disabled = true;
+      statusEl.textContent = `Converged after ${iteration} iteration${iteration===1?'':'s'}.`;
+    } else {
+      statusEl.textContent = `Iteration ${iteration}`;
+    }
+  }
+
+  function stopPlay(){
+    if (playTimer){ clearInterval(playTimer); playTimer = null; playBtn.textContent = 'Auto play'; }
+  }
+
+  function render(){
+    const dots = basePts.map((p,i) => {
+      const c = s(p);
+      const color = labels[i] >= 0 ? CLUSTER_COLORS[labels[i]] : '#6f8a90';
+      return `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="5.5" fill="${color}" opacity="0.85"/>`;
+    }).join('');
+    const marks = centroids.map((cent,i) => {
+      const c = s(cent);
+      return `<g>
+        <line x1="${c.x-8}" y1="${c.y-8}" x2="${c.x+8}" y2="${c.y+8}" stroke="${CLUSTER_COLORS[i]}" stroke-width="3.4"/>
+        <line x1="${c.x-8}" y1="${c.y+8}" x2="${c.x+8}" y2="${c.y-8}" stroke="${CLUSTER_COLORS[i]}" stroke-width="3.4"/>
+        <text x="${c.x}" y="${c.y-14}" font-size="11" fill="#082430" text-anchor="middle" font-weight="600">${i}</text>
+      </g>`;
+    }).join('');
+    host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="K-Means simulation, iteration ${iteration}">${dots}${marks}</svg>
+      <div class="viz-caption">${CLUSTER_COLORS.slice(0,K).map((c,i)=>`<span class="k-dot" style="background:${c}"></span>Cluster ${i}&nbsp;&nbsp;`).join('')}</div>`;
+  }
+
+  function fullReset(){
+    stopPlay();
+    initCentroids();
+    stepBtn.disabled = false;
+    statusEl.textContent = 'Ready. Click Step to begin.';
+    render();
+  }
+
+  stepBtn.addEventListener('click', doStep);
+  resetBtn.addEventListener('click', fullReset);
+  playBtn.addEventListener('click', () => {
+    if (playTimer){ stopPlay(); return; }
+    playBtn.textContent = 'Pause';
+    playTimer = setInterval(() => { doStep(); if (converged) stopPlay(); }, 700);
+  });
+  wrap.querySelectorAll('[data-k]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      wrap.querySelectorAll('[data-k]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      K = Number(btn.dataset.k);
+      fullReset();
+    });
+  });
+
+  fullReset();
+  mount('kmeansSimMount', wrap);
+}
+
+/* ============================================================
+   10. WCSS / mean minimization slider
+   ============================================================ */
+function renderWCSS(){
+  const clusterPoints = [[1,2],[2,3],[1.5,1],[3,2],[2.5,3.5]];
+  const meanX = clusterPoints.reduce((a,p)=>a+p[0],0)/clusterPoints.length;
+  const meanY = clusterPoints.reduce((a,p)=>a+p[1],0)/clusterPoints.length;
+
+  function totalSqDist(cx){
+    return clusterPoints.reduce((sum,p) => sum + (p[0]-cx)**2 + (p[1]-meanY)**2, 0);
+  }
+  const xMin = meanX - 3, xMax = meanX + 3;
+  const N = 100;
+  const curve = [];
+  for (let i=0;i<=N;i++){
+    const cx = xMin + (xMax-xMin)*i/N;
+    curve.push({x: cx, y: totalSqDist(cx)});
+  }
+  const w = 620, h = 300, padL = 50, padB = 34, padT = 16, padR = 20;
+  const yMax = Math.max(...curve.map(p=>p.y));
+  function toSvgX(x){ return padL + (x-xMin)/(xMax-xMin) * (w-padL-padR); }
+  function toSvgY(y){ return h-padB - (y/yMax) * (h-padB-padT); }
+
+  const pathD = curve.map((p,i) => `${i===0?'M':'L'} ${toSvgX(p.x).toFixed(1)} ${toSvgY(p.y).toFixed(1)}`).join(' ');
+  const meanSvgX = toSvgX(meanX);
+
+  const wrap = el(`
+    <div>
+      <div class="svgHost"></div>
+      <input type="range" min="${xMin}" max="${xMax}" step="0.02" value="${meanX.toFixed(2)}" style="width:100%;margin-top:10px;accent-color:#0d8f9c;" aria-label="Candidate centroid x position">
+      <div class="viz-caption" id="wcssCaption"></div>
+    </div>`);
+  const host = wrap.querySelector('.svgHost');
+  const range = wrap.querySelector('input');
+  const caption = wrap.querySelector('#wcssCaption');
+
+  function renderAt(cx){
+    const y = totalSqDist(cx);
+    const mx = toSvgX(cx), my = toSvgY(y);
+    const ptsPx = clusterPoints.map(p => {
+      const px = padL + (p[0]-xMin)/(xMax-xMin)*(w-padL-padR);
+      return px;
+    });
+    host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Total squared distance curve, currently at position ${cx.toFixed(2)} with value ${y.toFixed(2)}">
+      <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#c9e5e4" stroke-width="1"/>
+      <text x="${padL}" y="${padT}" font-size="11.5" fill="#6f8a90">Total squared distance (WCSS)</text>
+      <text x="${w-padR}" y="${h-10}" font-size="11.5" fill="#6f8a90" text-anchor="end">Candidate centroid x-position →</text>
+      <line x1="${meanSvgX.toFixed(1)}" y1="${padT}" x2="${meanSvgX.toFixed(1)}" y2="${h-padB}" stroke="#c76a2c" stroke-width="1.4" stroke-dasharray="4,4"/>
+      <text x="${meanSvgX.toFixed(1)}" y="${padT+12}" font-size="11" fill="#c76a2c" text-anchor="middle">mean = ${meanX.toFixed(2)}</text>
+      <path d="${pathD}" fill="none" stroke="#0a7480" stroke-width="2.4"/>
+      <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="7" fill="#073b44" stroke="#fff" stroke-width="2"/>
+    </svg>`;
+    const atMean = Math.abs(cx - meanX) < 0.03;
+    caption.textContent = `WCSS at x = ${cx.toFixed(2)}: ${y.toFixed(2)}` + (atMean ? ' — this is the minimum, right at the mean.' : '');
+  }
+  range.addEventListener('input', () => renderAt(Number(range.value)));
+  renderAt(meanX);
+  mount('wcssMount', wrap);
+}
+
+/* ============================================================
+   11. Elbow curve (schematic — illustrates the described shape)
+   ============================================================ */
+function renderElbow(){
+  const w = 620, h = 260, padL = 46, padB = 34, padT = 16, padR = 20;
+  const Ks = [1,2,3,4,5,6,7,8];
+  // Schematic decreasing, convex curve flattening after K=4 — illustrates the
+  // pattern described in the source material (exact WCSS values were not provided).
+  const shape = [100, 58, 34, 21, 15.5, 12, 9.5, 7.8];
+  const yMax = Math.max(...shape);
+  function toX(k){ return padL + (k-1)/(Ks.length-1) * (w-padL-padR); }
+  function toY(v){ return h-padB - (v/yMax) * (h-padB-padT); }
+  const pathD = shape.map((v,i)=>`${i===0?'M':'L'} ${toX(Ks[i]).toFixed(1)} ${toY(v).toFixed(1)}`).join(' ');
+  const elbowIdx = 3;
+  const dots = shape.map((v,i)=>{
+    const isElbow = i === elbowIdx;
+    return `<circle cx="${toX(Ks[i]).toFixed(1)}" cy="${toY(v).toFixed(1)}" r="${isElbow?6:4}" fill="${isElbow?'#c76a2c':'#0a7480'}" stroke="#fff" stroke-width="1.4"/>`;
+  }).join('');
+  const labels = Ks.map(k=>`<text x="${toX(k).toFixed(1)}" y="${h-padB+18}" font-size="11" fill="#6f8a90" text-anchor="middle">${k}</text>`).join('');
+  const svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Elbow curve of WCSS versus K, flattening after K equals 4">
+    <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#c9e5e4" stroke-width="1"/>
+    <text x="${padL}" y="${padT}" font-size="11.5" fill="#6f8a90">WCSS (relative scale)</text>
+    <text x="${w-padR}" y="${h-6}" font-size="11.5" fill="#6f8a90" text-anchor="end">K →</text>
+    <path d="${pathD}" fill="none" stroke="#0a7480" stroke-width="2.4"/>
+    ${dots}${labels}
+    <text x="${toX(Ks[elbowIdx]).toFixed(1)}" y="${(toY(shape[elbowIdx])-14).toFixed(1)}" font-size="11.5" fill="#c76a2c" text-anchor="middle" font-weight="600">elbow ≈ K=4</text>
+  </svg>`;
+  mount('elbowMount', el(`<div>${svg}<div class="viz-caption">Shown schematically: WCSS drops quickly through small K, then flattens — the marked point is where adding another cluster stops buying much.</div></div>`));
+}
+
+/* ============================================================
+   12. Silhouette score chart (real values)
+   ============================================================ */
+function renderSilhouette(){
+  const data = [
+    {k:2, v:0.743}, {k:3, v:0.604}, {k:4, v:0.705},
+    {k:5, v:0.586}, {k:6, v:0.522}, {k:7, v:0.438}
+  ];
+  const w = 620, h = 280, padL = 46, padB = 34, padT = 16, padR = 20;
+  const yMax = 1;
+  function toX(k){ return padL + (k-2)/(7-2) * (w-padL-padR); }
+  function toY(v){ return h-padB - (v/yMax) * (h-padB-padT); }
+  const pathD = data.map((d,i)=>`${i===0?'M':'L'} ${toX(d.k).toFixed(1)} ${toY(d.v).toFixed(1)}`).join(' ');
+
+  const wrap = el(`<div><div class="svgHost"></div><div class="viz-caption" id="silCaption">Hover or tap a point to see its exact score.</div></div>`);
+  const host = wrap.querySelector('.svgHost');
+  const caption = wrap.querySelector('#silCaption');
+
+  const dots = data.map(d => {
+    const chosen = d.k === 4;
+    return `<circle class="silDot" data-k="${d.k}" data-v="${d.v}" cx="${toX(d.k).toFixed(1)}" cy="${toY(d.v).toFixed(1)}" r="${chosen?7:5}" fill="${chosen?'#c76a2c':'#0a7480'}" stroke="#fff" stroke-width="1.6" style="cursor:pointer;"/>`;
+  }).join('');
+  const labels = data.map(d=>`<text x="${toX(d.k).toFixed(1)}" y="${h-padB+18}" font-size="11" fill="#6f8a90" text-anchor="middle">K=${d.k}</text>`).join('');
+
+  host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Silhouette score by K, highest at K=2, chosen value K=4">
+    <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#c9e5e4" stroke-width="1"/>
+    <text x="${padL}" y="${padT}" font-size="11.5" fill="#6f8a90">Silhouette score</text>
+    <path d="${pathD}" fill="none" stroke="#0a7480" stroke-width="2.2"/>
+    ${dots}${labels}
+  </svg>`;
+
+  host.querySelectorAll('.silDot').forEach(dot => {
+    const show = () => {
+      const k = dot.dataset.k, v = Number(dot.dataset.v).toFixed(3);
+      caption.textContent = k === '4'
+        ? `K = 4 — silhouette score ${v} (chosen: strong score, and matches the elbow's four-segment structure).`
+        : k === '2'
+        ? `K = 2 — silhouette score ${v} (the single highest score, but too coarse for four real segments).`
+        : `K = ${k} — silhouette score ${v}.`;
+    };
+    dot.addEventListener('mouseenter', show);
+    dot.addEventListener('click', show);
+    dot.addEventListener('focus', show);
+  });
+  mount('silhouetteMount', wrap);
+}
+
+/* ============================================================
+   13. Segment bar chart
+   ============================================================ */
+function renderSegmentBar(){
+  const data = [
+    { name:'Occasional', v:588.1, color:'#c76a2c' },
+    { name:'Discount', v:1736.6, color:'#7a5cc9' },
+    { name:'Frequent', v:3564.1, color:'#0d8f9c' },
+    { name:'Premium', v:7906.5, color:'#073b44' }
+  ];
+  const w = 560, h = 280, padL = 40, padB = 40, padT = 20, padR = 20;
+  const yMax = 8500;
+  const bw = (w - padL - padR) / data.length;
+  function toY(v){ return h-padB - (v/yMax)*(h-padB-padT); }
+  const bars = data.map((d,i) => {
+    const x = padL + i*bw + bw*0.18;
+    const bw2 = bw*0.64;
+    const y = toY(d.v);
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw2.toFixed(1)}" height="${(h-padB-y).toFixed(1)}" fill="${d.color}" rx="3"/>
+      <text x="${(x+bw2/2).toFixed(1)}" y="${(y-8).toFixed(1)}" font-size="12" fill="#082430" text-anchor="middle" font-weight="600">$${Math.round(d.v).toLocaleString()}</text>
+      <text x="${(x+bw2/2).toFixed(1)}" y="${h-padB+18}" font-size="11.5" fill="#6f8a90" text-anchor="middle">${d.name}</text>`;
+  }).join('');
+  const svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Average annual spend by customer segment">
+    <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#c9e5e4" stroke-width="1"/>
+    <text x="${padL}" y="${padT-4}" font-size="11.5" fill="#6f8a90">Average annual spend, by segment</text>
+    ${bars}
+  </svg>`;
+  mount('segmentBarMount', el(`<div>${svg}</div>`));
+}
+
+/* ============================================================
+   14. Quiz interactions
+   ============================================================ */
+function renderQuizzes(){
+  document.querySelectorAll('.quiz').forEach(q => {
+    const head = q.querySelector('.quiz-head');
+    const body = q.querySelector('.quiz-body');
+    body.style.display = 'none';
+    head.addEventListener('click', () => {
+      body.style.display = body.style.display === 'none' ? 'block' : 'none';
+    });
+    const opts = q.querySelectorAll('.quiz-opt');
+    const explain = q.querySelector('.quiz-explain');
+    let answered = false;
+    opts.forEach(opt => {
+      opt.setAttribute('role','button');
+      opt.setAttribute('tabindex','0');
+      const choose = () => {
+        if (answered) return;
+        answered = true;
+        opts.forEach(o => {
+          if (o.dataset.correct === 'true') o.classList.add('correct');
+          else if (o === opt) o.classList.add('incorrect');
+        });
+        explain.classList.add('show');
+      };
+      opt.addEventListener('click', choose);
+      opt.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(); } });
+    });
+  });
+}
+
+/* ============================================================
+   Init
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  buildRuler();
+  renderHeroScatter();
+  renderUnlabeledScatter();
+  renderSupUnsup();
+  renderScenarios();
+  renderClusterReveal();
+  renderDistanceDemo();
+  renderAnalystCompare();
+  renderKMeansSim();
+  renderWCSS();
+  renderElbow();
+  renderSilhouette();
+  renderSegmentBar();
+  renderQuizzes();
+});
+
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Intro-to-clustering-and-K-means" target="_blank" rel="noopener">github.com/scaler-content/Intro-to-clustering-and-K-means</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

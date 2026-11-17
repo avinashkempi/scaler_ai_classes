@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anomaly detection post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --cream:#171310;
+  --paper:#221C16;
+  --ink:#F1E6D8;
+  --slate:#B8A692;
+  --copper:#CC7F47;
+  --copper-deep:#E39B5D;
+  --copper-soft: rgba(227,155,93,0.16);
+  --rust:#E07248;
+  --rust-soft: rgba(224,114,72,0.14);
+  --patina:#72B89C;
+  --patina-deep:#8FCBB2;
+  --patina-soft: rgba(114,184,156,0.12);
+  --line:#3A2E22;
+  --line-bright:#5A4632;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 16px 32px -16px rgba(0,0,0,.65);
+  --radius: 14px;
+  --maxw: 760px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto;}
+  *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
+}
+body{
+  margin:0;
+  background:
+    radial-gradient(ellipse 1100px 750px at 15% -8%, rgba(227,155,93,0.08), transparent 60%),
+    radial-gradient(ellipse 900px 650px at 92% 8%, rgba(114,184,156,0.05), transparent 55%),
+    radial-gradient(ellipse 1000px 800px at 50% 115%, rgba(224,114,72,0.05), transparent 55%),
+    var(--cream);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:'Inter',system-ui,sans-serif;
+  font-size:17px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  position:relative;
+}
+body::after{
+  content:"";
+  position:fixed; inset:0;
+  pointer-events:none;
+  z-index:0;
+  opacity:.05;
+  mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+#progressbar, header.hero, nav, .shell, main, footer{position:relative; z-index:1;}
+h1,h2,h3,h4{
+  font-family:'Fraunces',serif;
+  color:var(--copper-deep);
+  line-height:1.15;
+  font-weight:600;
+  margin:0 0 .5em;
+}
+p{margin:0 0 1em;}
+a{color:var(--copper-deep);}
+img{max-width:100%;display:block;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+::selection{background:var(--copper-soft);}
+:focus-visible{outline:3px solid var(--patina); outline-offset:2px; border-radius:4px;}
+
+/* ============ READING PROGRESS ============ */
+#progressbar{
+  position:fixed; top:0; left:0; height:3px; width:0%;
+  background:linear-gradient(90deg,var(--patina),var(--copper),var(--rust));
+  z-index:200; transition:width .1s linear;
+}
+
+/* ============ SHELL / LAYOUT ============ */
+.shell{
+  display:grid;
+  grid-template-columns: 250px minmax(0,1fr);
+  gap:0 48px;
+  max-width:1180px;
+  margin:0 auto;
+  padding:0 24px;
+}
+@media (max-width:1024px){
+  .shell{grid-template-columns: 1fr;}
+  #rail{display:none;}
+}
+
+/* ============ HERO ============ */
+header.hero{
+  padding:76px 24px 40px;
+  max-width:1180px;
+  margin:0 auto;
+  border-bottom:1px solid var(--line);
+}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12.5px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--rust);
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:18px;
+}
+.eyebrow::before{
+  content:"";
+  width:22px; height:1px; background:var(--rust);
+}
+h1.title{
+  font-size:clamp(2.1rem, 5vw, 3.4rem);
+  max-width:14ch;
+  margin-bottom:.3em;
+}
+.subtitle{
+  font-size:1.15rem;
+  color:var(--slate);
+  max-width:56ch;
+  margin-bottom:0;
+}
+.hero-meta{
+  display:flex; flex-wrap:wrap; gap:10px;
+  margin-top:28px;
+}
+.chip{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px;
+  padding:6px 12px;
+  border:1px solid var(--line);
+  border-radius:100px;
+  color:var(--slate);
+  background:var(--paper);
+}
+
+/* ============ RAIL / TOC ============ */
+#rail{
+  position:sticky; top:0; align-self:start;
+  padding:40px 0 40px;
+  height:100vh;
+  overflow-y:auto;
+}
+#rail .rail-title{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--slate); margin-bottom:14px;
+}
+#rail ul{list-style:none; margin:0; padding:0;}
+#rail li{margin:0;}
+#rail a{
+  display:flex; align-items:baseline; gap:8px;
+  text-decoration:none;
+  color:var(--slate);
+  font-size:14.5px;
+  padding:7px 10px;
+  border-left:2px solid transparent;
+  border-radius:0 6px 6px 0;
+  transition:.15s;
+}
+#rail a .num{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;
+  color:var(--copper);
+  min-width:16px;
+}
+#rail a:hover{background:var(--paper); color:var(--ink);}
+#rail a.active{
+  border-left-color:var(--copper);
+  background:var(--paper);
+  color:var(--copper-deep);
+  font-weight:600;
+}
+
+/* ============ MOBILE NAV ============ */
+#mobilenav{
+  display:none;
+  position:sticky; top:0; z-index:100;
+  background:rgba(251,243,230,.92);
+  backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);
+  padding:10px 0;
+}
+#mobilenav .scrollrow{
+  display:flex; gap:8px; overflow-x:auto;
+  padding:0 20px 4px;
+  scrollbar-width:none;
+}
+#mobilenav .scrollrow::-webkit-scrollbar{display:none;}
+#mobilenav a{
+  flex:0 0 auto;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px;
+  padding:6px 12px;
+  border:1px solid var(--line);
+  border-radius:100px;
+  color:var(--slate);
+  text-decoration:none;
+  white-space:nowrap;
+  background:var(--paper);
+}
+#mobilenav a.active{border-color:var(--copper); color:var(--copper-deep); font-weight:600;}
+@media (max-width:1024px){#mobilenav{display:block;}}
+
+/* ============ MAIN CONTENT ============ */
+main{padding:48px 0 100px; min-width:0;}
+.section{
+  max-width:var(--maxw);
+  margin:0 0 76px;
+  scroll-margin-top:24px;
+}
+.section:last-child{margin-bottom:0;}
+.section-head{
+  display:flex; align-items:center; gap:14px;
+  margin-bottom:20px;
+}
+.section-tag{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px; letter-spacing:.1em;
+  color:var(--copper-deep);
+  text-transform:uppercase;
+}
+.section h2{font-size:clamp(1.5rem,3.4vw,2rem); margin:0;}
+.section h3{font-size:1.2rem; margin-top:1.6em;}
+.lede{font-size:1.08rem; color:var(--slate);}
+
+hr.divider{
+  border:none; border-top:1px solid var(--line);
+  margin:56px 0;
+  max-width:var(--maxw);
+}
+
+/* method file number badge */
+.method-badge{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:13px;
+  width:34px; height:34px; border-radius:8px;
+  background:var(--copper-deep); color:var(--cream);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+
+/* ============ CARDS / CALLOUTS ============ */
+.card{
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:22px 24px;
+  box-shadow:var(--shadow);
+  margin:22px 0;
+}
+.callout{
+  border-left:3px solid var(--copper);
+  background:var(--paper);
+  border-radius:0 var(--radius) var(--radius) 0;
+  padding:18px 22px;
+  margin:24px 0;
+}
+.callout.patina{border-left-color:var(--patina);}
+.callout .callout-label{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--copper-deep);
+  margin-bottom:8px; display:block;
+}
+.callout.patina .callout-label{color:var(--patina-deep);}
+
+/* concept-check <details> */
+details.concept{
+  background:var(--patina-soft);
+  border:1px solid rgba(114,184,156,0.35);
+  border-radius:var(--radius);
+  padding:16px 20px;
+  margin:24px 0;
+}
+details.concept summary{
+  cursor:pointer;
+  font-weight:600;
+  color:var(--patina-deep);
+  list-style:none;
+  display:flex; align-items:center; gap:10px;
+}
+details.concept summary::-webkit-details-marker{display:none;}
+details.concept summary::before{
+  content:"+";
+  font-family:'IBM Plex Mono',monospace;
+  font-size:15px;
+  width:20px; height:20px;
+  border:1px solid var(--patina);
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+  transition:transform .2s;
+}
+details.concept[open] summary::before{content:"–"; transform:rotate(180deg);}
+details.concept .concept-body{margin-top:12px; color:var(--ink);}
+details.concept .concept-body p:last-child{margin-bottom:0;}
+
+/* ============ TABLES ============ */
+.table-wrap{overflow-x:auto; margin:22px 0; border-radius:var(--radius); border:1px solid var(--line);}
+table{width:100%; border-collapse:collapse; background:var(--paper); font-size:15px;}
+caption{caption-side:bottom; text-align:left; font-size:13px; color:var(--slate); padding:8px 16px;}
+th,td{padding:12px 16px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top;}
+thead th{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11.5px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--copper-deep);
+  background:var(--cream);
+}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:rgba(204,127,71,0.08);}
+td.num, th.num{font-family:'IBM Plex Mono',monospace;}
+.yes{color:var(--patina); font-weight:700;}
+.no{color:var(--rust); font-weight:700;}
+
+/* ============ FIGURE / IMAGE CHART ============ */
+figure.chart{
+  margin:24px 0; background:var(--paper);
+  border:1px solid var(--line); border-radius:var(--radius);
+  padding:16px; box-shadow:var(--shadow);
+}
+figure.chart img{border-radius:8px;}
+figure.chart figcaption{
+  padding:12px 6px 2px;
+  font-size:14px; color:var(--slate);
+}
+figure.chart figcaption .stat{
+  font-family:'IBM Plex Mono',monospace;
+  color:var(--copper-deep); font-weight:600;
+}
+
+/* ============ LEGEND ============ */
+.legend{display:flex; flex-wrap:wrap; gap:16px; font-size:13px; color:var(--slate); margin:10px 4px 0;}
+.legend span{display:inline-flex; align-items:center; gap:6px;}
+.dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
+.dot.normal{background:var(--patina);}
+.dot.anom{background:var(--rust);}
+
+/* ============ QUIZ ============ */
+.quiz{
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:22px 24px 20px;
+  margin:28px 0;
+  box-shadow:var(--shadow);
+}
+.quiz .quiz-tag{
+  font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--rust); margin-bottom:10px; display:block;
+}
+.quiz p.q{font-weight:600; margin-bottom:14px; color:var(--ink);}
+.quiz .opts{display:flex; flex-direction:column; gap:8px; margin-bottom:14px;}
+.quiz .opt{
+  display:flex; align-items:flex-start; gap:10px;
+  padding:10px 14px;
+  border:1px solid var(--line); border-radius:10px;
+  cursor:pointer; background:var(--cream);
+  font-size:15px;
+  transition:.15s;
+}
+.quiz .opt:hover{border-color:var(--copper);}
+.quiz .opt input{margin-top:4px; accent-color:var(--copper-deep);}
+.quiz .opt.correct{background:var(--patina-soft); border-color:var(--patina);}
+.quiz .opt.incorrect{background:var(--rust-soft); border-color:var(--rust);}
+.quiz button.check{
+  font-family:'IBM Plex Mono',monospace; font-size:13px;
+  background:var(--copper-deep); color:var(--cream);
+  border:none; border-radius:8px; padding:10px 18px;
+  cursor:pointer;
+}
+.quiz button.check:disabled{opacity:.45; cursor:default;}
+.quiz .explain{
+  margin-top:14px; padding:14px 16px;
+  background:var(--cream); border-radius:10px;
+  font-size:14.5px; color:var(--slate);
+  display:none;
+  border-left:3px solid var(--copper);
+}
+.quiz .explain.show{display:block;}
+.quiz .fb{font-size:13.5px; font-weight:600; margin-top:2px;}
+.quiz .fb.ok{color:var(--patina-deep);}
+.quiz .fb.bad{color:var(--rust);}
+
+/* ============ WIDGET SHELLS ============ */
+.widget{
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:22px;
+  margin:26px 0;
+  box-shadow:var(--shadow);
+}
+.widget-label{
+  font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--copper-deep); margin-bottom:4px; display:block;
+}
+.widget h4{margin:0 0 10px; font-size:1.05rem; color:var(--ink); font-family:'Inter'; font-weight:700;}
+.widget .hint{font-size:13.5px; color:var(--slate); margin-bottom:14px;}
+
+/* slider rows */
+.slider-row{display:flex; align-items:center; gap:14px; margin:10px 0;}
+.slider-row label{
+  font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--ink);
+  width:90px; flex-shrink:0;
+}
+.slider-row input[type=range]{flex:1; accent-color:var(--copper-deep);}
+.slider-row output{
+  font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--copper-deep);
+  width:70px; text-align:right; font-weight:600;
+}
+.fence-readout{
+  display:flex; gap:14px; margin-top:16px; flex-wrap:wrap;
+}
+.fence-readout .box{
+  flex:1; min-width:140px;
+  background:var(--cream); border:1px solid var(--line);
+  border-radius:10px; padding:12px 14px;
+}
+.fence-readout .box .k{font-size:11.5px; color:var(--slate); font-family:'IBM Plex Mono',monospace; text-transform:uppercase;}
+.fence-readout .box .v{font-family:'IBM Plex Mono',monospace; font-size:19px; color:var(--copper-deep); font-weight:600;}
+
+/* buttons */
+.btn{
+  font-family:'IBM Plex Mono',monospace; font-size:13px;
+  background:var(--copper-deep); color:var(--cream);
+  border:none; border-radius:8px; padding:10px 18px;
+  cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+}
+.btn:hover{background:var(--rust);}
+.btn.ghost{
+  background:transparent; color:var(--copper-deep); border:1px solid var(--copper);
+}
+.btn.ghost:hover{background:var(--copper-soft);}
+.btn:disabled{opacity:.4; cursor:default;}
+
+/* isolation widget */
+.iso-controls{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px;}
+.iso-stat{
+  font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--slate);
+}
+.iso-stat b{color:var(--copper-deep); font-size:16px;}
+.iso-log{
+  margin-top:12px; font-family:'IBM Plex Mono',monospace; font-size:12.5px;
+  color:var(--slate); background:var(--cream); border-radius:8px; padding:10px 12px;
+  min-height:22px; max-height:120px; overflow-y:auto;
+}
+
+/* LOF stepper */
+.stepper-nav{display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;}
+.stepper-nav button{
+  font-family:'IBM Plex Mono',monospace; font-size:12px;
+  background:var(--cream); border:1px solid var(--line); border-radius:100px;
+  padding:6px 12px; cursor:pointer; color:var(--slate);
+}
+.stepper-nav button.active{background:var(--copper-deep); color:var(--cream); border-color:var(--copper-deep);}
+.step-panel{display:none;}
+.step-panel.active{display:block;}
+.step-formula{
+  font-family:'IBM Plex Mono',monospace; font-size:14px;
+  background:linear-gradient(135deg, var(--copper-deep), var(--copper));
+  color:#241608;
+  padding:12px 16px; border-radius:8px; margin:12px 0; overflow-x:auto;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.25), inset 0 -2px 4px rgba(0,0,0,.25);
+  font-weight:600;
+}
+.stepper-btns{display:flex; gap:8px; margin-top:16px;}
+
+/* svg text */
+svg text{font-family:'IBM Plex Mono',monospace;}
+.svg-wrap{width:100%; overflow-x:auto;}
+.svg-wrap svg{width:100%; height:auto; display:block; min-width:480px;}
+
+/* tooltip for scatter points */
+.tt{
+  position:absolute; pointer-events:none; z-index:20;
+  background:var(--copper-deep); color:#241608;
+  font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;
+  padding:6px 10px; border-radius:6px; opacity:0; transition:opacity .1s;
+  white-space:nowrap;
+  box-shadow:0 4px 12px rgba(0,0,0,.4);
+}
+.tt.show{opacity:1;}
+.chart-rel{position:relative;}
+
+/* toggle pill group (ellipse demo) */
+.pillgroup{display:flex; gap:8px; margin-bottom:14px;}
+.pillgroup button{
+  font-family:'IBM Plex Mono',monospace; font-size:12.5px;
+  background:var(--cream); border:1px solid var(--line); border-radius:100px;
+  padding:7px 14px; cursor:pointer; color:var(--slate);
+}
+.pillgroup button.active{background:var(--copper-deep); color:var(--cream); border-color:var(--copper-deep);}
+
+/* takeaway list */
+.takeaways{list-style:none; margin:0; padding:0;}
+.takeaways li{
+  display:flex; gap:14px;
+  padding:16px 0; border-bottom:1px solid var(--line);
+}
+.takeaways li:last-child{border-bottom:none;}
+.takeaways .tick{
+  font-family:'IBM Plex Mono',monospace; color:var(--patina-deep); flex-shrink:0; font-size:18px;
+}
+
+/* code toggle */
+details.code{
+  margin:16px 0; border:1px solid var(--line); border-radius:10px; overflow:hidden;
+  background:#241811;
+}
+details.code summary{
+  cursor:pointer; list-style:none;
+  font-family:'IBM Plex Mono',monospace; font-size:12.5px;
+  color:var(--copper-soft); padding:10px 16px; background:#1c130d;
+}
+details.code summary::-webkit-details-marker{display:none;}
+details.code pre{
+  margin:0; padding:16px; overflow-x:auto;
+  font-family:'IBM Plex Mono',monospace; font-size:12.8px; line-height:1.6;
+  color:#F0E4D3;
+}
+details.code code .c{color:#8a9c8f;}
+details.code code .k{color:#E9A876;}
+details.code code .s{color:#B7CBA0;}
+
+/* rule of thumb */
+.rot{
+  display:grid; gap:10px; margin:18px 0;
+}
+.rot .row{
+  display:flex; gap:14px; align-items:baseline;
+  background:var(--cream); border:1px solid var(--line);
+  border-radius:10px; padding:12px 16px;
+}
+.rot .row b{color:var(--copper-deep); font-family:'IBM Plex Mono',monospace; font-size:13px; min-width:150px;}
+
+/* footer */
+footer{
+  border-top:1px solid var(--line);
+  padding:40px 24px 60px;
+  max-width:1180px; margin:0 auto;
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;
+}
+footer .fname{
+  font-family:'Fraunces',serif; font-weight:600; color:var(--copper-deep); font-size:1rem;
+}
+footer .fmeta{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--slate);}
+
+/* misc */
+ul.tight{padding-left:1.2em; margin:0 0 1em;}
+ul.tight li{margin-bottom:.5em;}
+strong{color:var(--ink);}
+.small{font-size:13.5px; color:var(--slate);}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Anomaly detection · Four unsupervised methods</span><span class="pn"><a href="../t-SNE-and-UMAP/" title="Dimensionality reduction · t-SNE and UMAP">← Prev</a><a href="../DSML-UnSL-1/" title="DSML Unsupervised 1 · PCA for high-dimensional data">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progressbar"></div>
+
+<header class="hero">
+  <div class="eyebrow">Aegis Bank · Fraud Analytics</div>
+  <h1 class="title">Anomaly Detection: Catching the Odd One Out</h1>
+  <p class="subtitle">A card-payments platform moves roughly two million transactions a day. A sliver of them don't belong. This is a walkthrough of four unsupervised methods for finding that sliver — the intuition behind each one, where it breaks, and when to reach for it.</p>
+  <div class="hero-meta">
+    <span class="chip">4 detection methods</span>
+    <span class="chip">1 shared dataset · 500 transactions</span>
+    <span class="chip">Unsupervised learning</span>
+  </div>
+</header>
+
+<nav id="mobilenav" aria-label="Section navigation">
+  <div class="scrollrow" id="mobilenav-row"></div>
+</nav>
+
+<div class="shell">
+  <nav id="rail" aria-label="Table of contents">
+    <div class="rail-title">On this page</div>
+    <ul id="rail-list"></ul>
+  </nav>
+
+  <main>
+
+    <!-- ================= INTRO ================= -->
+    <section class="section" id="intro" data-title="The problem">
+      <div class="section-head">
+        <span class="section-tag">Setting the scene</span>
+      </div>
+      <h2>Somewhere in two million transactions, a few don't belong</h2>
+      <p class="lede">Most card transactions look exactly like the millions before them: a familiar amount, a familiar time of day, a familiar location. A small number don't — a card suddenly used in another country, an unusually large purchase at 3 a.m., a login pattern that doesn't resemble the account owner's usual behavior. Nobody can review two million transactions by hand, so a fraud analytics team needs algorithms that raise a hand automatically whenever something looks off.</p>
+      <p>That's <strong>anomaly detection</strong>: a family of techniques for finding the data points that don't behave like the rest. This walkthrough covers four of the most commonly used methods, run against one shared dataset, so their differences are visible directly rather than just described.</p>
+    </section>
+
+    <!-- ================= WHAT IS AN ANOMALY ================= -->
+    <section class="section" id="what-is-anomaly" data-title="What is an anomaly?">
+      <div class="section-head"><span class="section-tag">Core intuition</span></div>
+      <h2>What even is an anomaly?</h2>
+      <p>Picture a video call with thirty people, cameras on. Twenty-nine are sitting normally, indoors, in ordinary lighting. One is upside down, doing a handstand in their kitchen. Nobody needs a formal definition of "unusual" to notice that person — it just visually jumps out.</p>
+      <p>That's the entire intuition behind anomaly detection: <strong>most data points behave like the group, and a few don't.</strong> Plotted as two features, it looks like this:</p>
+
+      <div class="widget" id="handstand-widget">
+        <span class="widget-label">Interactive scatter</span>
+        <h4>The "handstand on a video call" intuition</h4>
+        <p class="hint">Hover a point. Forty ordinary points cluster together; two sit far enough away to be obvious at a glance — no threshold or formula required.</p>
+        <div class="chart-rel">
+          <div class="svg-wrap"><svg id="handstand-svg" viewBox="0 0 620 420" role="img" aria-label="Scatter plot showing 40 clustered points labeled normal, and 2 distant points labeled outliers"></svg></div>
+          <div class="tt" id="handstand-tt"></div>
+        </div>
+        <div class="legend">
+          <span><i class="dot normal"></i>"Normal" people on the call (40)</span>
+          <span><i class="dot anom"></i>The handstand-in-kitchen outliers (2)</span>
+        </div>
+      </div>
+
+      <h3>Three words people mix up</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Term</th><th>Intuition</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Outlier</strong></td><td>A point already sitting inside your training data that looks different from the rest</td><td>One transaction in last month's data was ₹5,00,000 while most were ₹500–₹5,000</td></tr>
+            <tr><td><strong>Novelty</strong></td><td>A new point that arrives <em>after</em> training and doesn't resemble anything the model has seen before</td><td>Training data has zero fraud; a genuinely new pattern shows up next month</td></tr>
+            <tr><td><strong>Anomaly</strong></td><td>The umbrella term — both of the above count as anomalies</td><td>Used loosely to mean "the odd one out," in general</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The distinction that actually changes how you model:</p>
+      <ul class="tight">
+        <li><strong>Outlier detection</strong> — training data is a mixed bag (mostly normal, a few contaminated points), and the model detects the weird points <em>within</em> that same data.</li>
+        <li><strong>Novelty detection</strong> — training data is clean (assumed zero anomalies), and the model is later shown new data and must flag what doesn't fit.</li>
+      </ul>
+      <p class="small">Outlier detection is like reviewing yesterday's class photo and spotting the one kid photobombing upside down. Novelty detection is like training only on "normal" class photos, then being handed next week's photo and asked whether anything in it looks off. Every method covered below can run in either mode — the difference is just how <code>.fit()</code> and <code>.predict()</code> get used.</p>
+    </section>
+
+    <!-- ================= BUSINESS CASE ================= -->
+    <section class="section" id="dataset" data-title="The dataset">
+      <div class="section-head"><span class="section-tag">The working data</span></div>
+      <h2>The Aegis Bank transaction feed</h2>
+      <p>Every method below runs against the same simplified slice of one day's card transactions — <span class="mono">500 rows</span> — so the differences between methods are visible directly rather than described in the abstract. Each row has three features:</p>
+      <ul class="tight">
+        <li><code>amount</code> — transaction value, in ₹</li>
+        <li><code>hour</code> — hour of day the transaction happened (0–23)</li>
+        <li><code>distance_from_home_km</code> — how far the transaction location is from the cardholder's registered address</li>
+      </ul>
+      <p>Most transactions cluster around ordinary behavior — small-to-medium amounts, daytime hours, nearby locations — with a handful of intentionally unusual ones mixed in.</p>
+
+      <div class="table-wrap">
+        <table>
+          <caption>First five rows of the dataset, as loaded.</caption>
+          <thead><tr><th class="num">amount (₹)</th><th class="num">hour</th><th class="num">distance (km)</th></tr></thead>
+          <tbody>
+            <tr><td class="num">700.11</td><td class="num">11.92</td><td class="num">4.63</td></tr>
+            <tr><td class="num">1,095.46</td><td class="num">12.02</td><td class="num">4.47</td></tr>
+            <tr><td class="num">1,147.44</td><td class="num">13.43</td><td class="num">5.29</td></tr>
+            <tr><td class="num">539.57</td><td class="num">8.87</td><td class="num">0.39</td></tr>
+            <tr><td class="num">1,201.89</td><td class="num">19.04</td><td class="num">5.65</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small">A hidden <code>is_actually_anomaly</code> ground-truth column exists in this exercise purely so the methods can be checked against reality. In production, that column almost never exists upfront — which is exactly why unsupervised methods matter.</p>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ================= METHOD 1: IQR ================= -->
+    <section class="section" id="iqr" data-title="Method 1 · IQR">
+      <div class="section-head">
+        <span class="method-badge">01</span>
+        <div><span class="section-tag">Method 1</span><h2 style="margin-top:2px;">IQR — building a fence</h2></div>
+      </div>
+      <p class="lede">Line up 100 people on a running track by height, shortest to tallest. The middle 50% of that line — from the 25th person to the 75th — is the "typical" range. Build a fence a bit beyond both ends of that middle chunk, and anyone standing outside it looks unusually short or unusually tall. IQR does exactly this with numbers.</p>
+
+      <h3>The idea</h3>
+      <ol class="tight">
+        <li><strong>Q1</strong> = the value at the 25th percentile</li>
+        <li><strong>Q3</strong> = the value at the 75th percentile</li>
+        <li><strong>IQR</strong> = Q3 − Q1 (the width of the typical middle)</li>
+        <li>Lower fence = Q1 − 1.5 × IQR &nbsp;&nbsp; Upper fence = Q3 + 1.5 × IQR</li>
+        <li>Anything outside the fences is flagged</li>
+      </ol>
+      <p class="small">The <span class="mono">1.5</span> multiplier is the same convention that draws whiskers on a boxplot — not a law of nature, just a well-tested default that roughly covers ~99.3% of a normal distribution.</p>
+
+      <div class="widget" id="iqr-widget">
+        <span class="widget-label">Interactive calculator</span>
+        <h4>Build the fence yourself</h4>
+        <p class="hint">Drag Q1, Q3, and the multiplier k to see how the fences move. Starting values match a worked example: Q1 = 200, Q3 = 500.</p>
+        <div class="slider-row">
+          <label for="iqr-q1">Q1</label>
+          <input type="range" id="iqr-q1" min="0" max="800" value="200" step="10">
+          <output for="iqr-q1" id="iqr-q1-out">200</output>
+        </div>
+        <div class="slider-row">
+          <label for="iqr-q3">Q3</label>
+          <input type="range" id="iqr-q3" min="0" max="1200" value="500" step="10">
+          <output for="iqr-q3" id="iqr-q3-out">500</output>
+        </div>
+        <div class="slider-row">
+          <label for="iqr-k">k</label>
+          <input type="range" id="iqr-k" min="0.5" max="3" value="1.5" step="0.1">
+          <output for="iqr-k" id="iqr-k-out">1.5</output>
+        </div>
+        <div class="fence-readout">
+          <div class="box"><div class="k">IQR</div><div class="v" id="iqr-iqr">300</div></div>
+          <div class="box"><div class="k">Lower fence</div><div class="v" id="iqr-lower">-250</div></div>
+          <div class="box"><div class="k">Upper fence</div><div class="v" id="iqr-upper">950</div></div>
+        </div>
+        <div class="svg-wrap" style="margin-top:16px;"><svg id="iqr-svg" viewBox="0 0 620 90" role="img" aria-label="Number line showing the lower fence, Q1, Q3, and upper fence"></svg></div>
+      </div>
+
+      <p><strong>Why it's a good starting point:</strong> simple, no distribution-shape assumptions, and robust — it's built from percentiles, not the mean, so a few extreme values don't drag the fence around.</p>
+      <p><strong>Where it struggles:</strong> it looks at <em>one column at a time</em>. It has no idea that a ₹40,000 transaction is especially suspicious specifically because it also happened at 2 a.m., 900 km from home — <code>amount</code>, <code>hour</code>, and <code>distance</code> get checked completely separately.</p>
+
+      <figure class="chart">
+        <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/446/original/Screenshot_2026-08-14_012409.png?1786693174" alt="Boxplot of transaction amount next to a scatter plot of transaction index versus amount, with red dashed lines marking the upper and lower IQR fences and red points marking flagged transactions">
+        <figcaption>Fencing the <span class="mono">amount</span> column alone: lower fence <span class="stat">₹-500</span> (effectively ₹0), upper fence <span class="stat">₹6,500</span> → <span class="stat">24 of 500</span> transactions flagged.</figcaption>
+      </figure>
+
+      <div class="quiz" data-answer="c">
+        <span class="quiz-tag">Quiz</span>
+        <p class="q">A dataset has Q1 = 200 and Q3 = 500. Using the standard IQR rule (k = 1.5), what is the upper fence?</p>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="q1"> 500</label>
+          <label class="opt"><input type="radio" name="q1"> 650</label>
+          <label class="opt"><input type="radio" name="q1" value="correct"> 950</label>
+          <label class="opt"><input type="radio" name="q1"> 1250</label>
+        </div>
+        <button class="check">Check answer</button>
+        <div class="explain">IQR = Q3 − Q1 = 500 − 200 = 300. Upper fence = Q3 + 1.5 × IQR = 500 + 450 = <strong>950</strong>. 650 is what you'd get by forgetting to multiply the full IQR by 1.5, or adding it to the wrong quartile.</div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ================= METHOD 2: ELLIPTIC ENVELOPE ================= -->
+    <section class="section" id="ellipse" data-title="Method 2 · Elliptic Envelope">
+      <div class="section-head">
+        <span class="method-badge">02</span>
+        <div><span class="section-tag">Method 2</span><h2 style="margin-top:2px;">Elliptic Envelope — fencing in multiple dimensions</h2></div>
+      </div>
+      <p class="lede">IQR missed some ₹40,000 transactions because it only ever checked <code>amount</code> alone. What if a transaction is only weird when <code>amount</code> and <code>distance</code> are considered <em>together</em>?</p>
+      <p>Picture a flock of sheep grazing in a field, viewed from above — now there are two features: x and y position. Most sheep cluster in roughly an oval patch of grass. A sheep standing alone in a corner is suspicious even if, individually, neither its x-coordinate nor its y-coordinate is extreme. It's the <em>combination</em> that looks wrong.</p>
+      <p><strong>Elliptic Envelope</strong> does exactly this: it assumes normal data roughly follows a multivariate Gaussian shape, fits an ellipse (or ellipsoid, in higher dimensions) around the bulk of the data, and flags anything outside it.</p>
+
+      <h3>How it decides the shape</h3>
+      <p>It estimates the <strong>mean</strong> and <strong>covariance</strong> (how features vary together) of the data, then computes the <strong>Mahalanobis distance</strong> for every point — distance from the center, stretched or squeezed to account for the natural shape of the point cloud. Points with a large Mahalanobis distance sit outside the ellipse.</p>
+      <p class="small"><code>sklearn.covariance.EllipticEnvelope</code> takes one key parameter: <code>contamination</code> — your estimate of what fraction of the data is anomalous (e.g. 0.05 means "I expect ~5% of this data to be weird"). It directly controls how tight or loose the ellipse is drawn. This is the first method here that asks you to state a belief about how much fraud is in the mix, rather than needing none at all.</p>
+
+      <figure class="chart">
+        <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/447/original/Screenshot_2026-08-14_012419.png?1786693201" alt="Scatter plot of amount versus distance from home with a red contour line showing the fitted elliptical decision boundary, and red points marking transactions flagged outside it">
+        <figcaption>Amount vs. distance from home, with the fitted ellipse (red contour) as the fence. <span class="stat">20 of 500</span> transactions flagged.</figcaption>
+      </figure>
+
+      <h3>Where it falls short</h3>
+      <ul class="tight">
+        <li><strong>Assumes a Gaussian (elliptical) shape.</strong> If normal transactions actually form two separate blobs — say "grocery spend" and "travel spend" — the ellipse stretches to cover both, quietly treating the empty gap between them as normal too.</li>
+        <li><strong>Sensitive to the <code>contamination</code> guess.</strong> Get it wrong and the ellipse is drawn too tight (false alarms) or too loose (missed fraud).</li>
+        <li><strong>Struggles as dimensions grow</strong> — estimating covariance reliably gets harder with more features and limited data.</li>
+        <li><strong>Sensitive to the anomalies it's fit on</strong> — many training-set anomalies can distort where the ellipse's center and shape land in the first place.</li>
+      </ul>
+
+      <div class="widget" id="ellipse-widget">
+        <span class="widget-label">Interactive demo</span>
+        <h4>One ellipse, two clusters</h4>
+        <p class="hint">Toggle between a single blob of normal data and two separate legitimate clusters — watch what the fitted ellipse does to the empty space in between.</p>
+        <div class="pillgroup">
+          <button class="active" data-mode="one">One cluster</button>
+          <button data-mode="two">Two clusters</button>
+        </div>
+        <div class="svg-wrap"><svg id="ellipse-svg" viewBox="0 0 620 320" role="img" aria-label="Diagram of a fitted ellipse around either one cluster of points, or two separate clusters with a gap between them"></svg></div>
+        <p class="hint" id="ellipse-caption" style="margin-top:10px; margin-bottom:0;"></p>
+      </div>
+
+      <details class="concept">
+        <summary>Concept check — what happens in the empty space between two clusters?</summary>
+        <div class="concept-body">
+          <p><strong>If normal data actually forms two separate clusters — say small everyday purchases and large monthly rent payments — instead of one blob, why does Elliptic Envelope perform poorly, and what happens to points that fall in the empty space between them?</strong></p>
+          <p>A single ellipse can only describe one Gaussian-shaped region. To cover both legitimate clusters, the "best fit" ellipse stretches across the gap between them — which means that gap gets quietly classified as normal too, even though no real transaction ever lands there. A transaction that happens to fall in that gap would pass through undetected, while the method's real strength (catching points genuinely outside the whole cloud) still works fine at the outer edges.</p>
+        </div>
+      </details>
+
+      <div class="quiz" data-answer="b">
+        <span class="quiz-tag">Quiz</span>
+        <p class="q">Why does Elliptic Envelope struggle when the "normal" data actually forms two separate, well-separated clusters instead of one blob?</p>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="q2"> It can only handle one feature at a time, like IQR.</label>
+          <label class="opt"><input type="radio" name="q2" value="correct"> It fits a single ellipse, so the empty space between the two clusters gets treated as part of the "normal" region.</label>
+          <label class="opt"><input type="radio" name="q2"> It requires the contamination parameter to be exactly 0.</label>
+          <label class="opt"><input type="radio" name="q2"> It cannot be used with more than two features.</label>
+        </div>
+        <button class="check">Check answer</button>
+        <div class="explain">Elliptic Envelope assumes one multivariate Gaussian shape. With two separate legitimate clusters, the best-fit ellipse often stretches to cover both — quietly marking the gap as normal too. Handling multiple features via covariance is this method's whole advantage over IQR, and there's no constraint tying it to exactly two features or a contamination of zero.</div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ================= METHOD 3: ISOLATION FOREST ================= -->
+    <section class="section" id="isoforest" data-title="Method 3 · Isolation Forest">
+      <div class="section-head">
+        <span class="method-badge">03</span>
+        <div><span class="section-tag">Method 3</span><h2 style="margin-top:2px;">Isolation Forest — Guess Who, but for data points</h2></div>
+      </div>
+      <p class="lede">Instead of modeling what "normal" looks like and drawing a boundary around it, this method flips the question: <strong>how easy is it to isolate this one point from everybody else?</strong></p>
+      <p>Think of 20 Questions, played on a packed stadium — isolating one specific person using only yes/no questions that randomly split the crowd in half ("Are you sitting in the left half? Are you standing? Are you wearing red?").</p>
+      <ul class="tight">
+        <li>To isolate an average, blend-in person, you need <strong>many</strong> random questions — they share enough traits with tons of other people that it takes a while to narrow down to just them.</li>
+        <li>To isolate the person who's <strong>8 feet tall, in a chicken costume, sitting alone in the empty top row</strong>, you'll probably manage it in <strong>one or two</strong> — almost any random split already separates them from the crowd.</li>
+      </ul>
+      <p>Isolation Forest does this with data, at scale:</p>
+      <ol class="tight">
+        <li>Build many random decision trees. At each split, pick a random feature and a random threshold.</li>
+        <li>Measure how many splits it takes to isolate each point into its own region, alone.</li>
+        <li>Few splits (short path length) → likely an anomaly — it's easy to separate.</li>
+        <li>Many splits → likely normal — it's tangled up with lots of similar neighbors.</li>
+      </ol>
+
+      <div class="widget" id="iso-widget">
+        <span class="widget-label">Signature interactive · run it yourself</span>
+        <h4>The isolation interrogation</h4>
+        <p class="hint">Pick a point below, then run the interrogation: random splits chop the plane in half, one at a time, discarding whichever side doesn't contain your point — until it's alone. Count how many splits it takes.</p>
+        <div class="svg-wrap"><svg id="iso-svg" viewBox="0 0 620 420" role="img" aria-label="Scatter plot of a dense cluster of 25 points and one distant point; clicking a point lets you run a live isolation simulation"></svg></div>
+        <div class="iso-controls">
+          <button class="btn" id="iso-run" disabled>Run isolation</button>
+          <button class="btn ghost" id="iso-reset">Reset</button>
+          <span class="iso-stat">Selected: <b id="iso-selected">none</b></span>
+          <span class="iso-stat">Splits so far: <b id="iso-splits">0</b></span>
+        </div>
+        <div class="iso-log" id="iso-log" aria-live="polite">Click a point on the chart, then press "Run isolation."</div>
+        <div class="legend">
+          <span><i class="dot normal"></i>Dense cluster (25 points)</span>
+          <span><i class="dot anom"></i>The lone point</span>
+        </div>
+      </div>
+
+      <figure class="chart">
+        <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/449/original/Screenshot_2026-08-14_012513.png?1786693251" alt="Scatter plot of amount versus distance from home where point size and color indicate the Isolation Forest anomaly score, with larger red points marking flagged transactions">
+        <figcaption>Run across all three features (<span class="mono">amount</span>, <span class="mono">hour</span>, <span class="mono">distance</span>) — point size is proportional to anomaly score. <span class="stat">20 of 500</span> transactions flagged.</figcaption>
+      </figure>
+
+      <div class="quiz" data-answer="b2">
+        <span class="quiz-tag">Quiz</span>
+        <p class="q">In Isolation Forest, which type of point tends to get a high anomaly score?</p>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="q3"> A point that requires many random splits to isolate into its own region.</label>
+          <label class="opt"><input type="radio" name="q3" value="correct"> A point that gets isolated into its own region after just a few random splits.</label>
+          <label class="opt"><input type="radio" name="q3"> A point that lies exactly on the mean of every feature.</label>
+          <label class="opt"><input type="radio" name="q3"> A point with the lowest amount value in the dataset.</label>
+        </div>
+        <button class="check">Check answer</button>
+        <div class="explain">Isolation Forest scores anomalousness by path length. Anomalies stick out enough that almost any random split isolates them quickly (short path length = high anomaly score); normal points are tangled up with similar neighbors and take many splits (long path length = low anomaly score). A low <code>amount</code> alone doesn't guarantee anomaly status — it depends on isolation difficulty across all features together.</div>
+      </div>
+
+      <h3>Scoring new transactions (novelty mode)</h3>
+      <p>In production, the goal usually isn't just flagging outliers within today's batch — it's fitting the forest once, then scoring tomorrow's incoming transactions live. That's novelty detection in practice:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th class="num">amount (₹)</th><th class="num">hour</th><th class="num">distance (km)</th><th>prediction</th></tr></thead>
+          <tbody>
+            <tr><td class="num">900</td><td class="num">13</td><td class="num">2</td><td>normal ✅</td></tr>
+            <tr><td class="num">38,000</td><td class="num">2</td><td class="num">1,400</td><td><strong>FLAGGED 🚩</strong></td></tr>
+            <tr><td class="num">1,500</td><td class="num">15</td><td class="num">5</td><td>normal ✅</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>The major disadvantage</h3>
+      <p>Isolation Forest excels at catching <strong>globally distant</strong> points — things far from everyone. It can miss <strong>local anomalies</strong>: points only unusual relative to their immediate neighborhood, even if they're not that far from the overall data cloud in absolute terms.</p>
+      <p class="small">Picture a wealthy neighborhood where every house is worth ₹5 crore, next to a modest neighborhood where every house is worth ₹40 lakh. A house worth ₹1 crore isn't a global outlier — similar values exist elsewhere in the city — but sitting in the middle of the ₹40 lakh neighborhood, it's a local anomaly Isolation Forest can under-flag, because globally, ₹1 crore isn't that extreme. That gap is exactly what the next method is built to catch.</p>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ================= METHOD 4: LOF ================= -->
+    <section class="section" id="lof" data-title="Method 4 · LOF">
+      <div class="section-head">
+        <span class="method-badge">04</span>
+        <div><span class="section-tag">Method 4</span><h2 style="margin-top:2px;">Local Outlier Factor — weird compared to your neighbors</h2></div>
+      </div>
+      <p class="lede">LOF doesn't ask "how far is this point from everything." It asks: <strong>how much sparser is this point's neighborhood compared to its neighbors' neighborhoods?</strong></p>
+      <p>Picture houses measured by how close their nearest neighbors are. In a dense downtown block, every house has five others within 50 meters. If your point's own pocket has its nearest neighbors 500 meters away — while those same neighbors have tightly-packed neighbors of their own nearby — your point lives in a comparatively empty patch. That relative sparseness, not the absolute distance, is what LOF measures.</p>
+      <p>An LOF score near <strong>1</strong> means "about as dense as my neighbors" (normal). A score <strong>significantly greater than 1</strong> means "my neighborhood is noticeably sparser than my neighbors'" (anomalous).</p>
+
+      <div class="widget" id="lof-stepper">
+        <span class="widget-label">Step-by-step process explorer</span>
+        <h4>How LOF is built, piece by piece</h4>
+        <div class="stepper-nav" id="lof-nav"></div>
+        <div id="lof-panels"></div>
+        <div class="stepper-btns">
+          <button class="btn ghost" id="lof-prev">← Back</button>
+          <button class="btn" id="lof-next">Next →</button>
+        </div>
+      </div>
+
+      <div class="widget" id="lof-toy-widget">
+        <span class="widget-label">Interactive scatter · real computed scores</span>
+        <h4>LOF scores across a dense cluster, a sparse cluster, and a lone point</h4>
+        <p class="hint">30 points packed tightly, 15 points spread loosely, and one lone point in between. Color and size both encode the actual computed LOF score (k = 5) — hover any point for its exact value.</p>
+        <div class="chart-rel">
+          <div class="svg-wrap"><svg id="lof-svg" viewBox="0 0 620 420" role="img" aria-label="Scatter plot of a dense cluster, a sparse cluster, and a lone point, colored and sized by their computed Local Outlier Factor score"></svg></div>
+          <div class="tt" id="lof-tt"></div>
+        </div>
+        <p class="hint" style="margin-top:8px; margin-bottom:0;">Notice: the lone point <em>and</em> the outer edge of the sparse cluster can both score high — LOF cares about relative density, not raw isolation alone.</p>
+      </div>
+
+      <div class="quiz" data-answer="b">
+        <span class="quiz-tag">Quiz</span>
+        <p class="q">A point has an LOF score of approximately 1. What does this suggest?</p>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="q4"> The point is definitely fraudulent.</label>
+          <label class="opt"><input type="radio" name="q4" value="correct"> The point's local density is roughly similar to its neighbors' local density — it fits in.</label>
+          <label class="opt"><input type="radio" name="q4"> The point has the maximum possible distance from all other points.</label>
+          <label class="opt"><input type="radio" name="q4"> The point should always be removed from the dataset before modeling.</label>
+        </div>
+        <button class="check">Check answer</button>
+        <div class="explain">LOF is a ratio of a point's neighbors' average density to its own density. A ratio near 1 means the neighborhood is about as packed as its neighbors' neighborhoods — it blends in locally. Scores well above 1 are the signal worth investigating. LOF is a continuous signal, not an automatic verdict either way.</div>
+      </div>
+
+      <figure class="chart">
+        <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/451/original/Screenshot_2026-08-14_012543.png?1786693334" alt="Scatter plot of amount versus distance from home where point size indicates the LOF score, with red points marking transactions flagged as outliers" >
+        <figcaption>Run across all three features on the full dataset — point size ∝ LOF score. <span class="stat">20 of 500</span> transactions flagged.</figcaption>
+      </figure>
+
+      <h3>Disadvantages of LOF</h3>
+      <ul class="tight">
+        <li><strong>Computationally heavier</strong> — needs nearest-neighbor distances for every point (and their neighbors' neighbors), scaling worse than Isolation Forest on very large datasets.</li>
+        <li><strong>Very sensitive to <code>n_neighbors</code> (k)</strong> — the right value usually needs experimentation.</li>
+        <li><strong>No natural probability or hard cutoff</strong> — scores are relative and need a chosen threshold.</li>
+        <li><strong>Struggles where density legitimately varies smoothly</strong> across the dataset — can over-flag naturally sparser (but still normal) regions if k is poorly chosen.</li>
+        <li><strong>High-dimensional data is hard on any distance-based method</strong>, LOF included — as features grow, "near" and "far" get less meaningful.</li>
+      </ul>
+
+      <details class="concept">
+        <summary>Think about it — where does Isolation Forest miss what LOF catches?</summary>
+        <div class="concept-body">
+          <p><strong>Isolation Forest flags points that are globally easy to separate from the rest of the data. LOF compares a point's local density to its neighbors' local density. Can you think of a real-world example — outside of banking or fraud — where a point would <em>not</em> be flagged by Isolation Forest but <em>would</em> be flagged by LOF?</strong></p>
+          <p>The "₹1 crore house in a ₹40 lakh neighborhood" analogy above is one version of this. Try applying the same shape of reasoning to a different domain — exam scores within a single classroom, running pace within a pack of runners, response times within one team's on-call rotation — anywhere a value is unremarkable at the population level but stands out sharply against its immediate neighbors.</p>
+        </div>
+      </details>
+
+      <div class="quiz" data-answer="b">
+        <span class="quiz-tag">Quiz</span>
+        <p class="q">A team is choosing between Isolation Forest and LOF for a dataset where they specifically care about catching fraud that's locally unusual — a transaction that fits the overall population but stands out sharply against its closest peer group. Which method is the better starting choice, and why?</p>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="q5"> Isolation Forest, because it's always more accurate than LOF.</label>
+          <label class="opt"><input type="radio" name="q5" value="correct"> LOF, because it explicitly compares a point's density to its neighbors' density rather than judging it against the whole dataset.</label>
+          <label class="opt"><input type="radio" name="q5"> IQR, because it's simpler and simplicity always wins.</label>
+          <label class="opt"><input type="radio" name="q5"> Elliptic Envelope, because ellipses can bend to fit local neighborhoods.</label>
+        </div>
+        <button class="check">Check answer</button>
+        <div class="explain">This is precisely the scenario LOF was designed for — local, relative anomalies that a global method like Isolation Forest can under-flag. No method is "always" more accurate; it's dataset-dependent. IQR can't even combine features, so simplicity doesn't help here. A single ellipse is a global shape — it doesn't adapt locally.</div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ================= COMPARISON ================= -->
+    <section class="section" id="comparison" data-title="Comparing all methods">
+      <div class="section-head"><span class="section-tag">Zooming out</span></div>
+      <h2>Comparing all four methods</h2>
+      <p class="lede">The cheat-sheet version — what each method actually does, and what it assumes to do it.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Method</th><th>Core idea</th><th>Multi-feature?</th><th>Assumes a shape?</th><th>Local anomalies?</th><th>Needs contamination guess?</th></tr></thead>
+          <tbody>
+            <tr><td><strong>IQR</strong></td><td>Fence around the middle 50%</td><td class="no">✗ one at a time</td><td>No</td><td class="no">✗</td><td>No</td></tr>
+            <tr><td><strong>Elliptic Envelope</strong></td><td>Fit an ellipse around the normal cloud</td><td class="yes">✓</td><td>Yes — Gaussian/elliptical</td><td class="no">✗</td><td>Yes</td></tr>
+            <tr><td><strong>Isolation Forest</strong></td><td>How few random splits isolate a point?</td><td class="yes">✓</td><td>No</td><td class="no">✗ mainly global</td><td>Yes (or default)</td></tr>
+            <tr><td><strong>LOF</strong></td><td>Compare local density to neighbors' density</td><td class="yes">✓</td><td>No</td><td class="yes">✓</td><td>Yes (or default)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Rule of thumb</h3>
+      <div class="rot">
+        <div class="row"><b>Quick sanity check</b> single column → <strong>IQR</strong></div>
+        <div class="row"><b>Roughly bell-shaped</b> multiple features, no sub-clusters → <strong>Elliptic Envelope</strong></div>
+        <div class="row"><b>Large dataset</b> care about points globally far from everything → <strong>Isolation Forest</strong></div>
+        <div class="row"><b>Neighborhood-relative</b> care about points only weird next to their neighbors → <strong>LOF</strong></div>
+      </div>
+      <p class="small">In practice, fraud teams often run more than one of these and treat agreement across methods as a stronger signal than any single method's flag on its own.</p>
+
+      <div class="widget" id="agreement-widget">
+        <span class="widget-label">Interactive chart · real results from this dataset</span>
+        <h4>How many methods agreed on each transaction?</h4>
+        <p class="hint">Bar height uses a square-root scale so the dominant "no methods flagged it" bar doesn't crowd out the rest — exact counts are labeled on every bar.</p>
+        <div class="svg-wrap"><svg id="agree-svg" viewBox="0 0 620 320" role="img" aria-label="Bar chart of how many of the 500 transactions had 0, 1, 2, 3, or 4 detection methods agree they were outliers"></svg></div>
+      </div>
+      <div class="callout patina">
+        <span class="callout-label">The payoff</span>
+        <p style="margin:0;">Of the 20 transactions where <strong>three or more</strong> methods agreed, all <strong>20 out of 20</strong> were confirmed true anomalies against the ground-truth column. Cross-method agreement was a stronger signal here than any single method's flag.</p>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ================= WRAP UP ================= -->
+    <section class="section" id="wrapup" data-title="Key takeaways">
+      <div class="section-head"><span class="section-tag">Summary</span></div>
+      <h2>Key takeaways</h2>
+      <ul class="takeaways">
+        <li><span class="tick">→</span><span>The difference between <strong>outlier</strong> and <strong>novelty</strong> detection changes how <code>.fit()</code> / <code>.predict()</code> get used — mixed training data vs. clean training data plus new incoming points.</span></li>
+        <li><span class="tick">→</span><span><strong>IQR</strong> builds a fence around the middle 50% — fast and simple, but blind to relationships between features.</span></li>
+        <li><span class="tick">→</span><span><strong>Elliptic Envelope</strong> handles multiple features at once by fitting an ellipse, but assumes one Gaussian-shaped blob.</span></li>
+        <li><span class="tick">→</span><span><strong>Isolation Forest</strong> makes no shape assumptions and scales well, catching globally distant points — but can miss local anomalies.</span></li>
+        <li><span class="tick">→</span><span><strong>Local Outlier Factor</strong> builds up from k-distance → neighborhood set → reachability distance → local reachability density → the LOF ratio itself, and is the go-to for local, neighborhood-relative anomalies.</span></li>
+        <li><span class="tick">→</span><span>Run more than one method side by side — agreement across methods is often a stronger signal than any single flag.</span></li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <span class="fname">Anomaly detection post read</span>
+  <span class="fmeta">Four unsupervised methods · one shared dataset</span>
+</footer>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   DATA — exact values reproduced from the source notebook's
+   deterministic code (fixed random seeds), and real dataset
+   output numbers quoted directly from the source.
+   ============================================================ */
+const DATA = {"handstand":{"normal":[[5.397,4.889],[5.518,6.218],[4.813,4.813],[6.263,5.614],[4.624,5.434],[4.629,4.627],[5.194,3.469],[3.62,4.55],[4.19,5.251],[4.274,3.87],[6.173,4.819],[5.054,3.86],[4.564,5.089],[4.079,5.301],[4.519,4.767],[4.519,6.482],[4.989,4.154],[5.658,4.023],[5.167,3.432],[3.937,5.157],[5.591,5.137],[4.907,4.759],[3.817,4.424],[4.631,5.846],[5.275,3.59],[5.259,4.692],[4.458,5.489],[5.825,5.745],[4.329,4.753],[5.265,5.78],[4.617,4.851],[4.115,4.043],[5.65,6.085],[4.942,5.803],[5.289,4.484],[5.289,6.23],[4.971,6.252],[2.904,5.658],[5.07,4.761],[5.073,3.41]],"outliers":[[9.5,1.0],[0.5,9.0]]},"isoGutCheck":{"cluster":[[4.868,5.214],[5.887,4.689],[4.515,4.699],[5.549,5.197],[4.682,5.308],[5.058,5.581],[4.579,4.803],[4.765,4.122],[5.178,5.157],[5.003,4.859],[4.151,4.748],[4.794,4.519],[4.903,5.242],[6.132,5.105],[5.155,4.955],[3.849,4.984],[5.036,6.478],[4.885,5.181],[4.979,4.299],[5.686,5.451],[5.475,4.454],[5.842,4.159],[5.352,6.314],[4.406,4.66],[5.06,4.698]],"lonePoint":[[9,9]]},"lofToy":{"points":[[2.447,2.109],[2.024,1.534],[1.931,1.911],[1.979,1.843],[1.989,1.881],[1.672,2.221],[2.22,2.427],[2.013,1.899],[1.864,1.613],[2.246,1.725],[1.704,1.949],[2.372,2.059],[1.744,1.822],[2.156,1.96],[1.808,1.942],[2.186,2.494],[1.689,1.843],[1.799,1.395],[1.769,1.744],[2.281,1.967],[1.594,2.162],[1.911,1.564],[1.851,1.853],[1.782,2.007],[1.438,1.933],[2.253,2.213],[2.277,2.28],[2.372,1.72],[2.211,1.535],[1.849,1.521],[9.258,9.6],[7.763,10.13],[7.19,8.181],[8.184,6.723],[8.526,10.327],[6.77,9.079],[7.815,10.124],[8.581,8.811],[8.772,8.299],[6.325,9.67],[6.355,8.286],[8.737,6.995],[8.174,9.401],[7.971,6.934],[4.501,6.834],[5.0,5.0]],"scores":[0.9793,1.0409,0.9961,0.9819,0.9945,1.521,1.1739,1.0554,1.0683,1.2143,0.9867,0.9766,1.0028,1.1369,0.9351,1.2643,1.0304,1.0933,0.9983,1.0305,1.5311,1.0933,0.9825,1.0553,1.6762,1.0028,1.123,1.1918,1.1081,1.0933,0.9728,0.9498,1.0532,1.1193,0.9837,1.03,0.9474,0.9728,1.0236,1.0439,1.0679,1.1138,1.0519,1.0783,1.6384,3.3047],"pred":[1,1,1,1,1,-1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,1,1,1,-1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,-1],"n_dense":30,"n_sparse":15}};
+
+const COPPER = "#E39B5D", PATINA = "#72B89C", RUST = "#E07248", INK = "#F1E6D8", LINE = "#4A3A28", SLATE="#B8A692";
+const SVGNS = "http://www.w3.org/2000/svg";
+function el(tag, attrs){
+  const e = document.createElementNS(SVGNS, tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+/* ============================================================
+   READING PROGRESS BAR
+   ============================================================ */
+const progressbar = document.getElementById('progressbar');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const height = h.scrollHeight - h.clientHeight;
+  progressbar.style.width = height > 0 ? (scrolled/height*100) + "%" : "0%";
+}
+document.addEventListener('scroll', updateProgress, {passive:true});
+updateProgress();
+
+/* ============================================================
+   TOC / RAIL + MOBILE NAV BUILD
+   ============================================================ */
+const sections = Array.from(document.querySelectorAll('main .section'));
+const railList = document.getElementById('rail-list');
+const mobileRow = document.getElementById('mobilenav-row');
+sections.forEach((sec, i) => {
+  const title = sec.dataset.title || sec.id;
+  const li = document.createElement('li');
+  const a = document.createElement('a');
+  a.href = '#' + sec.id;
+  a.innerHTML = '<span class="num">' + String(i+1).padStart(2,'0') + '</span><span>'+title+'</span>';
+  li.appendChild(a);
+  railList.appendChild(li);
+
+  const ma = document.createElement('a');
+  ma.href = '#' + sec.id;
+  ma.textContent = title;
+  mobileRow.appendChild(ma);
+});
+
+const railLinks = Array.from(document.querySelectorAll('#rail a'));
+const mobileLinks = Array.from(document.querySelectorAll('#mobilenav a'));
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting){
+      const id = entry.target.id;
+      railLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#'+id));
+      mobileLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#'+id));
+      const activeMobile = document.querySelector('#mobilenav a.active');
+      if(activeMobile) activeMobile.scrollIntoView({block:'nearest', inline:'center', behavior:'smooth'});
+    }
+  });
+}, {rootMargin: "-15% 0px -70% 0px", threshold: 0});
+sections.forEach(sec => io.observe(sec));
+
+/* ============================================================
+   QUIZ LOGIC
+   ============================================================ */
+document.querySelectorAll('.quiz').forEach(quiz => {
+  const btn = quiz.querySelector('button.check');
+  const opts = Array.from(quiz.querySelectorAll('.opt'));
+  const explain = quiz.querySelector('.explain');
+  btn.addEventListener('click', () => {
+    const checked = quiz.querySelector('input[type=radio]:checked');
+    if(!checked){ return; }
+    opts.forEach(o => {
+      const input = o.querySelector('input');
+      o.classList.remove('correct','incorrect');
+      if(input.value === 'correct'){ o.classList.add('correct'); }
+      else if(input === checked){ o.classList.add('incorrect'); }
+    });
+    explain.classList.add('show');
+    btn.disabled = true;
+    opts.forEach(o => o.querySelector('input').disabled = true);
+  });
+});
+
+/* ============================================================
+   1) HANDSTAND SCATTER
+   ============================================================ */
+(function(){
+  const svg = document.getElementById('handstand-svg');
+  const tt = document.getElementById('handstand-tt');
+  const W = 620, H = 420, PAD = 40;
+  const xs = DATA.handstand.normal.map(p=>p[0]).concat(DATA.handstand.outliers.map(p=>p[0]));
+  const ys = DATA.handstand.normal.map(p=>p[1]).concat(DATA.handstand.outliers.map(p=>p[1]));
+  const xMin = Math.min(...xs)-0.7, xMax = Math.max(...xs)+0.7;
+  const yMin = Math.min(...ys)-0.7, yMax = Math.max(...ys)+0.7;
+  function sx(x){ return PAD + (x-xMin)/(xMax-xMin) * (W-2*PAD); }
+  function sy(y){ return H-PAD - (y-yMin)/(yMax-yMin) * (H-2*PAD); }
+
+  // axes
+  svg.appendChild(el('line', {x1:PAD, y1:H-PAD, x2:W-PAD, y2:H-PAD, stroke:LINE, 'stroke-width':1}));
+  svg.appendChild(el('line', {x1:PAD, y1:PAD, x2:PAD, y2:H-PAD, stroke:LINE, 'stroke-width':1}));
+  const xl = el('text', {x:W/2, y:H-8, fill:SLATE, 'font-size':12, 'text-anchor':'middle'}); xl.textContent='feature 1'; svg.appendChild(xl);
+  const yl = el('text', {x:14, y:H/2, fill:SLATE, 'font-size':12, 'text-anchor':'middle', transform:'rotate(-90 14 '+(H/2)+')'}); yl.textContent='feature 2'; svg.appendChild(yl);
+
+  DATA.handstand.normal.forEach((p,i) => {
+    const c = el('circle', {cx:sx(p[0]), cy:sy(p[1]), r:6, fill:PATINA, opacity:0.85});
+    c.addEventListener('mouseenter', (e)=>showTT(tt, e, 'Normal · ('+p[0].toFixed(2)+', '+p[1].toFixed(2)+')'));
+    c.addEventListener('mousemove', (e)=>moveTT(tt,e));
+    c.addEventListener('mouseleave', ()=>hideTT(tt));
+    svg.appendChild(c);
+  });
+  DATA.handstand.outliers.forEach((p,i) => {
+    const g = starPath(sx(p[0]), sy(p[1]), 11);
+    g.setAttribute('fill', RUST);
+    g.addEventListener('mouseenter', (e)=>showTT(tt, e, 'Outlier · handstand · ('+p[0].toFixed(2)+', '+p[1].toFixed(2)+')'));
+    g.addEventListener('mousemove', (e)=>moveTT(tt,e));
+    g.addEventListener('mouseleave', ()=>hideTT(tt));
+    svg.appendChild(g);
+  });
+})();
+
+function starPath(cx, cy, r){
+  const spikes=5, step=Math.PI/spikes;
+  let d = "";
+  let rot = -Math.PI/2;
+  for(let i=0;i<spikes;i++){
+    let x = cx + Math.cos(rot)*r, y = cy + Math.sin(rot)*r;
+    d += (i===0?"M":"L") + x.toFixed(2) + "," + y.toFixed(2);
+    rot += step;
+    x = cx + Math.cos(rot)*r*0.45; y = cy + Math.sin(rot)*r*0.45;
+    d += "L" + x.toFixed(2) + "," + y.toFixed(2);
+    rot += step;
+  }
+  d += "Z";
+  return el('path', {d:d});
+}
+function showTT(tt, e, text){
+  tt.textContent = text;
+  tt.classList.add('show');
+  moveTT(tt, e);
+}
+function moveTT(tt, e){
+  const wrap = tt.parentElement.getBoundingClientRect();
+  tt.style.left = (e.clientX - wrap.left + 14) + "px";
+  tt.style.top = (e.clientY - wrap.top - 30) + "px";
+}
+function hideTT(tt){ tt.classList.remove('show'); }
+
+/* ============================================================
+   2) IQR FENCE CALCULATOR
+   ============================================================ */
+(function(){
+  const q1i = document.getElementById('iqr-q1'), q3i = document.getElementById('iqr-q3'), ki = document.getElementById('iqr-k');
+  const q1o = document.getElementById('iqr-q1-out'), q3o = document.getElementById('iqr-q3-out'), ko = document.getElementById('iqr-k-out');
+  const iqrEl = document.getElementById('iqr-iqr'), lowEl = document.getElementById('iqr-lower'), upEl = document.getElementById('iqr-upper');
+  const svg = document.getElementById('iqr-svg');
+  const W=620, H=90, PAD=50;
+
+  function render(){
+    const q1 = +q1i.value, q3raw = +q3i.value, k = +ki.value;
+    const q3 = Math.max(q3raw, q1+10);
+    const iqr = q3-q1;
+    const lower = q1 - k*iqr;
+    const upper = q3 + k*iqr;
+    q1o.textContent = q1; q3o.textContent = q3; ko.textContent = k.toFixed(1);
+    iqrEl.textContent = iqr.toFixed(0);
+    lowEl.textContent = lower.toFixed(0);
+    upEl.textContent = upper.toFixed(0);
+
+    svg.innerHTML = "";
+    const min = lower - (upper-lower)*0.15, max = upper + (upper-lower)*0.15;
+    function sx(v){ return PAD + (v-min)/(max-min) * (W-2*PAD); }
+    svg.appendChild(el('line', {x1:PAD,y1:55,x2:W-PAD,y2:55, stroke:LINE, 'stroke-width':2}));
+    // middle 50% band
+    svg.appendChild(el('rect', {x:sx(q1), y:46, width:Math.max(2,sx(q3)-sx(q1)), height:18, fill:COPPER, opacity:0.22, rx:3}));
+    // fence lines
+    [ [lower,'Lower',RUST], [q1,'Q1',INK], [q3,'Q3',INK], [upper,'Upper',RUST] ].forEach(([v,label,color])=>{
+      const x = sx(v);
+      svg.appendChild(el('line', {x1:x,y1:30,x2:x,y2:70, stroke:color, 'stroke-width': (label==='Lower'||label==='Upper')?2.5:1.5, 'stroke-dasharray': (label==='Lower'||label==='Upper')?'4,3':'none'}));
+      const t = el('text', {x:x, y:22, fill:color, 'font-size':11, 'text-anchor':'middle'});
+      t.textContent = label;
+      svg.appendChild(t);
+      const t2 = el('text', {x:x, y:84, fill:SLATE, 'font-size':10.5, 'text-anchor':'middle'});
+      t2.textContent = v.toFixed(0);
+      svg.appendChild(t2);
+    });
+  }
+  [q1i,q3i,ki].forEach(i => i.addEventListener('input', render));
+  render();
+})();
+
+/* ============================================================
+   3) ELLIPSE ONE/TWO CLUSTER DEMO
+   ============================================================ */
+(function(){
+  const svg = document.getElementById('ellipse-svg');
+  const caption = document.getElementById('ellipse-caption');
+  const buttons = document.querySelectorAll('#ellipse-widget .pillgroup button');
+  const W=620, H=320;
+
+  function seededRand(seed){ let s = seed; return function(){ s = (s*9301+49297) % 233280; return s/233280; }; }
+
+  function render(mode){
+    svg.innerHTML = "";
+    const rand = seededRand(11);
+    function gauss(){ let u=0,v=0; while(u===0)u=rand(); while(v===0)v=rand(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+    let pts = [];
+    if(mode === 'one'){
+      for(let i=0;i<55;i++) pts.push([310+gauss()*70, 160+gauss()*55]);
+      svg.appendChild(el('ellipse', {cx:310, cy:160, rx:170, ry:120, fill:'none', stroke:RUST, 'stroke-width':2.5}));
+      caption.textContent = "One legitimate cluster — the ellipse hugs it closely.";
+    } else {
+      for(let i=0;i<32;i++) pts.push([170+gauss()*45, 160+gauss()*50]);
+      for(let i=0;i<32;i++) pts.push([450+gauss()*45, 160+gauss()*50]);
+      svg.appendChild(el('ellipse', {cx:310, cy:160, rx:250, ry:80, fill:'none', stroke:RUST, 'stroke-width':2.5}));
+      // highlight the empty gap
+      svg.appendChild(el('rect', {x:250, y:105, width:120, height:110, fill:RUST, opacity:0.16, rx:8}));
+      const gt = el('text', {x:310, y:230, fill:RUST, 'font-size':12, 'text-anchor':'middle'});
+      gt.textContent = '"normal" per the ellipse — but empty in reality';
+      svg.appendChild(gt);
+      caption.textContent = "Two separate legitimate clusters — the ellipse stretches across the gap, quietly labeling empty space as normal.";
+    }
+    pts.forEach(p => svg.appendChild(el('circle', {cx:p[0], cy:p[1], r:5, fill:PATINA, opacity:0.8})));
+  }
+  buttons.forEach(b => b.addEventListener('click', () => {
+    buttons.forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    render(b.dataset.mode);
+  }));
+  render('one');
+})();
+
+/* ============================================================
+   4) ISOLATION INTERROGATION WIDGET
+   ============================================================ */
+(function(){
+  const svg = document.getElementById('iso-svg');
+  const runBtn = document.getElementById('iso-run');
+  const resetBtn = document.getElementById('iso-reset');
+  const selectedOut = document.getElementById('iso-selected');
+  const splitsOut = document.getElementById('iso-splits');
+  const logBox = document.getElementById('iso-log');
+  const W=620, H=420, PAD=40;
+
+  const allPoints = DATA.isoGutCheck.cluster.map(p=>({x:p[0],y:p[1],label:'cluster'}))
+    .concat(DATA.isoGutCheck.lonePoint.map(p=>({x:p[0],y:p[1],label:'lone'})));
+
+  const xs = allPoints.map(p=>p.x), ys = allPoints.map(p=>p.y);
+  const dataXMin = Math.min(...xs), dataXMax = Math.max(...xs);
+  const dataYMin = Math.min(...ys), dataYMax = Math.max(...ys);
+  const xMin = dataXMin - 0.8, xMax = dataXMax + 0.8;
+  const yMin = dataYMin - 0.8, yMax = dataYMax + 0.8;
+  function sx(x){ return PAD + (x-xMin)/(xMax-xMin) * (W-2*PAD); }
+  function sy(y){ return H-PAD - (y-yMin)/(yMax-yMin) * (H-2*PAD); }
+  function isx(px){ return xMin + (px-PAD)/(W-2*PAD) * (xMax-xMin); }
+  function isy(py){ return yMin + (H-PAD-py)/(H-2*PAD) * (yMax-yMin); }
+
+  let selected = null;
+  let running = false;
+  let splitLinesGroup, pointsGroup;
+
+  function draw(){
+    svg.innerHTML = "";
+    svg.appendChild(el('line', {x1:PAD, y1:H-PAD, x2:W-PAD, y2:H-PAD, stroke:LINE}));
+    svg.appendChild(el('line', {x1:PAD, y1:PAD, x2:PAD, y2:H-PAD, stroke:LINE}));
+    splitLinesGroup = el('g', {}); svg.appendChild(splitLinesGroup);
+    pointsGroup = el('g', {}); svg.appendChild(pointsGroup);
+    allPoints.forEach((p, idx) => {
+      let node;
+      if(p.label === 'lone'){
+        node = starPath(sx(p.x), sy(p.y), 12);
+        node.setAttribute('fill', RUST);
+      } else {
+        node = el('circle', {cx:sx(p.x), cy:sy(p.y), r:6, fill:PATINA, opacity:0.85});
+      }
+      node.style.cursor = 'pointer';
+      node.setAttribute('tabindex','0');
+      node.addEventListener('click', () => selectPoint(idx));
+      node.addEventListener('keypress', (e)=>{ if(e.key==='Enter') selectPoint(idx); });
+      pointsGroup.appendChild(node);
+    });
+    highlightSelection();
+  }
+
+  function highlightSelection(){
+    Array.from(pointsGroup.children).forEach((node, idx) => {
+      node.setAttribute('stroke', idx === selected ? INK : 'none');
+      node.setAttribute('stroke-width', idx === selected ? 3 : 0);
+    });
+  }
+
+  function selectPoint(idx){
+    if(running) return;
+    selected = idx;
+    const p = allPoints[idx];
+    selectedOut.textContent = (p.label === 'lone' ? 'the lone point' : 'a cluster point') + ' (' + p.x.toFixed(2) + ', ' + p.y.toFixed(2) + ')';
+    runBtn.disabled = false;
+    logBox.textContent = 'Ready. Press "Run isolation" to start splitting.';
+    splitsOut.textContent = '0';
+    highlightSelection();
+  }
+
+  function log(msg){
+    const line = document.createElement('div');
+    line.textContent = msg;
+    logBox.appendChild(line);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  async function runIsolation(){
+    if(selected === null || running) return;
+    running = true;
+    runBtn.disabled = true;
+    logBox.textContent = "";
+    splitLinesGroup.innerHTML = "";
+    let splits = 0;
+    let region = { xMin, xMax, yMin, yMax };
+    let remaining = allPoints.map((p,i)=>i).filter(i => true);
+    const target = allPoints[selected];
+
+    function pointsIn(region, indices){
+      return indices.filter(i => {
+        const p = allPoints[i];
+        return p.x >= region.xMin && p.x <= region.xMax && p.y >= region.yMin && p.y <= region.yMax;
+      });
+    }
+
+    while(true){
+      const inRegion = pointsIn(region, allPoints.map((p,i)=>i));
+      if(inRegion.length <= 1) break;
+      const axis = Math.random() < 0.5 ? 'x' : 'y';
+      let threshold;
+      if(axis === 'x') threshold = region.xMin + Math.random()*(region.xMax-region.xMin);
+      else threshold = region.yMin + Math.random()*(region.yMax-region.yMin);
+
+      // draw the split line
+      let lx1,ly1,lx2,ly2;
+      if(axis==='x'){ lx1=sx(threshold); ly1=PAD; lx2=sx(threshold); ly2=H-PAD; }
+      else { lx1=PAD; ly1=sy(threshold); lx2=W-PAD; ly2=sy(threshold); }
+      const line = el('line', {x1:lx1,y1:ly1,x2:lx2,y2:ly2, stroke:COPPER, 'stroke-width':1.6, 'stroke-dasharray':'5,4', opacity:0});
+      splitLinesGroup.appendChild(line);
+      await new Promise(r=>setTimeout(r, 260));
+      line.style.transition = 'opacity .25s';
+      line.setAttribute('opacity', 0.85);
+
+      splits++;
+      splitsOut.textContent = String(splits);
+
+      // decide which half contains target
+      const targetOnLow = axis === 'x' ? target.x <= threshold : target.y <= threshold;
+      let newRegion = {...region};
+      if(axis === 'x'){
+        if(targetOnLow) newRegion.xMax = threshold; else newRegion.xMin = threshold;
+      } else {
+        if(targetOnLow) newRegion.yMax = threshold; else newRegion.yMin = threshold;
+      }
+      const survivorCount = pointsIn(newRegion, allPoints.map((p,i)=>i)).length;
+      log('Split ' + splits + ': ' + (axis==='x'?'x':'y') + ' ≤ ' + threshold.toFixed(2) + ' → ' + survivorCount + ' point(s) remain in the target\'s half.');
+      region = newRegion;
+      await new Promise(r=>setTimeout(r, 180));
+
+      if(pointsIn(region, allPoints.map((p,i)=>i)).length <= 1) break;
+      if(splits > 40) break; // safety
+    }
+    log('Isolated after ' + splits + ' split' + (splits===1?'':'s') + '. ' + (target.label==='lone' ? 'The lone point separated quickly — a short path length.' : 'This cluster point needed more splits to separate from its neighbors — a longer path length.'));
+    running = false;
+    runBtn.disabled = false;
+  }
+
+  runBtn.addEventListener('click', runIsolation);
+  resetBtn.addEventListener('click', () => {
+    selected = null; running = false;
+    selectedOut.textContent = 'none';
+    splitsOut.textContent = '0';
+    runBtn.disabled = true;
+    logBox.textContent = 'Click a point on the chart, then press "Run isolation."';
+    draw();
+  });
+
+  draw();
+})();
+
+/* ============================================================
+   5) LOF STEPPER
+   ============================================================ */
+(function(){
+  const steps = [
+    {
+      title:"1 · K-distance",
+      body:"K-distance of a point A = the distance from A to its k-th nearest neighbor (you choose k upfront, e.g. k = 5). If k = 5, it's like asking: how far do I have to walk from my house before I've passed exactly 5 other houses? A short walk means dense; a long walk means sparse.",
+      formula:"k-distance(A) = distance to the k-th nearest neighbor of A"
+    },
+    {
+      title:"2 · Neighborhood set",
+      body:"N_k(A) is everyone within that k-distance — draw a circle around A with radius = k-distance, and N_k(A) is everyone inside it. (Ties can technically pull in slightly more than k points — a small detail, not important for the intuition.)",
+      formula:"N_k(A) = { points within k-distance(A) of A }"
+    },
+    {
+      title:"3 · Reachability distance",
+      body:"The one clever smoothing trick in LOF. If B sits in a dense area (small k-distance) but A happens to land extremely close to B, we don't want that lucky pairing to make A's neighborhood look artificially dense — so the distance is 'floored' at B's own k-distance. You don't get extra credit for living suspiciously close to one popular house.",
+      formula:"reach-dist(A, B) = max( k-distance(B), actual distance(A, B) )"
+    },
+    {
+      title:"4 · Local reachability density",
+      body:"If your average smoothed distance to your neighbors is small, your density (LRD) is high — you live somewhere dense. If that average distance is large, your LRD is low — you live somewhere sparse. It's simply density expressed as the inverse of average distance to neighbors.",
+      formula:"LRD(A) = 1 / ( average reach-dist from A to all points in N_k(A) )"
+    },
+    {
+      title:"5 · LOF — the ratio",
+      body:"LOF ≈ 1 → my density is about the same as my neighbors' → I fit right in. LOF ≫ 1 → my neighbors are much denser than I am → I'm in a relatively empty pocket next to a crowded one → anomalous. LOF < 1 → I'm actually denser than my neighbors, which is generally not flagged. This relative comparison — not global distance — is LOF's whole personality.",
+      formula:"LOF(A) = ( average of LRD(neighbors of A) ) / LRD(A)"
+    }
+  ];
+  const nav = document.getElementById('lof-nav');
+  const panelsWrap = document.getElementById('lof-panels');
+  let current = 0;
+
+  steps.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.textContent = i+1;
+    b.addEventListener('click', () => goTo(i));
+    nav.appendChild(b);
+
+    const panel = document.createElement('div');
+    panel.className = 'step-panel';
+    panel.innerHTML = '<h4 style="margin-bottom:6px;">'+s.title+'</h4><p style="margin-bottom:0;">'+s.body+'</p><div class="step-formula">'+s.formula+'</div>';
+    panelsWrap.appendChild(panel);
+  });
+
+  const navButtons = Array.from(nav.children);
+  const panels = Array.from(panelsWrap.children);
+  const prevBtn = document.getElementById('lof-prev');
+  const nextBtn = document.getElementById('lof-next');
+
+  function goTo(i){
+    current = Math.max(0, Math.min(steps.length-1, i));
+    navButtons.forEach((b,idx)=>b.classList.toggle('active', idx===current));
+    panels.forEach((p,idx)=>p.classList.toggle('active', idx===current));
+    prevBtn.disabled = current === 0;
+    nextBtn.textContent = current === steps.length-1 ? 'Restart ↺' : 'Next →';
+  }
+  prevBtn.addEventListener('click', ()=>goTo(current-1));
+  nextBtn.addEventListener('click', ()=>{
+    if(current === steps.length-1) goTo(0); else goTo(current+1);
+  });
+  goTo(0);
+})();
+
+/* ============================================================
+   6) LOF TOY SCATTER (real computed scores)
+   ============================================================ */
+(function(){
+  const svg = document.getElementById('lof-svg');
+  const tt = document.getElementById('lof-tt');
+  const W=620, H=420, PAD=40;
+  const pts = DATA.lofToy.points, scores = DATA.lofToy.scores, pred = DATA.lofToy.pred;
+  const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
+  const xMin = Math.min(...xs)-0.7, xMax = Math.max(...xs)+0.7;
+  const yMin = Math.min(...ys)-0.7, yMax = Math.max(...ys)+0.7;
+  function sx(x){ return PAD + (x-xMin)/(xMax-xMin) * (W-2*PAD); }
+  function sy(y){ return H-PAD - (y-yMin)/(yMax-yMin) * (H-2*PAD); }
+
+  svg.appendChild(el('line', {x1:PAD, y1:H-PAD, x2:W-PAD, y2:H-PAD, stroke:LINE}));
+  svg.appendChild(el('line', {x1:PAD, y1:PAD, x2:PAD, y2:H-PAD, stroke:LINE}));
+
+  const minS = Math.min(...scores), maxS = Math.max(...scores);
+  function colorFor(s){
+    const t = (s-minS)/(maxS-minS);
+    // interpolate patina -> copper -> rust
+    if(t < 0.5){
+      return lerpColor(PATINA, COPPER, t/0.5);
+    } else {
+      return lerpColor(COPPER, RUST, (t-0.5)/0.5);
+    }
+  }
+  function lerpColor(a,b,t){
+    const pa = hexToRgb(a), pb = hexToRgb(b);
+    const r = Math.round(pa[0]+(pb[0]-pa[0])*t);
+    const g = Math.round(pa[1]+(pb[1]-pa[1])*t);
+    const bb = Math.round(pa[2]+(pb[2]-pa[2])*t);
+    return 'rgb('+r+','+g+','+bb+')';
+  }
+  function hexToRgb(h){ h=h.replace('#',''); return [parseInt(h.substr(0,2),16), parseInt(h.substr(2,2),16), parseInt(h.substr(4,2),16)]; }
+
+  pts.forEach((p, i) => {
+    const s = scores[i];
+    const r = 5 + (s-minS)/(maxS-minS) * 12;
+    const c = el('circle', {cx:sx(p[0]), cy:sy(p[1]), r:r.toFixed(1), fill: colorFor(s), stroke: pred[i]===-1 ? INK : 'none', 'stroke-width': pred[i]===-1?1.5:0, opacity:0.9});
+    c.style.cursor='pointer';
+    c.addEventListener('mouseenter', (e)=>showTT(tt, e, 'LOF score ' + s.toFixed(3) + (pred[i]===-1?' · flagged':' · normal')));
+    c.addEventListener('mousemove', (e)=>moveTT(tt,e));
+    c.addEventListener('mouseleave', ()=>hideTT(tt));
+    svg.appendChild(c);
+  });
+
+  // simple legend gradient
+  const gid = 'lofgrad';
+  const defs = el('defs',{});
+  const grad = el('linearGradient', {id:gid, x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
+  [[0,PATINA],[0.5,COPPER],[1,RUST]].forEach(([o,c])=>grad.appendChild(el('stop',{offset:(o*100)+'%','stop-color':c})));
+  defs.appendChild(grad); svg.appendChild(defs);
+  svg.appendChild(el('rect', {x:PAD, y:12, width:150, height:8, fill:'url(#'+gid+')', rx:4}));
+  const lt1 = el('text', {x:PAD, y:8, fill:SLATE, 'font-size':10}); lt1.textContent='low LOF'; svg.appendChild(lt1);
+  const lt2 = el('text', {x:PAD+150, y:8, fill:SLATE, 'font-size':10, 'text-anchor':'end'}); lt2.textContent='high LOF'; svg.appendChild(lt2);
+})();
+
+/* ============================================================
+   7) METHOD AGREEMENT BAR CHART (real dataset numbers)
+   ============================================================ */
+(function(){
+  const svg = document.getElementById('agree-svg');
+  const W=620, H=320, PAD=50;
+  const counts = [474,4,2,2,18]; // methods agreeing: 0,1,2,3,4
+  const labels = ['0','1','2','3','4'];
+  const maxSqrt = Math.sqrt(Math.max(...counts));
+  const barW = 70, gap = 34;
+  const startX = (W - (barW*5 + gap*4))/2;
+  const baseY = H-50;
+  const maxBarH = H-120;
+
+  svg.appendChild(el('line', {x1:40, y1:baseY, x2:W-40, y2:baseY, stroke:LINE}));
+  const axisLabel = el('text', {x:W/2, y:H-10, fill:SLATE, 'font-size':12, 'text-anchor':'middle'});
+  axisLabel.textContent = 'number of methods that flagged the transaction';
+  svg.appendChild(axisLabel);
+
+  counts.forEach((c,i) => {
+    const h = Math.sqrt(c)/maxSqrt * maxBarH;
+    const x = startX + i*(barW+gap);
+    const y = baseY - h;
+    const color = i >= 3 ? RUST : (i===0 ? PATINA : COPPER);
+    const rect = el('rect', {x:x, y:y, width:barW, height:h, fill:color, rx:6, opacity:0.88});
+    svg.appendChild(rect);
+    const countLabel = el('text', {x:x+barW/2, y:y-10, fill:INK, 'font-size':14, 'font-weight':'600', 'text-anchor':'middle'});
+    countLabel.textContent = c;
+    svg.appendChild(countLabel);
+    const lbl = el('text', {x:x+barW/2, y:baseY+22, fill:SLATE, 'font-size':13, 'text-anchor':'middle'});
+    lbl.textContent = labels[i];
+    svg.appendChild(lbl);
+  });
+})();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Anomaly-Detection" target="_blank" rel="noopener">github.com/scaler-content/Anomaly-Detection</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tableau 2 — Filters &amp; Calculations</title>
+<style>
+:root{
+  --blue:#1F77B4;
+  --blue-dark:#145a8a;
+  --blue-light:#eaf2fa;
+  --green:#59A14F;
+  --green-light:#eaf5e9;
+  --orange:#F28E2B;
+  --orange-light:#fdf1e3;
+  --red:#E15759;
+  --red-light:#fdecec;
+  --teal:#76B7B2;
+  --yellow:#EDC948;
+  --purple:#B07AA1;
+  --gray-bg:#F4F4F4;
+  --panel:#FFFFFF;
+  --border:#D9D9D9;
+  --border-soft:#E8E8E8;
+  --text:#262626;
+  --text-soft:#5B5B5B;
+  --text-faint:#8C8C8C;
+  --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --sans:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  --radius:3px;
+  --shadow:0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg:0 4px 14px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  font-family:var(--sans);
+  background:var(--gray-bg);
+  color:var(--text);
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:var(--sans); font-weight:600; margin:0 0 .5em; color:#1a1a1a;}
+p{margin:0 0 1em;}
+a{color:var(--blue);}
+code, .mono{font-family:var(--mono);}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+
+/* ============ App chrome (Tableau desktop shell) ============ */
+.app-chrome{
+  background:linear-gradient(#3d3d3d,#2b2b2b);
+  color:#ddd;
+  padding:8px 18px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:12.5px;
+}
+.app-chrome .dots{display:flex; gap:6px;}
+.app-chrome .dot{width:11px;height:11px;border-radius:50%;}
+.dot.red{background:#ff5f57;} .dot.yellow{background:#febc2e;} .dot.green{background:#28c840;}
+.app-chrome .title{margin-left:8px; opacity:.85; letter-spacing:.2px;}
+.app-chrome .title b{color:#fff; font-weight:600;}
+.app-chrome .spacer{flex:1;}
+.app-chrome .badge{
+  background:var(--orange); color:#fff; font-weight:700; font-size:11px;
+  padding:2px 8px; border-radius:10px; letter-spacing:.3px;
+}
+
+/* toolbar row mimicking Tableau's ribbon */
+.toolbar{
+  background:#efefef;
+  border-bottom:1px solid var(--border);
+  padding:7px 18px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  overflow-x:auto;
+}
+.tb-icon{
+  width:26px; height:26px; border-radius:3px;
+  display:flex; align-items:center; justify-content:center;
+  color:#6b6b6b; flex:none;
+}
+.tb-icon svg{width:16px;height:16px;}
+.tb-sep{width:1px; height:20px; background:var(--border); flex:none;}
+
+/* ============ Sticky sheet-tab navigation ============ */
+.sheet-nav-wrap{
+  position:sticky; top:0; z-index:50;
+  background:#e4e4e4;
+  border-bottom:2px solid var(--border);
+  box-shadow:var(--shadow);
+}
+.sheet-nav{
+  display:flex;
+  overflow-x:auto;
+  gap:2px;
+  padding:0 14px;
+  scrollbar-width:thin;
+}
+.sheet-tab{
+  font-family:var(--sans);
+  border:1px solid var(--border);
+  border-bottom:none;
+  background:#d6d6d6;
+  color:#4a4a4a;
+  padding:9px 16px 8px;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  border-radius:5px 5px 0 0;
+  white-space:nowrap;
+  margin-top:6px;
+  transition:background .15s, color .15s;
+}
+.sheet-tab:hover{background:#e8e8e8;}
+.sheet-tab.active{
+  background:var(--panel);
+  color:var(--blue-dark);
+  border-color:var(--border);
+  box-shadow:0 -2px 0 var(--orange) inset;
+}
+
+/* ============ Layout ============ */
+main{max-width:1080px; margin:0 auto; padding:0 20px 80px;}
+.hero{
+  max-width:1080px; margin:0 auto;
+  padding:56px 20px 40px;
+}
+.hero .eyebrow{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:12.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+  color:var(--blue-dark); background:var(--blue-light);
+  padding:5px 12px; border-radius:20px; margin-bottom:18px;
+}
+.hero h1{
+  font-size:clamp(30px,5vw,46px);
+  line-height:1.12;
+  letter-spacing:-.5px;
+  max-width:14ch;
+}
+.hero .lede{
+  font-size:17px; color:var(--text-soft); max-width:640px; margin-top:14px;
+}
+.hero-pillrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:26px;}
+
+/* pills mimicking Tableau field pills */
+.pill{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:12.5px; font-weight:600; color:#fff;
+  padding:5px 12px 5px 10px; border-radius:3px;
+  box-shadow:0 1px 2px rgba(0,0,0,.15);
+}
+.pill.dim{background:var(--blue);}
+.pill.mea{background:var(--green);}
+.pill svg{width:12px;height:12px;}
+
+/* section shell */
+section.block{padding:52px 0; border-top:1px solid var(--border-soft);}
+section.block:first-of-type{border-top:none;}
+.block-head{max-width:720px; margin-bottom:28px;}
+.block-kicker{
+  font-size:12px; font-weight:700; letter-spacing:.8px; text-transform:uppercase;
+  color:var(--orange); margin-bottom:8px;
+}
+.block-head h2{font-size:28px; letter-spacing:-.3px;}
+.block-head .sub{color:var(--text-soft); font-size:15.5px;}
+
+/* "worksheet" card — the signature component */
+.sheet{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:6px;
+  box-shadow:var(--shadow);
+  margin:20px 0;
+  overflow:hidden;
+}
+.sheet-header{
+  display:flex; align-items:center; gap:8px;
+  background:#f7f7f7; border-bottom:1px solid var(--border);
+  padding:9px 14px; font-size:12.5px; font-weight:700; color:#555;
+}
+.sheet-header .sheet-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);}
+.sheet-body{padding:20px;}
+
+.shelf{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:8px 10px; border:1px dashed var(--border); border-radius:4px;
+  background:#fbfbfb; margin-bottom:10px; font-size:12.5px;
+}
+.shelf-label{font-weight:700; color:#777; min-width:64px; font-size:11.5px; text-transform:uppercase; letter-spacing:.4px;}
+
+/* generic content blocks */
+.definition{
+  background:var(--panel); border-left:4px solid var(--blue);
+  border-radius:0 6px 6px 0; padding:16px 20px; margin:18px 0;
+  box-shadow:var(--shadow);
+}
+.definition ul{margin:8px 0 0; padding-left:20px;}
+.definition li{margin-bottom:6px;}
+
+.problem-card{
+  background:var(--orange-light); border:1px solid #f3d9b6;
+  border-radius:6px; padding:18px 20px; margin:18px 0;
+}
+.problem-card .tag{
+  display:inline-block; font-size:11px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.5px; color:#9a5b0e; background:#fce3c0; padding:2px 9px; border-radius:12px; margin-bottom:8px;
+}
+.problem-card h4{font-size:15px; margin-bottom:6px;}
+.problem-card p{margin-bottom:0; color:#5c4322;}
+
+.sql-compare{
+  display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:18px 0;
+}
+@media (max-width:720px){ .sql-compare{grid-template-columns:1fr;} }
+.code-panel{
+  background:#1e1e1e; color:#d4d4d4; border-radius:6px; overflow:hidden;
+}
+.code-panel .cp-head{
+  background:#2d2d2d; padding:8px 14px; font-size:11.5px; font-weight:700;
+  letter-spacing:.4px; text-transform:uppercase; color:#9cdcfe; display:flex; align-items:center; gap:6px;
+}
+.code-panel pre{margin:0; padding:14px; font-size:12.8px; overflow-x:auto; font-family:var(--mono); line-height:1.6;}
+.code-panel .kw{color:#c586c0;} .code-panel .fn{color:#dcdcaa;} .code-panel .str{color:#ce9178;} .code-panel .cm{color:#6a9955;}
+
+.tableau-panel{
+  background:var(--blue-light); border-radius:6px; padding:14px;
+}
+.tableau-panel .cp-head{
+  font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--blue-dark);
+  margin-bottom:10px; display:flex; align-items:center; gap:6px;
+}
+.tableau-panel .formula{
+  background:#fff; border:1px solid var(--border); border-radius:4px; padding:10px 12px;
+  font-family:var(--mono); font-size:13px; color:#333;
+}
+
+/* steps */
+.steps{list-style:none; margin:16px 0; padding:0; counter-reset:step;}
+.steps li{
+  counter-increment:step; position:relative; padding:6px 0 6px 34px; font-size:14.5px; color:var(--text-soft);
+}
+.steps li::before{
+  content:counter(step); position:absolute; left:0; top:5px;
+  width:22px; height:22px; border-radius:50%; background:var(--blue); color:#fff;
+  font-size:11.5px; font-weight:700; display:flex; align-items:center; justify-content:center;
+}
+
+/* buttons / toggles */
+.btnrow{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:14px 0;}
+.toggle-btn{
+  font-family:var(--sans); font-size:13px; font-weight:600; cursor:pointer;
+  border:1px solid var(--border); background:#fff; color:#555;
+  padding:8px 16px; border-radius:20px; transition:all .15s;
+}
+.toggle-btn:hover{border-color:var(--blue); color:var(--blue-dark);}
+.toggle-btn.active{background:var(--blue); border-color:var(--blue); color:#fff;}
+.toggle-btn:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-visible{
+  outline:3px solid var(--orange); outline-offset:2px;
+}
+
+/* horizontal ranked bar list — used for every "chart" in the module */
+.hbar-list{
+  display:flex; flex-direction:column; gap:1px;
+  max-height:460px; overflow-y:auto; padding:4px 6px 4px 0;
+  border:1px solid var(--border-soft); border-radius:6px; background:#fff;
+}
+.hbar-list.compact{max-height:300px;}
+.hbar-row{
+  display:grid;
+  grid-template-columns:26px 128px 1fr 78px 46px;
+  align-items:center; gap:10px;
+  padding:5px 10px;
+  border-radius:4px;
+  transition:background .15s;
+}
+.hbar-row:nth-child(odd){background:#fbfbfb;}
+.hbar-row:hover{background:var(--blue-light);}
+.hbar-row.no-badge{grid-template-columns:26px 128px 1fr 78px;}
+.hbar-row.no-rank{grid-template-columns:0 128px 1fr 78px 46px;}
+.hbar-row.no-rank.no-badge{grid-template-columns:0 140px 1fr 78px;}
+.hbar-rank{font-family:var(--mono); font-size:11px; color:var(--text-faint); text-align:right;}
+.hbar-name{
+  font-size:12.8px; font-weight:600; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.hbar-row.dim .hbar-name{color:var(--text-faint); font-weight:500;}
+.hbar-track{
+  position:relative; height:20px; background:#f0f0f0; border-radius:3px; overflow:visible;
+}
+.hbar-fill{
+  height:100%; border-radius:3px; background:var(--blue);
+  transition:width .5s cubic-bezier(.4,0,.2,1), background .3s, opacity .3s;
+}
+.hbar-row.dim .hbar-fill{background:#c9c9c9; opacity:.7;}
+.hbar-fill.ghost{background:repeating-linear-gradient(45deg,#e2e2e2,#e2e2e2 4px,#ececec 4px,#ececec 8px);}
+.hbar-threshold{
+  position:absolute; top:-5px; bottom:-5px; width:0; border-left:2px dashed var(--red); opacity:.75;
+}
+.hbar-value{font-family:var(--mono); font-size:12px; font-weight:700; color:#333; text-align:right; white-space:nowrap;}
+.hbar-row.dim .hbar-value{color:var(--text-faint); font-weight:600;}
+.hbar-badge{
+  font-size:9.5px; font-weight:700; text-align:center; padding:3px 0; border-radius:3px; letter-spacing:.3px;
+}
+.hbar-badge.in{background:var(--blue); color:#fff;}
+.hbar-badge.out{background:#ececec; color:#999;}
+.hbar-head{
+  display:grid; grid-template-columns:26px 128px 1fr 78px 46px; gap:10px; padding:0 10px 6px;
+  font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--text-faint);
+}
+.hbar-head.no-badge{grid-template-columns:26px 128px 1fr 78px;}
+.hbar-head .hn{text-align:right;}
+.threshold-note{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--red); margin-top:8px; font-weight:600;}
+.threshold-note .swatch{width:14px; height:0; border-top:2px dashed var(--red); display:inline-block;}
+@media (max-width:640px){
+  .hbar-row, .hbar-head{grid-template-columns:20px 84px 1fr 62px 40px;}
+  .hbar-row.no-badge, .hbar-head.no-badge{grid-template-columns:20px 84px 1fr 62px;}
+  .hbar-name{font-size:11.8px;}
+}
+.chart-caption{font-size:12px; color:var(--text-faint); margin-top:10px; font-style:italic;}
+
+/* slider */
+.slider-row{display:flex; align-items:center; gap:14px; margin:16px 0; flex-wrap:wrap;}
+.slider-row input[type=range]{flex:1; min-width:180px; accent-color:var(--blue);}
+.slider-readout{
+  font-family:var(--mono); font-weight:700; background:var(--blue); color:#fff;
+  padding:6px 14px; border-radius:4px; font-size:14px; min-width:52px; text-align:center;
+}
+
+/* tabs (filter types) */
+.tabset-nav{display:flex; gap:4px; flex-wrap:wrap; border-bottom:1px solid var(--border); margin-bottom:18px;}
+.tabset-btn{
+  font-family:var(--sans); font-size:13.5px; font-weight:600; color:#666; cursor:pointer;
+  background:transparent; border:none; border-bottom:3px solid transparent;
+  padding:10px 14px;
+}
+.tabset-btn:hover{color:var(--blue-dark);}
+.tabset-btn.active{color:var(--blue-dark); border-bottom-color:var(--orange);}
+.tabpanel{display:none;}
+.tabpanel.active{display:block; animation:fadein .3s ease;}
+@keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+/* flow diagram (order of filters) */
+.flow{display:flex; flex-direction:column; gap:0; margin:20px 0;}
+.flow-step{
+  display:flex; align-items:center; gap:16px; cursor:pointer;
+  background:#fff; border:1.5px solid var(--border); border-radius:6px;
+  padding:14px 18px; transition:border-color .2s, background .2s;
+}
+.flow-step:hover{border-color:var(--blue);}
+.flow-step.active{border-color:var(--blue); background:var(--blue-light);}
+.flow-num{
+  width:34px; height:34px; border-radius:50%; background:var(--gray-bg); color:#666;
+  display:flex; align-items:center; justify-content:center; font-weight:700; flex:none; font-size:14px;
+  border:2px solid var(--border);
+}
+.flow-step.active .flow-num{background:var(--blue); color:#fff; border-color:var(--blue);}
+.flow-title{font-weight:700; font-size:14.5px;}
+.flow-desc{font-size:13px; color:var(--text-soft); margin-top:2px;}
+.flow-arrow{
+  align-self:center; width:2px; height:16px; background:var(--border); margin-left:34px;
+}
+.flow-detail{
+  background:var(--panel); border:1px solid var(--border); border-left:4px solid var(--orange);
+  border-radius:0 6px 6px 0; padding:14px 18px; margin-top:10px; font-size:14px; color:var(--text-soft); display:none;
+}
+.flow-detail.show{display:block;}
+
+/* cards grid */
+.card-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin:18px 0;}
+.info-card{
+  background:#fff; border:1px solid var(--border); border-radius:6px; padding:16px;
+  border-top:3px solid var(--blue);
+}
+.info-card h4{font-size:14.5px; margin-bottom:6px;}
+.info-card p{font-size:13.3px; color:var(--text-soft); margin:0;}
+.info-card code{background:var(--gray-bg); padding:1px 5px; border-radius:3px; font-size:12px;}
+
+/* expandable function cards */
+.fn-card{
+  background:#fff; border:1px solid var(--border); border-radius:6px; overflow:hidden;
+}
+.fn-card button.fn-toggle{
+  width:100%; text-align:left; background:#fafafa; border:none; padding:13px 16px;
+  font-family:var(--sans); font-size:14px; font-weight:700; color:var(--text);
+  display:flex; justify-content:space-between; align-items:center; cursor:pointer;
+}
+.fn-card button.fn-toggle:hover{background:var(--blue-light);}
+.fn-card .fn-chevron{transition:transform .2s; color:var(--blue);}
+.fn-card[data-open="true"] .fn-chevron{transform:rotate(180deg);}
+.fn-card .fn-body{
+  max-height:0; overflow:hidden; transition:max-height .25s ease;
+  font-size:13.3px; color:var(--text-soft); padding:0 16px;
+}
+.fn-card[data-open="true"] .fn-body{padding:2px 16px 14px;}
+
+/* quiz */
+.quiz{
+  background:#fff; border:1px solid var(--border); border-radius:8px; padding:20px;
+  margin:22px 0; box-shadow:var(--shadow);
+}
+.quiz .quiz-tag{
+  display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.5px; color:#fff; background:var(--purple);
+  padding:3px 10px; border-radius:12px; margin-bottom:10px;
+}
+.quiz p.q-text{font-weight:600; font-size:15px; margin-bottom:14px;}
+.quiz-opts{display:flex; flex-direction:column; gap:8px;}
+.quiz-opt{
+  text-align:left; font-family:var(--sans); font-size:14px; padding:10px 14px;
+  border:1.5px solid var(--border); border-radius:6px; background:#fff; cursor:pointer;
+  transition:border-color .15s, background .15s;
+}
+.quiz-opt:hover{border-color:var(--blue);}
+.quiz-opt.correct{border-color:var(--green); background:var(--green-light); font-weight:600;}
+.quiz-opt.incorrect{border-color:var(--red); background:var(--red-light);}
+.quiz-explain{
+  margin-top:14px; padding:12px 14px; background:var(--gray-bg); border-radius:6px;
+  font-size:13.5px; color:var(--text-soft); display:none;
+}
+.quiz-explain.show{display:block;}
+
+/* table (row-level demo) */
+table.demo-table{width:100%; border-collapse:collapse; font-size:13.3px;}
+table.demo-table th{
+  background:#f2f2f2; text-align:left; padding:8px 10px; font-size:11.5px;
+  text-transform:uppercase; letter-spacing:.3px; color:#666; border-bottom:2px solid var(--border);
+}
+table.demo-table td{padding:8px 10px; border-bottom:1px solid var(--border-soft);}
+table.demo-table td.num{font-family:var(--mono); font-weight:700; color:var(--blue-dark);}
+
+/* chat mockup */
+.chat-mock{background:#fff; border:1px solid var(--border); border-radius:8px; overflow:hidden;}
+.chat-mock .chat-head{background:#f7f7f7; border-bottom:1px solid var(--border); padding:10px 14px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px;}
+.chat-mock .chat-body{padding:16px; display:flex; flex-direction:column; gap:12px;}
+.bubble{max-width:80%; padding:10px 14px; border-radius:12px; font-size:13.6px;}
+.bubble.user{align-self:flex-end; background:var(--blue); color:#fff; border-bottom-right-radius:3px;}
+.bubble.bot{align-self:flex-start; background:#f1f1f1; color:#333; border-bottom-left-radius:3px;}
+
+/* callouts */
+.callout{
+  display:flex; gap:12px; align-items:flex-start; background:var(--green-light);
+  border:1px solid #bfe0ba; border-radius:6px; padding:14px 16px; margin:18px 0; font-size:14px;
+}
+.callout.warn{background:var(--red-light); border-color:#f0c2c2;}
+.callout .ic{flex:none; font-size:18px;}
+
+/* summary grid */
+.summary-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin:20px 0;}
+.summary-card{
+  background:#fff; border:1px solid var(--border); border-radius:8px; padding:18px;
+  border-top:4px solid var(--orange);
+}
+.summary-card h4{font-size:14.5px; color:var(--blue-dark);}
+.summary-card p{font-size:13.3px; color:var(--text-soft); margin:0;}
+
+footer{
+  text-align:center; padding:30px 20px 50px; color:var(--text-faint); font-size:12.5px;
+}
+.legend{display:flex; gap:16px; flex-wrap:wrap; align-items:center; font-size:12.5px; color:var(--text-soft); margin:10px 0 4px;}
+.legend span{display:inline-flex; align-items:center; gap:6px;}
+.legend i{width:10px; height:10px; border-radius:2px; display:inline-block;}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· Tableau 2 · Filters, sets and calculations</span><span class="pn"><a href="../Tableau-1-postread/" title="Tableau 1 · Viz fundamentals and KPIs">← Prev</a><a href="../Tableau-3-postread/" title="Tableau 3 · Level of detail">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="app-chrome">
+  <div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+  <div class="title">Workbook — <b>Global_Superstore2</b></div>
+  <div class="spacer"></div>
+  <div class="badge">Module 2</div>
+</div>
+<div class="toolbar" aria-hidden="true">
+  <div class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 010 8h-1"/></svg></div>
+  <div class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14l4-4-4-4"/><path d="M19 10H8a4 4 0 000 8h1"/></svg></div>
+  <div class="tb-sep"></div>
+  <div class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div>
+  <div class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+  <div class="tb-sep"></div>
+  <div class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></div>
+</div>
+
+<div class="sheet-nav-wrap">
+  <nav class="sheet-nav" id="sheetNav" aria-label="Section navigation">
+    <button class="sheet-tab active" data-target="overview">Overview</button>
+    <button class="sheet-tab" data-target="sets">Sets</button>
+    <button class="sheet-tab" data-target="parameters">Parameters</button>
+    <button class="sheet-tab" data-target="filters">Filters</button>
+    <button class="sheet-tab" data-target="filter-order">Order of Filters</button>
+    <button class="sheet-tab" data-target="calculations">Calculations</button>
+    <button class="sheet-tab" data-target="functions">Functions</button>
+    <button class="sheet-tab" data-target="summary">Wrap-up</button>
+  </nav>
+</div>
+
+<div class="hero" id="overview">
+  <div class="eyebrow">Tableau · Module 2</div>
+  <h1>Filters &amp; Calculations</h1>
+  <p class="lede">
+    Building a chart is the easy part. The real skill is controlling exactly which rows reach that chart,
+    and shaping the numbers once they arrive. This module covers four tools that do that work: Sets,
+    Parameters, Filters, and Calculated Fields — plus one subtle rule that quietly breaks views when it's
+    ignored: the order filters run in.
+  </p>
+  <div class="hero-pillrow">
+    <span class="pill dim"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>Dimension</span>
+    <span class="pill mea"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>Measure</span>
+  </div>
+</div>
+
+<main>
+
+<!-- ===================== SETS ===================== -->
+<section class="block" id="sets">
+  <div class="block-head">
+    <div class="block-kicker">01 · Sets</div>
+    <h2>Carving a subset out of a bigger list</h2>
+    <p class="sub">A Set is a custom field that keeps a subset of data based on a rule. Every member is
+      either <strong>In</strong> the set or <strong>Out</strong> of it — nothing in between.</p>
+  </div>
+
+  <div class="definition">
+    <strong>Set, in one line:</strong> if you know SQL, a Set is the visual equivalent of a subquery or an
+    <code>IN</code> operator. It doesn't move or copy data — it just labels each row as In or Out.
+    <ul>
+      <li><strong>In</strong> — members that satisfy the set's condition</li>
+      <li><strong>Out</strong> — everyone else</li>
+    </ul>
+  </div>
+
+  <div class="problem-card">
+    <span class="tag">Business problem</span>
+    <h4>Who are our most profitable customers?</h4>
+    <p>The marketing team is planning a "Thank You" campaign for the 10 most profitable customers, and
+      needs to know exactly who they are and how much profit each one contributed.</p>
+  </div>
+
+  <div class="sql-compare">
+    <div class="code-panel">
+      <div class="cp-head">🗄 SQL — subquery</div>
+      <pre><span class="kw">WITH</span> Top_Customers <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> Customer_Name, <span class="fn">SUM</span>(Profit)
+  <span class="kw">FROM</span> Orders
+  <span class="kw">GROUP BY</span> 1
+  <span class="kw">ORDER BY</span> 2 <span class="kw">DESC</span>
+  <span class="kw">LIMIT</span> 10
+)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> Top_Customers;</pre>
+    </div>
+    <div class="tableau-panel">
+      <div class="cp-head">📊 Tableau — Set</div>
+      <p style="font-size:13.5px;color:#444;margin-bottom:10px;">Right-click <strong>Customer Name</strong> →
+        <em>Create → Set</em> → Top tab → <strong>By field: Top 10 by SUM(Profit)</strong>.</p>
+      <div class="formula">Set name: <strong>Top 10 VIPs</strong><br>Top → By field → 10 → SUM(Profit)</div>
+    </div>
+  </div>
+
+  <div class="sheet">
+    <div class="sheet-header"><span class="sheet-dot"></span>Sheet — Customer Profit</div>
+    <div class="sheet-body">
+      <div class="shelf"><span class="shelf-label">Columns</span><span class="pill dim">Customer Name</span></div>
+      <div class="shelf"><span class="shelf-label">Rows</span><span class="pill mea">SUM(Profit)</span></div>
+      <div class="shelf" id="setsFilterShelf"><span class="shelf-label">Filters</span><span style="color:#999;font-style:italic;" id="setsFilterEmpty">— drop a Set here —</span></div>
+
+      <div class="btnrow">
+        <button class="toggle-btn active" id="setsBtnAll" onclick="setSetsMode(false)">All customers</button>
+        <button class="toggle-btn" id="setsBtnTop" onclick="setSetsMode(true)">Apply "Top 10 VIPs" set</button>
+      </div>
+
+      <div class="hbar-head"><span></span><span>Customer</span><span>Profit</span><span class="hn">Value</span><span>Status</span></div>
+      <div class="hbar-list" id="setsChart"></div>
+      <p class="chart-caption" id="setsCaption">Every customer, ranked by profit. Illustrative recreation of the source chart — values are approximate.</p>
+      <div class="legend">
+        <span><i style="background:var(--blue)"></i> In the set</span>
+        <span><i style="background:#c7c7c7"></i> Out of the set</span>
+      </div>
+    </div>
+  </div>
+
+  <ul class="steps">
+    <li>Right-click <strong>Customer Name</strong> in the Data Pane → <em>Create → Set</em>.</li>
+    <li>Name it <strong>Top 10 VIPs</strong>, open the <em>Top</em> tab, and set <em>By field → Top 10 → Profit → Sum</em>.</li>
+    <li>Build the view: Customer Name on Columns, Profit on Rows.</li>
+    <li>Drag the new set onto the Filters shelf to keep only the In members.</li>
+  </ul>
+</section>
+
+<!-- ===================== PARAMETERS ===================== -->
+<section class="block" id="parameters">
+  <div class="block-head">
+    <div class="block-kicker">02 · Parameters</div>
+    <h2>Letting the viewer change the rule, not just the view</h2>
+    <p class="sub">A Parameter is a workbook variable — a user-supplied value that isn't attached to any
+      row in the dataset — that can replace a constant inside a filter, calculation, or reference line.</p>
+  </div>
+
+  <div class="problem-card">
+    <span class="tag">Business problem</span>
+    <h4>"Top 10" isn't one-size-fits-all</h4>
+    <p>After seeing the VIP list, the marketing manager wants flexibility: <strong>Top 5</strong> "Super-VIPs"
+      for one campaign, <strong>Top 20</strong> or <strong>Top 50</strong> for a bigger mailing list — without
+      anyone re-editing the Set by hand every time.</p>
+  </div>
+
+  <div class="sheet">
+    <div class="sheet-header"><span class="sheet-dot" style="background:var(--orange)"></span>Sheet — Customer Profit (parameterized)</div>
+    <div class="sheet-body">
+      <div class="shelf"><span class="shelf-label">Columns</span><span class="pill dim">Customer Name</span></div>
+      <div class="shelf"><span class="shelf-label">Rows</span><span class="pill mea">SUM(Profit)</span></div>
+      <div class="shelf"><span class="shelf-label">Filters</span><span class="pill dim">Top N VIPs (set)</span></div>
+
+      <div class="slider-row">
+        <label for="paramSlider" style="font-size:13px;font-weight:700;color:#555;min-width:110px;">Top N VIPs</label>
+        <input type="range" id="paramSlider" min="5" max="50" step="1" value="10" oninput="updateParamChart(this.value)">
+        <span class="slider-readout" id="paramReadout">10</span>
+      </div>
+
+      <div class="hbar-head no-badge"><span></span><span>Customer</span><span>Profit</span><span class="hn">Value</span></div>
+      <div class="hbar-list compact" id="paramChart"></div>
+      <p class="chart-caption">Drag the slider to see the parameter drive the Set's "Top" logic live — the list re-ranks from 5 up to 50 customers. Names beyond the top 10 are simulated for demonstration.</p>
+    </div>
+  </div>
+
+  <ul class="steps">
+    <li>Create the parameter: name it <strong>Top N VIPs</strong>, type <em>Integer</em>, range 5–50.</li>
+    <li>Open the <strong>Top 10 VIPs</strong> set, go to the Top tab, and swap the fixed "10" for the new parameter.</li>
+    <li>Right-click the parameter → <em>Show Parameter Control</em> so viewers get a slider or input box.</li>
+    <li>Test it: the number of bars should grow or shrink instantly as the parameter changes.</li>
+  </ul>
+
+  <div class="callout">
+    <span class="ic">💡</span>
+    <div><strong>Sets vs. Parameters:</strong> a Set decides which rows are In or Out. A Parameter supplies
+      the number (or text, or date) that a Set, filter, or calculation uses to make that decision. They're
+      built to work together.</div>
+  </div>
+</section>
+
+<!-- ===================== FILTERS ===================== -->
+<section class="block" id="filters">
+  <div class="block-head">
+    <div class="block-kicker">03 · Filters</div>
+    <h2>Five filters, five different jobs</h2>
+    <p class="sub">A filter limits which records participate in the analysis without touching the
+      underlying dataset. Tableau gives you five filter types, each applied at a different stage and for a
+      different reason.</p>
+  </div>
+
+  <div class="tabset-nav" role="tablist" aria-label="Filter types">
+    <button class="tabset-btn active" data-tab="t-extract" role="tab" aria-selected="true">Extract</button>
+    <button class="tabset-btn" data-tab="t-source" role="tab" aria-selected="false">Data Source</button>
+    <button class="tabset-btn" data-tab="t-context" role="tab" aria-selected="false">Context</button>
+    <button class="tabset-btn" data-tab="t-dimension" role="tab" aria-selected="false">Dimension</button>
+    <button class="tabset-btn" data-tab="t-measure" role="tab" aria-selected="false">Measure</button>
+  </div>
+
+  <!-- EXTRACT -->
+  <div class="tabpanel active" id="t-extract">
+    <div class="definition">
+      <ul>
+        <li>Pulls a smaller subset of data from the original source and stores a local copy in Tableau's repository.</li>
+        <li>Reduces the number of live queries Tableau has to run.</li>
+        <li>Can be narrowed further with measure or dimension filters applied to the extract itself.</li>
+        <li>Tableau Public always works from an extract — it doesn't expose the Live/Extract choice at all. Tableau Desktop (paid) supports both.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- DATA SOURCE -->
+  <div class="tabpanel" id="t-source">
+    <div class="definition">
+      <ul>
+        <li>Restricts sensitive data from viewers and reduces the volume fed into the workbook.</li>
+        <li>Applies directly to the source, before any worksheet sees the data.</li>
+        <li>Not linked to the extract filter — switch back to a live connection and the data source filter still holds.</li>
+      </ul>
+    </div>
+    <div class="problem-card">
+      <span class="tag">Business problem</span>
+      <h4>Only the Europe market matters</h4>
+      <p>The manager only cares about the <strong>Europe</strong> market. Every other region needs to disappear
+        from the entire workbook, so the file stays clean and runs faster.</p>
+    </div>
+    <ul class="steps">
+      <li>Open the <em>Data Source</em> tab and click <strong>Add</strong> in the Filters section.</li>
+      <li>Choose the field <strong>Market</strong>.</li>
+      <li>Check the box for <strong>EU</strong> and click OK — the preview grid now shows European orders only.</li>
+    </ul>
+    <div class="callout">
+      <span class="ic">⚙️</span>
+      <div><strong>Why here instead of the Filters shelf?</strong> Performance — the query itself gets smaller and
+        faster — and focus, since you don't have to re-apply the same filter on every sheet.</div>
+    </div>
+
+    <div class="quiz" data-answer="0">
+      <span class="quiz-tag">Quiz 1</span>
+      <p class="q-text">Which filter type is primarily used to restrict sensitive information from viewers and reduce the volume of data fed into Tableau by applying the filter directly to the source data?</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt">A. Data Source Filter</button>
+        <button class="quiz-opt">B. Dimension Filter</button>
+        <button class="quiz-opt">C. Measure Filter</button>
+        <button class="quiz-opt">D. Table Calculation Filter</button>
+      </div>
+      <div class="quiz-explain">A Data Source Filter limits the data available to the workbook before it reaches any worksheet. It's commonly used for security and to improve performance by reducing how much data gets loaded into Tableau.</div>
+    </div>
+  </div>
+
+  <!-- CONTEXT -->
+  <div class="tabpanel" id="t-context">
+    <div class="definition">
+      <ul>
+        <li>By default, every filter in a view runs independently — each one scans all rows, ignoring the others.</li>
+        <li>A <strong>Context Filter</strong> becomes the independent filter; every other filter becomes <em>dependent</em>, processing only what survives the context filter first.</li>
+        <li>Adds real value for scoped analysis, but if the context filter doesn't shrink the data much, the computation cost can climb fast.</li>
+      </ul>
+    </div>
+
+    <div class="problem-card">
+      <span class="tag">Business problem</span>
+      <h4>Top 10 products — but only within Technology</h4>
+      <p>The goal is the Top 10 most profitable products, restricted to the Technology category. Tableau needs
+        to be told: filter for Technology <em>first</em>, then find the Top 10 from that group.</p>
+    </div>
+
+    <div class="sheet">
+      <div class="sheet-header"><span class="sheet-dot" style="background:var(--purple)"></span>Puzzle — order changes the answer</div>
+      <div class="sheet-body">
+        <p style="font-size:14px;">Two perfectly reasonable filters — <strong>Top 5 products</strong> and
+          <strong>Category = Furniture</strong> — stacked on the same view. Toggle the order below and watch the bar count change with no error, no warning.</p>
+        <div class="btnrow">
+          <button class="toggle-btn active" id="ctxBtnWrong" onclick="setContextMode(false)">Without context (Top 5 runs first)</button>
+          <button class="toggle-btn" id="ctxBtnRight" onclick="setContextMode(true)">With context (Furniture runs first)</button>
+        </div>
+        <div class="hbar-head no-badge"><span></span><span>Product</span><span>Profit</span><span class="hn">Value</span></div>
+        <div class="hbar-list compact" id="ctxChart"></div>
+        <p class="chart-caption" id="ctxCaption"></p>
+      </div>
+    </div>
+
+    <p><strong>Why it happens:</strong> without context, Tableau finds the global Top 5 products across every
+      category, then throws out anything that isn't Furniture — which can leave two or three bars instead of five.
+      Adding <strong>Category</strong> to context forces Tableau to filter to Furniture first, then compute the
+      Top 5 from that smaller, already-correct group.</p>
+
+    <ul class="steps">
+      <li>Right-click the <strong>Category</strong> pill on the Filters shelf.</li>
+      <li>Select <strong>Add to Context</strong> — the pill turns gray, marking it as the "boss" filter.</li>
+      <li>Every other filter on the shelf now runs against the reduced, Furniture-only data.</li>
+    </ul>
+
+    <div class="quiz" data-answer="1">
+      <span class="quiz-tag">Quiz 2</span>
+      <p class="q-text">If you want to create a "dependent" filter that only processes the data that has already passed through a primary, "independent" filter, which type of filter should you use?</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt">A. Extract Filter</button>
+        <button class="quiz-opt">B. Context Filter</button>
+        <button class="quiz-opt">C. Dimension Filter</button>
+        <button class="quiz-opt">D. Measure Filter</button>
+      </div>
+      <div class="quiz-explain">A Context Filter creates a subset of data that other filters then operate on. It's used when one filter needs to depend on another — improving performance and guaranteeing a specific execution order.</div>
+    </div>
+  </div>
+
+  <!-- DIMENSION -->
+  <div class="tabpanel" id="t-dimension">
+    <div class="definition">
+      <ul>
+        <li>Non-aggregated filters — the fields used are the blue, discrete pills.</li>
+        <li>Four selection modes: <strong>General</strong>, <strong>Wildcard</strong>, <strong>Condition</strong>, and <strong>Top/Bottom</strong>.</li>
+        <li>Condition and Top/Bottom modes can run off a custom formula against a measure.</li>
+      </ul>
+    </div>
+    <div class="problem-card">
+      <span class="tag">Business problem</span>
+      <h4>North Asia, minus Office Supplies</h4>
+      <p>The North Asia regional manager wants profitability by sub-category, but only for
+        <strong>Furniture</strong> and <strong>Technology</strong> — Office Supplies belongs to a different team.</p>
+    </div>
+    <div class="code-panel" style="margin:16px 0;">
+      <div class="cp-head">🗄 SQL equivalent</div>
+      <pre><span class="kw">SELECT</span> Sub_Category, <span class="fn">SUM</span>(Sales)
+<span class="kw">FROM</span> Global_Superstore
+<span class="kw">WHERE</span> Region = <span class="str">'North Asia'</span>   <span class="cm">-- dimension filter 1</span>
+  <span class="kw">AND</span> Category <span class="kw">IN</span> (<span class="str">'Furniture'</span>, <span class="str">'Technology'</span>) <span class="cm">-- dimension filter 2</span>
+<span class="kw">GROUP BY</span> 1;</pre>
+    </div>
+    <ul class="steps">
+      <li>Sub-Category on Rows, Sales on Columns.</li>
+      <li>Drag <strong>Region</strong> (blue pill) to Filters, select <strong>North Asia</strong>.</li>
+      <li>Drag <strong>Category</strong> (blue pill) to Filters, check <strong>Furniture</strong> and <strong>Technology</strong>, leave <strong>Office Supplies</strong> unchecked.</li>
+    </ul>
+  </div>
+
+  <!-- MEASURE -->
+  <div class="tabpanel" id="t-measure">
+    <div class="definition">
+      <ul>
+        <li>Applies to quantitative measure fields using an aggregate function — sum, average, median, standard deviation, and so on.</li>
+        <li>Aggregated filters always run <em>after</em> non-aggregated (dimension) filters, no matter what order they sit in on the Filters shelf.</li>
+        <li>Four selection modes: <strong>Range</strong>, <strong>At least</strong>, <strong>At most</strong>, and <strong>Special</strong> (null / non-null).</li>
+      </ul>
+    </div>
+    <div class="problem-card">
+      <span class="tag">Business problem</span>
+      <h4>Which sub-categories clear $500K in sales?</h4>
+      <p>The sales director wants only the sub-categories whose total sales exceed a threshold, to focus
+        inventory planning on high-volume products.</p>
+    </div>
+    <div class="code-panel" style="margin:16px 0;">
+      <div class="cp-head">🗄 SQL equivalent — HAVING</div>
+      <pre><span class="kw">SELECT</span> Sub_Category, <span class="fn">SUM</span>(Sales)
+<span class="kw">FROM</span> Global_Superstore
+<span class="kw">GROUP BY</span> Sub_Category
+<span class="kw">HAVING</span> <span class="fn">SUM</span>(Sales) > 500000;  <span class="cm">-- measure filter</span></pre>
+    </div>
+    <p style="font-size:13.8px;color:var(--text-soft);">A Measure Filter is the visual equivalent of SQL's
+      <code>HAVING</code> clause — it filters <em>after</em> the aggregation has already been computed.</p>
+
+    <div class="sheet">
+      <div class="sheet-header"><span class="sheet-dot" style="background:var(--green)"></span>Sheet — Sales by Sub-Category</div>
+      <div class="sheet-body">
+        <div class="shelf"><span class="shelf-label">Filters</span><span class="pill mea">SUM(Sales)</span> <span style="color:#999;">— At least</span></div>
+        <div class="slider-row">
+          <label for="measureSlider" style="font-size:13px;font-weight:700;color:#555;min-width:110px;">At least ($)</label>
+          <input type="range" id="measureSlider" min="0" max="1800000" step="10000" value="500000" oninput="updateMeasureChart(this.value)">
+          <span class="slider-readout" id="measureReadout">$500K</span>
+        </div>
+        <div class="hbar-head no-badge"><span></span><span>Sub-Category</span><span>Sales</span><span class="hn">Value</span></div>
+        <div class="hbar-list" id="measureChart"></div>
+        <div class="threshold-note"><span class="swatch"></span> Threshold line — sub-categories below it grey out. Values are illustrative, scaled to match the relative proportions in the source chart.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ORDER OF FILTERS ===================== -->
+<section class="block" id="filter-order">
+  <div class="block-head">
+    <div class="block-kicker">04 · Order of Operations</div>
+    <h2>Tableau always runs filters in the same sequence</h2>
+    <p class="sub">Every one of the five filter types you just saw fires in a fixed order. Get a filter into
+      the wrong stage and the numbers can be silently wrong — no error, no warning. Click each stage below.</p>
+  </div>
+
+  <div class="flow" id="filterFlow">
+    <div class="flow-step active" data-step="0">
+      <div class="flow-num">1</div>
+      <div><div class="flow-title">Extract Filters</div><div class="flow-desc">Shrink the data at the source, before Tableau even loads it.</div></div>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step" data-step="1">
+      <div class="flow-num">2</div>
+      <div><div class="flow-title">Data Source Filters</div><div class="flow-desc">Applied directly to the source connection — restricts sensitive data.</div></div>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step" data-step="2">
+      <div class="flow-num">3</div>
+      <div><div class="flow-title">Context Filters</div><div class="flow-desc">The "boss" filter — sets the scope every later filter has to respect.</div></div>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step" data-step="3">
+      <div class="flow-num">4</div>
+      <div><div class="flow-title">Dimension Filters</div><div class="flow-desc">Non-aggregated filters on discrete (blue) fields.</div></div>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step" data-step="4">
+      <div class="flow-num">5</div>
+      <div><div class="flow-title">Measure Filters</div><div class="flow-desc">Aggregated filters on continuous (green) fields — always after dimension filters.</div></div>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step" data-step="5">
+      <div class="flow-num">6</div>
+      <div><div class="flow-title">Table Calculation Filters</div><div class="flow-desc">Computed last, on whatever data survived every earlier stage.</div></div>
+    </div>
+  </div>
+  <div class="flow-detail show" id="flowDetail">Extract filters run before Tableau even loads the data — they shrink the dataset at the source, which is why they're the cheapest and fastest filters to apply.</div>
+
+  <div class="callout warn">
+    <span class="ic">⚠️</span>
+    <div><strong>Adding a filter to Context forces it to execute earlier</strong> — this is the one move that
+      changes a filter's place in the sequence above. Without it, a Top N filter and a category filter both sit
+      at stage 4, and Tableau still has to pick an internal order between them, which is exactly what produced
+      the Furniture puzzle earlier.</div>
+  </div>
+
+  <div class="quiz" data-answer="2">
+    <span class="quiz-tag">Quiz 3</span>
+    <p class="q-text">According to the Tableau order of operations, which of the following is the correct sequence in which filters are executed?</p>
+    <div class="quiz-opts">
+      <button class="quiz-opt">A. Dimension Filters → Context Filters → Extract Filters</button>
+      <button class="quiz-opt">B. Measure Filters → Dimension Filters → Data Source Filters</button>
+      <button class="quiz-opt">C. Extract Filters → Data Source Filters → Context Filters</button>
+      <button class="quiz-opt">D. Context Filters → Measure Filters → Data Source Filters</button>
+    </div>
+    <div class="quiz-explain">Tableau applies Extract Filters first, then Data Source Filters, then Context Filters. Knowing this order helps you troubleshoot unexpected results and improve performance.</div>
+  </div>
+</section>
+
+<!-- ===================== CALCULATIONS ===================== -->
+<section class="block" id="calculations">
+  <div class="block-head">
+    <div class="block-kicker">05 · Calculations</div>
+    <h2>Building the metrics your data doesn't already have</h2>
+    <p class="sub">Real business questions — profit margin, average order value, customer segments — rarely
+      exist as ready-made columns. A Calculated Field creates a brand-new field in the data source, driven by
+      a formula you control.</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="info-card"><h4>Fields</h4><p>The dimensions or measures — columns — pulled from your data source.</p></div>
+    <div class="info-card"><h4>Operators</h4><p>Symbols that denote an operation: <code>+</code>, <code>&gt;</code>, <code>AND</code>, and so on.</p></div>
+    <div class="info-card"><h4>Functions</h4><p>Built-in statements that transform the values or members in a field.</p></div>
+    <div class="info-card"><h4>Literal expressions</h4><p>Constant values used exactly as written — like <code>"Profitable"</code>.</p></div>
+  </div>
+
+  <p style="font-size:14.5px;">Calculated fields are useful for more than one thing: segmenting data,
+    converting a field's type, aggregating values, filtering results, and computing ratios all lean on the
+    same mechanism.</p>
+
+  <h3 style="margin-top:32px;font-size:19px;">Operators</h3>
+  <div class="card-grid">
+    <div class="info-card" style="border-top-color:var(--blue);">
+      <h4>Arithmetic</h4>
+      <p><code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code> <code>^</code></p>
+      <p style="margin-top:8px;">e.g. <code>[Sales] - [Cost]</code>, <code>[Profit] / [Sales]</code></p>
+    </div>
+    <div class="info-card" style="border-top-color:var(--orange);">
+      <h4>Comparison</h4>
+      <p><code>==</code> <code>!=</code> <code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code></p>
+      <p style="margin-top:8px;">e.g. <code>[Sales] &gt; 100000</code></p>
+    </div>
+    <div class="info-card" style="border-top-color:var(--purple);">
+      <h4>Logical</h4>
+      <p><code>AND</code> <code>OR</code> <code>NOT</code></p>
+      <p style="margin-top:8px;">e.g. <code>[Profit] &gt; 100 AND [Region] = 'EU'</code></p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:32px;font-size:19px;">Row-level vs. aggregate-level</h3>
+  <p style="font-size:14.5px;">Basic expressions come in two flavors, and the difference matters: one runs
+    once per row, the other runs once per group in the view.</p>
+
+  <div class="tabset-nav" role="tablist" aria-label="Calculation types">
+    <button class="tabset-btn active" data-tab="c-row" role="tab" aria-selected="true">Row-Level</button>
+    <button class="tabset-btn" data-tab="c-agg" role="tab" aria-selected="false">Aggregate-Level</button>
+  </div>
+
+  <div class="tabpanel active" id="c-row">
+    <div class="problem-card">
+      <span class="tag">Business problem</span>
+      <h4>How many days does each order actually take to ship?</h4>
+      <p>Operations wants "Days to Ship" calculated for every single order — from the moment it's placed
+        to the moment it leaves the warehouse.</p>
+    </div>
+    <div class="sql-compare">
+      <div class="code-panel">
+        <div class="cp-head">🗄 SQL</div>
+        <pre><span class="kw">SELECT</span> *, <span class="fn">DATEDIFF</span>(day, Order_Date, Ship_Date) <span class="kw">AS</span> Days_to_Ship
+<span class="kw">FROM</span> Orders</pre>
+      </div>
+      <div class="tableau-panel">
+        <div class="cp-head">📊 Calculated field</div>
+        <div class="formula"><strong>Days to Ship</strong><br>DATEDIFF('day', [Order Date], [Ship Date])</div>
+      </div>
+    </div>
+    <p style="font-size:13.5px;color:var(--text-soft);">Because it references no aggregate function, this
+      formula runs independently for <em>every row</em> in the underlying data — a true row-level calculation.</p>
+    <table class="demo-table">
+      <thead><tr><th>Order Date</th><th>Ship Date</th><th>Days to Ship</th></tr></thead>
+      <tbody>
+        <tr><td>Mar 3</td><td>Mar 7</td><td class="num">4</td></tr>
+        <tr><td>Mar 4</td><td>Mar 5</td><td class="num">1</td></tr>
+        <tr><td>Mar 6</td><td>Mar 12</td><td class="num">6</td></tr>
+        <tr><td>Mar 9</td><td>Mar 10</td><td class="num">1</td></tr>
+        <tr><td>Mar 11</td><td>Mar 16</td><td class="num">5</td></tr>
+      </tbody>
+    </table>
+    <p class="chart-caption">Illustrative rows — each one computed on its own, independent of every other row.</p>
+  </div>
+
+  <div class="tabpanel" id="c-agg">
+    <div class="problem-card">
+      <span class="tag">Business problem</span>
+      <h4>What percentage of sales is actual profit?</h4>
+      <p>The CFO wants a Profit Ratio that stays accurate no matter what level of detail is on the view —
+        Country, Region, or Category.</p>
+    </div>
+    <div class="sql-compare">
+      <div class="code-panel">
+        <div class="cp-head">🗄 SQL</div>
+        <pre><span class="kw">SELECT</span> Category, <span class="fn">SUM</span>(Profit) / <span class="fn">SUM</span>(Sales) <span class="kw">AS</span> Profit_Ratio
+<span class="kw">FROM</span> Orders <span class="kw">GROUP BY</span> Category;</pre>
+      </div>
+      <div class="tableau-panel">
+        <div class="cp-head">📊 Calculated field</div>
+        <div class="formula"><strong>Profit Ratio</strong><br>SUM([Profit]) / SUM([Sales])</div>
+      </div>
+    </div>
+    <p style="font-size:13.5px;color:var(--text-soft);">Wrapping the fields in <code>SUM()</code> tells
+      Tableau this is an aggregate-level metric — it recalculates correctly as dimensions are added or removed
+      from the view.</p>
+    <div class="hbar-head no-badge"><span></span><span>Ship Mode</span><span>Avg. Days to Ship</span><span class="hn">Value</span></div>
+    <div class="hbar-list compact" id="shipModeChart"></div>
+    <p class="chart-caption">Average "Days to Ship" by Ship Mode — an aggregate calculation summarized per category. Values approximate the source chart.</p>
+  </div>
+
+  <div class="quiz" data-answer="1">
+    <span class="quiz-tag">Quiz 4</span>
+    <p class="q-text">What is the fundamental difference between a row-level calculation and an aggregate-level calculation in Tableau?</p>
+    <div class="quiz-opts">
+      <button class="quiz-opt">A. Row-level calculations only work with text, while aggregate calculations only work with numbers.</button>
+      <button class="quiz-opt">B. Row-level calculations are performed for every individual row of data, while aggregate calculations are performed based on the dimensions used in the view.</button>
+      <button class="quiz-opt">C. Aggregate calculations can only be used as filters, while row-level calculations can only be used as labels.</button>
+      <button class="quiz-opt">D. There is no difference; Tableau processes both the same way.</button>
+    </div>
+    <div class="quiz-explain">Row-level calculations evaluate each record independently, while aggregate calculations summarize data at the level of detail defined by the dimensions in the view. <code>[Sales] * 0.1</code> is row-level; <code>SUM([Sales])</code> is aggregate-level.</div>
+  </div>
+
+  <div class="chat-mock" style="margin-top:26px;">
+    <div class="chat-head">🤖 Tableau Agent — ask in plain language</div>
+    <div class="chat-body">
+      <div class="bubble user">Show me the Top 10 Products by Profit within the Technology category only. Sort them from highest to lowest profit.</div>
+      <div class="bubble bot">I've created a bar chart to display the top 10 products by profit within the Technology category, sorted from highest to lowest profit.</div>
+    </div>
+  </div>
+  <p style="font-size:13.5px;color:var(--text-soft);margin-top:10px;">Tableau Agent can build a view like this
+    from a plain-language prompt — but the underlying mechanics are exactly what you just learned: filter to
+    Technology, then compute the Top 10 from that scoped group.</p>
+</section>
+
+<!-- ===================== FUNCTIONS ===================== -->
+<section class="block" id="functions">
+  <div class="block-head">
+    <div class="block-kicker">06 · Functions</div>
+    <h2>Nine families of built-in functions</h2>
+    <p class="sub">Every calculated field leans on one or more of these categories. You won't need all of
+      them on day one — but knowing the map makes it much faster to find the right tool later.</p>
+  </div>
+
+  <div class="card-grid" id="fnGrid">
+    <div class="fn-card"><button class="fn-toggle">Numeric <span class="fn-chevron">▾</span></button><div class="fn-body"><p>Perform computations on numerical field values — rounding, arithmetic, statistical operations.</p></div></div>
+    <div class="fn-card"><button class="fn-toggle">String <span class="fn-chevron">▾</span></button><div class="fn-body"><p>Manipulate text data — splitting, trimming, searching, and reformatting strings.</p></div></div>
+    <div class="fn-card"><button class="fn-toggle">Date <span class="fn-chevron">▾</span></button><div class="fn-body"><p>Manipulate dates in the data source — differences, truncation, and part extraction (like <code>DATEDIFF</code>).</p></div></div>
+    <div class="fn-card"><button class="fn-toggle">Type conversion <span class="fn-chevron">▾</span></button><div class="fn-body"><p>Convert a field from one data type to another — string to date, string to number, and so on.</p></div></div>
+    <div class="fn-card"><button class="fn-toggle">Logical <span class="fn-chevron">▾</span></button><div class="fn-body"><p>Determine whether a condition is true or false — the backbone of IF/CASE-style calculations.</p></div></div>
+    <div class="fn-card"><button class="fn-toggle">Aggregate <span class="fn-chevron">▾</span></button><div class="fn-body"><p>Summarize or change the granularity of data — <code>SUM</code>, <code>AVG</code>, <code>COUNTD</code>, and similar.</p></div></div>
+    <div class="fn-card"><button class="fn-toggle">User <span class="fn-chevron">▾</span></button><div class="fn-body"><p>Build user filters or row-level security so published views show only what a given viewer should see. Not available in Tableau Public.</p></div></div>
+    <div class="fn-card"><button class="fn-toggle">Table calculation <span class="fn-chevron">▾</span></button><div class="fn-body"><p>Compute on values already in the table — running totals, rank, percent of total.</p></div></div>
+    <div class="fn-card"><button class="fn-toggle">Spatial <span class="fn-chevron">▾</span></button><div class="fn-body"><p>Perform spatial analysis and combine spatial files with data from text files or spreadsheets.</p></div></div>
+  </div>
+
+  <div class="definition" style="margin-top:24px;">
+    <strong>Three ways to build a calculation:</strong>
+    <ul>
+      <li><strong>Basic expressions</strong> — row-level or aggregate-level, covered in this module.</li>
+      <li><strong>Level of Detail (LOD) expressions</strong> — compute at a more granular level (<code>INCLUDE</code>), a less granular level (<code>EXCLUDE</code>), or a fully independent level (<code>FIXED</code>). Covered next.</li>
+      <li><strong>Table calculations</strong> — transform values only at the level of detail already in the view, like a running total over time. Covered in an upcoming module.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================== SUMMARY ===================== -->
+<section class="block" id="summary">
+  <div class="block-head">
+    <div class="block-kicker">07 · Wrap-up</div>
+    <h2>What carries into the next module</h2>
+    <p class="sub">Every calculation built in this module matched the level of detail already in the view —
+      Region on Rows produced numbers per region, straightforward. But what happens when a chart needs to show
+      each region's share of a <em>national</em> total? Two different levels of detail, one view. That's the
+      exact problem Level of Detail (LOD) expressions solve next.</p>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card"><h4>Sets</h4><p>A subset of data marked In or Out by a rule — Tableau's visual equivalent of a SQL subquery.</p></div>
+    <div class="summary-card"><h4>Parameters</h4><p>A workbook variable that lets a viewer swap out a constant in a filter, calculation, or reference line.</p></div>
+    <div class="summary-card"><h4>Filter types</h4><p>Extract, Data Source, Context, Dimension, Measure — each applied at a different stage for a different reason.</p></div>
+    <div class="summary-card"><h4>Order of filters</h4><p>Extract → Data Source → Context → Dimension → Measure → Table Calculation. Adding a filter to Context forces it to run earlier.</p></div>
+    <div class="summary-card"><h4>Calculated fields</h4><p>Built from functions, fields, operators, and literal expressions — new columns driven entirely by your logic.</p></div>
+    <div class="summary-card"><h4>Row vs. aggregate</h4><p>Row-level calculations run per record; aggregate-level calculations summarize at the view's level of detail.</p></div>
+  </div>
+
+  <div class="callout">
+    <span class="ic">➡️</span>
+    <div><strong>Next up:</strong> Level of Detail expressions — telling Tableau to calculate at the level
+      <em>you</em> choose, not the level the chart happens to show.</div>
+  </div>
+</section>
+
+</main>
+
+<footer>Tableau 2 · Filters &amp; Calculations — an interactive learning module.</footer>
+
+<script>
+/* ---------- Sheet-tab scroll navigation ---------- */
+const tabs = document.querySelectorAll('.sheet-tab');
+const sectionIds = ['overview','sets','parameters','filters','filter-order','calculations','functions','summary'];
+tabs.forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    const id = tab.dataset.target;
+    const el = document.getElementById(id);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+});
+const sections = sectionIds.map(id=>document.getElementById(id)).filter(Boolean);
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      const id = entry.target.id;
+      tabs.forEach(t=>t.classList.toggle('active', t.dataset.target===id));
+    }
+  });
+},{rootMargin:'-40% 0px -50% 0px', threshold:0});
+sections.forEach(s=>observer.observe(s));
+
+/* ---------- Generic tabsets ---------- */
+document.querySelectorAll('.tabset-nav').forEach(nav=>{
+  const btns = nav.querySelectorAll('.tabset-btn');
+  btns.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btns.forEach(b=>{b.classList.remove('active'); b.setAttribute('aria-selected','false');});
+      btn.classList.add('active'); btn.setAttribute('aria-selected','true');
+      // hide every panel referenced by a button in this group, then show the chosen one
+      btns.forEach(b=>{
+        const p = document.getElementById(b.dataset.tab);
+        if(p) p.classList.remove('active');
+      });
+      const panel = document.getElementById(btn.dataset.tab);
+      if(panel) panel.classList.add('active');
+    });
+  });
+});
+
+/* ---------- Function accordion cards ---------- */
+document.querySelectorAll('.fn-card .fn-toggle').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const card = btn.closest('.fn-card');
+    const isOpen = card.getAttribute('data-open') === 'true';
+    card.setAttribute('data-open', isOpen ? 'false':'true');
+    const body = card.querySelector('.fn-body');
+    body.style.maxHeight = isOpen ? '0px' : body.scrollHeight+20+'px';
+  });
+});
+
+/* ---------- Quiz interactions ---------- */
+document.querySelectorAll('.quiz').forEach(quiz=>{
+  const correctIdx = parseInt(quiz.dataset.answer,10);
+  const opts = quiz.querySelectorAll('.quiz-opt');
+  const explain = quiz.querySelector('.quiz-explain');
+  let answered = false;
+  opts.forEach((opt,i)=>{
+    opt.addEventListener('click',()=>{
+      if(answered) return;
+      answered = true;
+      opts.forEach((o,j)=>{
+        if(j===correctIdx) o.classList.add('correct');
+        else if(j===i) o.classList.add('incorrect');
+      });
+      explain.classList.add('show');
+    });
+  });
+});
+
+/* ---------- Chart helper: horizontal ranked bar list ---------- */
+function renderHBars(containerId, data, opts){
+  opts = opts || {};
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  const max = Math.max(...data.map(d=>d.value));
+  const fmt = opts.format || (v => '$' + Math.round(v).toLocaleString());
+  container.innerHTML = '';
+  data.forEach((d,i)=>{
+    const row = document.createElement('div');
+    row.className = 'hbar-row' + (opts.showRank===false ? ' no-rank' : '') + (opts.showBadge===false ? ' no-badge' : '') + (d.out ? ' dim' : '');
+
+    const rank = document.createElement('div');
+    rank.className = 'hbar-rank';
+    rank.textContent = opts.showRank===false ? '' : (i+1);
+    row.appendChild(rank);
+
+    const name = document.createElement('div');
+    name.className = 'hbar-name';
+    name.textContent = d.name;
+    name.title = d.name;
+    row.appendChild(name);
+
+    const track = document.createElement('div');
+    track.className = 'hbar-track';
+    const fill = document.createElement('div');
+    fill.className = 'hbar-fill' + (d.ghost ? ' ghost' : '');
+    fill.style.width = Math.max(2, (d.value/max)*100) + '%';
+    track.appendChild(fill);
+    if(opts.thresholdPct !== undefined){
+      const line = document.createElement('div');
+      line.className = 'hbar-threshold';
+      line.style.left = opts.thresholdPct + '%';
+      track.appendChild(line);
+    }
+    row.appendChild(track);
+
+    const val = document.createElement('div');
+    val.className = 'hbar-value';
+    val.textContent = fmt(d.value);
+    row.appendChild(val);
+
+    if(opts.showBadge !== false){
+      const badge = document.createElement('div');
+      badge.className = 'hbar-badge ' + (d.out ? 'out' : 'in');
+      badge.textContent = d.out ? (opts.outLabel||'OUT') : (opts.inLabel||'IN');
+      row.appendChild(badge);
+    }
+    container.appendChild(row);
+  });
+}
+
+/* ---------- Sets demo data ---------- */
+const setMembers = [
+  {name:'Tamara Chand', value:8500},
+  {name:'Raymond Buch', value:8400},
+  {name:'Sanjit Chand', value:8100},
+  {name:'Hunter Lopez', value:7600},
+  {name:'Bill Eplett', value:7300},
+  {name:'Harry Marie', value:6900},
+  {name:'Adrian Barton', value:6800},
+  {name:'Tom Ashbrook', value:6300},
+  {name:'Susan Pistek', value:6100},
+  {name:'Mike Gockenbach', value:6000},
+];
+const setOthers = [
+  {name:'Other Customer A', value:5200},
+  {name:'Other Customer B', value:4700},
+  {name:'Other Customer C', value:4300},
+  {name:'Other Customer D', value:3800},
+  {name:'Other Customer E', value:3400},
+  {name:'Other Customer F', value:2900},
+];
+function setSetsMode(applied){
+  document.getElementById('setsBtnAll').classList.toggle('active', !applied);
+  document.getElementById('setsBtnTop').classList.toggle('active', applied);
+  const emptyLabel = document.getElementById('setsFilterEmpty');
+  const cap = document.getElementById('setsCaption');
+  const all = [...setMembers, ...setOthers].map((c,i)=>({...c, out: applied && i>=10}));
+  renderHBars('setsChart', all, {showRank:true, showBadge:true});
+  if(applied){
+    emptyLabel.style.display='none';
+    if(!document.getElementById('setsPillApplied')){
+      const pill = document.createElement('span');
+      pill.className = 'pill dim'; pill.id='setsPillApplied';
+      pill.textContent = 'Top 10 VIPs (set)';
+      document.getElementById('setsFilterShelf').appendChild(pill);
+    }
+    cap.textContent = 'Set applied: the 10 highest-profit customers are In (blue, "IN"); everyone else is still in the underlying data, just marked Out and greyed out. Illustrative recreation, approximate values.';
+  } else {
+    const pill = document.getElementById('setsPillApplied');
+    if(pill) pill.remove();
+    emptyLabel.style.display='inline';
+    emptyLabel.textContent = '— drop a Set here —';
+    cap.textContent = 'Every customer, ranked by profit, with no set applied yet. Illustrative recreation of the source chart — values are approximate.';
+  }
+}
+setSetsMode(false);
+
+/* ---------- Parameter demo data ---------- */
+const paramTop10 = setMembers;
+const paramExtended = [];
+for(let i=11;i<=50;i++){
+  const val = Math.max(1800, 5800 - (i-10)*72 + ((i%3)*90));
+  paramExtended.push({name:'Customer '+i, value: val});
+}
+const paramAll = paramTop10.concat(paramExtended).sort((a,b)=>b.value-a.value);
+function updateParamChart(n){
+  n = parseInt(n,10);
+  document.getElementById('paramReadout').textContent = n;
+  renderHBars('paramChart', paramAll.slice(0,n), {showRank:true, showBadge:false});
+}
+updateParamChart(10);
+
+/* ---------- Context filter puzzle demo ---------- */
+function setContextMode(withContext){
+  document.getElementById('ctxBtnWrong').classList.toggle('active', !withContext);
+  document.getElementById('ctxBtnRight').classList.toggle('active', withContext);
+  const cap = document.getElementById('ctxCaption');
+  if(withContext){
+    const data = [
+      {name:'Product A (Furniture)', value:1200},
+      {name:'Product B (Furniture)', value:1050},
+      {name:'Product C (Furniture)', value:960},
+      {name:'Product D (Furniture)', value:880},
+      {name:'Product E (Furniture)', value:820},
+    ];
+    renderHBars('ctxChart', data, {showRank:true, showBadge:false});
+    cap.textContent = 'Category added to context first → Tableau finds the Top 5 Furniture products from a Furniture-only pool. Result: exactly 5 Furniture products.';
+  } else {
+    const data = [
+      {name:'Product A (Furniture)', value:1200},
+      {name:'Product F (Technology)', value:1050, out:true, ghost:true},
+      {name:'Product G (Office Supplies)', value:960, out:true, ghost:true},
+      {name:'Product D (Furniture)', value:880},
+      {name:'Product H (Technology)', value:820, out:true, ghost:true},
+    ];
+    renderHBars('ctxChart', data, {showRank:true, showBadge:false});
+    cap.textContent = 'Top 5 computed first across ALL categories, then filtered to Furniture → the 3 greyed-out, non-Furniture products get discarded. Only 2 Furniture products survive.';
+  }
+}
+setContextMode(false);
+
+/* ---------- Measure filter demo ---------- */
+const subCats = [
+  {name:'Phones', value:1700000},
+  {name:'Copiers', value:1500000},
+  {name:'Chairs', value:1480000},
+  {name:'Bookcases', value:1450000},
+  {name:'Storage', value:1150000},
+  {name:'Appliances', value:1000000},
+  {name:'Machines', value:750000},
+  {name:'Tables', value:700000},
+  {name:'Accessories', value:680000},
+  {name:'Binders', value:480000},
+  {name:'Paper', value:450000},
+  {name:'Furnishings', value:380000},
+  {name:'Envelopes', value:170000},
+  {name:'Fasteners', value:90000},
+  {name:'Labels', value:70000},
+];
+const measureMax = Math.max(...subCats.map(c=>c.value));
+function updateMeasureChart(threshold){
+  threshold = parseInt(threshold,10);
+  document.getElementById('measureReadout').textContent = '$'+Math.round(threshold/1000)+'K';
+  const data = subCats.map(c=>({...c, out: c.value < threshold}))
+    .sort((a,b)=>b.value-a.value);
+  const thresholdPct = Math.min(100, (threshold/measureMax)*100);
+  renderHBars('measureChart', data, {showRank:true, showBadge:false, thresholdPct: thresholdPct});
+}
+updateMeasureChart(500000);
+
+/* ---------- Ship mode aggregate chart ---------- */
+renderHBars('shipModeChart', [
+  {name:'First Class', value:2.2},
+  {name:'Same Day', value:0.3},
+  {name:'Second Class', value:3.3},
+  {name:'Standard Class', value:5.0},
+], {showRank:true, showBadge:false, format:v=>v.toFixed(1)+' days'});
+
+/* ---------- Order-of-filters flow ---------- */
+const flowDetails = [
+  "Extract filters run before Tableau even loads the data — they shrink the dataset at the source, which is why they're the cheapest and fastest filters to apply.",
+  "Data source filters are applied directly to the connection, restricting sensitive rows before any worksheet ever sees them.",
+  "Context filters become the independent, \"boss\" filter — everything downstream only sees the data that survives this stage.",
+  "Dimension filters are non-aggregated — they run on discrete, blue-pill fields like Category or Region.",
+  "Measure filters are aggregated — they always run after dimension filters, regardless of shelf order, because they need a computed value like SUM or AVG first.",
+  "Table calculation filters run last, operating only on whatever data is still left after every earlier stage."
+];
+document.querySelectorAll('.flow-step').forEach(step=>{
+  step.addEventListener('click',()=>{
+    document.querySelectorAll('.flow-step').forEach(s=>s.classList.remove('active'));
+    step.classList.add('active');
+    const idx = parseInt(step.dataset.step,10);
+    const detail = document.getElementById('flowDetail');
+    detail.textContent = flowDetails[idx];
+    detail.classList.add('show');
+  });
+});
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Tableau-2-postread" target="_blank" rel="noopener">github.com/scaler-content/Tableau-2-postread</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

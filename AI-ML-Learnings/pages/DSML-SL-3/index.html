@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision Trees 1 post read</title>
+<meta name="description" content="Decision Trees 1 post read: why straight lines struggle, how a decision tree splits data, entropy, information gain, overfitting and feature importance.">
+<style>
+:root{
+  --navy:#0A1747;
+  --blue:#254AA5;
+  --blue-700:#1B3A8C;
+  --blue-200:#B9C8F0;
+  --blue-100:#E4EBFB;
+  --blue-50:#F2F5FD;
+  --pink:#EA1A85;
+  --pink-ink:#B0105F;
+  --pink-200:#F8B4D4;
+  --pink-100:#FDE2EF;
+  --pink-50:#FFF3F8;
+  --pink-soft:#FF8DC2;
+  --ink:#101A3F;
+  --muted:#4A5580;
+  --line:#D6DEF2;
+  --bg:#FAFBFF;
+  --card:#FFFFFF;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:"Avenir Next","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--blue-700);text-underline-offset:3px}
+a:hover{color:var(--pink-ink)}
+:focus-visible{outline:3px solid var(--pink);outline-offset:2px;border-radius:4px}
+h1,h2,h3,h4{font-family:var(--serif);color:var(--navy);line-height:1.2;margin:0}
+h2{font-size:clamp(1.7rem,3.4vw,2.3rem);letter-spacing:-.01em;margin-bottom:.6rem}
+h3{font-size:1.35rem;margin:2.2rem 0 .6rem}
+h4{font-size:1.08rem;margin:0 0 .35rem}
+p{margin:0 0 1rem}
+code{font-family:var(--mono);font-size:.88em;background:var(--blue-100);color:var(--blue-700);padding:.1em .4em;border-radius:5px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* progress */
+#progress{position:fixed;inset:0 auto auto 0;height:4px;width:0;background:linear-gradient(90deg,var(--blue),var(--pink));z-index:50}
+
+/* hero */
+.hero{background:var(--navy);color:#fff;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:linear-gradient(90deg,var(--blue) 0 55%,var(--pink) 55% 100%)}
+.hero-in{max-width:1180px;margin:0 auto;padding:72px 24px 88px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:40px;align-items:center}
+.hero h1{color:#fff;font-size:clamp(2.6rem,6.4vw,4.6rem);letter-spacing:-.02em;line-height:1.02;margin:.4rem 0 1.1rem}
+.hero .tag{display:inline-block;background:var(--pink);color:#fff;font-weight:700;font-size:.9rem;padding:.3rem .8rem;border-radius:999px}
+.hero .lede{font-size:1.2rem;color:#DCE4FF;max-width:34rem;margin-bottom:1.6rem}
+.hero .facts{display:flex;flex-wrap:wrap;gap:10px}
+.hero .facts span{border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:.3rem .85rem;font-size:.92rem;color:#EAF0FF}
+.hero-art{width:100%;height:auto}
+@media (max-width:860px){.hero-in{grid-template-columns:1fr;padding:48px 20px 64px}.hero-art{max-width:420px}}
+
+/* layout */
+.layout{max-width:1220px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:minmax(0,1fr);gap:48px}
+@media (min-width:1100px){.layout{grid-template-columns:210px minmax(0,1fr)}}
+.toc{display:none}
+@media (min-width:1100px){
+  .toc{display:block;position:sticky;top:24px;align-self:start;padding-top:56px;max-height:100vh;overflow:auto}
+  .toc p{font-weight:700;color:var(--navy);font-size:.95rem;margin-bottom:.6rem}
+  .toc ol{list-style:none;margin:0;padding:0;border-left:2px solid var(--line)}
+  .toc a{display:block;padding:.3rem 0 .3rem 14px;margin-left:-2px;border-left:2px solid transparent;text-decoration:none;color:var(--muted);font-size:.92rem;line-height:1.35}
+  .toc a:hover{color:var(--blue-700)}
+  .toc a.on{color:var(--pink-ink);border-left-color:var(--pink);font-weight:700}
+}
+main{min-width:0;max-width:820px}
+section{padding:56px 0 8px;border-top:1px solid var(--line)}
+section:first-child{border-top:0}
+.mission{display:inline-block;background:var(--blue-100);color:var(--blue-700);font-weight:700;font-size:.85rem;padding:.2rem .7rem;border-radius:999px;margin-bottom:.7rem}
+.lead{font-size:1.15rem;color:var(--muted)}
+
+/* generic blocks */
+.callout{border-radius:14px;padding:18px 22px;margin:1.4rem 0;border:1px solid var(--line);background:var(--blue-50)}
+.callout.pink{background:var(--pink-50);border-color:var(--pink-200)}
+.callout>:last-child{margin-bottom:0}
+.callout strong.t{display:block;font-family:var(--serif);font-size:1.05rem;color:var(--navy);margin-bottom:.25rem}
+.ticket{position:relative;background:#fff;border:1px solid var(--line);border-left:6px solid var(--pink);border-radius:14px;padding:22px 26px;margin:1.6rem 0;box-shadow:0 10px 30px rgba(10,23,71,.07)}
+.ticket .from{font-weight:700;color:var(--pink-ink);margin-bottom:.4rem;font-size:.95rem}
+.ticket q{quotes:none;font-family:var(--serif);font-size:1.18rem;font-style:italic;color:var(--navy);display:block}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:1.2rem 0}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:1.2rem 0}
+@media (max-width:700px){.grid2,.grid3{grid-template-columns:1fr}}
+.tile{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.tile p{font-size:.97rem;color:var(--muted);margin:0}
+.tile.pink{border-top:4px solid var(--pink)}
+.tile.blue{border-top:4px solid var(--blue)}
+.goals{list-style:none;margin:1rem 0;padding:0;display:grid;gap:10px}
+.goals li{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px 12px 48px;position:relative}
+.goals li::before{content:"";position:absolute;left:16px;top:17px;width:16px;height:16px;background:var(--pink);transform:rotate(45deg);border-radius:3px}
+.kpis{display:flex;flex-wrap:wrap;gap:14px;margin:1.2rem 0}
+.kpi{flex:1 1 150px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+.kpi b{display:block;font-family:var(--serif);font-size:1.9rem;color:var(--blue);line-height:1.1}
+.kpi span{color:var(--muted);font-size:.9rem}
+.kpi.pk b{color:var(--pink-ink)}
+
+/* widget shell */
+.widget{background:#fff;border:1px solid var(--line);border-radius:18px;margin:1.8rem 0;box-shadow:0 12px 34px rgba(10,23,71,.07);overflow:hidden}
+.widget>header{background:var(--navy);color:#fff;padding:12px 20px}
+.widget>header h4{color:#fff;margin:0;font-size:1.05rem}
+.widget>header p{margin:2px 0 0;color:#C9D5FF;font-size:.9rem}
+.wbody{padding:18px 20px}
+.wcap{padding:12px 20px;background:var(--blue-50);border-top:1px solid var(--line);font-size:.93rem;color:var(--muted)}
+.wcap>:last-child{margin-bottom:0}
+.svgwrap{overflow-x:auto}
+.svgwrap svg{display:block;width:100%;height:auto;min-width:560px}
+.ctrl{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin:10px 0}
+.ctrl label{display:flex;flex-direction:column;font-weight:600;font-size:.92rem;color:var(--navy);gap:4px;flex:1 1 220px}
+.ctrl input[type=range]{width:100%;accent-color:var(--pink)}
+.ctrl input[type=number]{width:100%;font:inherit;padding:.4rem .6rem;border:1px solid var(--blue-200);border-radius:8px;color:var(--ink);background:#fff}
+button.btn{font:inherit;font-weight:700;font-size:.92rem;background:var(--blue);color:#fff;border:2px solid var(--blue);border-radius:10px;padding:.45rem .95rem;cursor:pointer}
+button.btn:hover{background:var(--blue-700);border-color:var(--blue-700)}
+button.btn.alt{background:#fff;color:var(--blue-700)}
+button.btn.alt:hover{background:var(--blue-100)}
+button.btn.pk{background:var(--pink);border-color:var(--pink)}
+button.btn.pk:hover{background:var(--pink-ink);border-color:var(--pink-ink)}
+button.btn:disabled{opacity:.45;cursor:not-allowed}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.readout{font-weight:700;color:var(--navy);background:var(--blue-50);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:8px 0}
+.readout .pk{color:var(--pink-ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.9rem;color:var(--muted);margin:6px 0}
+.legend i{display:inline-block;vertical-align:-2px;margin-right:6px}
+.sw-l{width:13px;height:13px;background:var(--pink);transform:rotate(45deg);border-radius:2px}
+.sw-s{width:14px;height:14px;background:var(--blue);border-radius:50%}
+
+/* math + code */
+.formula{font-family:var(--serif);font-size:1.25rem;text-align:center;background:var(--pink-50);border:1px solid var(--pink-200);border-radius:14px;padding:16px 12px;margin:1.2rem 0;overflow-x:auto;color:var(--navy)}
+.formula i{font-style:italic}
+pre.code{background:var(--navy);color:#EAF0FF;border-radius:12px;padding:16px 18px;margin:1rem 0 0;overflow-x:auto;font-family:var(--mono);font-size:.84rem;line-height:1.6;border-left:5px solid var(--pink)}
+pre.out{background:var(--blue-50);color:var(--ink);border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;margin:0 0 1.2rem;padding:12px 18px;overflow-x:auto;font-family:var(--mono);font-size:.84rem;line-height:1.55}
+pre.code + pre.out{margin-top:-4px}
+pre.code:not(:has(+ pre.out)){margin-bottom:1.2rem}
+.cmt{color:#9DB2F5}
+.kw{color:var(--pink-soft)}
+
+/* tables */
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:.8rem 0;background:#fff}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th{background:var(--blue);color:#fff;text-align:left;padding:8px 12px;white-space:nowrap;font-weight:600}
+td{padding:8px 12px;border-top:1px solid var(--line);white-space:nowrap}
+td.tgt{font-weight:700;color:var(--pink-ink)}
+td.ell{color:var(--muted);text-align:center}
+tr:nth-child(even) td{background:var(--blue-50)}
+
+/* tabs */
+.tabs [role=tablist]{display:flex;flex-wrap:wrap;gap:6px;border-bottom:2px solid var(--line);margin-bottom:14px}
+.tabs [role=tab]{font:inherit;font-weight:700;font-size:.95rem;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:.5rem .9rem;color:var(--muted);cursor:pointer;border-radius:8px 8px 0 0}
+.tabs [role=tab]:hover{color:var(--blue-700)}
+.tabs [role=tab][aria-selected=true]{color:var(--pink-ink);border-bottom-color:var(--pink)}
+.tabs [role=tabpanel][hidden]{display:none}
+
+/* pictogram */
+.picto{display:grid;grid-template-columns:repeat(20,1fr);gap:5px;max-width:560px;margin:10px 0}
+.picto b{aspect-ratio:1;background:var(--blue);border-radius:50%;display:block}
+.picto b.l{background:var(--pink);border-radius:3px;transform:rotate(45deg) scale(.8)}
+.stack{display:flex;height:46px;border-radius:10px;overflow:hidden;border:1px solid var(--line);font-weight:700;color:#fff;margin:10px 0}
+.stack div{display:flex;align-items:center;justify-content:center;font-size:.9rem;white-space:nowrap;overflow:hidden;transition:width .3s}
+.stack .s{background:var(--blue)}
+.stack .l{background:var(--pink-ink)}
+
+/* jar */
+.labgrid{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.labgrid{grid-template-columns:1fr}}
+.jar{width:190px;margin:0 auto;padding:16px 14px 14px;border:4px solid var(--blue-200);border-top-width:8px;border-radius:14px 14px 48px 48px;background:linear-gradient(#fff,var(--blue-50));display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.ball{aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;color:#fff}
+.ball.r{background:var(--pink-ink)}
+.ball.b{background:var(--blue)}
+
+/* tree explorer */
+.explore{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.steps{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px}
+.dots{display:flex;gap:6px}
+.dots button{font:inherit;font-size:.85rem;font-weight:700;border:2px solid var(--blue-200);background:#fff;color:var(--blue-700);border-radius:999px;padding:.25rem .8rem;cursor:pointer}
+.dots button[aria-pressed=true]{background:var(--pink);border-color:var(--pink);color:#fff}
+.node{cursor:pointer}
+.node rect{transition:stroke-width .15s}
+.node:hover rect,.node:focus rect{stroke-width:4}
+.node.sel rect{stroke-width:4;stroke:var(--pink)!important}
+dl.det{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:0;font-size:.95rem}
+dl.det dt{color:var(--muted);font-weight:600}
+dl.det dd{margin:0;font-weight:700;color:var(--navy)}
+.tag-pure{background:var(--pink-100);color:var(--pink-ink);border-radius:999px;padding:.05rem .6rem;font-size:.82rem}
+
+/* gain bars */
+.gbars{display:flex;align-items:flex-end;gap:8px;height:190px;padding:22px 4px 0;overflow-x:auto;border-bottom:2px solid var(--line)}
+.gb{flex:1 0 54px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;background:none;border:0;padding:0;cursor:pointer;font:inherit;color:var(--ink)}
+.gb .v{font-size:.78rem;font-weight:700;margin-bottom:3px}
+.gb .bar{width:70%;background:var(--blue-200);border-radius:8px 8px 0 0;min-height:2px;transition:height .25s}
+.gb[aria-pressed=true] .bar{background:var(--blue)}
+.gb.best .bar{background:var(--pink)}
+.gb[aria-pressed=true]{background:var(--blue-50);border-radius:8px}
+.glabels{display:flex;gap:8px;padding:6px 4px 0;overflow-x:auto}
+.glabels span{flex:1 0 54px;text-align:center;font-size:.78rem;color:var(--muted);line-height:1.2}
+.gwrap{overflow-x:auto}
+.gwrap>*{min-width:640px}
+table.calc td,table.calc th{white-space:normal}
+table.calc td.num{text-align:right;font-variant-numeric:tabular-nums}
+
+/* horizontal bars */
+.hb{display:grid;grid-template-columns:130px minmax(0,1fr) 60px;gap:10px;align-items:center;margin:8px 0;font-size:.95rem}
+.hb .trk{height:26px;background:var(--blue-50);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.hb .fill{height:100%;background:var(--blue);border-radius:0 6px 6px 0}
+.hb .fill.pk{background:var(--pink)}
+.hb b{text-align:right;font-variant-numeric:tabular-nums}
+@media (max-width:520px){.hb{grid-template-columns:90px minmax(0,1fr) 50px;font-size:.85rem}}
+
+/* quiz */
+.quiz{background:#fff;border:2px solid var(--blue-200);border-radius:16px;padding:18px 22px;margin:2rem 0}
+.quiz .qtag{display:inline-block;background:var(--pink);color:#fff;font-weight:700;font-size:.82rem;padding:.15rem .65rem;border-radius:999px;margin-bottom:.5rem}
+.quiz fieldset{border:0;padding:0;margin:0}
+.quiz legend{font-family:var(--serif);font-size:1.15rem;color:var(--navy);padding:0;margin-bottom:.6rem}
+.quiz ul.st{margin:.2rem 0 .8rem;padding-left:1.2rem}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin:8px 0;cursor:pointer;background:#fff}
+.opt:hover{background:var(--blue-50)}
+.opt input{margin-top:.35rem;accent-color:var(--pink)}
+.opt.ok{border-color:var(--blue);background:var(--blue-100)}
+.opt.no{border-color:var(--pink);background:var(--pink-50)}
+.fb{margin-top:12px;padding:12px 14px;border-radius:10px;font-size:.96rem}
+.fb.ok{background:var(--blue-100);border-left:5px solid var(--blue)}
+.fb.no{background:var(--pink-50);border-left:5px solid var(--pink)}
+.fb:empty{display:none}
+
+/* accordion */
+details{background:#fff;border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:0 18px}
+details summary{cursor:pointer;font-weight:700;color:var(--navy);padding:14px 0;list-style:none;display:flex;gap:10px;align-items:center}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:"+";display:inline-flex;width:24px;height:24px;flex:none;align-items:center;justify-content:center;background:var(--blue-100);color:var(--blue-700);border-radius:50%;font-weight:800}
+details[open] summary::before{content:"−";background:var(--pink);color:#fff}
+details[open]{border-color:var(--blue-200)}
+details .dbody{padding:0 0 14px}
+details .dbody>:last-child{margin-bottom:0}
+
+/* prompt cards */
+.prompt{background:var(--blue-50);border:1px dashed var(--blue-200);border-radius:12px;padding:12px 14px;margin:.6rem 0;font-family:var(--serif);font-style:italic;color:var(--navy)}
+.copyb{margin-top:8px}
+
+/* wrap up */
+ol.take{list-style:none;counter-reset:t;margin:1rem 0;padding:0;display:grid;gap:10px}
+ol.take li{counter-increment:t;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px 12px 60px;position:relative}
+ol.take li::before{content:counter(t);position:absolute;left:14px;top:10px;width:34px;height:34px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
+ol.take li:nth-child(3n)::before{background:var(--pink)}
+.next{background:var(--navy);color:#fff;border-radius:16px;padding:22px 26px;margin:1.6rem 0}
+.next h3{color:#fff;margin:0 0 .5rem}
+.next p{color:#DCE4FF;margin:0}
+footer{margin-top:72px;background:var(--navy);color:#fff;text-align:center;padding:34px 20px;border-top:6px solid var(--pink)}
+footer strong{font-family:var(--serif);font-size:1.3rem}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· DSML Supervised 3 · Decision trees and impurity</span><span class="pn"><a href="../DSML-SL-2/" title="DSML Supervised 2 · KNN with scikit-learn">← Prev</a><a href="../DSML-SL-4/" title="DSML Supervised 4 · Decision trees: pruning and regression">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progress" aria-hidden="true"></div>
+
+<header class="hero">
+  <div class="hero-in">
+    <div>
+      <span class="tag">Ticket #3 from the Head of HR</span>
+      <h1>Decision Trees 1 post read</h1>
+      <p class="lede">Why are riders leaving? Learn how a tree of simple yes/no cuts can flag who is likely to quit, and show which factors it leans on.</p>
+      <div class="facts">
+        <span>Entropy and information gain by hand</span>
+        <span>Train a tree with scikit-learn</span>
+        <span>Spot overfitting</span>
+        <span>Feature importance</span>
+      </div>
+    </div>
+    <svg class="hero-art" viewBox="0 0 400 300" role="img" aria-label="Decorative scatter plot of pink diamonds and blue circles separated by axis-parallel cuts">
+      <rect x="10" y="10" width="380" height="280" rx="16" fill="#12225F" stroke="#3450A8" stroke-width="2"/>
+      <g stroke="#EA1A85" stroke-width="3" stroke-linecap="round">
+        <line x1="190" y1="10" x2="190" y2="290"/>
+        <line x1="10" y1="170" x2="190" y2="170" stroke-dasharray="2 9"/>
+        <line x1="190" y1="120" x2="390" y2="120" stroke-dasharray="2 9"/>
+      </g>
+      <g fill="#EA1A85">
+        <path d="M50 60l11 11-11 11-11-11z"/><path d="M110 40l11 11-11 11-11-11z"/><path d="M80 105l11 11-11 11-11-11z"/><path d="M140 90l11 11-11 11-11-11z"/><path d="M60 145l11 11-11 11-11-11z"/><path d="M300 70l11 11-11 11-11-11z"/>
+      </g>
+      <g fill="#8FB0FF" stroke="#0A1747" stroke-width="2">
+        <circle cx="90" cy="230" r="10"/><circle cx="145" cy="250" r="10"/><circle cx="240" cy="200" r="10"/><circle cx="300" cy="235" r="10"/><circle cx="350" cy="190" r="10"/><circle cx="330" cy="150" r="10"/><circle cx="260" cy="60" r="10"/>
+      </g>
+    </svg>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Sections">
+    <p>On this page</p>
+    <ol>
+      <li><a href="#intro">The ticket</a></li>
+      <li><a href="#data">Meet the data</a></li>
+      <li><a href="#line">Why a straight line fails</a></li>
+      <li><a href="#cuts">Splitting with cuts</a></li>
+      <li><a href="#purity">Pure nodes</a></li>
+      <li><a href="#entropy">Measuring impurity</a></li>
+      <li><a href="#gain">Information gain</a></li>
+      <li><a href="#tree">Growing a real tree</a></li>
+      <li><a href="#gini">Gini impurity</a></li>
+      <li><a href="#business">From tree to answer</a></li>
+      <li><a href="#explore">Explore further</a></li>
+      <li><a href="#wrap">Wrap up</a></li>
+    </ol>
+  </nav>
+
+<main id="main">
+
+<!-- ================= INTRO ================= -->
+<section id="intro">
+  <h2>Continuing the story: Orbit Express</h2>
+  <p class="lead">Tickets #1 and #2 are closed. The traffic-tier model is live, tuned and reasonably fast. Today a very different ticket arrives, from a new stakeholder.</p>
+
+  <div class="ticket">
+    <div class="from">Ticket #3, from the Head of HR</div>
+    <q>“We are losing delivery partners and warehouse staff faster than we can hire. Every exit costs us: the departing person often asks for a counter-offer, new hires need training, and it takes weeks to fill a role. Our own attrition history is still thin, so we have pulled a benchmark employee dataset from a similar-sized company to prototype a model. Can you help us find out who is likely to leave, and why?”</q>
+  </div>
+
+  <h3>Why does attrition matter here?</h3>
+  <div class="grid2">
+    <div class="tile pink"><h4>Counter-offers</h4><p>Trying to retain a departing employee often means a counter-offer negotiation. That is a cost in itself, and it does not always work.</p></div>
+    <div class="tile blue"><h4>Costlier replacements</h4><p>A replacement is often hired at today’s higher market rate, so backfilling a role can cost more than retaining the original person would have.</p></div>
+    <div class="tile blue"><h4>Training time</h4><p>New hires need training before they are fully productive.</p></div>
+    <div class="tile pink"><h4>Recruiting effort</h4><p>Recruiting itself costs time and money.</p></div>
+  </div>
+
+  <h3>What you will be able to do</h3>
+  <ul class="goals">
+    <li>Explain why straight-line models can struggle with this kind of data, and how a decision tree gets around that.</li>
+    <li>Read a decision tree: root node, internal nodes, leaf nodes, and how a tree makes a prediction.</li>
+    <li>Explain what a pure node is and why we want one.</li>
+    <li>Calculate entropy and information gain by hand for a simple split.</li>
+    <li>Train and visualise a decision tree with scikit-learn, and recognise overfitting when you see it.</li>
+    <li>Turn a trained tree into a business answer using feature importance.</li>
+  </ul>
+</section>
+
+<!-- ================= DATA ================= -->
+<section id="data">
+  <span class="mission">Mission 1</span>
+  <h2>Meet the data</h2>
+  <p>The dataset HR gave us has one row per employee. <code>Attrition</code> (Yes/No) is the column we want to predict.</p>
+
+<pre class="code"><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+
+df = pd.read_csv(<span class="cmt">'HR-Employee-Attrition.csv'</span>)
+print(df.shape)
+df.head()</pre>
+<pre class="out">(1470, 35)</pre>
+
+  <div class="kpis">
+    <div class="kpi"><b>1,470</b><span>employees (rows)</span></div>
+    <div class="kpi"><b>35</b><span>columns in the raw file</span></div>
+    <div class="kpi pk"><b>Attrition</b><span>target: Yes or No</span></div>
+  </div>
+
+  <div class="tabs widget" data-tabs>
+    <header><h4>First five rows</h4><p>Scroll sideways; selected columns shown.</p></header>
+    <div class="wbody">
+      <div role="tablist" aria-label="Dataset views">
+        <button role="tab" id="t-raw" aria-controls="p-raw" aria-selected="true">Raw HR data</button>
+        <button role="tab" id="t-model" aria-controls="p-model" aria-selected="false" tabindex="-1">Model-ready data</button>
+      </div>
+      <div role="tabpanel" id="p-raw" aria-labelledby="t-raw">
+        <div class="tblwrap"><table>
+          <caption class="sr-only">First five rows of the raw HR attrition dataset, 35 columns in total</caption>
+          <thead><tr><th>Age</th><th>Attrition</th><th>BusinessTravel</th><th>DailyRate</th><th>Department</th><th>DistanceFromHome</th><th>Education</th><th>EducationField</th><th>…</th><th>StockOptionLevel</th><th>TotalWorkingYears</th><th>YearsAtCompany</th></tr></thead>
+          <tbody>
+            <tr><td>41</td><td class="tgt">Yes</td><td>Travel_Rarely</td><td>1102</td><td>Sales</td><td>1</td><td>2</td><td>Life Sciences</td><td class="ell">…</td><td>0</td><td>8</td><td>6</td></tr>
+            <tr><td>49</td><td class="tgt">No</td><td>Travel_Frequently</td><td>279</td><td>Research &amp; Development</td><td>8</td><td>1</td><td>Life Sciences</td><td class="ell">…</td><td>1</td><td>10</td><td>10</td></tr>
+            <tr><td>37</td><td class="tgt">Yes</td><td>Travel_Rarely</td><td>1373</td><td>Research &amp; Development</td><td>2</td><td>2</td><td>Other</td><td class="ell">…</td><td>0</td><td>7</td><td>0</td></tr>
+            <tr><td>33</td><td class="tgt">No</td><td>Travel_Frequently</td><td>1392</td><td>Research &amp; Development</td><td>3</td><td>4</td><td>Life Sciences</td><td class="ell">…</td><td>0</td><td>8</td><td>8</td></tr>
+            <tr><td>27</td><td class="tgt">No</td><td>Travel_Rarely</td><td>591</td><td>Research &amp; Development</td><td>2</td><td>1</td><td>Medical</td><td class="ell">…</td><td>1</td><td>6</td><td>2</td></tr>
+          </tbody></table></div>
+        <p style="font-size:.9rem;color:var(--muted)">5 rows × 35 columns.</p>
+      </div>
+      <div role="tabpanel" id="p-model" aria-labelledby="t-model" hidden>
+        <div class="tblwrap"><table>
+          <caption class="sr-only">First five rows of the model-ready training data, 36 columns in total</caption>
+          <thead><tr><th>Age</th><th>DailyRate</th><th>EducationField</th><th>JobLevel</th><th>…</th><th>BusinessTravel_Travel_Rarely</th><th>Department_Sales</th><th>MaritalStatus_Single</th></tr></thead>
+          <tbody>
+            <tr><td>36</td><td>1174</td><td>0.233871</td><td>2</td><td class="ell">…</td><td>1.0</td><td>1.0</td><td>1.0</td></tr>
+            <tr><td>21</td><td>546</td><td>0.127479</td><td>1</td><td class="ell">…</td><td>1.0</td><td>0.0</td><td>1.0</td></tr>
+            <tr><td>43</td><td>422</td><td>0.151584</td><td>2</td><td class="ell">…</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+            <tr><td>42</td><td>188</td><td>0.127479</td><td>2</td><td class="ell">…</td><td>1.0</td><td>0.0</td><td>1.0</td></tr>
+            <tr><td>35</td><td>992</td><td>0.127479</td><td>1</td><td class="ell">…</td><td>1.0</td><td>0.0</td><td>1.0</td></tr>
+          </tbody></table></div>
+        <p style="font-size:.9rem;color:var(--muted)">5 rows × 36 columns. <code>EducationField</code> is a single target-encoded number; the other three columns shown are one-hot columns.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>How balanced is the target?</h3>
+  <div class="widget">
+    <header><h4>Who actually left?</h4><p>Hover or focus the dots for a label. Each shape stands for about one employee in every 100.</p></header>
+    <div class="wbody">
+      <div class="stack" role="img" aria-label="1,233 employees stayed (83.9 percent) and 237 left (16.1 percent)">
+        <div class="s" style="width:83.9%">No: 1,233 (83.9%)</div>
+        <div class="l" style="width:16.1%">Yes: 237</div>
+      </div>
+      <div class="picto" id="picto" role="img" aria-label="Pictogram of 100 employees: about 84 stayed, about 16 left"></div>
+      <div class="legend"><span><i class="sw-s"></i>Stayed (No)</span><span><i class="sw-l"></i>Left (Yes)</span></div>
+    </div>
+    <div class="wcap">Out of every 100 employees, roughly 16 have left. Like our traffic tiers in Class 1, this is an <strong>imbalanced</strong> target: far more employees stay than leave. Keep that in mind, exactly as we did with SMOTE back then.</div>
+  </div>
+
+<pre class="code">print(df[<span class="cmt">'Attrition'</span>].value_counts())
+print(df[<span class="cmt">'Attrition'</span>].value_counts(normalize=<span class="kw">True</span>).round(3))</pre>
+<pre class="out">Attrition
+No     1233
+Yes     237
+Name: count, dtype: int64
+Attrition
+No     0.839
+Yes    0.161
+Name: proportion, dtype: float64</pre>
+
+  <h3>Getting the model-ready data</h3>
+  <p>HR’s data science team already cleaned and encoded this dataset for us, using a mix of approaches. We load their prepared train and test files directly.</p>
+  <div class="grid3">
+    <div class="tile blue"><h4>One-hot encoded</h4><p><code>MaritalStatus</code>, <code>BusinessTravel</code>, <code>Department</code> become separate 0/1 columns.</p></div>
+    <div class="tile pink"><h4>Target-encoded</h4><p><code>EducationField</code> and <code>JobRole</code> have many categories, so each becomes a single numeric column. That avoids the dimensionality blow-up One-Hot Encoding caused back in Class 2.</p></div>
+    <div class="tile blue"><h4>Left raw</h4><p>Numeric fields like <code>Age</code> and <code>DailyRate</code> stay unscaled. As we’ll see in Class 4, decision trees don’t need scaled features the way kNN did.</p></div>
+  </div>
+
+<pre class="code">X_train = pd.read_pickle(<span class="cmt">'preprocessed_X_sm.pickle'</span>)
+X_test  = pd.read_pickle(<span class="cmt">'X_test.pickle'</span>)
+y_train = pd.read_pickle(<span class="cmt">'y_sm.pickle'</span>)
+y_test  = pd.read_pickle(<span class="cmt">'y_test.pickle'</span>)
+
+print(<span class="cmt">'Train:'</span>, X_train.shape)
+print(<span class="cmt">'Test :'</span>, X_test.shape)</pre>
+<pre class="out">Train: (1848, 36)
+Test : (368, 36)</pre>
+</section>
+
+<!-- ================= LINE ================= -->
+<section id="line">
+  <span class="mission">Mission 2</span>
+  <h2>Why a straight line will not work here</h2>
+  <p>To build intuition, forget all 36 columns for a moment. Imagine we only had two features: <strong>Age</strong> and whether the employee works <strong>Overtime</strong>. Here is a twelve-employee toy dataset.</p>
+
+<pre class="code">toy = pd.DataFrame({
+    <span class="cmt">'Age'</span>:       [22, 24, 26, 45, 48, 52, 23, 27, 47, 50, 25, 46],
+    <span class="cmt">'Overtime'</span>:  [1,  1,  0,  0,  1,  0,  1,  1,  0,  1,  0,  0],
+    <span class="cmt">'Attrition'</span>: [1,  1,  1,  0,  1,  0,  1,  1,  0,  0,  0,  0]
+})</pre>
+
+  <div class="widget">
+    <header><h4>Try to separate them with one straight line</h4><p>Drag the sliders. Aim for 12 out of 12.</p></header>
+    <div class="wbody">
+      <div class="svgwrap"><svg id="lineSvg" role="img" aria-label="Scatter plot of Age against Overtime. Pink diamonds mark employees who left, blue circles mark employees who stayed. A movable straight line is drawn over it."></svg></div>
+      <div class="legend"><span><i class="sw-l"></i>Left</span><span><i class="sw-s"></i>Stayed</span><span>Ringed points are on the wrong side of your line.</span></div>
+      <div class="ctrl">
+        <label>Line angle <input type="range" id="lineAngle" min="0" max="179" step="1" value="90" aria-describedby="lineScore"></label>
+        <label>Line position <input type="range" id="lineOff" min="-1" max="2" step="0.005" value="0.45" aria-describedby="lineScore"></label>
+      </div>
+      <div class="btnrow"><button class="btn pk" id="lineBest" type="button">Search for the best line</button><button class="btn alt" id="lineReset" type="button">Reset</button></div>
+      <div class="readout" id="lineScore" aria-live="polite"></div>
+    </div>
+    <div class="wcap">The line may face either way; the tool assumes the better orientation for you. The “Left” employees do not sit on one consistent side of any single line.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="tile pink">
+      <h4>Why not Logistic Regression?</h4>
+      <p>It draws one straight decision boundary. Looking at the plot, the “Left” employees are not on one consistent side of any single line, so it will struggle here, exactly like it struggled with our three traffic tiers in Class 1.</p>
+    </div>
+    <div class="tile blue">
+      <h4>Why not kNN?</h4>
+      <p>kNN actually works reasonably well on data like this. It rests on the same assumption we used in Class 1: neighbourhoods should be homogeneous, and that holds here too. But kNN has a real drawback, one we spent all of Class 2 on.</p>
+    </div>
+  </div>
+  <div data-quiz="q1"></div>
+</section>
+
+<!-- ================= CUTS ================= -->
+<section id="cuts">
+  <span class="mission">Mission 3</span>
+  <h2>A different idea: split the space with straight cuts</h2>
+  <p>Instead of one line, what if we used several straight cuts, each parallel to an axis, to carve the plot into small, pure regions? Each cut can be written as a simple rule, like <code>Age &lt; 35</code>. Stack enough of these rules and you get a set of nested if-else conditions that separates the classes, even though the overall boundary is not a straight line.</p>
+
+  <div class="widget">
+    <header><h4>Grow a tree on the toy data, one cut at a time</h4><p>Step through the cuts. Select any node to see its region, counts and entropy.</p></header>
+    <div class="wbody">
+      <div class="steps" role="group" aria-label="Growth step">
+        <button class="btn alt" id="stPrev" type="button">Previous</button>
+        <div class="dots" id="stDots"></div>
+        <button class="btn" id="stNext" type="button">Next cut</button>
+      </div>
+      <div class="readout" id="stCap" aria-live="polite"></div>
+      <div class="explore">
+        <div class="svgwrap"><svg id="cutSvg" role="img" aria-label="Scatter plot of the toy data with the axis-parallel cuts drawn so far. Selected node's region is shaded."></svg></div>
+        <div class="svgwrap"><svg id="treeSvg" role="group" aria-label="Decision tree built from the cuts so far. Each box is focusable."></svg></div>
+        <div class="callout" style="margin:0"><dl class="det" id="nodeDet" aria-live="polite"></dl></div>
+      </div>
+    </div>
+    <div class="wcap">These cuts show one way the splits can go on the toy data. The last two rounds of cuts each isolate a single employee, a hint of how a tree can start memorising rather than generalising.</div>
+  </div>
+
+  <h3>From rules to a tree</h3>
+  <p>Drawing the nested if-else conditions as a diagram gives a <strong>tree</strong> shape, which is exactly what the explorer above builds.</p>
+  <div class="grid3">
+    <div class="tile blue"><h4>Root node</h4><p>Sits at the top and holds the first split.</p></div>
+    <div class="tile blue"><h4>Internal nodes</h4><p>Hold further splits. Also called decision nodes.</p></div>
+    <div class="tile pink"><h4>Leaf nodes</h4><p>Sit at the bottom and hold the final prediction.</p></div>
+  </div>
+
+  <div class="tabs widget" data-tabs>
+    <header><h4>Two ways to read the same tree</h4></header>
+    <div class="wbody">
+      <div role="tablist" aria-label="Geometric or logical view">
+        <button role="tab" id="t-geo" aria-controls="p-geo" aria-selected="true">Geometry</button>
+        <button role="tab" id="t-log" aria-controls="p-log" aria-selected="false" tabindex="-1">Logic</button>
+      </div>
+      <div role="tabpanel" id="p-geo" aria-labelledby="t-geo"><p>Geometrically, a decision tree is a combination of <strong>axis-parallel cuts</strong>: every split is a vertical or horizontal line in the plot above.</p></div>
+      <div role="tabpanel" id="p-log" aria-labelledby="t-log" hidden>
+        <p>Logically, it is a combination of <strong>nested if-else conditions</strong>. The tree from the explorer reads:</p>
+<pre class="code" style="margin-bottom:0"><span class="kw">if</span> Age &lt; 35:
+    <span class="kw">if</span> Overtime == 1:  predict <span class="cmt">"Left"</span>
+    <span class="kw">else</span>:
+        <span class="kw">if</span> Age &lt; 25.5:  predict <span class="cmt">"Stayed"</span>
+        <span class="kw">else</span>:            predict <span class="cmt">"Left"</span>
+<span class="kw">else</span>:
+    <span class="kw">if</span> Overtime == 0:  predict <span class="cmt">"Stayed"</span>
+    <span class="kw">else</span>:
+        <span class="kw">if</span> Age &lt; 49:  predict <span class="cmt">"Left"</span>
+        <span class="kw">else</span>:          predict <span class="cmt">"Stayed"</span></pre>
+      </div>
+    </div>
+  </div>
+  <div data-quiz="q2"></div>
+</section>
+
+<!-- ================= PURITY ================= -->
+<section id="purity">
+  <span class="mission">Mission 4</span>
+  <h2>Pure nodes, and how confident should we be?</h2>
+  <p>At prediction time, a leaf node predicts whichever class is the <strong>majority</strong> among the training points that landed there. Compare two possible leaf nodes after a split:</p>
+  <div class="tblwrap"><table>
+    <caption class="sr-only">Comparison of two leaf nodes by class counts and confidence</caption>
+    <thead><tr><th></th><th>Positive class</th><th>Negative class</th><th>Confidence</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Option 1 (purer)</strong></td><td>90</td><td>10</td><td>High: 90%</td></tr>
+      <tr><td><strong>Option 2 (less pure)</strong></td><td>60</td><td>40</td><td>Low: 60%</td></tr>
+    </tbody></table></div>
+  <p>Neither option is actually pure. A <strong>pure node</strong> contains only one class, with zero mixing, like 100 positive and 0 negative. Option 1 is simply <em>purer</em> than Option 2: a stronger majority, so more confidence in the prediction. That is exactly why we split the data into purer and purer regions, ideally all the way to pure leaves.</p>
+
+  <div class="widget">
+    <header><h4>Leaf confidence lab</h4><p>Change how a leaf’s 100 training points are mixed.</p></header>
+    <div class="wbody">
+      <div class="ctrl"><label>Positive-class points in the leaf (out of 100)
+        <input type="range" id="leafPos" min="0" max="100" step="1" value="90"></label></div>
+      <div class="btnrow">
+        <button class="btn alt" type="button" data-leaf="90">Option 1 (90 / 10)</button>
+        <button class="btn alt" type="button" data-leaf="60">Option 2 (60 / 40)</button>
+        <button class="btn alt" type="button" data-leaf="100">Pure (100 / 0)</button>
+      </div>
+      <div class="stack" id="leafBar" role="img" aria-label="Class mix of the leaf"><div class="s" id="leafP"></div><div class="l" id="leafN"></div></div>
+      <div class="legend"><span>Blue: positive class</span><span>Dark pink: negative class</span></div>
+      <div class="readout" id="leafOut" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ENTROPY ================= -->
+<section id="entropy">
+  <h2>How do we measure purity mathematically?</h2>
+  <p>We measure the opposite of purity: <strong>impurity</strong>. The most common measure is <strong>entropy</strong>, borrowed from information theory, where it measures randomness.</p>
+
+  <h3>The four-jar thought experiment</h3>
+  <p>Imagine four jars, each filled with red and blue balls. You pick one ball from a jar without looking. Which jars give you the most confidence about the colour you will pick?</p>
+  <div class="grid3">
+    <div class="tile blue"><h4>Jars 3 and 4</h4><p>These are <strong>pure</strong>: you already know exactly what colour you will get.</p></div>
+    <div class="tile pink"><h4>Jar 1</h4><p>The most <strong>impure</strong>. It is a near-even mix, so you have the least confidence.</p></div>
+    <div class="tile"><h4>The lesson</h4><p>Confidence grows as a jar gets purer. Entropy puts a number on that.</p></div>
+  </div>
+
+  <p>For a binary outcome, entropy is defined as:</p>
+  <div class="formula" role="math" aria-label="H equals minus p log base 2 of p, minus open bracket 1 minus p close bracket log base 2 of open bracket 1 minus p close bracket"><i>H</i> = −<i>p</i> log<sub>2</sub>(<i>p</i>) − (1 − <i>p</i>) log<sub>2</sub>(1 − <i>p</i>)</div>
+  <p>where <em>p</em> is the proportion of one class in the node.</p>
+  <ul>
+    <li>Entropy is <strong>maximum</strong> (equal to 1) when <em>p</em> = 0.5: a perfectly impure, even mix.</li>
+    <li>Entropy is <strong>minimum</strong> (equal to 0) when <em>p</em> = 0 or <em>p</em> = 1: a pure node.</li>
+  </ul>
+
+  <div class="widget"><header><h4>Fill a jar, watch the entropy</h4><p>Change the number of red balls out of 20.</p></header><div class="wbody" id="lab1"></div>
+    <div class="wcap">The curve peaks exactly at <em>p</em> = 0.5 and touches zero at the two ends. That matches the jar experiment: maximum uncertainty at an even mix, zero uncertainty at a pure jar.</div></div>
+
+<pre class="code"><span class="kw">def</span> entropy(p):
+    <span class="cmt">"""Entropy for a binary outcome with probability p for one class."""</span>
+    <span class="kw">if</span> p == 0 <span class="kw">or</span> p == 1:
+        <span class="kw">return</span> 0.0
+    <span class="kw">return</span> -p * np.log2(p) - (1 - p) * np.log2(1 - p)
+
+p_values = np.linspace(0.001, 0.999, 200)
+entropy_values = [entropy(p) <span class="kw">for</span> p <span class="kw">in</span> p_values]
+
+plt.plot(p_values, entropy_values)
+plt.xlabel(<span class="cmt">'P(class = 1)'</span>)
+plt.ylabel(<span class="cmt">'Entropy'</span>)
+plt.title(<span class="cmt">'Entropy for a binary outcome'</span>)
+plt.axvline(0.5, linestyle=<span class="cmt">'--'</span>, color=<span class="cmt">'gray'</span>)
+plt.show()</pre>
+  <div data-quiz="q3"></div>
+</section>
+
+<!-- ================= GAIN ================= -->
+<section id="gain">
+  <span class="mission">Mission 5</span>
+  <h2>Choosing the best split with information gain</h2>
+  <p>We know we want purer child nodes after a split. <strong>Information gain</strong> measures exactly how much purer a split makes things:</p>
+  <div class="formula" role="math" aria-label="Information gain equals entropy of parent minus weighted average entropy of children">Information Gain = Entropy(parent) − Weighted average entropy(children)</div>
+  <p>We use a <strong>weighted</strong> average, not a simple average, because a child with 98 points should count for more than a child with 2 points.</p>
+
+  <h3>A worked example</h3>
+  <p>Say our root node has 100 employees: 60 who left, 40 who stayed. We consider splitting on <strong>Gender</strong>: the Male child has 70 employees (50 left, 20 stayed) and the Female child has 30 (10 left, 20 stayed).</p>
+
+  <div class="widget">
+    <header><h4>Information gain calculator</h4><p>Starts on the Gender example. Change any number, or try the presets.</p></header>
+    <div class="wbody">
+      <div class="ctrl">
+        <label>Parent: left <input type="number" id="cPL" min="0" step="1" value="60"></label>
+        <label>Parent: stayed <input type="number" id="cPS" min="0" step="1" value="40"></label>
+        <label>Child A: left <input type="number" id="cAL" min="0" step="1" value="50"></label>
+        <label>Child A: stayed <input type="number" id="cAS" min="0" step="1" value="20"></label>
+      </div>
+      <div class="btnrow">
+        <button class="btn alt" type="button" data-cpre="60,40,50,20">Gender split (Male as child A)</button>
+        <button class="btn alt" type="button" data-cpre="60,40,60,0">A perfect split</button>
+        <button class="btn alt" type="button" data-cpre="60,40,30,20">A split that changes nothing</button>
+      </div>
+      <div class="tblwrap"><table class="calc" id="calcT"></table></div>
+      <div class="readout" id="calcOut" aria-live="polite"></div>
+    </div>
+    <div class="wcap">Child B is filled in automatically: whatever is left over from the parent after Child A.</div>
+  </div>
+
+<pre class="code"><span class="cmt"># Parent node: 60 left, 40 stayed, out of 100</span>
+p_parent = 60 / 100
+entropy_parent = entropy(p_parent)
+
+<span class="cmt"># Split by Gender</span>
+<span class="cmt"># Male child: 70 employees total, 50 left, 20 stayed</span>
+p_male = 50 / 70
+entropy_male = entropy(p_male)
+
+<span class="cmt"># Female child: 30 employees total, 10 left, 20 stayed</span>
+p_female = 10 / 30
+entropy_female = entropy(p_female)
+
+<span class="cmt"># Weighted average entropy of the children</span>
+weighted_child_entropy = (70/100) * entropy_male + (30/100) * entropy_female
+
+information_gain = entropy_parent - weighted_child_entropy</pre>
+<pre class="out">Parent entropy          : 0.971
+Male child entropy      : 0.863
+Female child entropy    : 0.918
+Weighted child entropy  : 0.88
+Information gain (Gender): 0.091</pre>
+
+  <div class="widget">
+    <header><h4>Gender versus Age &lt; 35</h4><p>Information gain for the same root node.</p></header>
+    <div class="wbody">
+      <div class="hb"><span>Gender</span><div class="trk"><div class="fill" style="width:9.1%"></div></div><b>0.091</b></div>
+      <div class="hb"><span>Age &lt; 35</span><div class="trk"><div class="fill pk" style="width:25.7%"></div></div><b>0.257</b></div>
+      <p style="font-size:.85rem;color:var(--muted);margin:6px 0 0">Bar length is proportional to information gain on a 0 to 1 scale.</p>
+    </div>
+    <div class="wcap">Splitting on Gender barely helps: entropy drops only slightly, giving an information gain of about 0.091. Splitting on <strong>Age &lt; 35</strong> for the same root node gives <strong>0.257</strong>, noticeably higher.</div>
+  </div>
+
+  <div data-quiz="q4"></div>
+  <p>A decision tree always picks the split that gives the maximum information gain (equivalently, the maximum drop in entropy) at each node, then repeats this process on each child node until it reaches pure, or nearly pure, leaves.</p>
+
+  <div class="widget">
+    <header><h4>Try every candidate split on the toy data</h4><p>Each bar is a possible first cut on the twelve-employee dataset. Select one to see the arithmetic.</p></header>
+    <div class="wbody">
+      <div class="gwrap">
+        <div class="gbars" id="gBars" role="group" aria-label="Information gain for each candidate split"></div>
+        <div class="glabels" id="gLabels" aria-hidden="true"></div>
+      </div>
+      <div class="legend" style="margin-top:10px"><span><i class="sw-l"></i>Highest gain (pink)</span><span>Selected split has a tinted background.</span></div>
+      <div class="tblwrap"><table class="calc" id="gT"></table></div>
+      <div class="readout" id="gOut" aria-live="polite"></div>
+    </div>
+    <div class="wcap">These gains are computed on the twelve-employee toy dataset only, so they differ from the 100-employee Gender example above. Thresholds that fall in the same gap between ages give the same split, so each gap appears once.</div>
+  </div>
+
+  <h3>What happens with more than two categories?</h3>
+  <details>
+    <summary>Classic algorithm versus scikit-learn</summary>
+    <div class="dbody">
+      <p>The classic version of this algorithm, as described so far, would create one child branch per category for a feature with more than two unique values, calculating weighted entropy across all of them in the same way.</p>
+      <p><strong>A caveat for the tool we’re about to use:</strong> scikit-learn’s <code>DecisionTreeClassifier</code> doesn’t do this. It only ever makes <strong>binary</strong> splits, even for a categorical feature. A multi-category field is converted to a numeric column first (during preprocessing), and the tree searches for a threshold on that number, exactly as it would for <code>Age</code>. In the next section, <code>JobRole</code> appears as a single numeric column, split on a threshold rather than branching once per role.</p>
+    </div>
+  </details>
+  <p>We now understand how a tree decides where to split, in principle, and how scikit-learn’s implementation differs in practice. Time to grow a real one on the actual attrition data.</p>
+</section>
+
+<!-- ================= TREE ================= -->
+<section id="tree">
+  <span class="mission">Mission 6</span>
+  <h2>Growing a real tree</h2>
+  <p>We use scikit-learn’s <code>DecisionTreeClassifier</code> with entropy as the split criterion, exactly as we just worked out by hand.</p>
+<pre class="code"><span class="kw">from</span> sklearn.tree <span class="kw">import</span> DecisionTreeClassifier
+
+model = DecisionTreeClassifier(criterion=<span class="cmt">'entropy'</span>, random_state=42)
+model.fit(X_train, y_train)
+
+print(<span class="cmt">'Train accuracy:'</span>, round(model.score(X_train, y_train), 3))
+print(<span class="cmt">'Test accuracy :'</span>, round(model.score(X_test, y_test), 3))</pre>
+<pre class="out">Train accuracy: 1.0
+Test accuracy : 0.761</pre>
+
+  <div class="widget">
+    <header><h4>Train versus test accuracy</h4></header>
+    <div class="wbody">
+      <div class="hb"><span>Train</span><div class="trk"><div class="fill" style="width:100%"></div></div><b>1.000</b></div>
+      <div class="hb"><span>Test</span><div class="trk"><div class="fill pk" style="width:76.1%"></div></div><b>0.761</b></div>
+      <p style="margin:8px 0 0;font-weight:700;color:var(--navy)">Gap: about 0.239 (1.000 − 0.761)</p>
+    </div>
+    <div class="wcap">Train accuracy is a perfect 1.0, but test accuracy is much lower. A model that memorises its training data but does noticeably worse on new data is <strong>overfitting</strong>: the tree has fit noise and quirks of individual employees rather than patterns that generalise.</div>
+  </div>
+
+  <h3>Visualising the tree</h3>
+<pre class="code"><span class="kw">from</span> sklearn.tree <span class="kw">import</span> plot_tree
+
+plt.figure(figsize=(16, 10))
+plot_tree(model, filled=True, max_depth=3, feature_names=X_train.columns, fontsize=8)
+plt.title(<span class="cmt">'Top 3 levels of our (much deeper) tree'</span>)
+plt.show()</pre>
+  <div class="callout pink">
+    <strong class="t">What to notice</strong>
+    <p>Even showing just the top 3 levels, this tree is already complex. The full tree goes much deeper, memorising individual employees rather than learning general patterns. That is a textbook sign of overfitting, and it explains the gap between train and test accuracy. We will tackle it with pruning-style hyperparameters in Decision Trees-2.</p>
+  </div>
+</section>
+
+<!-- ================= GINI ================= -->
+<section id="gini">
+  <span class="mission">Bonus</span>
+  <h2>Entropy is not the only option</h2>
+  <p><code>DecisionTreeClassifier</code> also supports the <strong>Gini impurity</strong> criterion. It is an alternative way to measure impurity that is often just as effective and slightly cheaper to compute, since it skips the logarithm.</p>
+  <div class="formula" role="math" aria-label="Gini equals one minus the sum over i of p sub i squared">Gini = 1 − Σ<sub><i>i</i></sub> <i>p<sub>i</sub></i><sup>2</sup></div>
+  <p>Like entropy, Gini is 0 for a pure node and highest for an even mix. The two usually pick very similar splits in practice.</p>
+
+  <div class="widget"><header><h4>Entropy and Gini side by side</h4><p>For a two-class node, Gini simplifies to 2<i>p</i>(1 − <i>p</i>).</p></header><div class="wbody" id="lab2"></div></div>
+
+<pre class="code">model_gini = DecisionTreeClassifier(criterion=<span class="cmt">'gini'</span>, random_state=42)
+model_gini.fit(X_train, y_train)
+
+print(<span class="cmt">'Entropy tree - test accuracy:'</span>, round(model.score(X_test, y_test), 3))
+print(<span class="cmt">'Gini tree    - test accuracy:'</span>, round(model_gini.score(X_test, y_test), 3))</pre>
+<pre class="out">Entropy tree - test accuracy: 0.761
+Gini tree    - test accuracy: 0.764</pre>
+  <div class="widget">
+    <header><h4>Test accuracy by criterion</h4></header>
+    <div class="wbody">
+      <div class="hb"><span>Entropy</span><div class="trk"><div class="fill" style="width:76.1%"></div></div><b>0.761</b></div>
+      <div class="hb"><span>Gini</span><div class="trk"><div class="fill pk" style="width:76.4%"></div></div><b>0.764</b></div>
+    </div>
+    <div class="wcap">The two criteria land almost on top of each other.</div>
+  </div>
+</section>
+
+<!-- ================= BUSINESS ================= -->
+<section id="business">
+  <h2>From tree to business answer</h2>
+  <p>Remember HR’s real question: <strong>why</strong> are people leaving, not just who. A trained tree can tell us which features it relied on most, using <code>feature_importances_</code>.</p>
+
+  <div class="tabs widget" data-tabs>
+    <header><h4>How the importance chart is built</h4><p>Follow the code, one step at a time.</p></header>
+    <div class="wbody">
+      <div role="tablist" aria-label="Steps to build the importance chart">
+        <button role="tab" id="t-i1" aria-controls="p-i1" aria-selected="true">Score</button>
+        <button role="tab" id="t-i2" aria-controls="p-i2" aria-selected="false" tabindex="-1">Rank</button>
+        <button role="tab" id="t-i3" aria-controls="p-i3" aria-selected="false" tabindex="-1">Plot</button>
+      </div>
+      <div role="tabpanel" id="p-i1" aria-labelledby="t-i1">
+<pre class="code" style="margin-top:0">importances = pd.Series(model.feature_importances_, index=X_train.columns)</pre>
+        <p style="margin-top:12px">The trained tree exposes one importance score per feature. Pairing the scores with <code>X_train.columns</code> labels each score with its feature name.</p></div>
+      <div role="tabpanel" id="p-i2" aria-labelledby="t-i2" hidden>
+<pre class="code" style="margin-top:0">top_features = importances.sort_values(ascending=False).head(10)</pre>
+        <p style="margin-top:12px">Sort from most to least important and keep the top ten.</p></div>
+      <div role="tabpanel" id="p-i3" aria-labelledby="t-i3" hidden>
+<pre class="code" style="margin-top:0">plt.figure(figsize=(8, 5))
+top_features.sort_values().plot(kind='barh')
+plt.xlabel('Importance')
+plt.title("Top 10 features driving the tree's predictions")
+plt.show()
+
+top_features</pre>
+        <p style="margin-top:12px">A horizontal bar chart of the ten leading features, plus the underlying numbers. Run these cells on your trained model to see the ranking.</p></div>
+    </div>
+  </div>
+
+  <div class="callout pink">
+    <strong class="t">Reading the result as HR would</strong>
+    <p>Compare the top features with your own guesses about what might be driving attrition. Then separate two kinds of feature. Some are levers HR can realistically act on, for example adjusting stock option levels, training frequency, or how often certain roles are expected to travel. Others are just facts about a person that cannot be changed.</p>
+  </div>
+  <div data-quiz="q5"></div>
+</section>
+
+<!-- ================= EXPLORE ================= -->
+<section id="explore">
+  <h2>Explore further</h2>
+  <p>Each idea below works best if you write your guess first, then check it against what you find.</p>
+  <div class="grid2">
+    <div class="tile blue">
+      <h4>Play with a live tree</h4>
+      <p>Guess: if a tree keeps splitting forever with no limit, will it fit the training data perfectly? Then open the <a href="https://mlu-explain.github.io/decision-tree/" target="_blank" rel="noopener">interactive decision tree visualisation</a> and build a small tree yourself.</p>
+      <div class="prompt" id="pr1">In a decision tree, what does it mean for the final decision boundary to not be axis-parallel, even though every individual split is?</div>
+      <button class="btn alt copyb" type="button" data-copy="pr1">Copy prompt</button>
+    </div>
+    <div class="tile pink">
+      <h4>Name the problem</h4>
+      <p>Guess: is our tree overfitting or underfitting? Explain in one sentence using the train and test gap. We tune the hyperparameter properly in Decision Trees-2.</p>
+      <div class="prompt" id="pr2">A decision tree scores 1.0 on training data and 0.77 on test data. What is happening, and what is one simple hyperparameter that could help?</div>
+      <button class="btn alt copyb" type="button" data-copy="pr2">Copy prompt</button>
+    </div>
+    <div class="tile pink">
+      <h4>Entropy versus Gini</h4>
+      <p>Guess: will they give noticeably different trees, or very similar ones? Then compare the test accuracies above against the answer you get.</p>
+      <div class="prompt" id="pr3">What is the practical difference between using entropy and Gini impurity as the split criterion in a decision tree, and when might someone prefer one over the other?</div>
+      <button class="btn alt copyb" type="button" data-copy="pr3">Copy prompt</button>
+    </div>
+    <div class="tile blue">
+      <h4>Read one prediction like a human</h4>
+      <p>Guess: for one test employee, can you predict the output from their top two or three feature values? Then run the code you get on a row from <code>X_test</code> and see whether the printed path matches. Hint: look up <code>export_text</code> or <code>decision_path</code>.</p>
+      <div class="prompt" id="pr4">Given a trained scikit-learn DecisionTreeClassifier called `model` and a single row of test data `X_test.iloc[[0]]`, how do I print out the exact path of if-else rules it follows to reach its prediction?</div>
+      <button class="btn alt copyb" type="button" data-copy="pr4">Copy prompt</button>
+    </div>
+  </div>
+
+  <h3>For the curious: watching a tree grow, node by node</h3>
+  <p>These are optional, for your own exploration.</p>
+  <ul>
+    <li>An <a href="https://shrijankumar1-maker.github.io/decision-tree-visualiser/" target="_blank" rel="noopener">interactive visualiser</a> that builds a tree step by step, with information gain calculated live at each stage.</li>
+    <li>The underlying paper for going deeper: <a href="https://opus.bibliothek.uni-augsburg.de/opus4/frontdoor/deliver/index/docId/79711/file/ECML_PKDD_Decision_Tree_Learning.pdf" target="_blank" rel="noopener">ECML PKDD Decision Tree Learning</a>.</li>
+  </ul>
+</section>
+
+<!-- ================= WRAP ================= -->
+<section id="wrap">
+  <h2>Wrap up</h2>
+  <ol class="take">
+    <li>Straight-line models like Logistic Regression struggle with data like this; even kNN, which handles it reasonably well, does not scale, as we saw in Class 2.</li>
+    <li>A decision tree splits the feature space using axis-parallel cuts, which combine into a tree of root, internal and leaf nodes.</li>
+    <li>A leaf predicts the majority class of the training points that land there; purer leaves give more confident predictions.</li>
+    <li>Entropy measures impurity: 0 for a pure node, 1 (maximum) for an even 50-50 split.</li>
+    <li>Information gain is the drop in weighted entropy from a split; a tree always picks the split with the highest information gain at each node.</li>
+    <li>A fully grown tree can reach perfect training accuracy while doing much worse on test data. That gap is overfitting, and we will fix it with pruning-style hyperparameters in the next class.</li>
+    <li>Gini impurity is an alternative to entropy, usually giving very similar trees.</li>
+    <li><code>feature_importances_</code> turns a trained tree into a ranked list of what actually drives its predictions, connecting the model back to the original business question.</li>
+  </ol>
+
+  <div class="ticket">
+    <div class="from">Ticket #3 closed: your reply to the Head of HR</div>
+    <q>“We can now flag employees at risk of leaving, and just as importantly, show which factors the model is actually relying on. Before we roll this out, we need to fix an overfitting problem in the tree so it generalises to employees it has not seen before.”</q>
+  </div>
+
+  <div class="next">
+    <h3>Next ticket: Decision Trees-2</h3>
+    <p>The tree memorises the training data almost perfectly, but does much worse on new employees. How do we control how much a tree is allowed to grow, so it learns real patterns instead of individual employees?</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer><strong>Decision Trees 1 post read</strong></footer>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent){var e=document.createElementNS(NS,tag);for(var k in attrs){e.setAttribute(k,attrs[k]);}if(parent)parent.appendChild(e);return e;}
+function H(p){return (p<=0||p>=1)?0:-p*Math.log2(p)-(1-p)*Math.log2(1-p);}
+function Hc(a,b){var n=a+b;return n?H(a/n):0;}
+function fmt(x,d){d=d==null?3:d;return (Math.round(x*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+/* ---------- data ---------- */
+var TOY=[[22,1,1],[24,1,1],[26,0,1],[45,0,0],[48,1,1],[52,0,0],[23,1,1],[27,1,1],[47,0,0],[50,1,0],[25,0,0],[46,0,0]];
+function cnt(pts){var l=0;pts.forEach(function(p){if(p[2]===1)l++;});return {l:l,s:pts.length-l,n:pts.length};}
+function ptLabel(p){return 'Age '+p[0]+', Overtime '+(p[1]?'yes':'no')+': '+(p[2]?'Left':'Stayed');}
+
+/* ---------- progress + toc ---------- */
+var prog=$('#progress');
+function onScroll(){var h=document.documentElement;var m=h.scrollHeight-h.clientHeight;prog.style.width=(m>0?h.scrollTop/m*100:0)+'%';}
+window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+if('IntersectionObserver' in window){
+  var links=$$('.toc a');
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id);});}});},{rootMargin:'-20% 0px -70% 0px'});
+  $$('main section').forEach(function(s){io.observe(s);});
+}
+
+/* ---------- tabs ---------- */
+$$('[data-tabs]').forEach(function(root){
+  var tabs=$$('[role=tab]',root);
+  function sel(t){tabs.forEach(function(x){var on=x===t;x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1;var p=document.getElementById(x.getAttribute('aria-controls'));if(p)p.hidden=!on;});}
+  tabs.forEach(function(t,i){
+    t.addEventListener('click',function(){sel(t);});
+    t.addEventListener('keydown',function(e){
+      var j=-1;if(e.key==='ArrowRight')j=(i+1)%tabs.length;if(e.key==='ArrowLeft')j=(i-1+tabs.length)%tabs.length;
+      if(j>=0){e.preventDefault();sel(tabs[j]);tabs[j].focus();}
+    });
+  });
+});
+
+/* ---------- pictogram ---------- */
+(function(){
+  var box=$('#picto');
+  for(var i=0;i<100;i++){var b=document.createElement('b');var left=i>=84;if(left)b.className='l';b.title=left?'Left':'Stayed';box.appendChild(b);}
+})();
+
+/* ---------- scatter factory ---------- */
+function makeScatter(svg){
+  var W=640,HH=300,m={l:62,r:18,t:14,b:48},xd=[18,56],yd=[-0.3,1.3];
+  var X=function(v){return m.l+(v-xd[0])/(xd[1]-xd[0])*(W-m.l-m.r);};
+  var Y=function(v){return m.t+(1-(v-yd[0])/(yd[1]-yd[0]))*(HH-m.t-m.b);};
+  svg.setAttribute('viewBox','0 0 '+W+' '+HH);
+  while(svg.firstChild)svg.removeChild(svg.firstChild);
+  var defs=el('defs',{},svg);
+  var cp=el('clipPath',{id:'clip-'+svg.id},defs);
+  el('rect',{x:X(xd[0]),y:Y(yd[1]),width:X(xd[1])-X(xd[0]),height:Y(yd[0])-Y(yd[1])},cp);
+  el('rect',{x:X(xd[0]),y:Y(yd[1]),width:X(xd[1])-X(xd[0]),height:Y(yd[0])-Y(yd[1]),fill:'#FAFBFF',stroke:'#D6DEF2'},svg);
+  var gReg=el('g',{},svg),gAx=el('g',{},svg),gCut=el('g',{'clip-path':'url(#clip-'+svg.id+')'},svg),gPt=el('g',{},svg);
+  [20,30,40,50].forEach(function(v){
+    el('line',{x1:X(v),x2:X(v),y1:Y(yd[1]),y2:Y(yd[0]),stroke:'#E4EBFB'},gAx);
+    var t=el('text',{x:X(v),y:HH-26,'text-anchor':'middle','font-size':13,fill:'#4A5580'},gAx);t.textContent=v;
+  });
+  [0,1].forEach(function(v){
+    el('line',{x1:X(xd[0]),x2:X(xd[1]),y1:Y(v),y2:Y(v),stroke:'#E4EBFB'},gAx);
+    var t=el('text',{x:m.l-8,y:Y(v)+4,'text-anchor':'end','font-size':13,fill:'#4A5580'},gAx);t.textContent=v?'Yes (1)':'No (0)';
+  });
+  var xt=el('text',{x:(m.l+W-m.r)/2,y:HH-6,'text-anchor':'middle','font-size':13,'font-weight':700,fill:'#101A3F'},gAx);xt.textContent='Age';
+  var yt=el('text',{x:14,y:(m.t+HH-m.b)/2,'text-anchor':'middle','font-size':13,'font-weight':700,fill:'#101A3F',transform:'rotate(-90 14 '+((m.t+HH-m.b)/2)+')'},gAx);yt.textContent='Overtime';
+  var pts=TOY.map(function(p){
+    var g=el('g',{},gPt),cx=X(p[0]),cy=Y(p[1]),shape;
+    if(p[2]===1){shape=el('path',{d:'M'+cx+' '+(cy-11)+'L'+(cx+11)+' '+cy+'L'+cx+' '+(cy+11)+'L'+(cx-11)+' '+cy+'Z',fill:'#EA1A85',stroke:'#fff','stroke-width':1.5},g);}
+    else{shape=el('circle',{cx:cx,cy:cy,r:9,fill:'#254AA5',stroke:'#fff','stroke-width':1.5},g);}
+    var ti=el('title',{},g);ti.textContent=ptLabel(p);
+    return {p:p,g:g,shape:shape,cx:cx,cy:cy};
+  });
+  return {W:W,HH:HH,X:X,Y:Y,xd:xd,yd:yd,gReg:gReg,gCut:gCut,pts:pts};
+}
+
+/* ---------- Mission 2: line lab ---------- */
+(function(){
+  var svg=$('#lineSvg'),S=makeScatter(svg);
+  var line=el('line',{stroke:'#101A3F','stroke-width':4,'stroke-linecap':'round'},S.gCut);
+  var rings=[];S.pts.forEach(function(o){rings.push(el('circle',{cx:o.cx,cy:o.cy,r:17,fill:'none',stroke:'#101A3F','stroke-width':2.5,'stroke-dasharray':'4 3',visibility:'hidden'},S.gCut));});
+  var A=$('#lineAngle'),B=$('#lineOff'),out=$('#lineScore');
+  function xn(a){return (a-20)/35;}
+  function toPx(x,y){return [S.X(x*35+20),S.Y(y)];}
+  function score(th,b){
+    var c=Math.cos(th),s=Math.sin(th),k=0,side=TOY.map(function(p){var v=c*xn(p[0])+s*p[1]>b?1:0;if(v===p[2])k++;return v;});
+    var flip=k<6;return {k:flip?12-k:k,flip:flip,side:side};
+  }
+  function draw(){
+    var th=+A.value*Math.PI/180,b=+B.value,c=Math.cos(th),s=Math.sin(th);
+    var p0=[b*c,b*s],d=[-s,c],a=toPx(p0[0]-6*d[0],p0[1]-6*d[1]),z=toPx(p0[0]+6*d[0],p0[1]+6*d[1]);
+    line.setAttribute('x1',a[0]);line.setAttribute('y1',a[1]);line.setAttribute('x2',z[0]);line.setAttribute('y2',z[1]);
+    var r=score(th,b);
+    S.pts.forEach(function(o,i){var pred=r.flip?1-r.side[i]:r.side[i];rings[i].setAttribute('visibility',pred!==o.p[2]?'visible':'hidden');});
+    out.innerHTML='Your line classifies <span class="pk">'+r.k+' of 12</span> employees correctly.'+(r.k===12?' Every employee is on the right side.':'');
+  }
+  A.addEventListener('input',draw);B.addEventListener('input',draw);
+  $('#lineReset').addEventListener('click',function(){A.value=90;B.value=0.45;draw();});
+  $('#lineBest').addEventListener('click',function(){
+    var best=-1,bt=0,bb=0;
+    for(var t=0;t<180;t++){var th=t*Math.PI/180;
+      for(var b=-1;b<=2.0001;b+=0.005){var r=score(th,b);if(r.k>best){best=r.k;bt=t;bb=b;}}}
+    A.value=bt;B.value=Math.round(bb*1000)/1000;draw();
+    out.innerHTML='Searched 180 angles and about 600 positions. The best line classifies <span class="pk">'+best+' of 12</span> correctly.'+(best<12?' No single straight line gets them all.':'');
+  });
+  draw();
+})();
+
+/* ---------- Mission 3: tree explorer ---------- */
+(function(){
+  var S=makeScatter($('#cutSvg')),ts=$('#treeSvg');
+  var NODES=[
+    {id:'root',par:null,step:0,x:385,y:36,q:'Age < 35 ?',path:'All 12 employees',mem:function(p){return true;},reg:[18,56,-.3,1.3],kids:['n1','n2']},
+    {id:'n1',par:'root',edge:'Yes',step:1,x:220,y:128,q:'Overtime = Yes ?',path:'Age < 35',mem:function(p){return p[0]<35;},reg:[18,35,-.3,1.3],kids:['n4','n3']},
+    {id:'n2',par:'root',edge:'No',step:1,x:550,y:128,q:'Overtime = Yes ?',path:'Age ≥ 35',mem:function(p){return p[0]>=35;},reg:[35,56,-.3,1.3],kids:['n5','n6']},
+    {id:'n3',par:'n1',edge:'No',step:2,x:145,y:220,q:'Age < 25.5 ?',path:'Age < 35, Overtime = No',mem:function(p){return p[0]<35&&p[1]===0;},reg:[18,35,-.3,.5],kids:['l1','l2']},
+    {id:'n4',par:'n1',edge:'Yes',step:2,x:305,y:220,q:null,path:'Age < 35, Overtime = Yes',mem:function(p){return p[0]<35&&p[1]===1;},reg:[18,35,.5,1.3],kids:[]},
+    {id:'n5',par:'n2',edge:'No',step:2,x:470,y:220,q:null,path:'Age ≥ 35, Overtime = No',mem:function(p){return p[0]>=35&&p[1]===0;},reg:[35,56,-.3,.5],kids:[]},
+    {id:'n6',par:'n2',edge:'Yes',step:2,x:630,y:220,q:'Age < 49 ?',path:'Age ≥ 35, Overtime = Yes',mem:function(p){return p[0]>=35&&p[1]===1;},reg:[35,56,.5,1.3],kids:['l3','l4']},
+    {id:'l1',par:'n3',edge:'Yes',step:3,x:70,y:312,q:null,path:'Age < 25.5, Overtime = No',mem:function(p){return p[0]<25.5&&p[1]===0;},reg:[18,25.5,-.3,.5],kids:[]},
+    {id:'l2',par:'n3',edge:'No',step:3,x:220,y:312,q:null,path:'25.5 ≤ Age < 35, Overtime = No',mem:function(p){return p[0]>=25.5&&p[0]<35&&p[1]===0;},reg:[25.5,35,-.3,.5],kids:[]},
+    {id:'l3',par:'n6',edge:'Yes',step:3,x:558,y:312,q:null,path:'35 ≤ Age < 49, Overtime = Yes',mem:function(p){return p[0]>=35&&p[0]<49&&p[1]===1;},reg:[35,49,.5,1.3],kids:[]},
+    {id:'l4',par:'n6',edge:'No',step:3,x:702,y:312,q:null,path:'Age ≥ 49, Overtime = Yes',mem:function(p){return p[0]>=49&&p[1]===1;},reg:[49,56,.5,1.3],kids:[]}
+  ];
+  var byId={};NODES.forEach(function(n){byId[n.id]=n;n.c=cnt(TOY.filter(n.mem));});
+  var CUTS=[{s:1,a:[35,-.3,35,1.3]},{s:2,a:[18,.5,56,.5]},{s:3,a:[25.5,-.3,25.5,.5]},{s:3,a:[49,.5,49,1.3]}];
+  var CAPS=[
+    'Start: all 12 employees sit in one region, 6 left and 6 stayed. Entropy is at its maximum of 1.000.',
+    'First cut: a vertical line at Age = 35 creates two regions, each now mostly one class.',
+    'Second cuts: Overtime splits each region horizontally. Two regions are now pure.',
+    'Final cuts: short Age cuts separate the last mixed regions. Every leaf is pure, but four of the six leaves hold just one employee.'
+  ];
+  var step=0,sel='root',NW=132,NH=64;
+  var dots=$('#stDots');
+  for(var i=0;i<4;i++){(function(i){var b=document.createElement('button');b.type='button';b.textContent=i===0?'Start':'Cut '+i;b.addEventListener('click',function(){step=i;render();});dots.appendChild(b);})(i);}
+  $('#stPrev').addEventListener('click',function(){if(step>0){step--;render();}});
+  $('#stNext').addEventListener('click',function(){if(step<3){step++;render();}});
+  function visible(n){return n.step<=step;}
+  function leafLike(n){return n.kids.every(function(k){return !visible(byId[k]);});}
+  function pred(c){return c.l>c.s?'Left':c.s>c.l?'Stayed':'Tie';}
+  function render(){
+    if(!visible(byId[sel]))sel='root';
+    $$('button',dots).forEach(function(b,i){b.setAttribute('aria-pressed',i===step);});
+    $('#stPrev').disabled=step===0;$('#stNext').disabled=step===3;
+    $('#stNext').textContent=step===3?'All cuts shown':'Next cut';
+    $('#stCap').textContent=CAPS[step];
+    /* scatter */
+    while(S.gCut.firstChild)S.gCut.removeChild(S.gCut.firstChild);
+    CUTS.forEach(function(c){if(c.s<=step){el('line',{x1:S.X(c.a[0]),y1:S.Y(c.a[1]),x2:S.X(c.a[2]),y2:S.Y(c.a[3]),stroke:c.s===step?'#EA1A85':'#254AA5','stroke-width':c.s===step?4:3,'stroke-dasharray':c.s===step?'':'8 5'},S.gCut);}});
+    while(S.gReg.firstChild)S.gReg.removeChild(S.gReg.firstChild);
+    var n=byId[sel];
+    if(n.id!=='root'){var r=n.reg;el('rect',{x:S.X(r[0]),y:S.Y(r[3]),width:S.X(r[1])-S.X(r[0]),height:S.Y(r[2])-S.Y(r[3]),fill:'#254AA5','fill-opacity':.14,stroke:'#254AA5','stroke-width':2},S.gReg);}
+    S.pts.forEach(function(o){var inr=n.mem(o.p);o.shape.setAttribute('stroke',inr?'#101A3F':'#fff');o.shape.setAttribute('stroke-width',inr&&n.id!=='root'?3:1.5);});
+    /* tree */
+    ts.setAttribute('viewBox','0 0 770 384');ts.style.minWidth='640px';
+    while(ts.firstChild)ts.removeChild(ts.firstChild);
+    NODES.forEach(function(nd){if(nd.par&&visible(nd)){
+      var p=byId[nd.par];
+      el('path',{d:'M'+p.x+' '+(p.y+NH/2)+'C'+p.x+' '+(p.y+NH/2+34)+' '+nd.x+' '+(nd.y-NH/2-34)+' '+nd.x+' '+(nd.y-NH/2),fill:'none',stroke:'#7E92CF','stroke-width':2},ts);
+      var mx=(p.x+nd.x)/2,my=(p.y+nd.y)/2;
+      el('rect',{x:mx-17,y:my-11,width:34,height:20,rx:10,fill:'#fff',stroke:'#D6DEF2'},ts);
+      var t=el('text',{x:mx,y:my+4,'text-anchor':'middle','font-size':12,'font-weight':700,fill:'#1B3A8C'},ts);t.textContent=nd.edge;
+    }});
+    NODES.forEach(function(nd){
+      if(!visible(nd))return;
+      var ll=leafLike(nd),c=nd.c,pure=(c.l===0||c.s===0),pr=pred(c);
+      var fill=ll?(pr==='Left'?'#FDE2EF':pr==='Stayed'?'#E4EBFB':'#fff'):'#fff';
+      var stroke=ll?(pr==='Left'?'#B0105F':pr==='Stayed'?'#254AA5':'#4A5580'):'#1B3A8C';
+      var g=el('g',{'class':'node'+(nd.id===sel?' sel':''),tabindex:0,role:'button','aria-label':(nd.par===null?'Root node':ll?'Leaf node':'Internal node')+', '+c.l+' left, '+c.s+' stayed'+(ll?', predicts '+pr:', splits on '+nd.q)},ts);
+      el('rect',{x:nd.x-NW/2,y:nd.y-NH/2,width:NW,height:NH,rx:12,fill:fill,stroke:stroke,'stroke-width':nd.id===sel?4:2.5},g);
+      var role=nd.par===null?'Root':ll?'Leaf':'Internal';
+      var t1=el('text',{x:nd.x,y:nd.y-14,'text-anchor':'middle','font-size':11,'font-weight':700,fill:'#4A5580'},g);t1.textContent=role+(ll&&pure?' (pure)':'');
+      var t2=el('text',{x:nd.x,y:nd.y+3,'text-anchor':'middle','font-size':14,'font-weight':800,fill:'#0A1747'},g);t2.textContent=ll?(nd.par===null?'No split yet':'Predict: '+pr):nd.q;
+      var t3=el('text',{x:nd.x,y:nd.y+21,'text-anchor':'middle','font-size':12,fill:'#101A3F'},g);t3.textContent=c.l+' left · '+c.s+' stayed';
+      g.addEventListener('click',function(){sel=nd.id;render();});
+      g.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();sel=nd.id;render();var ng=$$('.node',ts).filter(function(x){return x.__id===nd.id;})[0];if(ng)ng.focus();}});
+      g.__id=nd.id;
+    });
+    /* details */
+    var d=byId[sel],c=d.c,ll=leafLike(d),pr=pred(c),conf=c.n?Math.max(c.l,c.s)/c.n:0;
+    $('#nodeDet').innerHTML=
+      '<dt>Node</dt><dd>'+(d.par===null?'Root':ll?'Leaf':'Internal')+(c.l===0||c.s===0?' <span class="tag-pure">pure</span>':'')+'</dd>'+
+      '<dt>Reached by</dt><dd>'+d.path+'</dd>'+
+      '<dt>Employees</dt><dd>'+c.n+' ('+c.l+' left, '+c.s+' stayed)</dd>'+
+      '<dt>Entropy</dt><dd>'+fmt(Hc(c.l,c.s))+'</dd>'+
+      '<dt>'+(ll?'Prediction':'Would predict if it stopped')+'</dt><dd>'+pr+(pr!=='Tie'?' (confidence '+Math.round(conf*100)+'%)':'')+'</dd>'+
+      (ll?'':'<dt>Splits on</dt><dd>'+d.q.replace(' ?','')+'</dd>');
+  }
+  render();
+})();
+
+/* ---------- Mission 4: leaf lab ---------- */
+(function(){
+  var R=$('#leafPos'),P=$('#leafP'),N=$('#leafN'),O=$('#leafOut'),bar=$('#leafBar');
+  function up(){
+    var p=+R.value,n=100-p;
+    P.style.width=p+'%';N.style.width=n+'%';P.textContent=p>=12?'Positive '+p:'';N.textContent=n>=12?'Negative '+n:'';
+    bar.setAttribute('aria-label',p+' positive and '+n+' negative points');
+    var maj=p>n?'Positive':n>p?'Negative':'Tie',conf=Math.max(p,n);
+    O.innerHTML=(p===0||p===100)?'Pure node: only one class, so the prediction is <span class="pk">'+maj+' with 100% confidence</span>.':maj==='Tie'?'A 50/50 split: no majority, so the leaf has <span class="pk">no basis for a confident prediction</span>.':'The leaf predicts <span class="pk">'+maj+'</span> with '+conf+'% confidence.';
+  }
+  R.addEventListener('input',up);
+  $$('[data-leaf]').forEach(function(b){b.addEventListener('click',function(){R.value=b.dataset.leaf;up();});});
+  up();
+})();
+
+/* ---------- impurity lab ---------- */
+function impLab(root,opt){
+  var id=root.id,N=20;
+  var ORDER=[0,7,14,3,10,17,6,13,2,9,16,5,12,19,1,8,15,4,11,18];
+  root.innerHTML=
+    '<div class="'+(opt.jar?'labgrid':'')+'">'+
+    (opt.jar?'<div><div class="jar" id="'+id+'Jar" role="img" aria-label="Jar of balls"></div><div class="btnrow" style="justify-content:center"><button class="btn alt" type="button" data-k="0">All blue</button><button class="btn alt" type="button" data-k="10">Even mix</button><button class="btn alt" type="button" data-k="20">All red</button></div></div>':'')+
+    '<div><div class="svgwrap"><svg id="'+id+'Svg" role="img" aria-label="Impurity curve against the proportion of one class"></svg></div></div></div>'+
+    '<div class="ctrl"><label>'+(opt.jar?'Red balls in the jar (out of 20)':'Proportion of class 1 in the node')+'<input type="range" id="'+id+'R" min="0" max="'+N+'" step="1" value="'+(opt.jar?14:14)+'"></label></div>'+
+    '<div class="readout" id="'+id+'O" aria-live="polite"></div>';
+  var svg=$('#'+id+'Svg'),W=560,HH=300,m={l:54,r:20,t:18,b:48};
+  svg.setAttribute('viewBox','0 0 '+W+' '+HH);
+  var X=function(p){return m.l+p*(W-m.l-m.r);},Y=function(v){return m.t+(1-v)*(HH-m.t-m.b);};
+  el('rect',{x:m.l,y:m.t,width:W-m.l-m.r,height:HH-m.t-m.b,fill:'#FAFBFF',stroke:'#D6DEF2'},svg);
+  [0,.25,.5,.75,1].forEach(function(v){
+    el('line',{x1:X(v),x2:X(v),y1:Y(0),y2:Y(1),stroke:'#E4EBFB'},svg);
+    var t=el('text',{x:X(v),y:HH-28,'text-anchor':'middle','font-size':12,fill:'#4A5580'},svg);t.textContent=v;
+    el('line',{x1:X(0),x2:X(1),y1:Y(v),y2:Y(v),stroke:'#E4EBFB'},svg);
+    var u=el('text',{x:m.l-8,y:Y(v)+4,'text-anchor':'end','font-size':12,fill:'#4A5580'},svg);u.textContent=v;
+  });
+  el('line',{x1:X(.5),x2:X(.5),y1:Y(0),y2:Y(1),stroke:'#7E92CF','stroke-dasharray':'5 5'},svg);
+  var xl=el('text',{x:(m.l+W-m.r)/2,y:HH-8,'text-anchor':'middle','font-size':13,'font-weight':700,fill:'#101A3F'},svg);xl.textContent='P(class = 1)';
+  var yl=el('text',{x:14,y:(m.t+HH-m.b)/2,'text-anchor':'middle','font-size':13,'font-weight':700,fill:'#101A3F',transform:'rotate(-90 14 '+((m.t+HH-m.b)/2)+')'},svg);yl.textContent='Impurity';
+  function path(f){var d='';for(var i=0;i<=100;i++){var p=i/100;d+=(i?'L':'M')+X(p)+' '+Y(f(p));}return d;}
+  el('path',{d:path(H),fill:'none',stroke:'#254AA5','stroke-width':4},svg);
+  if(opt.gini)el('path',{d:path(function(p){return 2*p*(1-p);}),fill:'none',stroke:'#EA1A85','stroke-width':4,'stroke-dasharray':'9 6'},svg);
+  var le=el('text',{x:X(.08),y:Y(.62),'font-size':14,'font-weight':800,fill:'#254AA5'},svg);le.textContent='Entropy';
+  if(opt.gini){var lg=el('text',{x:X(.8),y:Y(.36),'font-size':14,'font-weight':800,fill:'#B0105F'},svg);lg.textContent='Gini';}
+  var pm=el('text',{x:X(0)+4,y:Y(0)-8,'font-size':12,'font-weight':700,fill:'#B0105F'},svg);pm.textContent='pure';
+  var pm2=el('text',{x:X(1)-4,y:Y(0)-8,'text-anchor':'end','font-size':12,'font-weight':700,fill:'#B0105F'},svg);pm2.textContent='pure';
+  var mm=el('text',{x:X(.5),y:Y(1)-4,'text-anchor':'middle','font-size':12,'font-weight':700,fill:'#1B3A8C'},svg);mm.textContent='even mix';
+  var mk=el('circle',{r:9,fill:'#254AA5',stroke:'#101A3F','stroke-width':3},svg);
+  var mg=opt.gini?el('path',{fill:'#EA1A85',stroke:'#101A3F','stroke-width':2.5},svg):null;
+  var R=$('#'+id+'R'),O=$('#'+id+'O'),jar=$('#'+id+'Jar');
+  function up(){
+    var k=+R.value,p=k/N,h=H(p),g=2*p*(1-p);
+    mk.setAttribute('cx',X(p));mk.setAttribute('cy',Y(h));
+    if(mg){var cx=X(p),cy=Y(g);mg.setAttribute('d','M'+cx+' '+(cy-11)+'L'+(cx+11)+' '+cy+'L'+cx+' '+(cy+11)+'L'+(cx-11)+' '+cy+'Z');}
+    if(jar){
+      var red={};ORDER.slice(0,k).forEach(function(i){red[i]=1;});
+      jar.innerHTML='';for(var i=0;i<N;i++){var b=document.createElement('div');b.className='ball '+(red[i]?'r':'b');b.textContent=red[i]?'R':'B';jar.appendChild(b);}
+      jar.setAttribute('aria-label','Jar with '+k+' red and '+(N-k)+' blue balls');
+    }
+    var note=(k===0||k===N)?' A pure jar: you know the colour before you pick.':k===N/2?' An even mix: the least confidence you can have.':'';
+    O.innerHTML='p = '+fmt(p,2)+' &rarr; Entropy = <span class="pk">'+fmt(h)+'</span>'+(opt.gini?' &nbsp;|&nbsp; Gini = <span class="pk">'+fmt(g)+'</span>':'')+'.'+(opt.jar?note:'');
+  }
+  R.addEventListener('input',up);
+  $$('[data-k]',root).forEach(function(b){b.addEventListener('click',function(){R.value=b.dataset.k;up();});});
+  up();
+}
+impLab($('#lab1'),{jar:true,gini:false});
+impLab($('#lab2'),{jar:false,gini:true});
+
+/* ---------- Mission 5: calculator ---------- */
+(function(){
+  var f={PL:$('#cPL'),PS:$('#cPS'),AL:$('#cAL'),AS:$('#cAS')},T=$('#calcT'),O=$('#calcOut');
+  function up(){
+    var PL=Math.max(0,Math.floor(+f.PL.value||0)),PS=Math.max(0,Math.floor(+f.PS.value||0)),AL=Math.max(0,Math.floor(+f.AL.value||0)),AS=Math.max(0,Math.floor(+f.AS.value||0));
+    if(PL+PS===0||AL>PL||AS>PS){T.innerHTML='';O.innerHTML='Child A cannot have more left or stayed employees than the parent. Adjust the numbers.';return;}
+    var BL=PL-AL,BS=PS-AS,n=PL+PS,nA=AL+AS,nB=BL+BS;
+    var hp=Hc(PL,PS),ha=Hc(AL,AS),hb=Hc(BL,BS),w=(nA/n)*ha+(nB/n)*hb,ig=hp-w;
+    T.innerHTML='<thead><tr><th>Node</th><th>Left</th><th>Stayed</th><th>Total</th><th>Weight</th><th>Entropy</th></tr></thead><tbody>'+
+      '<tr><td>Parent</td><td class="num">'+PL+'</td><td class="num">'+PS+'</td><td class="num">'+n+'</td><td class="num">1</td><td class="num">'+fmt(hp)+'</td></tr>'+
+      '<tr><td>Child A</td><td class="num">'+AL+'</td><td class="num">'+AS+'</td><td class="num">'+nA+'</td><td class="num">'+fmt(nA/n,2)+'</td><td class="num">'+fmt(ha)+'</td></tr>'+
+      '<tr><td>Child B</td><td class="num">'+BL+'</td><td class="num">'+BS+'</td><td class="num">'+nB+'</td><td class="num">'+fmt(nB/n,2)+'</td><td class="num">'+fmt(hb)+'</td></tr>'+
+      '<tr><td><strong>Weighted children</strong></td><td></td><td></td><td></td><td></td><td class="num"><strong>'+fmt(w)+'</strong></td></tr></tbody>';
+    O.innerHTML='Information gain = '+fmt(hp)+' − '+fmt(w)+' = <span class="pk">'+fmt(ig)+'</span>';
+  }
+  Object.keys(f).forEach(function(k){f[k].addEventListener('input',up);});
+  $$('[data-cpre]').forEach(function(b){b.addEventListener('click',function(){var v=b.dataset.cpre.split(',');f.PL.value=v[0];f.PS.value=v[1];f.AL.value=v[2];f.AS.value=v[3];up();});});
+  up();
+})();
+
+/* ---------- Mission 5: candidate splits ---------- */
+(function(){
+  var C=[22.5,23.5,24.5,25.5,26.5,35,45.5,46.5,47.5,49,51].map(function(t){return {k:'age',t:t,label:'Age < '+t,short:'&lt;'+t,test:function(p){return p[0]<t;}};});
+  C.push({k:'ot',label:'Overtime = Yes',short:'Overtime',test:function(p){return p[1]===1;}});
+  var parent=cnt(TOY),hp=Hc(parent.l,parent.s);
+  C.forEach(function(c){c.A=cnt(TOY.filter(c.test));c.B=cnt(TOY.filter(function(p){return !c.test(p);}));c.w=(c.A.n/12)*Hc(c.A.l,c.A.s)+(c.B.n/12)*Hc(c.B.l,c.B.s);c.ig=hp-c.w;});
+  var max=Math.max.apply(null,C.map(function(c){return c.ig;}));
+  C.forEach(function(c){c.best=Math.abs(c.ig-max)<1e-9;});
+  var bars=$('#gBars'),labs=$('#gLabels'),T=$('#gT'),O=$('#gOut'),cur=C.length-1;
+  C.forEach(function(c,i){
+    var b=document.createElement('button');b.type='button';b.className='gb'+(c.best?' best':'');
+    b.setAttribute('aria-label',c.label+', information gain '+fmt(c.ig)+(c.best?', highest':''));
+    b.innerHTML='<span class="v">'+fmt(c.ig,2)+'</span><span class="bar" style="height:'+Math.max(1,c.ig/0.5*100)*0.78+'%"></span>';
+    b.addEventListener('click',function(){cur=i;up();});bars.appendChild(b);
+    var s=document.createElement('span');s.innerHTML=c.short;labs.appendChild(s);
+  });
+  function row(name,n){return '<tr><td>'+name+'</td><td class="num">'+n.l+'</td><td class="num">'+n.s+'</td><td class="num">'+n.n+'</td><td class="num">'+fmt(n.n/12,2)+'</td><td class="num">'+fmt(Hc(n.l,n.s))+'</td></tr>';}
+  function up(){
+    var c=C[cur];
+    $$('.gb',bars).forEach(function(b,i){b.setAttribute('aria-pressed',i===cur);});
+    T.innerHTML='<thead><tr><th>Node ('+c.label+')</th><th>Left</th><th>Stayed</th><th>Total</th><th>Weight</th><th>Entropy</th></tr></thead><tbody>'+
+      row('Parent',parent)+row('Yes branch',c.A)+row('No branch',c.B)+
+      '<tr><td><strong>Weighted children</strong></td><td></td><td></td><td></td><td></td><td class="num"><strong>'+fmt(c.w)+'</strong></td></tr></tbody>';
+    var nb=C.filter(function(x){return x.best;});
+    O.innerHTML='Information gain = '+fmt(hp)+' − '+fmt(c.w)+' = <span class="pk">'+fmt(c.ig)+'</span>'+(c.best?' (highest available'+(nb.length>1?', tied with '+(nb.length-1)+' other'+(nb.length>2?'s':''):'')+')':'');
+  }
+  up();
+})();
+
+/* ---------- quizzes ---------- */
+var QUIZ={
+  q1:{n:1,q:'What is the main disadvantage of using kNN for a problem like this, at production scale?',c:['It becomes computationally expensive for large datasets','It cannot handle categorical features at all','It cannot be used for classification, only regression','It is a non-parametric algorithm, so it is difficult to train'],a:0,e:'kNN has no real training cost, but every single prediction compares against the entire stored dataset (as we saw in Class 2). At Orbit Express scale, that gets expensive fast.'},
+  q2:{n:2,q:'Which of these statements about decision tree structure are true?',st:['s1: the topmost node is called the leaf node','s2: the topmost node is called the root node','s3: the bottommost nodes are called root nodes','s4: the nodes between the root and the leaves are called internal (or decision) nodes'],c:['All statements are true','s2 and s4','s1 and s3','s3 and s4'],a:1,e:'The topmost node is the root node, and the nodes between the root and the leaves are internal (decision) nodes. The bottommost nodes are leaf nodes, not root nodes.'},
+  q3:{n:3,q:'In which of these cases is entropy at its minimum?',c:['A node where all datapoints belong to one class only','A node with datapoints belonging to both classes in equal number','A node with 100 datapoints, 50 in each class','Entropy does not depend on the proportion of datapoints in the node'],a:0,e:'A single-class (pure) node has entropy 0, the minimum possible value.'},
+  q4:{n:4,q:'Given the two features above (Gender: gain 0.091, Age < 35: gain 0.257), which feature should the tree pick to split the root node?',c:['Gender, because it is simpler','Age < 35, because it gives the higher information gain','Either, since both reduce entropy','Neither; we should pick a feature with zero information gain'],a:1,e:'A decision tree always picks the split that gives the maximum information gain (equivalently, the maximum drop in entropy) at each node, then repeats this on each child node until it reaches pure, or nearly pure, leaves.'},
+  q5:{n:5,q:'Which of the following is a genuine advantage of decision trees?',c:['They can handle multi-class classification problems','They are easy to interpret, since each prediction traces back to a short set of rules','They can capture complex, non-linear relationships using only axis-parallel splits','All of the above'],a:3,e:'All three are real strengths of decision trees, and the feature importance chart is a direct example of that interpretability at work.'}
+};
+$$('[data-quiz]').forEach(function(box){
+  var d=QUIZ[box.dataset.quiz],name='quiz-'+box.dataset.quiz,L='ABCD';
+  var h='<div class="quiz"><span class="qtag">Check your understanding</span><fieldset><legend>'+d.q+'</legend>';
+  if(d.st){h+='<ul class="st">'+d.st.map(function(s){return '<li>'+s+'</li>';}).join('')+'</ul>';}
+  d.c.forEach(function(c,i){h+='<label class="opt"><input type="radio" name="'+name+'" value="'+i+'"><span><strong>'+L[i]+'.</strong> '+c+'</span></label>';});
+  h+='</fieldset><div class="btnrow"><button class="btn" type="button">Check answer</button></div><div class="fb" aria-live="polite"></div></div>';
+  box.innerHTML=h;
+  var btn=$('button',box),fb=$('.fb',box),opts=$$('.opt',box);
+  btn.addEventListener('click',function(){
+    var ch=$('input:checked',box);
+    opts.forEach(function(o){o.classList.remove('ok','no');});
+    if(!ch){fb.className='fb';fb.textContent='Select an answer first.';return;}
+    var v=+ch.value;
+    opts[d.a].classList.add('ok');
+    if(v===d.a){fb.className='fb ok';fb.innerHTML='<strong>Correct: '+L[d.a]+'.</strong> '+d.e;}
+    else{opts[v].classList.add('no');fb.className='fb no';fb.innerHTML='<strong>Not quite.</strong> You chose '+L[v]+'; the correct answer is <strong>'+L[d.a]+'</strong>. '+d.e;}
+  });
+});
+
+/* ---------- copy prompts ---------- */
+$$('[data-copy]').forEach(function(b){
+  b.addEventListener('click',function(){
+    var txt=document.getElementById(b.dataset.copy).textContent,old=b.textContent;
+    function done(){b.textContent='Copied';setTimeout(function(){b.textContent=old;},1600);}
+    try{navigator.clipboard.writeText(txt).then(done,function(){fallback();});}catch(e){fallback();}
+    function fallback(){var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(e){b.textContent='Select the prompt and copy';}document.body.removeChild(ta);}
+  });
+});
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-SL-3" target="_blank" rel="noopener">github.com/scaler-content/DSML-SL-3</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Version control and Git post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --black:#050505;
+  --bg:#0b0b0c;
+  --bg-raised:#131314;
+  --surface:#18181a;
+  --surface-2:#1f1f22;
+  --line:#2b2b2e;
+  --line-soft:#202022;
+  --ink:#ececec;
+  --ink-dim:#a9a9ac;
+  --ink-faint:#727276;
+  --white:#f5f5f5;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --serif: 'Source Serif 4', Georgia, serif;
+  --sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --radius: 3px;
+  --maxw: 820px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth; scroll-padding-top: calc(76px + env(safe-area-inset-top,0px));}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--serif);
+  font-size:17px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  padding-top: env(safe-area-inset-top,0px);
+  padding-bottom: env(safe-area-inset-bottom,0px);
+}
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 26px 26px;
+  pointer-events:none;
+  z-index:0;
+}
+::selection{ background:var(--ink); color:var(--black); }
+a{ color:var(--ink); }
+h1,h2,h3,h4{ font-family:var(--sans); font-weight:600; letter-spacing:-0.01em; color:var(--white); margin:0; }
+code, .mono{ font-family:var(--mono); }
+p{ margin:0 0 1.05em; color:var(--ink-dim); }
+p:last-child{ margin-bottom:0; }
+strong{ color:var(--ink); font-weight:600; }
+:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
+
+/* ---------- Layout shell ---------- */
+.skip-link{position:absolute; left:-9999px; top:0; background:var(--white); color:var(--black); padding:10px 16px; z-index:200;}
+.skip-link:focus{ left:12px; top:12px; }
+
+header.masthead{
+  position:relative; z-index:2;
+  border-bottom:1px solid var(--line);
+  padding: 68px 24px 56px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.02), transparent 60%);
+}
+.masthead-inner{ max-width: var(--maxw); margin:0 auto; }
+.kicker{
+  font-family:var(--mono); font-size:12.5px; letter-spacing:0.06em;
+  color:var(--ink-faint); display:flex; align-items:center; gap:10px; margin-bottom:22px;
+}
+.kicker .dot{ width:6px; height:6px; border-radius:50%; background:var(--ink-faint); }
+h1.title{
+  font-size: clamp(2.1rem, 5.2vw, 3.1rem);
+  line-height:1.08;
+  margin-bottom:20px;
+  max-width: 14ch;
+}
+.deck{
+  font-family:var(--serif); font-size:1.18rem; color:var(--ink-dim);
+  max-width:58ch; margin-bottom:30px;
+}
+.meta-row{ display:flex; flex-wrap:wrap; gap:10px 28px; font-family:var(--mono); font-size:12.5px; color:var(--ink-faint); }
+.meta-row span b{ color:var(--ink-dim); font-weight:500; }
+
+/* top progress bar */
+#progress{ position:fixed; top:0; left:0; height:2px; background:var(--white); width:0%; z-index:300; transition:width .08s linear; }
+
+/* ---------- Nav ---------- */
+nav.toc{
+  position: sticky; top:0; z-index:150;
+  background:rgba(11,11,12,0.88); backdrop-filter: blur(10px);
+  border-bottom:1px solid var(--line);
+  padding-top: env(safe-area-inset-top,0px);
+}
+.toc-scroll{
+  max-width:1180px; margin:0 auto; padding:0 16px;
+  display:flex; gap:4px; overflow-x:auto; scrollbar-width:none;
+}
+.toc-scroll::-webkit-scrollbar{ display:none; }
+.toc-scroll a{
+  flex:0 0 auto; font-family:var(--mono); font-size:12.5px; color:var(--ink-faint);
+  text-decoration:none; padding:14px 12px; border-bottom:2px solid transparent; white-space:nowrap;
+}
+.toc-scroll a:hover{ color:var(--ink); }
+.toc-scroll a.active{ color:var(--white); border-bottom-color:var(--white); }
+
+/* ---------- Main content grid ---------- */
+main{ position:relative; z-index:1; max-width: var(--maxw); margin:0 auto; padding: 0 24px 40px; }
+section.block{ padding:56px 0; border-bottom:1px solid var(--line-soft); }
+section.block:last-of-type{ border-bottom:none; }
+.eyebrow{
+  font-family:var(--mono); font-size:12px; color:var(--ink-faint);
+  display:flex; align-items:baseline; gap:10px; margin-bottom:14px;
+}
+.eyebrow .num{ color:var(--ink-dim); }
+h2.h{ font-size:1.7rem; margin-bottom:18px; max-width:22ch; }
+h3.sub{ font-size:1.18rem; margin:34px 0 12px; color:var(--white); }
+h4.subsub{ font-family:var(--mono); font-size:0.95rem; color:var(--ink); margin:26px 0 10px; font-weight:500; }
+.lede{ font-size:1.08rem; color:var(--ink-dim); }
+
+/* ---------- Objectives ---------- */
+.objectives{
+  list-style:none; margin:0; padding:0;
+  display:grid; grid-template-columns: 1fr 1fr; gap:10px 20px;
+}
+@media (max-width:640px){ .objectives{ grid-template-columns:1fr; } }
+.objectives li{
+  font-size:0.92rem; color:var(--ink-dim); padding-left:20px; position:relative; line-height:1.5;
+}
+.objectives li::before{
+  content:""; position:absolute; left:0; top:0.55em; width:6px; height:6px; background:var(--ink-faint);
+}
+
+/* ---------- Callouts ---------- */
+.callout{
+  border:1px solid var(--line); background:var(--surface);
+  border-left:3px solid var(--ink);
+  padding:18px 20px; margin:24px 0; border-radius:var(--radius);
+}
+.callout .label{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:0.04em; margin-bottom:8px; }
+.callout p{ color:var(--ink); font-family:var(--sans); font-size:1.02rem; }
+.callout.quote{ font-family:var(--serif); font-style:italic; color:var(--ink); }
+.callout.warn{ border-left-color:#8a8a8a; }
+
+/* ---------- Code blocks ---------- */
+.code-block{
+  background:var(--black); border:1px solid var(--line);
+  border-radius:var(--radius); overflow:hidden; margin:20px 0;
+}
+.code-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 14px; border-bottom:1px solid var(--line-soft);
+  font-family:var(--mono); font-size:11px; color:var(--ink-faint);
+}
+.code-head .dots{ display:flex; gap:5px; }
+.code-head .dots span{ width:7px; height:7px; border-radius:50%; background:var(--line); }
+.code-block pre{ margin:0; padding:16px 18px; overflow-x:auto; }
+.code-block code{ font-size:13.2px; line-height:1.65; color:#d7d7d7; white-space:pre; }
+.code-block .c-comment{ color:var(--ink-faint); }
+.code-block .c-str{ color:#c9c9c9; font-style:italic; }
+.copy-btn{
+  font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); background:transparent;
+  border:1px solid var(--line); border-radius:2px; padding:3px 8px; cursor:pointer;
+}
+.copy-btn:hover{ color:var(--ink); border-color:var(--ink-faint); }
+
+/* terminal-style output block */
+.terminal{
+  background:#000; border:1px solid var(--line); border-radius:var(--radius);
+  padding:14px 16px; margin:14px 0; font-family:var(--mono); font-size:12.5px; color:#9a9a9a;
+  overflow-x:auto; white-space:pre;
+}
+
+/* ---------- Tables ---------- */
+.table-wrap{ overflow-x:auto; margin:20px 0; border:1px solid var(--line); border-radius:var(--radius); }
+table{ width:100%; border-collapse:collapse; font-size:0.92rem; min-width:420px; }
+th{
+  font-family:var(--mono); font-size:11px; text-align:left; color:var(--ink-faint);
+  background:var(--surface); padding:10px 14px; border-bottom:1px solid var(--line); letter-spacing:0.02em;
+}
+td{ padding:12px 14px; border-bottom:1px solid var(--line-soft); color:var(--ink-dim); vertical-align:top; }
+tr:last-child td{ border-bottom:none; }
+td code, th code{ font-size:12px; color:var(--ink); background:var(--surface-2); padding:1px 5px; border-radius:2px; }
+tr:hover td{ background:rgba(255,255,255,0.02); }
+
+/* inline code */
+p code, li code{
+  font-family:var(--mono); font-size:0.86em; color:var(--ink);
+  background:var(--surface-2); border:1px solid var(--line-soft); padding:1px 5px; border-radius:2px;
+}
+
+/* ---------- Cards / grids ---------- */
+.card-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin:22px 0; }
+@media (max-width:640px){ .card-grid{ grid-template-columns:1fr; } }
+.card{
+  border:1px solid var(--line); background:var(--surface); border-radius:var(--radius);
+  padding:18px; transition: border-color .15s ease, background .15s ease;
+}
+.card:hover{ border-color:var(--ink-faint); background:var(--surface-2); }
+.card h4{ font-family:var(--sans); font-size:0.98rem; color:var(--white); margin-bottom:8px; }
+.card p{ font-size:0.9rem; margin:0; }
+
+/* ---------- Accordion ---------- */
+details.acc{
+  border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);
+  margin:10px 0; overflow:hidden;
+}
+details.acc[open]{ background:var(--surface-2); }
+details.acc summary{
+  cursor:pointer; list-style:none; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  font-family:var(--sans); font-weight:500; color:var(--ink); font-size:0.95rem;
+}
+details.acc summary::-webkit-details-marker{ display:none; }
+details.acc summary::after{
+  content:"+"; font-family:var(--mono); color:var(--ink-faint); font-size:16px; flex:0 0 auto;
+}
+details.acc[open] summary::after{ content:"–"; }
+details.acc .acc-body{ padding:0 18px 18px; font-size:0.92rem; }
+details.acc .acc-body p{ font-size:0.92rem; }
+
+/* checkpoints */
+details.checkpoint{
+  border:1px dashed var(--line); border-radius:var(--radius); margin:28px 0; background:var(--bg-raised);
+}
+details.checkpoint summary{
+  cursor:pointer; list-style:none; padding:14px 18px; font-family:var(--mono); font-size:12.5px;
+  color:var(--ink-dim); display:flex; align-items:center; gap:10px;
+}
+details.checkpoint summary::-webkit-details-marker{ display:none; }
+details.checkpoint summary::before{ content:"▸"; color:var(--ink-faint); transition:transform .15s; }
+details.checkpoint[open] summary::before{ transform:rotate(90deg); }
+details.checkpoint .cp-body{ padding:4px 20px 20px; }
+details.checkpoint ol{ padding-left:20px; margin:0; }
+details.checkpoint li{ margin-bottom:14px; font-size:0.92rem; color:var(--ink-dim); }
+details.checkpoint li .why{ display:block; font-style:italic; color:var(--ink-faint); margin-top:4px; font-size:0.88rem; }
+
+/* ---------- Tabs ---------- */
+.tabs{ margin:22px 0; }
+.tab-btns{ display:flex; gap:2px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+.tab-btn{
+  font-family:var(--mono); font-size:12px; color:var(--ink-faint); background:transparent; border:none;
+  padding:10px 14px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px;
+}
+.tab-btn.active{ color:var(--white); border-bottom-color:var(--white); }
+.tab-panel{ display:none; padding-top:18px; }
+.tab-panel.active{ display:block; }
+
+/* ---------- Diagrams: three trees ---------- */
+.trees-wrap{ margin:26px 0; }
+.trees-row{ display:flex; align-items:stretch; gap:0; overflow-x:auto; padding-bottom:6px; }
+.tree-box{
+  flex:1 1 0; min-width:130px; border:1px solid var(--line); background:var(--surface);
+  border-radius:var(--radius); padding:14px 12px; text-align:center; position:relative; transition:.15s;
+}
+.tree-box.hot{ border-color:var(--white); background:var(--surface-2); }
+.tree-box .tname{ font-family:var(--mono); font-size:11.5px; color:var(--ink); font-weight:500; }
+.tree-box .tdesc{ font-size:11px; color:var(--ink-faint); margin-top:4px; }
+.tree-arrow{
+  flex:0 0 64px; display:flex; align-items:center; justify-content:center; position:relative;
+}
+.tree-arrow svg{ width:100%; height:24px; }
+.tree-arrow-label{
+  position:absolute; top:-20px; left:50%; transform:translateX(-50%);
+  font-family:var(--mono); font-size:9.5px; color:var(--ink-faint); white-space:nowrap;
+}
+.tree-btns{ display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+.tbtn{
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-dim); background:var(--surface);
+  border:1px solid var(--line); padding:7px 12px; border-radius:20px; cursor:pointer; transition:.15s;
+}
+.tbtn:hover{ border-color:var(--ink-faint); color:var(--ink); }
+.tbtn.on{ background:var(--white); color:var(--black); border-color:var(--white); }
+.tree-explain{
+  margin-top:14px; padding:12px 14px; background:var(--bg-raised); border:1px solid var(--line-soft);
+  border-radius:var(--radius); font-size:0.88rem; color:var(--ink-dim); min-height:46px;
+}
+.tree-explain b{ color:var(--ink); font-family:var(--mono); font-weight:500; }
+
+/* ---------- Graph diagram (commits) ---------- */
+.graph-toggle{ display:flex; gap:8px; margin-bottom:16px; }
+.graph-wrap{ border:1px solid var(--line); background:var(--surface); border-radius:var(--radius); padding:22px 18px; overflow-x:auto; }
+.graph-svg{ min-width:520px; width:100%; }
+.node{ fill:var(--bg-raised); stroke:var(--ink-faint); stroke-width:1.5; }
+.node.head{ stroke:var(--white); stroke-width:2; }
+.node-label{ font-family:var(--mono); font-size:11px; fill:var(--ink-dim); }
+.edge{ stroke:var(--line); stroke-width:1.5; fill:none; }
+.branch-label{ font-family:var(--mono); font-size:10.5px; fill:var(--ink-faint); }
+
+/* ---------- Bloat chart ---------- */
+.chart-wrap{ border:1px solid var(--line); background:var(--surface); border-radius:var(--radius); padding:22px 18px 8px; margin:22px 0; }
+.chart-legend{ display:flex; gap:22px; margin-bottom:18px; font-family:var(--mono); font-size:11px; color:var(--ink-faint); }
+.chart-legend span{ display:inline-flex; align-items:center; gap:6px; }
+.chart-legend i{ width:10px; height:10px; display:inline-block; border-radius:2px; }
+.swatch-git{ background:var(--white); }
+.swatch-csv{ background:var(--ink-faint); }
+.bars{ display:flex; align-items:flex-end; gap:22px; height:180px; padding:0 6px; }
+.bar-group{ flex:1; display:flex; align-items:flex-end; gap:5px; justify-content:center; height:100%; position:relative; }
+.bar{ width:22px; background:var(--ink-faint); position:relative; transition: height .6s cubic-bezier(.2,.8,.2,1); height:0; border-radius:2px 2px 0 0; }
+.bar.git{ background:var(--white); }
+.bar .val{ position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-family:var(--mono); font-size:10px; color:var(--ink-faint); white-space:nowrap; }
+.bar-axis{ display:flex; gap:22px; padding:8px 6px 4px; border-top:1px solid var(--line-soft); margin-top:4px; }
+.bar-axis span{ flex:1; text-align:center; font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); }
+.gc-note{ font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); text-align:center; padding:14px 0 4px; }
+
+/* ---------- Conflict marker annotation ---------- */
+.conflict-anno{ margin:18px 0; }
+.conflict-line{ display:flex; align-items:flex-start; gap:14px; padding:9px 0; border-bottom:1px dashed var(--line-soft); }
+.conflict-line:last-child{ border-bottom:none; }
+.conflict-marker{ font-family:var(--mono); font-size:12.5px; color:var(--white); background:var(--bg-raised); padding:4px 8px; border-radius:2px; flex:0 0 auto; white-space:nowrap; }
+.conflict-desc{ font-size:0.88rem; color:var(--ink-dim); padding-top:3px; }
+
+/* ---------- ML file tree ---------- */
+.filetree{ font-family:var(--mono); font-size:13px; border:1px solid var(--line); background:var(--bg-raised); border-radius:var(--radius); padding:14px 0; margin:20px 0; }
+.ft-row{ display:flex; align-items:center; gap:10px; padding:7px 18px; cursor:pointer; border-radius:2px; }
+.ft-row:hover, .ft-row.open{ background:var(--surface-2); }
+.ft-row .ft-name{ color:var(--ink); }
+.ft-row.dim .ft-name{ color:var(--ink-faint); }
+.ft-indent{ padding-left:22px; }
+.ft-desc{ display:none; padding:2px 18px 12px 50px; font-family:var(--serif); font-size:0.85rem; color:var(--ink-faint); }
+.ft-row.open + .ft-desc{ display:block; }
+
+/* ---------- Stash comparison cards ---------- */
+.stash-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:20px 0; }
+@media (max-width:720px){ .stash-grid{ grid-template-columns:1fr; } }
+.stash-card{ border:1px solid var(--line); background:var(--surface); border-radius:var(--radius); padding:16px; text-align:center; }
+.stash-card .icon-row{ display:flex; justify-content:center; gap:6px; margin-bottom:12px; }
+.chip{ font-family:var(--mono); font-size:10px; padding:3px 7px; border-radius:20px; border:1px solid var(--line); color:var(--ink-faint); }
+.chip.yes{ border-color:var(--ink); color:var(--ink); }
+.stash-card h4{ font-size:0.9rem; margin-bottom:8px; }
+.stash-card p{ font-size:0.82rem; }
+
+/* ---------- Failure accordion (troubleshooting) ---------- */
+.fail-item{ border:1px solid var(--line); border-radius:var(--radius); margin:10px 0; background:var(--surface); overflow:hidden; }
+.fail-head{ display:flex; align-items:center; gap:12px; padding:14px 18px; cursor:pointer; }
+.fail-head .sig{ font-family:var(--mono); font-size:10px; color:var(--black); background:var(--ink-faint); padding:2px 7px; border-radius:20px; flex:0 0 auto; }
+.fail-head h4{ font-size:0.92rem; margin:0; }
+.fail-body{ display:none; padding:0 18px 16px 18px; font-size:0.88rem; color:var(--ink-dim); }
+.fail-item.open .fail-body{ display:block; }
+.fail-item.open .fail-head .sig{ background:var(--white); }
+
+/* ---------- Summary cards ---------- */
+.summary-grid{ display:grid; grid-template-columns:1fr; gap:12px; margin:20px 0; }
+.summary-card{ border:1px solid var(--line); border-left:3px solid var(--ink-faint); background:var(--surface); border-radius:var(--radius); padding:16px 18px; }
+.summary-card h4{ font-size:0.95rem; margin-bottom:6px; }
+.summary-card p{ font-size:0.9rem; margin:0; }
+
+/* references */
+.ref-group{ margin:18px 0 26px; }
+.ref-group h4{ font-family:var(--mono); font-size:12px; color:var(--ink-faint); margin-bottom:10px; text-transform:none; letter-spacing:0.02em; }
+.ref-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
+.ref-list li{ font-size:0.9rem; color:var(--ink-dim); padding-left:16px; position:relative; }
+.ref-list li::before{ content:"—"; position:absolute; left:0; color:var(--ink-faint); }
+.ref-list a{ color:var(--ink); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
+.ref-list a:hover{ text-decoration-color:var(--ink); }
+
+/* back to top */
+#toTop{
+  position:fixed; right:18px; bottom:calc(18px + env(safe-area-inset-bottom,0px)); z-index:120;
+  width:40px; height:40px; border-radius:50%; background:var(--surface); border:1px solid var(--line);
+  color:var(--ink-dim); display:flex; align-items:center; justify-content:center; cursor:pointer;
+  opacity:0; pointer-events:none; transition:opacity .2s;
+}
+#toTop.show{ opacity:1; pointer-events:auto; }
+
+footer{
+  border-top:1px solid var(--line); padding:44px 24px 60px; text-align:center;
+  font-family:var(--mono); font-size:12px; color:var(--ink-faint); position:relative; z-index:1;
+}
+footer .fname{ color:var(--ink-dim); font-size:13px; margin-bottom:6px; }
+
+@media (max-width:640px){
+  header.masthead{ padding:52px 20px 40px; }
+  section.block{ padding:42px 0; }
+  .code-block pre{ padding:14px; }
+  .code-block code{ font-size:12px; }
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/mlops/">MLOps</a><span class="t">· MLOps 2 · Version control and Git</span><span class="pn"><a href="../MLOPS-1/" title="MLOps 1 · Why ML projects need MLOps">← Prev</a><a href="../MLOPS-3/" title="MLOps 3 · Streamlit and Optuna">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip-link" href="#main">Skip to content</a>
+<div id="progress"></div>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="kicker"><span class="dot"></span> MLOPS COURSE · SESSION 02 · READING</div>
+    <h1 class="title">Version control and Git post read</h1>
+    <p class="deck">Last time was about ideas. This time it is commands. A working understanding of what Git actually stores, the everyday workflow, GitHub as a shared copy, and the point where Git stops being the right tool — your data.</p>
+    <div class="meta-row">
+      <span>Format: <b>reference reading</b></span>
+      <span>Prerequisite: <b>a terminal, basic Python</b></span>
+      <span>Git experience needed: <b>none</b></span>
+    </div>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Table of contents">
+  <div class="toc-scroll" id="tocScroll">
+    <a href="#intro">Intro</a>
+    <a href="#why">Why VCS</a>
+    <a href="#stores">What Git stores</a>
+    <a href="#workflow">Workflow</a>
+    <a href="#github">GitHub</a>
+    <a href="#reshape">Stash · Rebase</a>
+    <a href="#ml">Git for ML</a>
+    <a href="#data">Why Git fails data</a>
+    <a href="#failures">Debugging</a>
+    <a href="#mlops">MLOps view</a>
+    <a href="#summary">Summary</a>
+    <a href="#refs">References</a>
+    <a href="#next">What's next</a>
+  </div>
+</nav>
+
+<main id="main">
+
+  <!-- ============ INTRO ============ -->
+  <section class="block" id="intro">
+    <div class="eyebrow"><span class="num">00</span> Introduction</div>
+    <h2 class="h">The debt this session pays</h2>
+    <p class="lede">The previous session closed on six MLOps principles, with "version everything" holding up the other five — and nothing implemented. This session pays that debt. Everything is worked at the command line, in real repositories, broken on purpose and repaired.</p>
+    <p>It starts from what version control is and why copying files does not work, assumes no prior Git experience, and builds up to something you can reason about rather than a save button you press and hope. The last third covers what changes when a repository holds an ML project rather than an application, and it ends by measuring the thing that makes this an MLOps problem: datasets and model binaries cannot live in Git, and pretending otherwise is how teams end up with a repository nobody can clone.</p>
+
+    <div class="callout quote">
+      <div class="label" style="font-family:var(--mono); font-style:normal;">THE OPEN QUESTION</div>
+      <p style="font-family:var(--serif); color:var(--ink); font-style:italic;">Which exact data and which exact code produced this exact number?</p>
+    </div>
+    <p>Today answers the code half of that question, precisely. The data half — why it needs a different tool entirely — gets measured, not just asserted, in the closing sections.</p>
+
+    <h3 class="sub">What this reading covers</h3>
+    <ul class="objectives">
+      <li>What Git records when you commit, and how Git differs from GitHub</li>
+      <li>Which of three "trees" an everyday command touches, so you can predict it</li>
+      <li>The full local loop: stage, commit, branch, merge, resolve a conflict</li>
+      <li>Pushing to GitHub over SSH, opening a pull request, and what fetch/merge/pull each do</li>
+      <li>Setting work aside safely with <code>stash</code>, including its ML-specific trap</li>
+      <li>Merge vs. rebase as two different things happening to the commit graph</li>
+      <li>Cleaning a messy branch into one reviewable commit with interactive rebase</li>
+      <li>The one rule that keeps history-rewriting safe, and how to recover from a bad rebase</li>
+      <li>Structuring an ML repository, and writing a <code>.gitignore</code> that actually holds</li>
+      <li>Precisely why Git is the wrong tool for datasets and model binaries</li>
+    </ul>
+  </section>
+
+  <!-- ============ 1: DEBT / WHY VCS ============ -->
+  <section class="block" id="why">
+    <div class="eyebrow"><span class="num">01</span> Why version control exists</div>
+    <h2 class="h">The folder everyone has produced</h2>
+    <p>You have a folder with a training script and a notebook. You try something, it works, you keep going. Two weeks later the folder looks like this:</p>
+
+    <div class="code-block">
+      <div class="code-head"><span>folder listing</span></div>
+      <pre><code>analysis.ipynb
+analysis_v2.ipynb
+analysis_final.ipynb
+analysis_final_FIXED.ipynb
+analysis_final_use_this_one.ipynb
+train.py
+train_old.py
+train_backup.py</code></pre>
+    </div>
+
+    <p>The trouble is not that it's ugly. The trouble is the questions it can't answer, all of which you will genuinely need answered:</p>
+    <div class="card-grid">
+      <div class="card"><h4>Which file is the source?</h4><p>Which file produced the accuracy number you put in the slide deck?</p></div>
+      <div class="card"><h4>What actually changed?</h4><p>What changed between <code>final</code> and <code>final_FIXED</code>, and why?</p></div>
+      <div class="card"><h4>Whose version wins?</h4><p>Your teammate edited <code>analysis_final.ipynb</code> at the same time as you.</p></div>
+      <div class="card"><h4>When did it break?</h4><p>Something worked Monday and is broken today. What happened in between?</p></div>
+    </div>
+    <p>A copy records the <em>state</em> of a file and nothing about the <em>change</em> — not when, not who, not why, not what it looked like before. All four questions are questions about change, which is why no amount of careful file naming will ever answer them. A version control system records the change. You keep one <code>analysis.ipynb</code>, and the history of every edit lives alongside it.</p>
+
+    <h3 class="sub">What Git actually is</h3>
+    <p>Git is a program you run on your own machine. Point it at a folder and it records snapshots of that folder on request. Three things about that sentence surprise most people:</p>
+    <div class="card-grid">
+      <div class="card"><h4>Whole-folder, not per-file</h4><p>The unit of work is your project. There's no such thing as the history of one file in isolation.</p></div>
+      <div class="card"><h4>Only records on request</h4><p>Git is not an autosave. You decide when the project is worth remembering, and you say so.</p></div>
+      <div class="card"><h4>Entirely local</h4><p>Everything Git knows sits in a hidden <code>.git</code> folder. Delete it and you have an ordinary folder again.</p></div>
+      <div class="card"><h4>No account required</h4><p>Git is usually introduced through GitHub, but you can use Git for years, alone, with no account anywhere.</p></div>
+    </div>
+
+    <h3 class="sub">Git is not GitHub</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr><td><code>Git</code></td><td>A version control program that runs on your machine.</td></tr>
+          <tr><td><code>GitHub</code></td><td>A website that hosts copies of Git repositories.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Git is the tool. GitHub is one of several places (GitLab, Bitbucket, Azure Repos) where a team keeps a shared copy, so everyone has an agreed destination for their work and an agreed source for everyone else's. The practical consequence: most of what follows in "What Git stores" and "The everyday workflow" needs no account, no network, and no login. GitHub becomes relevant the moment a second person is involved.</p>
+  </section>
+
+  <!-- ============ 2: WHAT GIT STORES ============ -->
+  <section class="block" id="stores">
+    <div class="eyebrow"><span class="num">02</span> What Git stores</div>
+    <h2 class="h">The picture that makes the commands obvious</h2>
+    <p class="lede">Almost all beginner pain with Git comes from carrying an inaccurate picture of what the commands operate on. The commands themselves are short — they're also unforgiving about that picture, and give unhelpful errors when it's wrong. Four claims, in order, and the everyday commands become consequences rather than incantations.</p>
+
+    <h3 class="sub">A repository is your folder, plus <code>.git</code></h3>
+    <p>A <strong>repository</strong> is a project folder that Git is tracking, together with its history. <code>git init</code> turns an ordinary folder into one — and creates exactly one thing, the <code>.git</code> folder, leaving your project files untouched beside it.</p>
+    <p><code>-b main</code> names the first <strong>branch</strong> <code>main</code>. A branch is a line of commits with a name attached, and <code>main</code> is the conventional name for the line holding a project's accepted work. <code>git status</code> is the command you'll run more than any other — read it as the answer to "where am I, and what have I got?"</p>
+
+    <h3 class="sub">A commit is a snapshot, not a diff</h3>
+    <p>People describe Git as storing changes. It does not. A <strong>commit</strong> stores a complete listing of your project at one moment, plus a pointer to the commit before it, plus who made it and why. Git <em>shows</em> you diffs by comparing two snapshots — what it keeps is the snapshots.</p>
+    <p>The name of a commit is a SHA-1 hash of all of that content, which is why commit IDs look like <code>a3f9c21</code>. Change one byte of a file, the message, or the parent, and you get a different name — the reason a commit SHA works as a name for "the code that produced this model."</p>
+
+    <div class="callout">
+      <div class="label">WRITING A COMMIT MESSAGE</div>
+      <p style="font-family:var(--serif); font-style:normal; color:var(--ink-dim);">Write it in the imperative — "add baseline training script," not "added." Git quotes messages back inside sentences it generates itself, like <code>Revert "Add baseline training script"</code>, and the imperative is the form that reads correctly there. Spend the words on <em>why</em>, since the diff already records <em>what</em> changed. A <code>feat(train):</code>-style prefix is optional and cheap, and it makes a long log skimmable.</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-head"><span>first commit, and the object Git wrote</span><button class="copy-btn" data-copy>copy</button></div>
+      <pre><code>mkdir -p src
+printf 'print("baseline model")\n' &gt; src/train.py
+git add src/train.py
+git commit -q -m "feat(train): add baseline training script"
+
+git cat-file -p HEAD</code></pre>
+    </div>
+    <div class="terminal">tree a1b2c3d
+author  MLOps Student &lt;student@example.com&gt;  1699999999 +0000
+committer  MLOps Student &lt;student@example.com&gt;  1699999999 +0000
+
+feat(train): add baseline training script</div>
+    <p>The commit points at a <code>tree</code> — a directory listing, not a diff. It carries an author, a committer, a message. No <code>parent</code> line yet, because nothing came before it. A second commit adds that line, and it's what makes history a chain: <code>git log</code> is just a walk backwards from <code>HEAD</code>, nothing cleverer. <code>src/train.py</code> itself is stored as a <code>blob</code> named by a hash of its bytes — two files with identical content anywhere in history share a single blob. Git is a <strong>content-addressed store</strong>, and that one design choice is the source of both its strengths and its unsuitability for data, measured later in this reading.</p>
+
+    <h3 class="sub">A change lives in one of three places</h3>
+    <p>Here's where the confusion actually lives. Between your editor and your history there are three separate stores. Explore what each command moves below.</p>
+
+    <div class="trees-wrap">
+      <div class="trees-row" id="treesRow">
+        <div class="tree-box" data-tree="wd"><div class="tname">Working directory</div><div class="tdesc">files you're editing</div></div>
+        <div class="tree-arrow"><svg viewBox="0 0 64 24" preserveAspectRatio="none"><line x1="2" y1="12" x2="58" y2="12" stroke="#2b2b2e" stroke-width="1.5"/><polygon points="58,7 64,12 58,17" fill="#2b2b2e"/></svg></div>
+        <div class="tree-box" data-tree="stage"><div class="tname">Staging area</div><div class="tdesc">the next commit, being built</div></div>
+        <div class="tree-arrow"><svg viewBox="0 0 64 24" preserveAspectRatio="none"><line x1="2" y1="12" x2="58" y2="12" stroke="#2b2b2e" stroke-width="1.5"/><polygon points="58,7 64,12 58,17" fill="#2b2b2e"/></svg></div>
+        <div class="tree-box" data-tree="repo"><div class="tname">Repository (.git)</div><div class="tdesc">committed history, permanent</div></div>
+        <div class="tree-arrow"><svg viewBox="0 0 64 24" preserveAspectRatio="none"><line x1="2" y1="12" x2="58" y2="12" stroke="#2b2b2e" stroke-width="1.5"/><polygon points="58,7 64,12 58,17" fill="#2b2b2e"/></svg></div>
+        <div class="tree-box" data-tree="remote"><div class="tname">Remote (GitHub)</div><div class="tdesc">the shared copy</div></div>
+      </div>
+      <div class="tree-btns" id="treeBtns">
+        <button class="tbtn" data-cmd="add">git add</button>
+        <button class="tbtn" data-cmd="commit">git commit</button>
+        <button class="tbtn" data-cmd="restore">git restore</button>
+        <button class="tbtn" data-cmd="reset">git reset</button>
+        <button class="tbtn" data-cmd="push">git push</button>
+        <button class="tbtn" data-cmd="pull">git pull</button>
+      </div>
+      <div class="tree-explain" id="treeExplain">Click a command to see which trees it moves data between.</div>
+    </div>
+
+    <p><code>git status</code> reports on all three local trees at once, which is why its output has a three-block shape:</p>
+    <ul class="objectives" style="grid-template-columns:1fr;">
+      <li><strong>Changes to be committed</strong> — staging area against the last commit.</li>
+      <li><strong>Changes not staged for commit</strong> — working directory against staging.</li>
+      <li><strong>Untracked files</strong> — everything Git has never been told about; invisible until added.</li>
+    </ul>
+    <p>The two forms of diff split the same way: <code>git diff</code> shows what you have <em>not</em> staged; <code>git diff --cached</code> shows what you have. If <code>git diff</code> prints nothing while <code>git status</code> insists you have changes, everything is staged.</p>
+
+    <h3 class="sub">A branch is a pointer, not a copy</h3>
+    <p>A branch is physically a 41-byte file containing a SHA. Creating one copies nothing — it writes a new pointer at your current commit, which is why branching in Git is instant. <code>HEAD</code> points at a branch, which points at a commit. Checking out a specific commit directly (rather than a branch name) puts you in a <strong>detached HEAD</strong> — not an error, just standing on a commit rather than a branch. A commit made there is still reachable even with no branch name pointing at it, which matters later when recovery comes up.</p>
+
+    <h3 class="sub">The loop, now that you know what it moves</h3>
+    <p>Everything above assembles into one short cycle. A change moves left to right through four places:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Step</th><th>Command</th><th>Moves</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>git add &lt;files&gt;</code></td><td>Working directory → staging area</td></tr>
+          <tr><td>2</td><td><code>git commit -m "why"</code></td><td>Staging area → local repository</td></tr>
+          <tr><td>3</td><td><code>git push</code></td><td>Local repository → remote (GitHub)</td></tr>
+          <tr><td>4</td><td><code>git pull</code></td><td>Remote → local repository → working directory</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 3: EVERYDAY WORKFLOW ============ -->
+  <section class="block" id="workflow">
+    <div class="eyebrow"><span class="num">03</span> The everyday workflow</div>
+    <h2 class="h">Staging with intent, undoing safely, merging</h2>
+    <p class="lede">This is the loop you'll run hundreds of times a week: change something, look at what changed, stage a coherent piece of it, commit with a message that explains why, eventually share it.</p>
+
+    <h3 class="sub">Staging and committing with intent</h3>
+    <p><code>git add .</code> is a habit to break early. Stage selectively and <code>git log</code> becomes a readable account of the project. Stage everything and it becomes a diary of your interruptions.</p>
+    <div class="callout">
+      <div class="label">ONE COMMIT, ONE IDEA</div>
+      <p style="font-family:var(--serif); color:var(--ink-dim);">This is what the staging area is for: you edit six files and choose which three belong together. If a commit message needs the word "and," you probably wanted two commits.</p>
+    </div>
+
+    <h3 class="sub">Undoing things safely</h3>
+    <p>Four commands do four different jobs, and choosing the wrong one is how people lose work. Learn them as a set — the dividing line is whether anyone else has seen the commit.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>git restore &lt;file&gt;</code></td><td>Throws away working-directory changes.</td></tr>
+          <tr><td><code>git reset --soft HEAD~1</code></td><td>Undoes the commit, keeps changes staged.</td></tr>
+          <tr><td><code>git reset --mixed HEAD~1</code></td><td>Undoes the commit, keeps changes unstaged.</td></tr>
+          <tr><td><code>git revert &lt;sha&gt;</code></td><td>Adds a new commit that reverses an old one.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><code>reset</code> rewrites history and belongs to commits you haven't shared. <code>revert</code> adds history and is correct for anything already pushed, because it doesn't lie about what happened — it records that you changed your mind. There's also <code>git reset --hard</code>, the one Git command that can genuinely destroy uncommitted work.</p>
+
+    <h3 class="sub">Branching and merging</h3>
+    <p>Merges come in two shapes, and telling them apart from a graph is a useful reflex. Toggle between them below.</p>
+
+    <div class="graph-toggle" role="tablist">
+      <button class="tbtn on" data-graph="ff">Fast-forward</button>
+      <button class="tbtn" data-graph="merge">Merge commit</button>
+    </div>
+    <div class="graph-wrap">
+      <svg class="graph-svg" id="mergeGraph" viewBox="0 0 560 180"></svg>
+    </div>
+    <p id="graphCaption" style="font-size:0.88rem; color:var(--ink-faint); font-family:var(--mono); margin-top:8px;">main has not moved since the branch was cut — Git slides the main pointer forward. No merge commit, history stays a straight line.</p>
+
+    <h3 class="sub">A merge conflict, on purpose</h3>
+    <p>Far better to meet conflict markers here than at 6pm on a Friday. <strong>Conflicts are normal</strong> — not a sign you did something wrong, or that Git is broken. A merge conflict is Git declining to guess between two changes to the same lines. The only real failure mode is resolving one carelessly.</p>
+
+    <div class="code-block">
+      <div class="code-head"><span>RUNNING.md — during a conflict</span></div>
+      <pre><code>Run:
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+python src/train.py --config configs/train.yaml
+=======
+python src/train.py --n-estimators 100 --max-depth 4
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; docs/run-with-flags</code></pre>
+    </div>
+    <div class="conflict-anno">
+      <div class="conflict-line"><span class="conflict-marker">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span><span class="conflict-desc">Everything below this, down to the divider, is the version already on the branch you're standing on.</span></div>
+      <div class="conflict-line"><span class="conflict-marker">=======</span><span class="conflict-desc">The divider between the two competing versions.</span></div>
+      <div class="conflict-line"><span class="conflict-marker">&gt;&gt;&gt;&gt;&gt;&gt;&gt; docs/run-with-flags</span><span class="conflict-desc">Everything above this, up to the divider, is the version coming in from the branch being merged.</span></div>
+    </div>
+    <p><code>git status --short</code> reports <code>UU RUNNING.md</code> — <code>U</code> on both sides means unmerged from both, because each branch modified this file. In real projects the answer is very often "both changes are valid." Resolving is not picking a winner; it's writing the version the team actually wants, then deleting the markers, <code>git add</code>-ing the file, and committing.</p>
+
+    <details class="checkpoint">
+      <summary>Try it yourself — Checkpoint 5.1</summary>
+      <div class="cp-body">
+        <ol>
+          <li>Initialise a repository, make three commits, then produce a <code>git log --oneline --graph</code> you'd be happy to show a reviewer. Make a fourth commit with the message <code>wip</code> and undo it with <code>reset --soft</code>, keeping the work.
+            <span class="why">Why it matters: <code>reset --soft</code> is what lets you commit early and often without leaving a mess behind.</span></li>
+          <li>Create two branches from <code>main</code> that edit the same line of the same file. Merge one, then the other, and resolve the conflict so the final file keeps both intentions.
+            <span class="why">Why it matters: the first conflict you resolve shouldn't be one that matters.</span></li>
+          <li>Run <code>git status</code> at four points: clean, after an edit, after <code>git add</code>, and after <code>git commit</code>. Predict each output before you look.
+            <span class="why">Why it matters: if you can predict <code>git status</code>, you have the three trees; if not, memorising commands won't help.</span></li>
+        </ol>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ 4: GITHUB ============ -->
+  <section class="block" id="github">
+    <div class="eyebrow"><span class="num">04</span> GitHub: the shared copy</div>
+    <h2 class="h">One copy everybody agrees on</h2>
+    <p class="lede">Everything so far ran on one machine, no account, no network — that's genuinely how Git works, and also not how anyone ships. The moment a second person is involved, the team needs one copy everybody agrees on.</p>
+
+    <h3 class="sub">What a remote is</h3>
+    <p>A <strong>remote</strong> is another repository yours knows how to exchange commits with — a name and a URL, nothing more. By convention the shared one is called <code>origin</code>. A <strong>clone</strong> is a full local copy of a remote, history included. Because every clone holds the entire history, <code>git log</code>, <code>git diff</code>, <code>git branch</code>, and committing all work with no network — Git is distributed. GitHub is a convention for agreeing which copy counts, plus what a website can do that a version control program can't: review, permissions, a link you can share.</p>
+
+    <div class="code-block">
+      <div class="code-head"><span>authenticate once per machine, over SSH</span></div>
+      <pre><code>ssh-keygen -t ed25519 -C "you@example.com"
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub   <span class="c-comment"># paste into GitHub → Settings → SSH keys</span>
+ssh -T git@github.com</code></pre>
+    </div>
+    <p>The private key never leaves your machine — only the public half goes to GitHub. Do this once, and a new empty repository accepts your history cleanly:</p>
+    <div class="code-block">
+      <div class="code-head"><span>push an existing local project</span></div>
+      <pre><code>git remote add origin git@github.com:your-username/your-repo.git
+git push -u origin main</code></pre>
+    </div>
+    <p><code>git remote add</code> records the name and URL in <code>.git/config</code>. <code>git push -u origin main</code> sends your commits and sets <code>origin/main</code> as what your <code>main</code> tracks — what lets Git later tell you that you're two commits ahead or one behind. After the first push, a bare <code>git push</code> is enough.</p>
+
+    <h3 class="sub"><code>fetch</code>, <code>merge</code>, <code>pull</code></h3>
+    <p>These three get conflated constantly, and the confusion is expensive — it decides whether you can look before you leap.</p>
+    <div class="card-grid">
+      <div class="card"><h4><code>git fetch</code></h4><p>Downloads new commits and moves <code>origin/main</code>. Your own branches don't move; nothing in your working directory changes.</p></div>
+      <div class="card"><h4><code>git merge origin/main</code></h4><p>Merges the downloaded commits into the branch you're on.</p></div>
+      <div class="card"><h4><code>git pull</code></h4><p>Is those two, in that order. <strong>pull = fetch + merge.</strong></p></div>
+      <div class="card"><h4>Careful default</h4><p><code>git fetch</code> then <code>git status -sb</code> then <code>git diff main origin/main</code> before you merge — costs five seconds, occasionally saves an afternoon.</p></div>
+    </div>
+    <p><code>git pull</code> is the right default on a branch only you're working on. On a busy shared branch, fetch and look first.</p>
+
+    <h3 class="sub">Pull requests and review</h3>
+    <p>You have write access to your own repository, so nothing above required a pull request. Teams add one anyway, because the point of a <strong>pull request</strong> is not the merge — it's the conversation and the checks attached to it.</p>
+    <div class="code-block">
+      <div class="code-head"><span>opening a PR from the terminal</span></div>
+      <pre><code>git switch -c feat/new-branch
+<span class="c-comment"># edit src/train.py</span>
+git add src/train.py
+git commit -m "feat(train): weight classes by inverse frequency"
+git push -u origin feat/new-branch</code></pre>
+    </div>
+    <p>Notice what has <em>not</em> happened: <code>main</code> hasn't moved, on your machine or the server. The branch exists in both places now, and that's all. GitHub spots the new branch and offers to open a pull request for it. A PR description for ML work repays being written properly — three headings cover most cases: what changed, how to reproduce it, what happened to the metric. If a reviewer can't re-run your result from the description, the review is a spell-check.</p>
+
+    <h3 class="sub">What a reviewer of ML work should check</h3>
+    <ul class="objectives" style="grid-template-columns:1fr;">
+      <li>No data files or model binaries in the diff.</li>
+      <li>No credentials in the diff.</li>
+      <li>Enough in the description to reproduce the reported number.</li>
+    </ul>
+
+    <p>After it merges, the merge happened on the server, so your local repository still knows nothing about it:</p>
+    <div class="code-block">
+      <div class="code-head"><span>closing the loop</span></div>
+      <pre><code>git switch main
+git pull                              <span class="c-comment"># the merge commit comes down</span>
+git branch -d feat/class-weighting    <span class="c-comment"># delete the branch you're done with</span></code></pre>
+    </div>
+    <p><code>git branch -d</code> refuses if the branch holds commits that never reached <code>main</code> — exactly the check you want. <code>-D</code> forces it, and is how work gets quietly lost.</p>
+
+    <h3 class="sub">Protected branches</h3>
+    <p>Everything above is a preference until the server enforces it. Branch protection rules on <code>main</code> can refuse direct pushes, require an approving review, and require a named check to pass before merge. "We use pull requests" describes a habit. A protected branch describes a guarantee — and the difference shows up on the afternoon somebody is in a hurry.</p>
+  </section>
+
+  <!-- ============ 5: RESHAPING ============ -->
+  <section class="block" id="reshape">
+    <div class="eyebrow"><span class="num">05</span> Reshaping and moving work</div>
+    <h2 class="h">Stash, rebase, cherry-pick</h2>
+    <p class="lede">Up to now you've been a passenger in your own history — commits happen and stay as they happened. This section is where you take the controls: three tools, in increasing order of how much damage they can do, plus one safety net.</p>
+
+    <h3 class="sub"><code>git stash</code> — setting work aside</h3>
+    <p>It exists for interruptions: a teammate needs you to look at <code>main</code> right now, you started editing the wrong branch, or you need to pull and Git refuses because your working directory is dirty. Prefer <code>git stash apply</code> while learning — if applying goes wrong you still have the stash; with <code>pop</code> you have an unexpected working directory and nothing to go back to.</p>
+
+    <p>This is the part that specifically bites ML work — three tiers of what a stash actually captures:</p>
+    <div class="stash-grid">
+      <div class="stash-card">
+        <div class="icon-row"><span class="chip yes">tracked, edited</span></div>
+        <h4>Plain <code>git stash</code></h4>
+        <p>Only tidies away edits to files Git already tracks. A brand-new config file is left sitting in the working directory, untouched.</p>
+      </div>
+      <div class="stash-card">
+        <div class="icon-row"><span class="chip yes">+ untracked</span></div>
+        <h4><code>git stash push -u</code></h4>
+        <p>Also captures new, untracked files — the script you just wrote, the fresh config. Fixes the trap above.</p>
+      </div>
+      <div class="stash-card">
+        <div class="icon-row"><span class="chip">gitignored</span></div>
+        <h4>Still won't touch <code>.gitignore</code>d paths</h4>
+        <p>In an ML repo, <code>data/</code>, <code>models/</code>, <code>artifacts/</code> are ignored — no form of stash touches them, ever.</p>
+      </div>
+    </div>
+    <p>This matters more than it looks: switch branches with stale artifacts in <code>models/</code> and your workspace now holds a model produced by <em>different</em> code. Nothing errors. Nothing warns you. That's the code/data mismatch in miniature — the problem the "Why Git fails for data" section is entirely about.</p>
+
+    <div class="callout warn">
+      <div class="label">THE HONEST WARNING ABOUT STASHES</div>
+      <p style="font-family:var(--serif); color:var(--ink-dim);">A stash is local, invisible to your teammates, unnamed unless you write a message, and easy to forget. It is never pushed. If your laptop dies, the stash dies with it. A stash is a five-minute tool and not storage. <strong>A stash older than a day should have been a branch</strong> — <code>git stash branch &lt;name&gt;</code> is how you fix that after the fact.</p>
+    </div>
+
+    <h3 class="sub"><code>git rebase</code> — replaying commits onto a new base</h3>
+    <p>The diagram is the entire lesson, so it comes before any command. Suppose you branched from <code>main</code> at commit <code>B</code>, made <code>X</code> and <code>Y</code>, and meanwhile someone added <code>C</code> to <code>main</code>.</p>
+
+    <div class="graph-toggle" role="tablist">
+      <button class="tbtn on" data-rebase="start">Starting point</button>
+      <button class="tbtn" data-rebase="merged">After merge</button>
+      <button class="tbtn" data-rebase="rebased">After rebase</button>
+    </div>
+    <div class="graph-wrap">
+      <svg class="graph-svg" id="rebaseGraph" viewBox="0 0 560 190"></svg>
+    </div>
+    <p id="rebaseCaption" style="font-size:0.88rem; color:var(--ink-faint); font-family:var(--mono); margin-top:8px;">The feature branch (X, Y) diverges from main after commit B.</p>
+
+    <p>Merge <strong>joins</strong> two histories and records that they were joined. Rebase <strong>replays</strong> your commits one at a time on top of the new base, producing brand-new commits — <code>X'</code> carries the same change as <code>X</code> but has a different SHA, because its parent is different and the parent is part of the hash. Every other property of rebase is a consequence of that one idea.</p>
+
+    <h4 class="subsub">The conflict loop</h4>
+    <p>A rebase replays commits <em>one at a time</em>, and each replay can conflict. The loop is: resolve, <code>git add</code>, <code>git rebase --continue</code> — once per conflicting commit. Know all three exits before you start one:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Exit</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>git rebase --continue</code></td><td>Carry on, once you've resolved and staged.</td></tr>
+          <tr><td><code>git rebase --skip</code></td><td>Drop the commit being replayed.</td></tr>
+          <tr><td><code>git rebase --abort</code></td><td>Return to exactly where you were before the rebase.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><code>--abort</code> is safe and complete — costs you nothing beyond the resolution you just did. A rebase can hit the <em>same</em> file conflict commit after commit; that's not you doing it wrong. Each commit touched the file, so each replay reconciles against the new base separately. Squashing a messy branch first avoids most of it.</p>
+
+    <h4 class="subsub">Interactive rebase — cleaning a branch before review</h4>
+    <p><code>git rebase -i HEAD~n</code> opens an editor with one line per commit, letting you rewrite the last <code>n</code> commits:</p>
+    <div class="tabs" id="rebaseTabs">
+      <div class="tab-btns">
+        <button class="tab-btn active" data-tab="pick">pick</button>
+        <button class="tab-btn" data-tab="reword">reword</button>
+        <button class="tab-btn" data-tab="squash">squash</button>
+        <button class="tab-btn" data-tab="fixup">fixup</button>
+        <button class="tab-btn" data-tab="drop">drop</button>
+        <button class="tab-btn" data-tab="edit">edit</button>
+      </div>
+      <div class="tab-panel active" data-panel="pick"><p>Keep the commit exactly as it is — the default for every line.</p></div>
+      <div class="tab-panel" data-panel="reword"><p>Keep the change, but stop to edit the commit message.</p></div>
+      <div class="tab-panel" data-panel="squash"><p>Merge this commit into the previous one, combining both messages into one you then edit.</p></div>
+      <div class="tab-panel" data-panel="fixup"><p>Like <code>squash</code>, but silently discards this commit's message — useful for "oops, typo" follow-ups.</p></div>
+      <div class="tab-panel" data-panel="drop"><p>Delete the commit entirely.</p></div>
+      <div class="tab-panel" data-panel="edit"><p>Stop the replay here so you can amend the commit's contents before continuing.</p></div>
+    </div>
+    <p>The realistic case: a branch containing <code>wip</code>, <code>fix</code>, <code>actually fix</code>, which needs to become one reviewable commit before the pull request goes out. Changing <code>pick</code> to <code>squash</code> on the second and third lines replays all three as one, then reopens the editor with all three messages stacked up for you to replace with the real one. Three commits become one, the content is unchanged, and the message says what the branch does — what a reviewer should receive.</p>
+
+    <h4 class="subsub">The golden rule, and <code>--force-with-lease</code></h4>
+    <div class="callout quote">
+      <p style="font-family:var(--serif); color:var(--ink);">Never rebase commits that anyone else has pulled.</p>
+    </div>
+    <p>Rebasing rewrites commits. If a teammate holds your old commits and you replace them with new SHAs, their branch and yours now disagree about history, and every one of them has to perform a recovery you'll have to explain. Rebase your own unshared branches as much as you like — leave shared history alone.</p>
+    <p>Once you've rebased a branch you already pushed, the remote rejects an ordinary push, because its history is no longer an ancestor of yours. The wrong fix is <code>--force</code> — "overwrite whatever is there." The right one:</p>
+    <div class="code-block">
+      <div class="code-head"><span>the safe force-push</span></div>
+      <pre><code>git push --force-with-lease origin my-branch</code></pre>
+    </div>
+    <p>The lease means "overwrite it only if it's still exactly what I last saw." If a teammate pushed while you were rebasing, Git refuses with <code>[rejected] (stale info)</code> — nothing was destroyed. With plain <code>--force</code>, their commit would now be gone from the remote, recoverable only from their local reflog, if they still have it. <code>--force-with-lease</code> costs eleven characters over <code>--force</code> and is the cheapest safety net in Git.</p>
+
+    <h4 class="subsub">Merge or rebase? Decide it as a team</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>Rebase</th><th>Merge</th></tr></thead>
+        <tbody>
+          <tr><td>History</td><td>Linear, easy to read and to bisect.</td><td>Records what happened, including the mess.</td></tr>
+          <tr><td>Safety</td><td>Rewrites SHAs — unsafe on shared branches.</td><td>Never rewrites anything.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Both are defensible. A common and sane convention: rebase your own feature branch to keep it current, then merge it into <code>main</code> through a pull request. What matters less is which one you pick than that the team picks one and writes it down — an undocumented convention is not a convention.</p>
+
+    <h4 class="subsub"><code>git reflog</code> — the safety net</h4>
+    <p>Learn this the same day you learn rebase, because it's what makes rewriting history survivable. Git records every move of <code>HEAD</code> locally, and commits no branch points at aren't deleted immediately — by default they survive around 90 days. A "lost" commit after a bad rebase or a <code>reset --hard</code> is usually still sitting there, unnamed, reachable as e.g. <code>feat/messy2@{1}</code> — the position a branch pointed to before the rebase finished.</p>
+    <div class="code-block">
+      <div class="code-head"><span>recovering from a botched rebase</span></div>
+      <pre><code>git reflog show feat/messy2
+git reset --hard "feat/messy2@{1}"</code></pre>
+    </div>
+    <p>A botched rebase is almost never fatal — <em>locally</em>. The reflog lives in your own <code>.git</code> directory. It cannot help a teammate whose commits you overwrote on the remote, and it cannot help you on a fresh clone. One more reason not to rewrite what you've already shared.</p>
+
+    <h4 class="subsub"><code>git cherry-pick</code> — moving one commit</h4>
+    <p>Specific situations: a hotfix landed on <code>main</code> and needs to go onto a release branch too, or one genuinely useful commit sits on an experiment branch you're otherwise abandoning. Everything follows from one fact: <strong>cherry-pick copies the change, not the commit.</strong> The new commit has a different SHA, so the same work now exists twice in the repository under two identities. <code>-x</code> appends <code>(cherry picked from commit ...)</code> to the message — free provenance, so use it.</p>
+    <p>The consequence shows up later: cherry-pick a commit off <code>main</code>, then merge that branch back into <code>main</code>, and the same change can appear twice under two SHAs. Often Git merges it silently because it recognizes the change was already applied; in less lucky cases you get a conflict that looks baffling because you're reconciling a change with itself. The one routine, legitimate use in ML work is moving a single config change onto another experiment branch. Otherwise, cherry-pick is a targeted tool for exceptional situations — reaching for it routinely usually means branches were cut from the wrong place.</p>
+
+    <details class="acc">
+      <summary>The rest of the Git surface (not covered here)</summary>
+      <div class="acc-body"><p><code>git submodule</code> and <code>git worktree</code> for managing multiple checkouts and nested repositories, <code>git bisect</code> for finding the commit that broke something by binary search, and <code>git filter-repo</code> for rewriting history at scale — the answer to "I committed a 500 MB file," which the data section below measures the cost of.</p></div>
+    </details>
+
+    <details class="checkpoint">
+      <summary>Try it yourself — Checkpoint 7.1</summary>
+      <div class="cp-body">
+        <ol>
+          <li>Edit a tracked file and create a new untracked file. Run plain <code>git stash</code>, then <code>ls</code>. Confirm which file went away and which didn't, then redo it with <code>-u</code>.
+            <span class="why">Why it matters: this is the most common way ML students lose track of a new script or config.</span></li>
+          <li>Create a branch with four commits named <code>wip</code>, <code>wip2</code>, <code>fix</code>, <code>fix again</code>. Squash them into one properly-messaged commit with <code>git rebase -i HEAD~4</code>.
+            <span class="why">Why it matters: this is the difference between a reviewable pull request and one your reviewer skims out of politeness.</span></li>
+          <li>Start a rebase that conflicts. Before resolving anything, read <code>git status</code> and identify which branch you're on, which commit is being replayed, and the three ways out. Then <code>--abort</code>. Then redo it and resolve with <code>--continue</code>.
+            <span class="why">Why it matters: being stuck in a rebase is a reading-comprehension problem, and this is the reading.</span></li>
+          <li>After that exercise, run <code>git reflog</code> and find the SHA your branch pointed at before the rebase. Reset to it, confirm the old commits are back, then reset forward again.
+            <span class="why">Why it matters: once you've recovered from a rebase, you stop being afraid of them.</span></li>
+        </ol>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ 6: GIT FOR ML ============ -->
+  <section class="block" id="ml">
+    <div class="eyebrow"><span class="num">06</span> Git for ML projects specifically</div>
+    <h2 class="h">Where an ML repository behaves differently</h2>
+    <p class="lede">Everything so far applies to any codebase. This section is about the parts of an ML repository that behave differently from application code.</p>
+
+    <h3 class="sub">A sane repository structure</h3>
+    <p>There's no universal layout, but there's a widely-used convention (the Cookiecutter Data Science layout is the usual reference) — the logic behind it repays understanding rather than copying. Click a row to see why it's there.</p>
+
+    <div class="filetree" id="fileTree">
+      <div class="ft-row" data-desc="Importable code: prepare.py, train.py, evaluate.py. This is production code — it has a callable interface and a test surface."><span>├──</span><span class="ft-name">src/</span></div>
+      <div class="ft-desc"></div>
+      <div class="ft-row" data-desc="Exploration only — nothing production depends on these. Fine for looking at data, a bad place to keep the code that produces a model."><span>├──</span><span class="ft-name">notebooks/</span></div>
+      <div class="ft-desc"></div>
+      <div class="ft-row" data-desc="Config files, or a single params.yaml at the root — the knobs your training run reads."><span>├──</span><span class="ft-name">configs/</span></div>
+      <div class="ft-desc"></div>
+      <div class="ft-row dim" data-desc="Never committed to Git. Section 08 (why Git fails for data) measures exactly why."><span>├──</span><span class="ft-name">data/</span> <span class="chip">gitignored</span></div>
+      <div class="ft-desc"></div>
+      <div class="ft-row dim" data-desc="Never committed to Git — model binaries are worse than data: opaque, and they change completely on every retrain."><span>├──</span><span class="ft-name">models/</span> <span class="chip">gitignored</span></div>
+      <div class="ft-desc"></div>
+      <div class="ft-row" data-desc="Yes — ML code gets tests too."><span>├──</span><span class="ft-name">tests/</span></div>
+      <div class="ft-desc"></div>
+      <div class="ft-row" data-desc="requirements.txt — the environment. README.md — how to run it. .gitignore — what stays out."><span>└──</span><span class="ft-name">requirements.txt · README.md · .gitignore</span></div>
+      <div class="ft-desc"></div>
+    </div>
+    <p>The important line is the boundary between <code>src/</code> and <code>notebooks/</code>. A notebook is a fine place to look at data and a bad place to keep the code that produces a model, because it has no callable interface, no test surface, and an execution order that depends on what you clicked. The discipline: explore in a notebook, then move the code that worked into <code>src/</code>.</p>
+
+    <h3 class="sub">A real ML <code>.gitignore</code></h3>
+    <p>Write this on the first day of a project, not the day after you accidentally commit a 300&nbsp;MB parquet file. History is immutable, which is the whole problem.</p>
+    <div class="code-block">
+      <div class="code-head"><span>.gitignore</span><button class="copy-btn" data-copy>copy</button></div>
+      <pre><code><span class="c-comment"># Python</span>
+__pycache__/
+*.pyc
+
+<span class="c-comment"># Environments and secrets</span>
+.venv/
+venv/
+.env
+
+<span class="c-comment"># Notebook cruft</span>
+.ipynb_checkpoints/
+
+<span class="c-comment"># Data and artifacts — these do not belong in Git</span>
+data/
+models/
+artifacts/
+*.pkl
+*.joblib
+*.h5</code></pre>
+    </div>
+
+    <h3 class="sub">Secrets</h3>
+    <p>Never commit credentials. When you do, three things are true at once:</p>
+    <ul class="objectives" style="grid-template-columns:1fr;">
+      <li>Removing the file with <code>git rm</code> does <strong>not</strong> remove it from history — the old commit still contains it, readable with <code>git show</code>.</li>
+      <li>Rewriting history to excise it (<code>git filter-repo</code>) is possible but invasive: every SHA after the offending commit changes, invalidating every clone.</li>
+      <li>Therefore the only correct first response is to <strong>rotate the credential</strong>. Assume it's compromised, because it is. Cleaning the repository afterwards is hygiene, not remediation.</li>
+    </ul>
+    <p>The minimum practice is unglamorous and sufficient: keep secrets in a gitignored <code>.env</code> file, read them from the environment in code, and commit a <code>.env.example</code> listing the variable <em>names</em> with no values.</p>
+    <div class="terminal">=== what Git is actually tracking ===
+.env.example
+.gitignore
+README.md
+requirements.txt
+
+=== and .env is correctly ignored ===
+.gitignore:8:.env	.env</div>
+    <p><code>git ls-files</code> shows <code>.env.example</code> and no <code>.env</code>. Run that command on your own repositories occasionally — it's the fastest way to find out what you've been committing without noticing.</p>
+
+    <h3 class="sub">Notebooks in Git are a real problem</h3>
+    <p>A structural mismatch rather than an inconvenience, for three reasons:</p>
+    <div class="card-grid">
+      <div class="card"><h4>It's JSON</h4><p>A one-line code change shows up as a diff in a nested structure, with execution_count and metadata churn around it.</p></div>
+      <div class="card"><h4>Outputs live in the file</h4><p>A plot is a base64 PNG, sometimes megabytes of it, changing every run. Diffs become unreadable and the repository grows for no reason.</p></div>
+      <div class="card"><h4>Metadata churns on every run</h4><p>Two people editing one notebook conflict almost every time — in JSON rather than code. Rebase makes it worse, since it replays each commit.</p></div>
+      <div class="card"><h4>The fix is upfront</h4><p>Squash notebook-heavy branches before rebasing them, and adopt a standard tool (below) from day one.</p></div>
+    </div>
+    <div class="tabs" id="nbTabs">
+      <div class="tab-btns">
+        <button class="tab-btn active" data-tab="strip">nbstripout</button>
+        <button class="tab-btn" data-tab="jt">jupytext</button>
+      </div>
+      <div class="tab-panel active" data-panel="strip">
+        <p>Installs a Git filter that removes outputs and execution counts automatically as files are staged. Minimal change to your workflow: keep working in <code>.ipynb</code>, and Git only ever sees the clean version.</p>
+        <div class="code-block"><pre><code>pip install nbstripout
+nbstripout --install   <span class="c-comment"># run once, inside the repository</span></code></pre></div>
+      </div>
+      <div class="tab-panel" data-panel="jt">
+        <p>Pairs each notebook with a plain-text representation (usually <code>.py</code> with light markers) and keeps the two in sync. You commit the text file, which diffs and merges like code. A bigger change to how you work, and a better answer for notebooks that hold real logic.</p>
+      </div>
+    </div>
+    <p>Whichever you pick, the underlying rule is the same: <strong>commit notebooks without outputs.</strong></p>
+
+    <h3 class="sub">Tags, and the callback to last session</h3>
+    <p>A tag is a human-readable name for a commit. <code>a3f9c21</code> is precise and forgettable; <code>v1.2-fraud-baseline</code> is both. Tag the commit that produced a model you deployed, or the state of the repository at a milestone.</p>
+    <div class="callout">
+      <div class="label">THE TWO-LINE HABIT</div>
+      <p style="font-family:var(--serif); color:var(--ink-dim);">Record the commit SHA in your run metadata. Two lines in your training script:</p>
+    </div>
+    <div class="code-block">
+      <div class="code-head"><span>python</span></div>
+      <pre><code>import subprocess
+sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()</code></pre>
+    </div>
+    <p>Write that into your metrics file, your log line, your model card. It's the link that makes "which code produced this model" answerable at all, and it costs two lines. The other half — which <em>data</em> produced it — needs the tool covered next.</p>
+  </section>
+
+  <!-- ============ 7: WHY GIT FAILS FOR DATA ============ -->
+  <section class="block" id="data">
+    <div class="eyebrow"><span class="num">07</span> Why Git fails for data</div>
+    <h2 class="h">Measured, not asserted</h2>
+    <p class="lede">This claim gets asserted constantly and demonstrated almost never — which is why students end up half-believing it and committing a CSV "just this once." A commit stores a snapshot; content is stored as compressed blobs identified by hash. For text that's efficient: Git can store one version as a delta against another, and source files are small. For data, two things go wrong at once — the files are large, and successive versions aren't similar in the way Git's compression needs.</p>
+
+    <p><strong>The experiment:</strong> a modest 14&nbsp;MB CSV, refreshed four times the way a real dataset gets refreshed — same schema, new snapshot of underlying reality. Commit each version, measure <code>.git</code> after each one.</p>
+
+    <div class="chart-wrap">
+      <div class="chart-legend">
+        <span><i class="swatch-git"></i> .git size</span>
+        <span><i class="swatch-csv"></i> CSV file size</span>
+      </div>
+      <div class="bars" id="bloatChart">
+        <div class="bar-group"><div class="bar git" data-h="27" data-v="7 MB"><span class="val"></span></div><div class="bar csv" data-h="54" data-v="14 MB"><span class="val"></span></div></div>
+        <div class="bar-group"><div class="bar git" data-h="50" data-v="13 MB"><span class="val"></span></div><div class="bar csv" data-h="58" data-v="15 MB"><span class="val"></span></div></div>
+        <div class="bar-group"><div class="bar git" data-h="77" data-v="20 MB"><span class="val"></span></div><div class="bar csv" data-h="58" data-v="15 MB"><span class="val"></span></div></div>
+        <div class="bar-group"><div class="bar git" data-h="100" data-v="26 MB"><span class="val"></span></div><div class="bar csv" data-h="58" data-v="15 MB"><span class="val"></span></div></div>
+      </div>
+      <div class="bar-axis"><span>commit 1</span><span>commit 2</span><span>commit 3</span><span>commit 4</span></div>
+      <div class="gc-note">after <code>git gc --aggressive</code>: 26 MB → 24 MB — barely a dent</div>
+    </div>
+
+    <p>Read the numbers: the working file never grows past its ~15&nbsp;MB, but <code>.git</code> grows by roughly the compressed size of the dataset with <em>every commit</em>, because every version is stored in full. Four refreshes of a 14&nbsp;MB file cost the repository several times the size of the data you actually care about. To be fair to Git, it does try: <code>git gc --aggressive</code> repacks and hunts for deltas between similar objects — and barely helps, because delta compression works when two versions share long runs of identical bytes. A <em>refreshed</em> dataset, a re-sampled split, a re-encoded feature, a shuffled export — every byte moves, and there's no delta to find. In ML work, that's the normal case.</p>
+
+    <h3 class="sub">The mechanics, stated plainly</h3>
+    <ul class="objectives" style="grid-template-columns:1fr;">
+      <li>Every version of every dataset is stored in full, forever, in every clone. A new teammate pays for your entire data history before they can run anything.</li>
+      <li><strong>History is immutable.</strong> A 500&nbsp;MB file committed once is in history permanently. Deleting it in a later commit doesn't shrink the repository — only rewriting history does, and that invalidates every existing clone.</li>
+      <li>GitHub enforces limits regardless of your opinions: warnings above 50&nbsp;MB per file, a hard block at 100&nbsp;MB, and a recommendation to keep repositories well under a few gigabytes.</li>
+    </ul>
+
+    <h3 class="sub">What about Git LFS?</h3>
+    <p>Git LFS (Large File Storage) replaces large files with text pointers and stores the bytes on a separate server — structurally the idea every data-versioning tool uses. A genuine improvement for a team versioning a handful of large binaries alongside application code. Its limits for ML work specifically:</p>
+    <div class="card-grid">
+      <div class="card"><h4>Billed quotas</h4><p>Bandwidth and storage quotas on GitHub, easy to exhaust with datasets.</p></div>
+      <div class="card"><h4>No deduplication</h4><p>No awareness across similar files, or of which version of the data produced which result beyond the pointer.</p></div>
+      <div class="card"><h4>No pipeline concept</h4><p>LFS knows the file changed, not that the change invalidates your training stage.</p></div>
+      <div class="card"><h4>Co-located</h4><p>Still hosted with your Git provider, so data lives where code lives — often not where your compute is.</p></div>
+    </div>
+
+    <div class="callout">
+      <div class="label">THE ACTUAL REQUIREMENT</div>
+      <p style="font-family:var(--serif); color:var(--ink); font-style:italic;">Version the data like code, but store the bytes somewhere built for bytes.</p>
+    </div>
+    <p>A small text pointer goes under version control, so data versions move with branches, commits, and merges exactly like source files. The actual gigabytes live in object storage — S3, GCS, Azure, or a network mount. What matters today is that you can say precisely why "just commit it" fails, because you've watched a repository reach 26&nbsp;MB over four refreshes of a 14&nbsp;MB file and seen aggressive garbage collection give back only 2&nbsp;MB of it.</p>
+
+    <details class="checkpoint">
+      <summary>Try it yourself — Checkpoint 9.1</summary>
+      <div class="cp-body">
+        <ol>
+          <li>Write one of your own projects a <code>.gitignore</code> from scratch, without looking at the one it already has. Then run <code>git ls-files</code> and read the whole list.
+            <span class="why">Why it matters: <code>git ls-files</code> is the fastest audit of what a repository actually contains, and almost nobody runs it.</span></li>
+          <li>Commit a file holding a fake credential, remove it with <code>git rm</code>, and commit again. Now retrieve it with <code>git log -p</code> and <code>git show &lt;sha&gt;:&lt;path&gt;</code>.
+            <span class="why">Why it matters: until you've pulled a "deleted" secret back out of your own history, rotating the key instead of just deleting the file won't feel mandatory.</span></li>
+          <li>Run the bloat experiment against a dataset of your own, at whatever size it really is, and write down <code>.git</code> before and after.
+            <span class="why">Why it matters: a measurement from your own project wins the "this doesn't belong in the repository" argument in a way an opinion doesn't.</span></li>
+        </ol>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ 8: FAILURES ============ -->
+  <section class="block" id="failures">
+    <div class="eyebrow"><span class="num">08</span> Common failures and how to debug them</div>
+    <h2 class="h">Not exhaustive — but these will actually happen to you</h2>
+    <p class="lede">Roughly in order of how often. Click any one to expand.</p>
+
+    <div id="failList">
+      <div class="fail-item">
+        <div class="fail-head"><span class="sig">stuck</span><h4>Stuck in a rebase</h4></div>
+        <div class="fail-body"><p><code>git status</code> says <code>interactive rebase in progress</code> and you don't know whether to commit, continue, or abort. Read the status output — it names the commit being replayed and lists your three exits. Resolve the files and <code>git add</code> them, then <code>git rebase --continue</code>. Or <code>git rebase --abort</code> and you're exactly where you started. Never <code>git commit</code> mid-rebase — it isn't one of the exits.</p></div>
+      </div>
+      <div class="fail-item">
+        <div class="fail-head"><span class="sig">force-push</span><h4>Force-push clobbered a teammate</h4></div>
+        <div class="fail-body"><p>You rebased a shared branch and forced. Their commits are gone from the remote. Recovery: they find the pre-push SHA in their local <code>reflog</code> and push it back. Prevention: <code>--force-with-lease</code>, which refuses when the remote has moved.</p></div>
+      </div>
+      <div class="fail-item">
+        <div class="fail-head"><span class="sig">stash</span><h4>The lost stash</h4></div>
+        <div class="fail-body"><p>You stashed, changed context for two days, stashed twice more, and <code>stash@{0}</code> isn't what you think. <code>git stash list</code> and <code>git stash show -p stash@{1}</code> before you pop anything, and always use <code>-m</code>.</p></div>
+      </div>
+      <div class="fail-item">
+        <div class="fail-head"><span class="sig">stash</span><h4>Untracked files not stashed</h4></div>
+        <div class="fail-body"><p>The one that bites ML students hardest. <code>git stash</code> ignores untracked files; use <code>-u</code>. Gitignored artifacts are never stashed at all.</p></div>
+      </div>
+      <div class="fail-item">
+        <div class="fail-head"><span class="sig">duplicate</span><h4>Duplicated commits after cherry-pick</h4></div>
+        <div class="fail-body"><p>You cherry-picked a fix, then merged the branch it came from — the change exists twice. Sometimes silent, sometimes a conflict that looks like nonsense because you're reconciling a change with itself. Prefer merging the whole branch when you can.</p></div>
+      </div>
+      <div class="fail-item">
+        <div class="fail-head"><span class="sig">rebase</span><h4>A rebase conflicting again and again</h4></div>
+        <div class="fail-body"><p>Each of your commits touched the file, so each replay conflicts separately. Expected, not a bug. Squash first if the branch is messy.</p></div>
+      </div>
+      <div class="fail-item">
+        <div class="fail-head"><span class="sig">bloat</span><h4>You committed a 500 MB file</h4></div>
+        <div class="fail-body"><p>It's in history permanently. Deleting it in a new commit doesn't shrink anything. Options: rewrite history with <code>git filter-repo</code> and force everyone to re-clone, or start a fresh repository. Both are unpleasant — which is why <code>.gitignore</code> comes before the first <code>git add</code>.</p></div>
+      </div>
+      <div class="fail-item">
+        <div class="fail-head"><span class="sig">notebook</span><h4>A merge conflict inside a notebook</h4></div>
+        <div class="fail-body"><p>The conflict is in JSON — in <code>execution_count</code> and output blobs rather than your code. Take one side wholesale, re-run the notebook, and commit that. Then install <code>nbstripout</code> so it stops happening.</p></div>
+      </div>
+      <div class="fail-item">
+        <div class="fail-head"><span class="sig">branch</span><h4>A branch that will not delete</h4></div>
+        <div class="fail-body"><p><code>git branch -d</code> refuses because the branch holds commits that never reached <code>main</code>. That refusal is correct — check <code>git log main..the-branch</code> before reaching for <code>-D</code>.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 9: MLOPS PERSPECTIVE ============ -->
+  <section class="block" id="mlops">
+    <div class="eyebrow"><span class="num">09</span> The MLOps perspective</div>
+    <h2 class="h">Where this sits on the maturity model</h2>
+    <p>Three levels exist above this: manual, pipeline automation, and CI/CD automation. Nothing in this reading automates anything, and that's fine — you cannot automate a process you cannot reproduce. A versioned repository with a reviewable history is the floor the other two levels stand on.</p>
+    <p><strong>Review is the cheapest quality gate you have.</strong> A pull request that changes how a feature is computed shows up as a diff somebody reads, instead of surfacing three weeks later as a metric nobody can explain. Every argument for code review applies with more force to ML code, because the failures are quieter.</p>
+
+    <h3 class="sub">Pitfalls seen in industry, all of them common</h3>
+    <ul class="objectives" style="grid-template-columns:1fr;">
+      <li>Treating <code>main</code> as a personal scratchpad — no branch protection, no review, and the deployed model comes from whatever was pushed last.</li>
+      <li>Versioning code religiously and data not at all — the most common half-measure by a wide margin, and it leaves you exactly as unable to reproduce a result as versioning nothing.</li>
+      <li>Committing notebooks with outputs, then being puzzled that every merge conflicts.</li>
+      <li>Committing a credential and then "removing" it in a later commit, without rotating it.</li>
+      <li>A repository nobody has ever cloned from scratch — if a fresh clone plus a README can't get a new teammate running, the history is a diary rather than a project.</li>
+    </ul>
+
+    <div class="callout">
+      <div class="label">ONE THING TO CARRY OUT OF THE ROOM</div>
+      <p style="font-family:var(--serif); color:var(--ink-dim);">Your repository is your project's memory. Not your laptop, not your notebook outputs, not the Slack thread where you posted a screenshot of a ROC curve. A project you cannot reconstruct from its repository is a project you do not own — you are borrowing it from your own filesystem.</p>
+    </div>
+  </section>
+
+  <!-- ============ 10: SUMMARY ============ -->
+  <section class="block" id="summary">
+    <div class="eyebrow"><span class="num">10</span> Class summary</div>
+    <h2 class="h">What we opened with a debt for, and what we now have</h2>
+    <p class="lede">"Version everything" was a principle with no implementation. Here's what's now in place.</p>
+
+    <div class="summary-grid">
+      <div class="summary-card"><h4>Git, understood rather than memorised</h4><p>A commit is a snapshot plus a parent, named by a hash of its content. Three trees — working directory, staging area, repository — with every command moving things between them. Branches are pointers, so branching is free. <code>HEAD</code> is where you're standing; detached HEAD is a place, not an error.</p></div>
+      <div class="summary-card"><h4>The everyday workflow</h4><p>Including the conflict created on purpose. Merge conflicts are Git declining to guess, and resolving one is a normal Tuesday.</p></div>
+      <div class="summary-card"><h4>GitHub as the shared copy</h4><p>A remote is a name and a URL, <code>origin</code> by convention. SSH keys once per machine. <code>fetch</code> moves <code>origin/main</code> and touches nothing of yours; <code>merge</code> brings it in; <code>pull</code> is the two in order. Pull requests carry the review; branch protection turns a habit into a guarantee.</p></div>
+      <div class="summary-card"><h4>Reshaping work</h4><p><code>stash</code> for interruptions, with <code>-u</code> for untracked files. <code>rebase</code> as replaying commits onto a new base, with the conflict loop, the three exits, and interactive rebase for turning messy commits into one reviewable one. The golden rule: don't rewrite what others have pulled. <code>--force-with-lease</code> when you must, <code>reflog</code> as the net that makes it survivable. <code>cherry-pick</code> for the exceptional case, with the duplication it creates.</p></div>
+      <div class="summary-card"><h4>Why Git fails for data</h4><p>Measured, not asserted: four refreshes of a 14&nbsp;MB CSV grew the repository several times over, and aggressive GC barely helped, because refreshed data shares no deltas. Plus GitHub's hard limits and the permanence of history.</p></div>
+      <div class="summary-card"><h4>Git for ML work specifically</h4><p>A layout separating <code>src/</code> from <code>notebooks/</code>, a <code>.gitignore</code> written before the first <code>git add</code>, secrets that live in <code>.env</code> and never in history, notebooks committed without outputs, and a tag on the commit that produced a model — plus the two-line habit of writing the commit SHA into your metrics file.</p></div>
+    </div>
+
+    <p>The question that opened this reading was: <em>which exact data and which exact code produced this exact number?</em> Half of it is now precisely answerable — given a metric, you can name the commit, and given the commit you can recover the code, the config, and the environment file that produced it. The data half is next, and you now know exactly why it needs different machinery.</p>
+  </section>
+
+  <!-- ============ 11: REFERENCES ============ -->
+  <section class="block" id="refs">
+    <div class="eyebrow"><span class="num">11</span> References</div>
+    <h2 class="h">Further reading</h2>
+
+    <div class="ref-group">
+      <h4>Git</h4>
+      <ul class="ref-list">
+        <li>Chacon &amp; Straub, <em>Pro Git</em> — chapters 2 (Basics), 3 (Branching), 5 (Distributed Git), and 7.6 (Rewriting History). Free at <a href="https://git-scm.com/book" target="_blank" rel="noopener">git-scm.com/book</a></li>
+        <li>Git reference manual: <code>git-stash</code>, <code>git-rebase</code>, <code>git-cherry-pick</code>, <code>git-reflog</code> — <a href="https://git-scm.com/docs" target="_blank" rel="noopener">git-scm.com/docs</a></li>
+        <li>Atlassian Git tutorials — <em>Merging vs Rebasing</em> and <em>Rewriting History</em></li>
+        <li>GitHub Docs — pull requests, branch protection rules, and managing large files</li>
+      </ul>
+    </div>
+    <div class="ref-group">
+      <h4>Notebooks and large files</h4>
+      <ul class="ref-list">
+        <li><code>nbstripout</code> and <code>jupytext</code> project documentation</li>
+        <li>GitHub Docs — about large files on GitHub, and Git LFS</li>
+      </ul>
+    </div>
+    <div class="ref-group">
+      <h4>Books and conventions</h4>
+      <ul class="ref-list">
+        <li>Chip Huyen, <em>Designing Machine Learning Systems</em> — the data engineering and versioning chapters</li>
+        <li>Noah Gift &amp; Alfredo Deza, <em>Practical MLOps</em> — the source control chapters</li>
+        <li>Cookiecutter Data Science — for the repository structure conventions</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 12: WHAT'S NEXT ============ -->
+  <section class="block" id="next" style="border-bottom:none;">
+    <div class="eyebrow"><span class="num">12</span> What's next</div>
+    <h2 class="h">The gap this reading measured</h2>
+    <p>You can now version code, collaborate on it without losing work, and point at the commit that produced a model. The gap is the one measured in "Why Git fails for data."</p>
+    <p>Next up is data versioning: a pointer file under Git, the bytes in S3, and the pair of commands that restore a past state of a project completely rather than halfway. That's where the opening question gets its full answer, and where you meet the failure that makes it matter — a checkout that brings back old code beside new data and reports a plausible, wrong number without warning you.</p>
+
+    <div class="callout">
+      <div class="label">BEFORE THEN</div>
+      <p style="font-family:var(--serif); color:var(--ink-dim);">Use what you have on something real. Take one of your own projects, give it a <code>.gitignore</code> before anything else, put exploratory work in <code>notebooks/</code> and the code that matters in <code>src/</code>, and make its history something you'd be willing to show a reviewer. Then write the commit SHA into whatever file records your results.</p>
+    </div>
+    <p style="font-family:var(--sans); color:var(--ink); font-size:1.02rem; margin-top:26px;">Git is the half of this problem that is genuinely solved. Being fluent in it is not the interesting part of MLOps — and everything interesting rests on it.</p>
+  </section>
+
+</main>
+
+<button id="toTop" aria-label="Back to top">↑</button>
+
+<footer>
+  <div class="fname">Version control and Git post read</div>
+  <div>MLOps course · reference reading</div>
+</footer>
+
+<script>
+(function(){
+  // ---- progress bar ----
+  var progress = document.getElementById('progress');
+  function onScroll(){
+    var h = document.documentElement;
+    var scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    progress.style.width = (scrolled||0) + '%';
+    var toTop = document.getElementById('toTop');
+    if(h.scrollTop > 700){ toTop.classList.add('show'); } else { toTop.classList.remove('show'); }
+    spy();
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  document.getElementById('toTop').addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+
+  // ---- scrollspy ----
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc-scroll a'));
+  var sections = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  function spy(){
+    var pos = window.scrollY + 100;
+    var current = 0;
+    for(var i=0;i<sections.length;i++){
+      if(sections[i] && sections[i].offsetTop <= pos) current = i;
+    }
+    links.forEach(function(a,i){ a.classList.toggle('active', i===current); });
+  }
+  spy();
+
+  // ---- copy buttons ----
+  document.querySelectorAll('[data-copy]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var pre = btn.closest('.code-block').querySelector('code');
+      var text = pre.innerText;
+      navigator.clipboard && navigator.clipboard.writeText(text).then(function(){
+        var orig = btn.textContent; btn.textContent = 'copied';
+        setTimeout(function(){ btn.textContent = orig; }, 1200);
+      });
+    });
+  });
+
+  // ---- three trees interactive diagram ----
+  var treeMoves = {
+    add:    { path:['wd','stage'], text:'<b>git add</b> copies the working directory into the staging area — you choose which edits belong in the next commit.' },
+    commit: { path:['stage','repo'], text:'<b>git commit</b> turns the staging area into a new commit, permanently, in your local repository.' },
+    restore:{ path:['stage','wd'], text:'<b>git restore</b> copies staging (or a commit) back into the working directory, discarding an edit.' },
+    reset:  { path:['repo','stage'], text:'<b>git reset --soft</b> moves the branch pointer backward and puts the undone commit back in the staging area.' },
+    push:   { path:['repo','remote'], text:'<b>git push</b> sends your local commits to the remote — the shared copy on GitHub.' },
+    pull:   { path:['remote','repo'], text:'<b>git pull</b> is fetch + merge: it brings the remote&#39;s commits into your local repository, then your working directory.' }
+  };
+  var treeBoxes = document.querySelectorAll('.tree-box');
+  var treeExplain = document.getElementById('treeExplain');
+  document.querySelectorAll('#treeBtns .tbtn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('#treeBtns .tbtn').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      var cmd = btn.getAttribute('data-cmd');
+      var move = treeMoves[cmd];
+      treeBoxes.forEach(function(box){
+        box.classList.toggle('hot', move.path.indexOf(box.getAttribute('data-tree')) !== -1);
+      });
+      treeExplain.innerHTML = move.text;
+    });
+  });
+
+  // ---- ff / merge commit graph ----
+  var mergeGraph = document.getElementById('mergeGraph');
+  var graphCaption = document.getElementById('graphCaption');
+  function node(x,y,label,head){
+    return '<circle class="node'+(head?' head':'')+'" cx="'+x+'" cy="'+y+'" r="9"></circle>'+
+           '<text class="node-label" x="'+x+'" y="'+(y-16)+'" text-anchor="middle">'+label+'</text>';
+  }
+  function edge(x1,y1,x2,y2){ return '<line class="edge" x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'"></line>'; }
+  function drawFF(){
+    var y=90;
+    var s = edge(60,y,180,y)+edge(180,y,300,y)+edge(300,y,420,y);
+    s += node(60,y,'A')+node(180,y,'B')+node(300,y,'C')+node(420,y,'D (docs/readme-setup)',true);
+    s += '<text class="branch-label" x="420" y="'+(y+28)+'" text-anchor="middle">main → here after merge</text>';
+    mergeGraph.innerHTML = s;
+    graphCaption.textContent = 'main has not moved since the branch was cut — Git slides the main pointer forward. No merge commit, history stays a straight line.';
+  }
+  function drawMergeCommit(){
+    var yTop=55, yBot=125, yMid=90;
+    var s = '';
+    s += edge(60,yMid,180,yMid);
+    s += edge(180,yMid,300,yTop); s += edge(300,yTop,420,yTop);
+    s += edge(180,yMid,300,yBot); s += edge(300,yBot,420,yBot);
+    s += edge(420,yTop,500,yMid); s += edge(420,yBot,500,yMid);
+    s += node(60,yMid,'A')+node(180,yMid,'B');
+    s += node(300,yTop,'RUNNING.md')+node(420,yTop,'feat/add-metrics');
+    s += node(300,yBot,'')+node(420,yBot,'metrics.py');
+    s += node(500,yMid,'M',true);
+    s += '<text class="branch-label" x="500" y="'+(yMid+28)+'" text-anchor="middle">merge commit — two parents</text>';
+    mergeGraph.innerHTML = s;
+    graphCaption.textContent = "Both branches gained new commits, so Git creates a commit with two parents to record the join — the graph forks and rejoins.";
+  }
+  document.querySelectorAll('[data-graph]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('[data-graph]').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      if(btn.getAttribute('data-graph')==='ff') drawFF(); else drawMergeCommit();
+    });
+  });
+  drawFF();
+
+  // ---- rebase graph ----
+  var rebaseGraph = document.getElementById('rebaseGraph');
+  var rebaseCaption = document.getElementById('rebaseCaption');
+  function drawRebaseStart(){
+    var yMain=140, yFeat=60;
+    var s='';
+    s+=edge(60,yMain,180,yMain); s+=edge(180,yMain,300,yMain);
+    s+=edge(180,yMain,260,yFeat); s+=edge(260,yFeat,380,yFeat);
+    s+=node(60,yMain,'A')+node(180,yMain,'B')+node(300,yMain,'C (main)',true);
+    s+=node(260,yFeat,'X')+node(380,yFeat,'Y (feature)');
+    rebaseGraph.innerHTML = s;
+    rebaseCaption.textContent = 'The feature branch (X, Y) diverges from main after commit B. Meanwhile main gained commit C.';
+  }
+  function drawRebaseMerged(){
+    var yMain=140, yFeat=60, yM=100;
+    var s='';
+    s+=edge(60,yMain,180,yMain); s+=edge(180,yMain,300,yMain);
+    s+=edge(180,yMain,260,yFeat); s+=edge(260,yFeat,380,yFeat);
+    s+=edge(300,yMain,470,yM); s+=edge(380,yFeat,470,yM);
+    s+=node(60,yMain,'A')+node(180,yMain,'B')+node(300,yMain,'C');
+    s+=node(260,yFeat,'X')+node(380,yFeat,'Y');
+    s+=node(470,yM,'M',true);
+    s+='<text class="branch-label" x="470" y="'+(yM+28)+'" text-anchor="middle">merge commit — TWO parents</text>';
+    rebaseGraph.innerHTML = s;
+    rebaseCaption.textContent = "git merge main (from feature): Git joins the histories and records that they were joined, with a two-parent merge commit.";
+  }
+  function drawRebaseDone(){
+    var y=100;
+    var s='';
+    s+=edge(60,y,180,y)+edge(180,y,300,y)+edge(300,y,380,y)+edge(380,y,480,y);
+    s+=node(60,y,'A')+node(180,y,'B')+node(300,y,'C')+node(380,y,"X'")+node(480,y,"Y'",true);
+    s+='<text class="branch-label" x="480" y="'+(y+28)+'" text-anchor="middle">linear — new SHAs for X and Y</text>';
+    rebaseGraph.innerHTML = s;
+    rebaseCaption.textContent = "git rebase main (from feature): Git replays X and Y on top of C, one at a time, producing brand-new commits X' and Y' with different SHAs.";
+  }
+  document.querySelectorAll('[data-rebase]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('[data-rebase]').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      var v = btn.getAttribute('data-rebase');
+      if(v==='start') drawRebaseStart();
+      else if(v==='merged') drawRebaseMerged();
+      else drawRebaseDone();
+    });
+  });
+  drawRebaseStart();
+
+  // ---- generic tabs ----
+  document.querySelectorAll('.tabs').forEach(function(tabset){
+    var btns = tabset.querySelectorAll('.tab-btn');
+    var panels = tabset.querySelectorAll('.tab-panel');
+    btns.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        btns.forEach(function(b){ b.classList.remove('active'); });
+        panels.forEach(function(p){ p.classList.remove('active'); });
+        btn.classList.add('active');
+        tabset.querySelector('[data-panel="'+btn.getAttribute('data-tab')+'"]').classList.add('active');
+      });
+    });
+  });
+
+  // ---- file tree ----
+  document.querySelectorAll('#fileTree .ft-row').forEach(function(row){
+    row.addEventListener('click', function(){
+      var desc = row.nextElementSibling;
+      var wasOpen = row.classList.contains('open');
+      document.querySelectorAll('#fileTree .ft-row').forEach(function(r){ r.classList.remove('open'); });
+      document.querySelectorAll('#fileTree .ft-desc').forEach(function(d){ d.textContent=''; });
+      if(!wasOpen){
+        row.classList.add('open');
+        desc.textContent = row.getAttribute('data-desc');
+      }
+    });
+  });
+
+  // ---- failure accordion ----
+  document.querySelectorAll('.fail-item .fail-head').forEach(function(head){
+    head.addEventListener('click', function(){
+      head.parentElement.classList.toggle('open');
+    });
+  });
+
+  // ---- bloat chart animation on scroll into view ----
+  var chartAnimated = false;
+  var chart = document.getElementById('bloatChart');
+  function animateChart(){
+    if(chartAnimated) return;
+    var rect = chart.getBoundingClientRect();
+    if(rect.top < window.innerHeight - 80){
+      chartAnimated = true;
+      chart.querySelectorAll('.bar').forEach(function(bar){
+        var h = bar.getAttribute('data-h');
+        var v = bar.getAttribute('data-v');
+        bar.querySelector('.val').textContent = v;
+        setTimeout(function(){ bar.style.height = h+'%'; }, 60);
+      });
+    }
+  }
+  document.addEventListener('scroll', animateChart, {passive:true});
+  animateChart();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/MLOPS-2" target="_blank" rel="noopener">github.com/scaler-content/MLOPS-2</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Logistic Regression post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F2E7;
+  --paper-2:#FBF8F1;
+  --ink:#1C271F;
+  --ink-soft:#4B5A50;
+  --ink-faint:#7C897E;
+  --line:#DDD4BC;
+  --line-strong:#C9BE9E;
+
+  --green-900:#163827;
+  --green-700:#25623F;
+  --green-600:#2E7A4D;
+  --green-500:#3F9760;
+  --green-300:#8FBE9E;
+  --green-150:#DCEADF;
+  --green-100:#EAF2EA;
+
+  --red-900:#571C16;
+  --red-700:#9A3226;
+  --red-600:#B4402F;
+  --red-500:#C85B47;
+  --red-300:#E1A497;
+  --red-150:#F5DCD3;
+  --red-100:#FAEAE3;
+
+  --gold-700:#9B7218;
+  --gold-500:#C0942E;
+  --gold-150:#F0E1BE;
+
+  --shadow: 0 1px 2px rgba(28,39,31,0.06), 0 6px 18px rgba(28,39,31,0.05);
+  --radius: 3px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Source Serif 4', Georgia, serif;
+  font-size:17px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{
+  font-family:'Fraunces', 'Iowan Old Style', serif;
+  color:var(--green-900);
+  font-weight:600;
+  line-height:1.15;
+  margin:0 0 .5em;
+}
+.skip-link{
+  position:absolute; left:-999px; top:0; background:var(--green-900); color:#fff;
+  padding:.6em 1em; z-index:200; border-radius:var(--radius);
+}
+.skip-link:focus{left:1em; top:1em;}
+
+a{color:var(--red-700);}
+a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible{
+  outline:3px solid var(--gold-500); outline-offset:2px;
+}
+
+.page{
+  display:grid;
+  grid-template-columns: 230px minmax(0,780px);
+  justify-content:center;
+  gap:56px;
+  max-width:1180px;
+  margin:0 auto;
+  padding:0 24px;
+}
+
+/* ---------- TOC ---------- */
+.toc{
+  padding-top:96px;
+  position:sticky;
+  top:24px;
+  align-self:start;
+  height:fit-content;
+}
+.toc-label{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  letter-spacing:.06em;
+  color:var(--ink-faint);
+  margin-bottom:10px;
+}
+.toc ol{
+  list-style:none; margin:0; padding:0;
+  border-left:1px solid var(--line);
+}
+.toc li{margin:0;}
+.toc a{
+  display:block;
+  padding:7px 0 7px 16px;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:12.5px;
+  color:var(--ink-soft);
+  text-decoration:none;
+  border-left:2px solid transparent;
+  margin-left:-1px;
+  transition:color .15s ease, border-color .15s ease;
+}
+.toc a:hover{color:var(--green-700);}
+.toc a.active{
+  color:var(--green-800,var(--green-700));
+  border-left-color:var(--red-600);
+  font-weight:600;
+}
+
+/* ---------- Hero ---------- */
+.hero{
+  padding:88px 0 40px;
+  border-bottom:1px solid var(--line);
+}
+.hero .kicker{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:12.5px;
+  letter-spacing:.04em;
+  color:var(--red-700);
+  margin-bottom:18px;
+  display:flex; align-items:center; gap:10px;
+}
+.hero .kicker .dot{width:6px;height:6px;border-radius:50%;background:var(--green-600);display:inline-block;}
+.hero h1{
+  font-size:clamp(2.3rem, 5vw, 3.3rem);
+  max-width:14ch;
+  letter-spacing:-0.01em;
+}
+.hero p.lede{
+  font-size:1.18rem;
+  color:var(--ink-soft);
+  max-width:56ch;
+  margin-top:20px;
+}
+.hero .stakes{
+  margin-top:34px;
+  display:flex;
+  gap:26px;
+  flex-wrap:wrap;
+}
+.stakes div{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:12.5px;
+  color:var(--ink-faint);
+}
+.stakes strong{
+  display:block;
+  font-family:'Fraunces', serif;
+  font-size:1.5rem;
+  color:var(--ink);
+  font-weight:600;
+}
+
+main{padding-bottom:100px;}
+section{padding:56px 0;}
+section + section{border-top:1px solid var(--line);}
+.q-eyebrow{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:12px; letter-spacing:.05em; color:var(--red-700);
+  margin-bottom:10px;
+}
+h2.q-title{font-size:1.85rem; max-width:24ch;}
+p{margin:0 0 1.1em;}
+.prose{max-width:70ch;}
+.prose h3{margin-top:1.8em; font-size:1.25rem;}
+.prose ul, .prose ol{padding-left:1.3em; margin-bottom:1.1em;}
+.prose li{margin-bottom:.4em;}
+strong{color:var(--green-900); font-weight:600;}
+em.term{font-style:italic; color:var(--red-700); font-weight:500;}
+
+/* ---------- callouts ---------- */
+.callout{
+  border:1px solid var(--line-strong);
+  background:var(--paper-2);
+  border-radius:var(--radius);
+  padding:20px 22px;
+  margin:1.6em 0;
+  box-shadow:var(--shadow);
+}
+.callout.analogy{border-left:4px solid var(--green-600);}
+.callout.explore{border-left:4px solid var(--gold-500); background:var(--gold-150,#F5EBD2); background:#FBF3DD;}
+.callout .callout-label{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11.5px; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--green-700);
+  margin-bottom:8px;
+}
+.callout.explore .callout-label{color:var(--gold-700);}
+.callout p:last-child{margin-bottom:0;}
+.callout.takeaway{
+  border-left:4px solid var(--red-600);
+  background:var(--red-100);
+}
+.callout.takeaway .callout-label{color:var(--red-700);}
+
+/* ---------- equations ---------- */
+.eq{
+  font-family:'IBM Plex Mono', monospace;
+  background:var(--paper-2);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:16px 20px;
+  margin:1.3em 0;
+  overflow-x:auto;
+  font-size:1.02rem;
+  color:var(--green-900);
+}
+.eq .var{font-style:italic;}
+.frac{display:inline-flex; flex-direction:column; vertical-align:middle; text-align:center; margin:0 .28em; font-size:.92em; line-height:1.15;}
+.frac .num{border-bottom:1.4px solid currentColor; padding:0 .25em .12em;}
+.frac .den{padding:.14em .25em 0;}
+.key-list{list-style:none; padding:0; margin:1em 0;}
+.key-list li{
+  padding:2px 0 2px 1.1em;
+  position:relative;
+  font-size:.97rem;
+  color:var(--ink-soft);
+}
+.key-list li::before{
+  content:"—"; position:absolute; left:0; color:var(--ink-faint);
+}
+.key-list .var{font-family:'IBM Plex Mono', monospace; color:var(--green-800,var(--green-700)); font-style:normal;}
+
+/* ---------- flow diagrams ---------- */
+.flow-wrap{margin:1.8em 0; overflow-x:auto;}
+.flow-wrap svg{display:block; margin:0 auto; max-width:100%; height:auto;}
+.flow-caption{
+  text-align:center; font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+  color:var(--ink-faint); margin-top:8px;
+}
+
+/* ---------- widget shell ---------- */
+.widget{
+  border:1px solid var(--line-strong);
+  background:var(--paper-2);
+  border-radius:6px;
+  margin:1.8em 0;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.widget-head{
+  padding:16px 22px;
+  border-bottom:1px solid var(--line);
+  background:var(--green-900);
+  color:var(--green-100);
+}
+.widget-head .w-eyebrow{
+  font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--green-300); margin-bottom:4px;
+}
+.widget-head h4{color:#fff; margin:0; font-size:1.08rem;}
+.widget-body{padding:22px;}
+.widget-body p.hint{font-size:.9rem; color:var(--ink-faint); margin-top:10px; margin-bottom:0;}
+
+.control-row{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:14px;}
+.control-row label{font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--ink-soft); min-width:64px;}
+input[type=range]{
+  flex:1; min-width:160px; accent-color:var(--green-600); height:22px; cursor:pointer;
+}
+.readout{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:13px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:3px;
+  padding:6px 10px;
+  min-width:82px;
+  text-align:center;
+}
+canvas{max-width:100%; display:block; margin:0 auto; border-radius:3px;}
+.viz-grid{display:grid; grid-template-columns: 1fr; gap:18px;}
+@media(min-width:640px){ .viz-grid.two{grid-template-columns: 1.15fr .85fr;} }
+.readout-panel{
+  display:grid; grid-template-columns:repeat(2,1fr); gap:10px;
+}
+.readout-panel .stat{
+  background:var(--paper); border:1px solid var(--line); border-radius:3px; padding:10px 12px;
+}
+.readout-panel .stat .lbl{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-faint); letter-spacing:.04em;}
+.readout-panel .stat .val{font-family:'IBM Plex Mono', monospace; font-size:1.15rem; font-weight:600; margin-top:2px;}
+.readout-panel .stat.pos .val{color:var(--green-700);}
+.readout-panel .stat.neg .val{color:var(--red-700);}
+.msg-line{
+  margin-top:14px; padding:10px 14px; border-radius:3px; font-size:.94rem;
+  border:1px solid var(--line);
+  transition:background .15s ease, border-color .15s ease, color .15s ease;
+}
+.msg-line.pos{background:var(--green-100); border-color:var(--green-300); color:var(--green-900);}
+.msg-line.neg{background:var(--red-100); border-color:var(--red-300); color:var(--red-900);}
+.msg-line.warn{background:var(--gold-150,#F5EBD2); border-color:var(--gold-500); color:var(--gold-700);}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-soft); margin-top:10px;}
+.legend span{display:inline-flex; align-items:center; gap:6px;}
+.legend i{width:10px; height:10px; border-radius:50%; display:inline-block; border:1px solid rgba(0,0,0,.25);}
+
+/* ---------- OvR argmax sliders ---------- */
+.ovr-model{border:1px solid var(--line); border-radius:4px; padding:12px 14px; margin-bottom:10px; background:var(--paper); transition:box-shadow .15s ease, border-color .15s ease;}
+.ovr-model.winner{border-color:var(--green-600); box-shadow:0 0 0 2px var(--green-150);}
+.ovr-model .row{display:flex; align-items:center; gap:12px;}
+.ovr-model .tag{font-family:'IBM Plex Mono', monospace; font-size:12px; min-width:118px; color:var(--ink-soft);}
+.ovr-model .pval{font-family:'IBM Plex Mono', monospace; font-size:13px; min-width:52px; text-align:right;}
+.ovr-model .bar-track{flex:1; height:10px; background:var(--line); border-radius:5px; overflow:hidden;}
+.ovr-model .bar-fill{height:100%; background:var(--ink-faint); border-radius:5px; transition:width .1s linear, background .15s ease;}
+.ovr-model.winner .bar-fill{background:var(--green-600);}
+.ovr-verdict{margin-top:14px; font-family:'IBM Plex Mono', monospace; font-size:13px;}
+
+/* ---------- quiz ---------- */
+.quiz{
+  border:1px solid var(--line-strong);
+  border-radius:6px;
+  overflow:hidden;
+  margin:1.8em 0;
+  box-shadow:var(--shadow);
+  background:#fff;
+}
+.quiz-head{
+  background:var(--red-700);
+  color:#fdf6f2;
+  padding:14px 22px;
+}
+.quiz-head .q-num{font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--red-150);}
+.quiz-head p{margin:4px 0 0; font-weight:500; color:#fff; font-size:1.02rem;}
+.quiz-body{padding:18px 22px 20px;}
+.quiz-opts{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;}
+.quiz-opt button{
+  width:100%; text-align:left;
+  border:1px solid var(--line-strong);
+  background:var(--paper-2);
+  padding:11px 14px;
+  border-radius:4px;
+  font-family:'Source Serif 4', serif;
+  font-size:.98rem;
+  color:var(--ink);
+  cursor:pointer;
+  transition:border-color .15s ease, background .15s ease;
+}
+.quiz-opt button:hover:not(:disabled){border-color:var(--green-500);}
+.quiz-opt button:disabled{cursor:default;}
+.quiz-opt button.correct{background:var(--green-100); border-color:var(--green-600); color:var(--green-900); font-weight:600;}
+.quiz-opt button.incorrect{background:var(--red-100); border-color:var(--red-600); color:var(--red-900);}
+.quiz-opt button.dim{opacity:.55;}
+.quiz-feedback{
+  margin-top:14px; padding:14px 16px; border-radius:4px; font-size:.95rem;
+  border:1px solid var(--line); display:none;
+}
+.quiz-feedback.show{display:block;}
+.quiz-feedback.right{background:var(--green-100); border-color:var(--green-300);}
+.quiz-feedback.wrong{background:var(--red-100); border-color:var(--red-300);}
+.quiz-feedback .verdict{font-weight:700; font-family:'Fraunces',serif; display:block; margin-bottom:4px;}
+.quiz-feedback.right .verdict{color:var(--green-800,var(--green-700));}
+.quiz-feedback.wrong .verdict{color:var(--red-800,var(--red-700));}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid; grid-template-columns:1fr; gap:14px; margin-top:24px;}
+@media(min-width:640px){.recap-grid{grid-template-columns:1fr 1fr;}}
+.recap-card{
+  border:1px solid var(--line-strong);
+  border-left:4px solid var(--green-600);
+  background:var(--paper-2);
+  border-radius:4px;
+  padding:16px 18px;
+}
+.recap-card h4{font-size:1rem; margin-bottom:6px; color:var(--green-900);}
+.recap-card p{font-size:.93rem; color:var(--ink-soft); margin:0;}
+.recap-card.alt{border-left-color:var(--red-600);}
+
+/* ---------- footer ---------- */
+footer{
+  padding:40px 0 10px;
+  border-top:1px solid var(--line);
+  font-family:'IBM Plex Mono', monospace;
+  font-size:12px;
+  color:var(--ink-faint);
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
+}
+
+/* details/accordion for code */
+details.codebox{
+  margin:1.4em 0; border:1px solid var(--line); border-radius:4px; overflow:hidden; background:#fff;
+}
+details.codebox summary{
+  cursor:pointer; list-style:none; padding:12px 18px;
+  font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--green-800,var(--green-700));
+  background:var(--green-100); display:flex; align-items:center; gap:8px;
+}
+details.codebox summary::-webkit-details-marker{display:none;}
+details.codebox summary::before{content:"▸"; transition:transform .15s ease;}
+details.codebox[open] summary::before{transform:rotate(90deg);}
+details.codebox pre{
+  margin:0; padding:18px 20px; overflow-x:auto;
+  font-family:'IBM Plex Mono', monospace; font-size:12.5px; line-height:1.6;
+  background:#16231a; color:#dbe8dd;
+}
+details.codebox pre .cm{color:#7c9b85;}
+details.codebox pre .kw{color:#e1a497;}
+details.codebox pre .st{color:#c0942e;}
+
+@media(max-width:900px){
+  .page{grid-template-columns:1fr; padding:0 20px;}
+  .toc{display:none;}
+  .hero{padding-top:56px;}
+}
+@media(max-width:480px){
+  body{font-size:16px;}
+  .hero h1{font-size:2rem;}
+}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto;}
+  *{transition-duration:0.001ms !important;}
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML with AI 8 · Logistic regression: log-odds and trust</span><span class="pn"><a href="../Maths-postread-Pipelines-CV/" title="Math Companion · Regularisation and cross-validation">← Prev</a><a href="../ML-with-AI-workflows-11/" title="ML with AI 11 · Logistic regression from zero">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip-link" href="#main">Skip to content</a>
+<div class="page">
+  <nav class="toc" aria-label="Contents">
+    <div class="toc-label">CONTENTS</div>
+    <ol>
+      <li><a href="#intro">Setting the scene</a></li>
+      <li><a href="#q1">1 · Trusting the model</a></li>
+      <li><a href="#q2">2 · Log-odds &amp; the logit</a></li>
+      <li><a href="#q3">3 · Impact of outliers</a></li>
+      <li><a href="#q4">4 · Beyond two classes</a></li>
+      <li><a href="#softmax">Wider view: softmax</a></li>
+      <li><a href="#recap">Recap</a></li>
+    </ol>
+  </nav>
+
+  <main id="main">
+    <header class="hero">
+      <div class="kicker"><span class="dot"></span> LOGISTIC REGRESSION — PART TWO</div>
+      <h1>Logistic Regression post read</h1>
+      <p class="lede">A working model isn't the end of the story. This is a walk through four questions that turn a logistic regression that merely runs into one you can actually trust — using one recurring scenario to ground the ideas.</p>
+      <div class="stakes">
+        <div><strong>4</strong>questions answered</div>
+        <div><strong>2</strong>classes → K classes</div>
+        <div><strong>1</strong>running scenario</div>
+      </div>
+    </header>
+
+    <!-- ================= INTRO ================= -->
+    <section id="intro">
+      <div class="q-eyebrow">SETTING THE SCENE</div>
+      <h2 class="q-title">Rohan's cart-abandonment model</h2>
+      <div class="prose">
+        <p>Rohan is a data analyst at <strong>Northstar Retail</strong>, a mid-sized e-commerce company. He has trained a logistic regression model to predict whether a customer who abandoned their shopping cart will complete the purchase within 24 hours if sent a reminder email. The output is binary: <em class="term">will convert</em> or <em class="term">will not convert</em>.</p>
+        <p>The model works, and the team is excited about it. But when Rohan presents the results in a review meeting, three uncomfortable questions come up, one after another — and a fourth arrives once the first three are settled. Each one pushes the model a little closer to something the team can actually rely on:</p>
+        <ul>
+          <li><strong>Can we trust it on new customers?</strong> — this is a question about hyperparameter tuning and regularization strength.</li>
+          <li><strong>What is the model actually computing?</strong> — this is a question about log-odds and the logit.</li>
+          <li><strong>Can one weird data point throw it off?</strong> — this is a question about the impact of outliers.</li>
+          <li><strong>Can it choose between more than two outcomes?</strong> — this is a question about multi-class classification with One-vs-Rest.</li>
+        </ul>
+        <p>Each section below tracks one of these questions in the order the team asked them.</p>
+      </div>
+    </section>
+
+    <!-- ================= Q1 ================= -->
+    <section id="q1">
+      <div class="q-eyebrow">QUESTION 1</div>
+      <h2 class="q-title">"Your model looks perfect on training data. Can we trust it on new customers?"</h2>
+      <div class="prose">
+        <p>Rohan's manager points out that the training accuracy is unusually high — almost too high. The worry: has the model memorised quirks of the training data instead of learning the general pattern of cart-abandonment behaviour? This is where <strong>hyperparameter tuning</strong> comes in.</p>
+
+        <h3>An analogy before the maths</h3>
+        <div class="callout analogy">
+          <div class="callout-label">Analogy</div>
+          <p>Think of training a logistic regression model like preparing a student for a general aptitude exam using a set of practice questions.</p>
+          <p>If the student memorises the exact practice questions word for word, they score perfectly on those questions but struggle the moment the real exam asks something slightly different — that's <strong>overfitting</strong>. If the student ignores the practice questions almost entirely and guesses from broad instincts, they do poorly even on the practice set — that's <strong>underfitting</strong>. The goal is a student who learns the underlying pattern: general enough to transfer, specific enough to be useful. That balance is what <strong>regularization</strong> controls.</p>
+        </div>
+
+        <h3>The maths behind it</h3>
+        <p>Logistic regression tries to find coefficients (weights) that minimise a loss function. Left unconstrained, the optimiser can push coefficients to large values to fit the training data as closely as possible — exactly the "memorising practice questions" behaviour. Regularization adds a penalty term that discourages large coefficients. In <code>sklearn</code>, this is controlled by a hyperparameter called <strong>C</strong>:</p>
+        <div class="eq">C = <span class="frac"><span class="num">1</span><span class="den">λ</span></span></div>
+        <ul class="key-list">
+          <li><span class="var">λ</span> (lambda) is the regularization strength — a larger λ means a heavier penalty on large coefficients, pushing toward simpler, more general patterns.</li>
+          <li><span class="var">C</span> is the inverse of λ, and it's the parameter <code>sklearn</code> actually asks for. Because C is an inverse, a <strong>small C</strong> means <strong>strong</strong> regularization, and a <strong>large C</strong> means <strong>weak</strong> regularization.</li>
+        </ul>
+        <p>There's no single correct value of C — it depends on the dataset. The standard approach is to try a range of values and pick whichever performs best on a <strong>validation set</strong>: data the model hasn't trained on, standing in for "the real exam."</p>
+
+        <!-- WIDGET: C playground -->
+        <div class="widget" id="widget-c">
+          <div class="widget-head">
+            <div class="w-eyebrow">Try it yourself</div>
+            <h4>The regularization playground</h4>
+          </div>
+          <div class="widget-body">
+            <p style="margin-top:0;color:var(--ink-soft);font-size:.95rem;">A small, slightly noisy two-class dataset — the same shape Rohan's model sees. Drag <strong>C</strong> and watch the decision boundary respond.</p>
+            <div class="viz-grid two">
+              <div>
+                <canvas id="cCanvas" width="520" height="380" aria-label="Decision boundary plot reacting to the value of C" role="img"></canvas>
+                <div class="legend">
+                  <span><i style="background:var(--green-500)"></i>will convert (class 1)</span>
+                  <span><i style="background:var(--red-500)"></i>will not convert (class 0)</span>
+                </div>
+              </div>
+              <div>
+                <div class="control-row">
+                  <label for="cSlider">C</label>
+                  <input type="range" id="cSlider" min="-3" max="3" step="0.1" value="0">
+                  <span class="readout" id="cReadout">1.000</span>
+                </div>
+                <div class="readout-panel">
+                  <div class="stat"><div class="lbl">REGULARIZATION</div><div class="val" id="lambdaVal">λ = 1.00</div></div>
+                  <div class="stat"><div class="lbl">MISCLASSIFIED</div><div class="val" id="missVal">–</div></div>
+                </div>
+                <div class="msg-line" id="cMsg">Balanced: neither aggressively simple nor tightly fit to every point.</div>
+              </div>
+            </div>
+            <p class="hint">As C grows, the boundary tightens around individual noisy points, trading away margin to fit them — the overfitting direction. As C shrinks toward zero, the boundary flattens toward the simplest split it can find, even mislabelling points it could otherwise get right — the underfitting direction.</p>
+          </div>
+        </div>
+
+        <details class="codebox">
+          <summary>View the underlying scikit-learn code</summary>
+          <pre><span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LogisticRegression
+<span class="kw">from</span> sklearn.datasets <span class="kw">import</span> make_classification
+<span class="kw">from</span> sklearn.inspection <span class="kw">import</span> DecisionBoundaryDisplay
+
+<span class="cm"># small, slightly noisy two-class dataset</span>
+X_demo, y_demo = make_classification(
+    n_samples=<span class="st">120</span>, n_features=<span class="st">2</span>, n_redundant=<span class="st">0</span>,
+    n_informative=<span class="st">2</span>, n_clusters_per_class=<span class="st">1</span>,
+    flip_y=<span class="st">0.08</span>, class_sep=<span class="st">1.2</span>, random_state=<span class="st">7</span>
+)
+
+<span class="kw">def</span> show_boundary(C=<span class="st">1.0</span>):
+    model = LogisticRegression(C=C)
+    model.fit(X_demo, y_demo)
+    DecisionBoundaryDisplay.from_estimator(
+        model, X_demo, response_method=<span class="st">"predict"</span>
+    )</pre>
+        </details>
+      </div>
+
+      <div id="quiz1"></div>
+      <div id="quiz2"></div>
+    </section>
+
+    <!-- ================= Q2 ================= -->
+    <section id="q2">
+      <div class="q-eyebrow">QUESTION 2</div>
+      <h2 class="q-title">"What is the model actually computing internally?"</h2>
+      <div class="prose">
+        <p>Once Rohan picks a value of C using the validation set, performance on new customers improves and the team is satisfied the model generalises well. But a second question surfaces: for the customer with a predicted probability of 0.97, what does the model actually know that makes it so confident, compared to the one at 0.55? To answer that, we need to look inside the model, at what it computes before it ever produces a probability — two related ideas: <strong>odds</strong> and <strong>log-odds</strong> (also called the <strong>logit</strong>).</p>
+
+        <h3>Odds, before log-odds</h3>
+        <p>Odds are a familiar idea outside data science. If a forecaster says there's a 75% chance of rain, they could equally say "the odds of rain are 3 to 1" — for every 1 dry outcome, there are 3 rainy ones on average. Formally, if <span class="var" style="font-style:italic">p</span> is the probability of an event happening (here, that a customer converts):</p>
+        <div class="eq">odds = <span class="frac"><span class="num">p</span><span class="den">1 − p</span></span></div>
+        <p style="font-size:.93rem;color:var(--ink-soft);">Odds range from 0 (impossible) to ∞ (certain); odds of exactly 1 mean the event is equally likely to happen or not.</p>
+
+        <h3>From odds to log-odds</h3>
+        <p>Odds are asymmetric: a very unlikely event gives odds near 0, but a very likely one gives odds that can run into the hundreds or thousands. Taking the logarithm of the odds fixes this asymmetry and gives the <strong>log-odds</strong>, or <strong>logit</strong>:</p>
+        <div class="eq">logit(p) = ln<span class="frac"><span class="num">p</span><span class="den">1 − p</span></span> = z</div>
+        <p>Here <em>z</em> is exactly the same <code>z = w·x + b</code> — the weighted sum of features plus a bias — that logistic regression computes internally, before it ever becomes a probability. <strong>Logistic regression is a straightforward linear model in log-odds space.</strong> Log-odds can be any real number: a large positive z strongly favours converting, a large negative z strongly favours not converting, and z = 0 is a 50-50 call.</p>
+
+        <h3>Getting back to a probability: the sigmoid</h3>
+        <p>Log-odds are useful for the model's internal arithmetic, but people want a probability. The <strong>sigmoid function</strong> converts log-odds back into a probability between 0 and 1 — it's simply the algebraic inverse of the logit:</p>
+        <div class="eq">p = σ(z) = <span class="frac"><span class="num">1</span><span class="den">1 + e<sup>−z</sup></span></span></div>
+        <p>Geometrically, sigmoid is an S-shaped curve that squashes any real number into (0, 1). A very large positive z gives a probability extremely close to 1; a very large negative z gives one extremely close to 0 — but never exactly either.</p>
+
+        <div class="flow-wrap">
+          <svg viewBox="0 0 640 130" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow diagram: features feed a weighted sum which is the log-odds, then the sigmoid converts that into a probability">
+            <defs>
+              <marker id="arr1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#25623F"/></marker>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="12.5">
+              <rect x="4" y="38" width="118" height="54" rx="4" fill="#EAF2EA" stroke="#8FBE9E"/>
+              <text x="63" y="60" text-anchor="middle" fill="#163827">features</text>
+              <text x="63" y="78" text-anchor="middle" fill="#163827">(x)</text>
+
+              <line x1="122" y1="65" x2="182" y2="65" stroke="#25623F" stroke-width="1.6" marker-end="url(#arr1)"/>
+
+              <rect x="186" y="30" width="168" height="70" rx="4" fill="#FAEAE3" stroke="#E1A497"/>
+              <text x="270" y="58" text-anchor="middle" fill="#571C16">z = w·x + b</text>
+              <text x="270" y="76" text-anchor="middle" fill="#9A3226" font-size="11">(the log-odds)</text>
+
+              <line x1="354" y1="65" x2="414" y2="65" stroke="#25623F" stroke-width="1.6" marker-end="url(#arr1)"/>
+
+              <rect x="418" y="30" width="160" height="70" rx="4" fill="#EAF2EA" stroke="#8FBE9E"/>
+              <text x="498" y="52" text-anchor="middle" fill="#163827">sigmoid:</text>
+              <text x="498" y="70" text-anchor="middle" fill="#163827" font-size="11">p = 1 / (1+e⁻ᶻ)</text>
+              <text x="498" y="88" text-anchor="middle" fill="#25623F" font-size="11">probability (0–1)</text>
+            </g>
+          </svg>
+          <div class="flow-caption">flow of computation inside a logistic regression model</div>
+        </div>
+
+        <!-- WIDGET: sigmoid explorer -->
+        <div class="widget" id="widget-sig">
+          <div class="widget-head">
+            <div class="w-eyebrow">Explore</div>
+            <h4>Log-odds → probability explorer</h4>
+          </div>
+          <div class="widget-body">
+            <div class="viz-grid two">
+              <div>
+                <svg id="sigSvg" viewBox="0 0 480 300" width="100%" role="img" aria-label="Sigmoid curve with a marker showing the current point"></svg>
+              </div>
+              <div>
+                <div class="control-row">
+                  <label for="zSlider">z</label>
+                  <input type="range" id="zSlider" min="-8" max="8" step="0.1" value="0">
+                  <span class="readout" id="zReadout">0.00</span>
+                </div>
+                <div class="readout-panel">
+                  <div class="stat"><div class="lbl">PROBABILITY p</div><div class="val" id="pVal">0.500</div></div>
+                  <div class="stat"><div class="lbl">ODDS p/(1−p)</div><div class="val" id="oddsVal">1.00</div></div>
+                </div>
+                <div class="msg-line" id="sigMsg">z = 0 — the odds are exactly balanced, a 50-50 call.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="quiz3"></div>
+    </section>
+
+    <!-- ================= Q3 ================= -->
+    <section id="q3">
+      <div class="q-eyebrow">QUESTION 3</div>
+      <h2 class="q-title">"Can one weird data point throw off the whole model?"</h2>
+      <div class="prose">
+        <p>Understanding log-odds settles the second question. But a third issue surfaces when someone on the team notices a strange record: a customer whose session length is listed as 40 hours — almost certainly a logging error. How much damage can one bad data point do?</p>
+        <p>The answer, somewhat counter-intuitively, is: <strong>it depends on which side of the decision boundary the outlier falls on.</strong></p>
+
+        <h3>The loss function, briefly</h3>
+        <p>Logistic regression is trained by minimising the <strong>log loss</strong> (cross-entropy loss) for each data point. For a single example, if <em>y</em> is the true label (0 or 1) and <em>ŷ</em> is the model's predicted probability for the positive class:</p>
+        <div class="eq">L = −[ y·ln(ŷ) + (1 − y)·ln(1 − ŷ) ]</div>
+        <p>What matters here is the <em>shape</em> of this loss: it stays small when a prediction is confident and correct, and grows extremely large when a prediction is confident and wrong.</p>
+
+        <h3>Case 1 — the outlier lands on the correct side</h3>
+        <p>Suppose the odd 40-hour session belongs to a customer who genuinely did convert (y = 1), and despite the strange value the model's weighted sum still produces a large positive log-odds, say z = 6. The predicted probability ŷ = σ(6) ≈ 0.998 is close to 1, matching the true label. The loss is L = −ln(0.998) ≈ <strong>0.002</strong> — tiny. Even though the point looks unusual, because the model predicts it correctly it barely contributes to total error, and has very little influence on where the boundary is drawn.</p>
+
+        <h3>Case 2 — the outlier lands on the wrong side</h3>
+        <p>Now suppose a different odd record, still y = 1, but the model's weighted sum produces a strongly negative log-odds, z = −4.3, because the unusual feature value pulls the prediction the wrong way. ŷ = σ(−4.3) ≈ 0.013, and the loss is L = −ln(0.013) ≈ <strong>4.34</strong> — more than a thousand times larger than Case 1. Because the optimiser minimises total loss across all points, it will adjust coefficients specifically to bring this loss down, even shifting the boundary in a way that's slightly worse for the rest of the well-behaved data.</p>
+
+        <div class="flow-wrap">
+          <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow diagram: an unusual data point on the correct side produces small loss and small impact; on the wrong side it produces large loss and shifts the boundary">
+            <defs>
+              <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#4B5A50"/></marker>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="12">
+              <rect x="230" y="6" width="180" height="42" rx="4" fill="#FBF8F1" stroke="#C9BE9E"/>
+              <text x="320" y="31" text-anchor="middle" fill="#1C271F">unusual data point</text>
+
+              <line x1="320" y1="48" x2="320" y2="70" stroke="#4B5A50" stroke-width="1.4" marker-end="url(#arr2)"/>
+
+              <line x1="320" y1="70" x2="150" y2="100" stroke="#4B5A50" stroke-width="1.4" marker-end="url(#arr2)"/>
+              <line x1="320" y1="70" x2="490" y2="100" stroke="#4B5A50" stroke-width="1.4" marker-end="url(#arr2)"/>
+
+              <rect x="40" y="102" width="220" height="42" rx="4" fill="#EAF2EA" stroke="#8FBE9E"/>
+              <text x="150" y="127" text-anchor="middle" fill="#163827">correct side → small loss</text>
+
+              <rect x="380" y="102" width="220" height="42" rx="4" fill="#FAEAE3" stroke="#E1A497"/>
+              <text x="490" y="127" text-anchor="middle" fill="#571C16">wrong side → large loss</text>
+
+              <line x1="150" y1="144" x2="150" y2="166" stroke="#25623F" stroke-width="1.4" marker-end="url(#arr2)"/>
+              <line x1="490" y1="144" x2="490" y2="166" stroke="#9A3226" stroke-width="1.4" marker-end="url(#arr2)"/>
+
+              <rect x="30" y="168" width="240" height="42" rx="4" fill="#EAF2EA" stroke="#8FBE9E"/>
+              <text x="150" y="193" text-anchor="middle" fill="#163827">little effect on boundary</text>
+
+              <rect x="370" y="168" width="240" height="42" rx="4" fill="#FAEAE3" stroke="#E1A497"/>
+              <text x="490" y="193" text-anchor="middle" fill="#571C16">boundary shifts to accommodate it</text>
+            </g>
+          </svg>
+          <div class="flow-caption">what determines an outlier's impact on training</div>
+        </div>
+
+        <!-- WIDGET: loss visualizer -->
+        <div class="widget" id="widget-loss">
+          <div class="widget-head">
+            <div class="w-eyebrow">Explore</div>
+            <h4>Log loss visualizer — true label y = 1</h4>
+          </div>
+          <div class="widget-body">
+            <div class="viz-grid two">
+              <div>
+                <svg id="lossSvg" viewBox="0 0 480 300" width="100%" role="img" aria-label="Log loss curve with a marker showing loss at the current log-odds value"></svg>
+              </div>
+              <div>
+                <div class="control-row">
+                  <label for="lzSlider">z</label>
+                  <input type="range" id="lzSlider" min="-6" max="6" step="0.1" value="6">
+                  <span class="readout" id="lzReadout">6.00</span>
+                </div>
+                <div class="readout-panel">
+                  <div class="stat"><div class="lbl">PREDICTED ŷ</div><div class="val" id="lpVal">0.998</div></div>
+                  <div class="stat"><div class="lbl">LOSS L</div><div class="val" id="lVal">0.002</div></div>
+                </div>
+                <div class="msg-line" id="lossMsg">Confident and correct — this point barely pulls on the coefficients.</div>
+              </div>
+            </div>
+            <p class="hint">The true label is fixed at y = 1 (a customer who did convert). Slide z toward negative values to see what happens when the model gets a real converter confidently wrong.</p>
+          </div>
+        </div>
+
+        <div class="callout takeaway">
+          <div class="callout-label">Practical takeaway</div>
+          <p>It's worth specifically checking outliers that the model currently gets <em>wrong</em>, since those are the ones capable of distorting the decision boundary. Outliers the model already gets right are comparatively harmless — but the safest general practice is still to investigate and, where justified, correct or remove data errors like the 40-hour session length.</p>
+        </div>
+      </div>
+
+      <div id="quiz4"></div>
+    </section>
+
+    <!-- ================= Q4 ================= -->
+    <section id="q4">
+      <div class="q-eyebrow">QUESTION 4</div>
+      <h2 class="q-title">"Our model only knows two answers. How do we get it to choose between three or more?"</h2>
+      <div class="prose">
+        <p>Rohan cleans up the flagged record and retrains the model; the team is now confident the binary "will convert / will not convert" model is solid. At this point a marketing stakeholder joins with a new request: "Binary is fine, but what we actually want is to sort abandoned carts into three groups: <strong>high urgency</strong> (recover today), <strong>medium urgency</strong> (recover this week), and <strong>low urgency</strong> (unlikely to convert regardless)." This is no longer a two-class problem.</p>
+        <p>Logistic regression, as used so far, is inherently a two-class algorithm: the sigmoid produces one probability, for one class, and the other class is implied as 1 − p. To handle more than two classes we need a strategy that reuses logistic regression as a building block rather than reinventing it. The most common such strategy is <strong>One-vs-Rest (OvR)</strong>.</p>
+
+        <div class="callout analogy">
+          <div class="callout-label">Analogy</div>
+          <p>Imagine three specialist doctors independently examining the same patient. Doctor A only answers one question: "is this condition A, or is it not?" Doctors B and C do the same for their own conditions, each treating the other two possibilities as a single "not mine" bucket. At the end, all three report a confidence score for their own condition being present, and the final diagnosis goes to whichever doctor was most confident — regardless of what that raw number was.</p>
+        </div>
+
+        <h3>The maths of One-vs-Rest</h3>
+        <p>If there are <em>K</em> classes, One-vs-Rest trains <em>K</em> separate binary logistic regression models. For the <em>k</em>-th model:</p>
+        <ul>
+          <li>The label is temporarily reassigned: examples belonging to class <em>k</em> are relabelled 1, and every example belonging to any other class is relabelled 0.</li>
+          <li>The model trains exactly like a normal two-class model, producing its own probability ŷ<sub>k</sub> for "belongs to class k."</li>
+        </ul>
+        <p>For Rohan's three urgency classes, this means training three models: "high urgency vs. rest," "medium urgency vs. rest," and "low urgency vs. rest."</p>
+
+        <h3>Making a prediction with K models</h3>
+        <p>Given a new abandoned cart, all K trained models each produce their own probability. The predicted class is whichever model produced the <strong>highest</strong> probability:</p>
+        <div class="eq">predicted class = argmax<sub>k</sub> ŷ<sub>k</sub></div>
+        <p>This rule is applied even if none of the K probabilities individually crosses the usual 0.5 threshold — the class with the relatively highest confidence still wins, since exactly one class must be chosen.</p>
+
+        <div class="flow-wrap">
+          <svg viewBox="0 0 660 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow diagram: an abandoned cart is scored by three One-vs-Rest models, each producing a probability, and argmax selects the highest as the predicted class">
+            <defs>
+              <marker id="arr3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#4B5A50"/></marker>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="12">
+              <rect x="10" y="100" width="130" height="56" rx="4" fill="#FBF8F1" stroke="#C9BE9E"/>
+              <text x="75" y="124" text-anchor="middle" fill="#1C271F">abandoned</text>
+              <text x="75" y="142" text-anchor="middle" fill="#1C271F">cart</text>
+
+              <line x1="140" y1="128" x2="140" y2="30" stroke="#4B5A50" stroke-width="1.2"/>
+              <line x1="140" y1="128" x2="140" y2="230" stroke="#4B5A50" stroke-width="1.2"/>
+              <line x1="140" y1="30" x2="200" y2="30" stroke="#4B5A50" stroke-width="1.2" marker-end="url(#arr3)"/>
+              <line x1="140" y1="128" x2="200" y2="128" stroke="#4B5A50" stroke-width="1.2" marker-end="url(#arr3)"/>
+              <line x1="140" y1="230" x2="200" y2="230" stroke="#4B5A50" stroke-width="1.2" marker-end="url(#arr3)"/>
+
+              <rect x="204" y="6" width="188" height="48" rx="4" fill="#EAF2EA" stroke="#8FBE9E"/>
+              <text x="298" y="26" text-anchor="middle" fill="#163827">high vs. rest</text>
+              <text x="298" y="42" text-anchor="middle" fill="#25623F" font-size="11">→ ŷ_high</text>
+
+              <rect x="204" y="104" width="188" height="48" rx="4" fill="#F0E1BE" stroke="#C0942E"/>
+              <text x="298" y="124" text-anchor="middle" fill="#6B4F12">medium vs. rest</text>
+              <text x="298" y="140" text-anchor="middle" fill="#9B7218" font-size="11">→ ŷ_medium</text>
+
+              <rect x="204" y="204" width="188" height="48" rx="4" fill="#FAEAE3" stroke="#E1A497"/>
+              <text x="298" y="224" text-anchor="middle" fill="#571C16">low vs. rest</text>
+              <text x="298" y="240" text-anchor="middle" fill="#9A3226" font-size="11">→ ŷ_low</text>
+
+              <line x1="392" y1="30" x2="452" y2="118" stroke="#4B5A50" stroke-width="1.1" marker-end="url(#arr3)"/>
+              <line x1="392" y1="128" x2="452" y2="128" stroke="#4B5A50" stroke-width="1.1" marker-end="url(#arr3)"/>
+              <line x1="392" y1="228" x2="452" y2="138" stroke="#4B5A50" stroke-width="1.1" marker-end="url(#arr3)"/>
+
+              <rect x="456" y="96" width="190" height="64" rx="4" fill="#FBF8F1" stroke="#C9BE9E" stroke-width="1.6"/>
+              <text x="551" y="122" text-anchor="middle" fill="#1C271F" font-weight="600">argmax</text>
+              <text x="551" y="140" text-anchor="middle" fill="#4B5A50" font-size="11">pick highest ŷ_k</text>
+            </g>
+          </svg>
+          <div class="flow-caption">flow of One-vs-Rest, end to end</div>
+        </div>
+
+        <!-- WIDGET: argmax demo -->
+        <div class="widget" id="widget-argmax">
+          <div class="widget-head">
+            <div class="w-eyebrow">Try it yourself</div>
+            <h4>Argmax prediction — three independent probabilities</h4>
+          </div>
+          <div class="widget-body">
+            <p style="margin-top:0;font-size:.93rem;color:var(--ink-soft);">Each One-vs-Rest model has no knowledge of the others, so these probabilities don't need to add up to 1. Move the sliders and watch which model wins.</p>
+            <div class="ovr-model" id="ovr-high">
+              <div class="row"><span class="tag">high vs. rest</span>
+                <input type="range" id="ovrHigh" min="0" max="1" step="0.01" value="0.62">
+                <span class="pval" id="ovrHighVal">0.62</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill" id="ovrHighBar" style="width:62%"></div></div>
+            </div>
+            <div class="ovr-model" id="ovr-medium">
+              <div class="row"><span class="tag">medium vs. rest</span>
+                <input type="range" id="ovrMedium" min="0" max="1" step="0.01" value="0.41">
+                <span class="pval" id="ovrMediumVal">0.41</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill" id="ovrMediumBar" style="width:41%"></div></div>
+            </div>
+            <div class="ovr-model" id="ovr-low">
+              <div class="row"><span class="tag">low vs. rest</span>
+                <input type="range" id="ovrLow" min="0" max="1" step="0.01" value="0.18">
+                <span class="pval" id="ovrLowVal">0.18</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill" id="ovrLowBar" style="width:18%"></div></div>
+            </div>
+            <div class="ovr-verdict" id="ovrVerdict">predicted class = argmax → <strong>high urgency</strong> (0.62)</div>
+          </div>
+        </div>
+
+        <h3>One-vs-Rest in code</h3>
+        <p><code>sklearn</code>'s <code>LogisticRegression</code> handles the One-vs-Rest machinery internally when there are more than two classes in the labels, so three separate models don't need to be trained and combined by hand. Below is the same idea trained live in your browser on a synthetic three-class dataset standing in for Rohan's urgency categories — the decision regions are what the argmax rule produces once it's applied everywhere in feature space, not just at one point.</p>
+
+        <div class="widget" id="widget-ovr3">
+          <div class="widget-head">
+            <div class="w-eyebrow">Decision regions</div>
+            <h4>Three urgency classes, One-vs-Rest</h4>
+          </div>
+          <div class="widget-body">
+            <canvas id="ovrCanvas" width="560" height="400" aria-label="Decision regions for a three-class One-vs-Rest logistic regression model" role="img"></canvas>
+            <div class="legend">
+              <span><i style="background:var(--green-500)"></i>● high urgency</span>
+              <span><i style="background:var(--gold-500)"></i>▲ medium urgency</span>
+              <span><i style="background:var(--red-500)"></i>■ low urgency</span>
+            </div>
+            <p class="hint">Three distinct regions emerge, even though internally the model is just three binary logistic-regression boundaries competing against each other — the "three specialist doctors" idea, applied across the whole plane.</p>
+          </div>
+        </div>
+
+        <details class="codebox">
+          <summary>View the underlying scikit-learn code</summary>
+          <pre><span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LogisticRegression
+<span class="kw">from</span> sklearn.datasets <span class="kw">import</span> make_classification
+<span class="kw">from</span> sklearn.inspection <span class="kw">import</span> DecisionBoundaryDisplay
+
+X, y = make_classification(
+    n_samples=<span class="st">450</span>, n_features=<span class="st">2</span>, n_classes=<span class="st">3</span>,
+    n_redundant=<span class="st">0</span>, n_informative=<span class="st">2</span>,
+    n_clusters_per_class=<span class="st">1</span>, random_state=<span class="st">11</span>
+)
+
+ovr_model = LogisticRegression(multi_class=<span class="st">'auto'</span>)
+ovr_model.fit(X_train, y_train)
+DecisionBoundaryDisplay.from_estimator(ovr_model, X, response_method=<span class="st">"predict"</span>)</pre>
+        </details>
+      </div>
+
+      <div id="quiz5"></div>
+    </section>
+
+    <!-- ================= SOFTMAX ================= -->
+    <section id="softmax">
+      <div class="q-eyebrow">A WIDER VIEW</div>
+      <h2 class="q-title">This idea is bigger than it looks</h2>
+      <div class="prose">
+        <p>The One-vs-Rest idea just covered — training several models and letting them compete on a probability score — is a close cousin of something running underneath almost every modern large language model.</p>
+        <p>When a model like a chatbot generates its next word, it isn't doing anything mystical: it computes a score for every possible next word in its vocabulary (which can be hundreds of thousands of options), converts those scores into probabilities using a generalisation of the sigmoid function called <strong>softmax</strong>, and then selects — or samples — the option with the highest probability. Softmax is, in essence, what results from extending the "multiple binary competitions" spirit of One-vs-Rest into a single unified layer that outputs a full probability distribution over every class at once, rather than K independent yes/no verdicts.</p>
+        <p>In other words: the mechanism used today to sort abandoned carts into three urgency buckets is a small, transparent relative of the mechanism a large language model uses to decide its very next word. Understanding one gives real intuition for the other.</p>
+        <div class="callout explore">
+          <div class="callout-label">Go further</div>
+          <p>Ask an AI assistant to explain the <strong>softmax function</strong> and how it differs mathematically from training K separate One-vs-Rest models — specifically, why softmax guarantees that all class probabilities sum to exactly 1, while One-vs-Rest probabilities generally do not (as seen in the argmax widget above). Ask for one practical scenario where that difference actually matters.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= RECAP ================= -->
+    <section id="recap">
+      <div class="q-eyebrow">RECAP</div>
+      <h2 class="q-title">Four questions, one more reliable model</h2>
+      <div class="recap-grid">
+        <div class="recap-card">
+          <h4>1 · Hyperparameter tuning</h4>
+          <p>The regularization parameter C (and its relationship to λ) controls the tradeoff between an overfit model and an underfit one. The right value is chosen using validation performance, not training performance.</p>
+        </div>
+        <div class="recap-card alt">
+          <h4>2 · Log-odds and the logit</h4>
+          <p>Logistic regression is fundamentally a linear model in log-odds space; the sigmoid function is the transformation that converts that internal log-odds score into an interpretable probability.</p>
+        </div>
+        <div class="recap-card">
+          <h4>3 · Impact of outliers</h4>
+          <p>An unusual data point only distorts the decision boundary meaningfully when the model currently predicts it with high confidence and gets it wrong. Outliers predicted correctly have minimal effect on training.</p>
+        </div>
+        <div class="recap-card alt">
+          <h4>4 · Multi-class classification</h4>
+          <p>One-vs-Rest extends logistic regression beyond two classes by training one binary model per class and picking whichever model reports the highest probability.</p>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:22px;border-left:4px solid var(--gold-500);">
+        <div class="callout-label" style="color:var(--gold-700);">And beyond today</div>
+        <p style="margin:0;">Softmax, a generalisation of multi-class logistic regression, is how this same underlying idea shows up inside today's large-scale AI systems.</p>
+      </div>
+    </section>
+
+    <footer>
+      <span>Logistic Regression post read</span>
+      <span>Four questions on making a model reliable — regularization, log-odds, outliers, and multi-class classification.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ utility ============ */
+function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+function fmt(n,d){ d=(d===undefined)?2:d; return Number(n).toFixed(d); }
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rng){
+  var u = 0, v = 0;
+  while(u === 0) u = rng();
+  while(v === 0) v = rng();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+
+/* ============ Section: TOC active state ============ */
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var sections = links.map(function(a){ return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
+  if(!sections.length) return;
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(a){ a.classList.remove('active'); });
+        var link = document.querySelector('.toc a[href="#' + e.target.id + '"]');
+        if(link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-40% 0px -50% 0px', threshold: 0 });
+  sections.forEach(function(s){ io.observe(s); });
+})();
+
+/* ============ Widget: C regularization playground ============ */
+(function(){
+  var canvas = document.getElementById('cCanvas');
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  var rng = mulberry32(42);
+
+  // fixed synthetic two-class dataset, feature space roughly [-3,3]x[-3,3]
+  var pts = [];
+  var n = 34;
+  for(var i=0;i<n;i++){
+    pts.push({ x: -1.05 + gaussian(rng)*0.85, y: -0.55 + gaussian(rng)*0.85, c: 0 });
+  }
+  for(var j=0;j<n;j++){
+    pts.push({ x: 1.05 + gaussian(rng)*0.85, y: 0.55 + gaussian(rng)*0.85, c: 1 });
+  }
+  // sprinkle label noise near the boundary (mirrors flip_y)
+  [6,13,22,29,44,51].forEach(function(idx){
+    if(pts[idx]) pts[idx].c = 1 - pts[idx].c;
+  });
+  // a couple of genuine outliers, far from their own cluster
+  pts.push({x:-2.7,y:2.3,c:1});
+  pts.push({x:2.6,y:-2.2,c:0});
+
+  var xMin=-3.2,xMax=3.2,yMin=-3.2,yMax=3.2;
+  function toPx(x,y){
+    return [ (x-xMin)/(xMax-xMin)*W, H - (y-yMin)/(yMax-yMin)*H ];
+  }
+  function toData(px,py){
+    return [ xMin + (px/W)*(xMax-xMin), yMin + ((H-py)/H)*(yMax-yMin) ];
+  }
+
+  function trainLogReg(points, lambda, iters, lr){
+    var w1=0,w2=0,b=0;
+    var m = points.length;
+    for(var it=0; it<iters; it++){
+      var gw1=0, gw2=0, gb=0;
+      for(var i=0;i<m;i++){
+        var p = points[i];
+        var z = w1*p.x + w2*p.y + b;
+        var pred = sigmoid(z);
+        var err = pred - p.c;
+        gw1 += err*p.x; gw2 += err*p.y; gb += err;
+      }
+      gw1 = gw1/m + (lambda/m)*w1;
+      gw2 = gw2/m + (lambda/m)*w2;
+      gb = gb/m;
+      w1 -= lr*gw1; w2 -= lr*gw2; b -= lr*gb;
+    }
+    return {w1:w1,w2:w2,b:b};
+  }
+
+  function draw(C){
+    var lambda = 1/C;
+    var model = trainLogReg(pts, lambda, 700, 0.12);
+
+    // decision region heatmap
+    var step = 6;
+    for(var px=0; px<W; px+=step){
+      for(var py=0; py<H; py+=step){
+        var dd = toData(px+step/2, py+step/2);
+        var z = model.w1*dd[0] + model.w2*dd[1] + model.b;
+        var p = sigmoid(z);
+        ctx.fillStyle = p >= 0.5 ? 'rgba(63,151,96,0.14)' : 'rgba(200,91,71,0.14)';
+        ctx.fillRect(px,py,step,step);
+      }
+    }
+
+    // points
+    var missed = 0;
+    pts.forEach(function(pt){
+      var xy = toPx(pt.x, pt.y);
+      var z = model.w1*pt.x + model.w2*pt.y + model.b;
+      var pred = sigmoid(z) >= 0.5 ? 1 : 0;
+      if(pred !== pt.c) missed++;
+      ctx.beginPath();
+      ctx.arc(xy[0], xy[1], 5.5, 0, Math.PI*2);
+      ctx.fillStyle = pt.c === 1 ? '#3F9760' : '#C85B47';
+      ctx.fill();
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = '#1C271F';
+      ctx.globalAlpha = 0.5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+
+    document.getElementById('missVal').textContent = missed + ' / ' + pts.length;
+    document.getElementById('lambdaVal').textContent = 'λ = ' + fmt(lambda,2);
+
+    var msg = document.getElementById('cMsg');
+    if(C >= 30){
+      msg.textContent = 'Weak regularization: the boundary tightens around individual noisy points, chasing every training example — the overfitting direction.';
+      msg.className = 'msg-line neg';
+    } else if(C <= 0.03){
+      msg.textContent = 'Strong regularization: the boundary flattens toward the simplest split it can find, missing points it could otherwise get right — the underfitting direction.';
+      msg.className = 'msg-line neg';
+    } else {
+      msg.textContent = 'A reasonable middle ground: general enough to transfer, specific enough to be useful.';
+      msg.className = 'msg-line pos';
+    }
+  }
+
+  var slider = document.getElementById('cSlider');
+  var readout = document.getElementById('cReadout');
+  function update(){
+    var log10C = parseFloat(slider.value);
+    var C = Math.pow(10, log10C);
+    readout.textContent = C >= 100 ? fmt(C,0) : fmt(C,3);
+    draw(C);
+  }
+  slider.addEventListener('input', update);
+  update();
+})();
+
+/* ============ Widget: sigmoid explorer ============ */
+(function(){
+  var svg = document.getElementById('sigSvg');
+  if(!svg) return;
+  var ns = 'http://www.w3.org/2000/svg';
+  var W=480, H=300, pad=40;
+  var zMin=-8, zMax=8;
+
+  function xPix(z){ return pad + (z-zMin)/(zMax-zMin)*(W-2*pad); }
+  function yPix(p){ return H-pad - p*(H-2*pad); }
+
+  function el(tag, attrs){
+    var e = document.createElementNS(ns, tag);
+    for(var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  // axes
+  svg.appendChild(el('line',{x1:pad,y1:H-pad,x2:W-pad,y2:H-pad,stroke:'#C9BE9E','stroke-width':1}));
+  svg.appendChild(el('line',{x1:xPix(0),y1:pad,x2:xPix(0),y2:H-pad,stroke:'#DDD4BC','stroke-width':1,'stroke-dasharray':'3,3'}));
+  svg.appendChild(el('line',{x1:pad,y1:yPix(0.5),x2:W-pad,y2:yPix(0.5),stroke:'#DDD4BC','stroke-width':1,'stroke-dasharray':'3,3'}));
+
+  var labelZ0 = el('text',{x:xPix(0),y:H-pad+18,'text-anchor':'middle','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:'#7C897E'});
+  labelZ0.textContent = 'z = 0';
+  svg.appendChild(labelZ0);
+  var labelP1 = el('text',{x:pad-8,y:yPix(1)+4,'text-anchor':'end','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:'#7C897E'});
+  labelP1.textContent = '1';
+  svg.appendChild(labelP1);
+  var labelP0 = el('text',{x:pad-8,y:yPix(0)+4,'text-anchor':'end','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:'#7C897E'});
+  labelP0.textContent = '0';
+  svg.appendChild(labelP0);
+
+  // curve
+  var d = '';
+  for(var i=0;i<=100;i++){
+    var z = zMin + (zMax-zMin)*i/100;
+    var p = sigmoid(z);
+    d += (i===0?'M':'L') + xPix(z).toFixed(1) + ',' + yPix(p).toFixed(1) + ' ';
+  }
+  svg.appendChild(el('path',{d:d, fill:'none', stroke:'#25623F', 'stroke-width':2.4}));
+
+  var vline = el('line',{x1:0,y1:0,x2:0,y2:0,stroke:'#C85B47','stroke-width':1.4,'stroke-dasharray':'3,3'});
+  svg.appendChild(vline);
+  var dot = el('circle',{r:6, fill:'#B4402F', stroke:'#fff', 'stroke-width':2});
+  svg.appendChild(dot);
+
+  var zSlider = document.getElementById('zSlider');
+  var zReadout = document.getElementById('zReadout');
+  var pVal = document.getElementById('pVal');
+  var oddsVal = document.getElementById('oddsVal');
+  var sigMsg = document.getElementById('sigMsg');
+
+  function update(){
+    var z = parseFloat(zSlider.value);
+    var p = sigmoid(z);
+    var odds = p/(1-p);
+    zReadout.textContent = fmt(z,2);
+    pVal.textContent = fmt(p,3);
+    oddsVal.textContent = (odds>999? '999+' : fmt(odds,2));
+    dot.setAttribute('cx', xPix(z));
+    dot.setAttribute('cy', yPix(p));
+    vline.setAttribute('x1', xPix(z)); vline.setAttribute('x2', xPix(z));
+    vline.setAttribute('y1', H-pad); vline.setAttribute('y2', yPix(p));
+
+    if(Math.abs(z) < 0.15){
+      sigMsg.textContent = 'z ≈ 0 — the odds are almost exactly balanced, a near 50-50 call.';
+      sigMsg.className = 'msg-line warn';
+    } else if(z > 0){
+      sigMsg.textContent = 'Positive log-odds — the odds favour converting' + (z>3?' strongly.':'.');
+      sigMsg.className = 'msg-line pos';
+    } else {
+      sigMsg.textContent = 'Negative log-odds — the odds favour not converting' + (z<-3?' strongly.':'.');
+      sigMsg.className = 'msg-line neg';
+    }
+  }
+  zSlider.addEventListener('input', update);
+  update();
+})();
+
+/* ============ Widget: log loss visualizer ============ */
+(function(){
+  var svg = document.getElementById('lossSvg');
+  if(!svg) return;
+  var ns = 'http://www.w3.org/2000/svg';
+  var W=480,H=300,pad=42;
+  var zMin=-6, zMax=6;
+  var lossMax = 6; // clip for display
+
+  function lossAt(z){ var p = sigmoid(z); return -Math.log(Math.max(p,1e-9)); }
+  function xPix(z){ return pad + (z-zMin)/(zMax-zMin)*(W-2*pad); }
+  function yPix(l){ var lc = Math.min(l,lossMax); return H-pad - lc/lossMax*(H-2*pad); }
+
+  function el(tag, attrs){
+    var e = document.createElementNS(ns, tag);
+    for(var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  svg.appendChild(el('line',{x1:pad,y1:H-pad,x2:W-pad,y2:H-pad,stroke:'#C9BE9E','stroke-width':1}));
+  svg.appendChild(el('line',{x1:pad,y1:pad,x2:pad,y2:H-pad,stroke:'#C9BE9E','stroke-width':1}));
+  var lx = el('text',{x:W-pad,y:H-pad+18,'text-anchor':'end','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:'#7C897E'});
+  lx.textContent = 'z →'; svg.appendChild(lx);
+  var ly = el('text',{x:pad,y:pad-10,'text-anchor':'start','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:'#7C897E'});
+  ly.textContent = 'loss L (y=1)'; svg.appendChild(ly);
+
+  var d='';
+  for(var i=0;i<=120;i++){
+    var z = zMin + (zMax-zMin)*i/120;
+    var l = lossAt(z);
+    d += (i===0?'M':'L') + xPix(z).toFixed(1) + ',' + yPix(l).toFixed(1) + ' ';
+  }
+  svg.appendChild(el('path',{d:d, fill:'none', stroke:'#9A3226', 'stroke-width':2.4}));
+
+  var vline = el('line',{x1:0,y1:0,x2:0,y2:0,stroke:'#4B5A50','stroke-width':1.2,'stroke-dasharray':'3,3'});
+  svg.appendChild(vline);
+  var dot = el('circle',{r:6, fill:'#25623F', stroke:'#fff','stroke-width':2});
+  svg.appendChild(dot);
+
+  var lzSlider = document.getElementById('lzSlider');
+  var lzReadout = document.getElementById('lzReadout');
+  var lpVal = document.getElementById('lpVal');
+  var lVal = document.getElementById('lVal');
+  var lossMsg = document.getElementById('lossMsg');
+
+  function update(){
+    var z = parseFloat(lzSlider.value);
+    var p = sigmoid(z);
+    var l = lossAt(z);
+    lzReadout.textContent = fmt(z,2);
+    lpVal.textContent = fmt(p,3);
+    lVal.textContent = fmt(l,3);
+    dot.setAttribute('cx', xPix(z));
+    dot.setAttribute('cy', yPix(l));
+    vline.setAttribute('x1', xPix(z)); vline.setAttribute('x2', xPix(z));
+    vline.setAttribute('y1', H-pad); vline.setAttribute('y2', yPix(l));
+
+    if(l < 0.3){
+      lossMsg.textContent = 'Confident and correct — this point barely pulls on the coefficients.';
+      lossMsg.className = 'msg-line pos';
+    } else if(l < 1.5){
+      lossMsg.textContent = 'A moderate loss — some pull on training, but not dramatic.';
+      lossMsg.className = 'msg-line warn';
+    } else {
+      lossMsg.textContent = 'Confident and wrong — this point exerts a large, disproportionate pull, and the optimiser will shift the boundary to bring this loss down.';
+      lossMsg.className = 'msg-line neg';
+    }
+  }
+  lzSlider.addEventListener('input', update);
+  update();
+})();
+
+/* ============ Widget: OvR argmax demo ============ */
+(function(){
+  var high = document.getElementById('ovrHigh');
+  var med = document.getElementById('ovrMedium');
+  var low = document.getElementById('ovrLow');
+  if(!high) return;
+  var highVal = document.getElementById('ovrHighVal');
+  var medVal = document.getElementById('ovrMediumVal');
+  var lowVal = document.getElementById('ovrLowVal');
+  var highBar = document.getElementById('ovrHighBar');
+  var medBar = document.getElementById('ovrMediumBar');
+  var lowBar = document.getElementById('ovrLowBar');
+  var verdict = document.getElementById('ovrVerdict');
+  var wraps = {
+    high: document.getElementById('ovr-high'),
+    medium: document.getElementById('ovr-medium'),
+    low: document.getElementById('ovr-low')
+  };
+
+  function update(){
+    var h = parseFloat(high.value), m = parseFloat(med.value), l = parseFloat(low.value);
+    highVal.textContent = fmt(h,2); medVal.textContent = fmt(m,2); lowVal.textContent = fmt(l,2);
+    highBar.style.width = (h*100)+'%'; medBar.style.width = (m*100)+'%'; lowBar.style.width = (l*100)+'%';
+
+    var best = 'high', bv = h;
+    if(m > bv){ best='medium'; bv=m; }
+    if(l > bv){ best='low'; bv=l; }
+
+    ['high','medium','low'].forEach(function(k){ wraps[k].classList.toggle('winner', k===best); });
+    var label = best==='high' ? 'high urgency' : (best==='medium' ? 'medium urgency' : 'low urgency');
+    verdict.innerHTML = 'predicted class = argmax → <strong>' + label + '</strong> (' + fmt(bv,2) + ')';
+  }
+  [high,med,low].forEach(function(s){ s.addEventListener('input', update); });
+  update();
+})();
+
+/* ============ Widget: 3-class OvR decision regions ============ */
+(function(){
+  var canvas = document.getElementById('ovrCanvas');
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  var rng = mulberry32(11);
+
+  var centers = [ {x:-1.5,y:1.0,c:0}, {x:1.5,y:1.0,c:1}, {x:0,y:-1.7,c:2} ];
+  var pts = [];
+  centers.forEach(function(ctr){
+    for(var i=0;i<40;i++){
+      pts.push({ x: ctr.x + gaussian(rng)*0.62, y: ctr.y + gaussian(rng)*0.62, c: ctr.c });
+    }
+  });
+
+  var xMin=-3.4,xMax=3.4,yMin=-3.4,yMax=3.0;
+  function toPx(x,y){ return [ (x-xMin)/(xMax-xMin)*W, H - (y-yMin)/(yMax-yMin)*H ]; }
+  function toData(px,py){ return [ xMin + (px/W)*(xMax-xMin), yMin + ((H-py)/H)*(yMax-yMin) ]; }
+
+  function trainOVR(points, targetClass, lambda, iters, lr){
+    var w1=0,w2=0,b=0;
+    var m = points.length;
+    for(var it=0; it<iters; it++){
+      var gw1=0, gw2=0, gb=0;
+      for(var i=0;i<m;i++){
+        var p = points[i];
+        var y = (p.c === targetClass) ? 1 : 0;
+        var z = w1*p.x + w2*p.y + b;
+        var pred = sigmoid(z);
+        var err = pred - y;
+        gw1 += err*p.x; gw2 += err*p.y; gb += err;
+      }
+      gw1 = gw1/m + (lambda/m)*w1;
+      gw2 = gw2/m + (lambda/m)*w2;
+      gb = gb/m;
+      w1 -= lr*gw1; w2 -= lr*gw2; b -= lr*gb;
+    }
+    return {w1:w1,w2:w2,b:b};
+  }
+
+  var models = [
+    trainOVR(pts, 0, 1, 500, 0.15),
+    trainOVR(pts, 1, 1, 500, 0.15),
+    trainOVR(pts, 2, 1, 500, 0.15)
+  ];
+  var regionColors = ['rgba(63,151,96,0.16)','rgba(192,148,46,0.18)','rgba(200,91,71,0.16)'];
+  var ptColors = ['#3F9760','#C0942E','#C85B47'];
+
+  var step = 6;
+  for(var px=0; px<W; px+=step){
+    for(var py=0; py<H; py+=step){
+      var dd = toData(px+step/2, py+step/2);
+      var best=-1, bv=-Infinity;
+      for(var k=0;k<3;k++){
+        var mo = models[k];
+        var z = mo.w1*dd[0]+mo.w2*dd[1]+mo.b;
+        var p = sigmoid(z);
+        if(p>bv){bv=p; best=k;}
+      }
+      ctx.fillStyle = regionColors[best];
+      ctx.fillRect(px,py,step,step);
+    }
+  }
+
+  function drawMarker(ctx, shape, x, y, color){
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#1C271F';
+    ctx.lineWidth = 1.1;
+    ctx.globalAlpha = 0.55;
+    if(shape==='circle'){
+      ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    } else if(shape==='triangle'){
+      ctx.beginPath(); ctx.moveTo(x,y-6); ctx.lineTo(x+5.5,y+4.5); ctx.lineTo(x-5.5,y+4.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.rect(x-4.5,y-4.5,9,9); ctx.fill(); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  var shapes = ['circle','triangle','square'];
+  pts.forEach(function(pt){
+    var xy = toPx(pt.x, pt.y);
+    drawMarker(ctx, shapes[pt.c], xy[0], xy[1], ptColors[pt.c]);
+  });
+})();
+
+/* ============ Quiz component ============ */
+function buildQuiz(mountId, opts){
+  var mount = document.getElementById(mountId);
+  if(!mount) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'quiz';
+
+  var head = document.createElement('div');
+  head.className = 'quiz-head';
+  var num = document.createElement('div'); num.className='q-num'; num.textContent = opts.label;
+  var pq = document.createElement('p'); pq.textContent = opts.question;
+  head.appendChild(num); head.appendChild(pq);
+  wrap.appendChild(head);
+
+  var body = document.createElement('div');
+  body.className = 'quiz-body';
+  var list = document.createElement('ul');
+  list.className = 'quiz-opts';
+
+  var feedback = document.createElement('div');
+  feedback.className = 'quiz-feedback';
+  var verdict = document.createElement('span'); verdict.className='verdict';
+  var explain = document.createElement('span');
+  feedback.appendChild(verdict); feedback.appendChild(explain);
+
+  var answered = false;
+  opts.choices.forEach(function(choice){
+    var li = document.createElement('li');
+    li.className = 'quiz-opt';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = choice.text;
+    btn.addEventListener('click', function(){
+      if(answered) return;
+      answered = true;
+      var buttons = list.querySelectorAll('button');
+      buttons.forEach(function(b){ b.disabled = true; b.classList.add('dim'); });
+      btn.classList.remove('dim');
+      if(choice.correct){
+        btn.classList.add('correct');
+        verdict.textContent = 'Correct.';
+        feedback.className = 'quiz-feedback show right';
+      } else {
+        btn.classList.add('incorrect');
+        var correctBtn = Array.prototype.find.call(buttons, function(b,i){ return opts.choices[i].correct; });
+        if(correctBtn){ correctBtn.classList.remove('dim'); correctBtn.classList.add('correct'); }
+        verdict.textContent = 'Not quite.';
+        feedback.className = 'quiz-feedback show wrong';
+      }
+      explain.textContent = ' ' + opts.explanation;
+    });
+    li.appendChild(btn);
+    list.appendChild(li);
+  });
+
+  body.appendChild(list);
+  body.appendChild(feedback);
+  wrap.appendChild(body);
+  mount.appendChild(wrap);
+}
+
+buildQuiz('quiz1', {
+  label: 'Check your understanding',
+  question: 'Rohan sets C to a very small value (for example, C = 0.001) for his cart-abandonment model. What is the most likely effect on the model?',
+  choices: [
+    {text:'The model will fit the training data extremely closely, including its noise', correct:false},
+    {text:'The model will become simpler and may underfit, performing poorly even on training data', correct:true},
+    {text:"The model's coefficients will grow very large in magnitude", correct:false},
+    {text:'The value of C has no effect on how the model is trained', correct:false}
+  ],
+  explanation: 'A small C means a large regularization strength λ, since C = 1/λ. A large λ applies a heavy penalty on large coefficients, forcing them toward smaller values. This constrains the model\'s flexibility, which can prevent it from capturing genuine patterns — leading to underfitting.'
+});
+
+buildQuiz('quiz2', {
+  label: 'Check your understanding',
+  question: 'Which of the following correctly describes the relationship between C and the regularization strength λ in logistic regression?',
+  choices: [
+    {text:'C and λ are unrelated hyperparameters', correct:false},
+    {text:'C = λ, they are the same value with different names', correct:false},
+    {text:'C is the inverse of λ, so increasing C decreases the regularization strength', correct:true},
+    {text:'C is the square of λ', correct:false}
+  ],
+  explanation: 'By definition, C = 1/λ. As C increases, λ decreases, which weakens the regularization penalty and allows coefficients to grow larger. As C decreases, λ increases, strengthening the penalty and shrinking coefficients toward zero.'
+});
+
+buildQuiz('quiz3', {
+  label: 'Check your understanding',
+  question: 'For one customer, the model computes a log-odds value of z = −2.5. What can we conclude, without doing any further calculation?',
+  choices: [
+    {text:'The customer is more likely to convert than not', correct:false},
+    {text:'The customer is more likely to not convert than to convert', correct:true},
+    {text:"The customer's probability of converting is exactly 0", correct:false},
+    {text:'We cannot say anything until we compute the sigmoid', correct:false}
+  ],
+  explanation: 'A negative log-odds value means ln(p/(1−p)) < 0, so p/(1−p) < 1, so p < 1−p. The probability of not converting is higher than the probability of converting — we only need the sign of z to know the direction of the prediction, not its exact sigmoid value.'
+});
+
+buildQuiz('quiz4', {
+  label: 'Check your understanding',
+  question: 'Point A is an outlier the current model predicts correctly. Point B is an outlier the current model predicts incorrectly, with high confidence. Which point is more likely to distort the decision boundary during training?',
+  choices: [
+    {text:'Point A, because outliers always increase loss', correct:false},
+    {text:'Point B, because a confident wrong prediction produces a very large loss', correct:true},
+    {text:'Both points will have identical impact, since both are outliers', correct:false},
+    {text:'Neither point affects training, since logistic regression ignores outliers', correct:false}
+  ],
+  explanation: 'Log loss grows very large when a confident prediction turns out to be wrong, and stays small when a prediction is correct. Since training minimises total loss, points with disproportionately large loss, like Point B, exert a disproportionately large pull on the coefficients — and therefore on the final decision boundary.'
+});
+
+buildQuiz('quiz5', {
+  label: 'Check your understanding',
+  question: 'A stakeholder now wants to split carts into 5 urgency categories instead of 3. Under the One-vs-Rest strategy, how many individual logistic regression models need to be trained?',
+  choices: [
+    {text:'1', correct:false},
+    {text:'4', correct:false},
+    {text:'5', correct:true},
+    {text:'10', correct:false}
+  ],
+  explanation: 'One-vs-Rest trains exactly one binary logistic regression model per class, each distinguishing "this class" from "all other classes combined." For K classes, this means K models are trained — so 5 classes require 5 models.'
+});
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/ML-with-AI-workflows-8" target="_blank" rel="noopener">github.com/scaler-content/ML-with-AI-workflows-8</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

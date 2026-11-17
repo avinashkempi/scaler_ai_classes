@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KNN Imputation & Decision Trees — Lecture Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mg-deep:      #2D0A20;
+    --mg-mid:       #7A1550;
+    --mg-soft:      #B02870;
+    --mg-pale:      #D870A0;
+    --mg-mist:      #F5C0DA;
+    --blush:        #FDF4F8;
+    --blush-mid:    #FAE4EF;
+    --magenta:      #C0306A;
+    --mg-light:     #E880B0;
+    --charcoal:     #160810;
+    --text-body:    #2D0A1E;
+    --text-muted:   #7A3055;
+    --white:        #FFFFFF;
+    --sidebar-w:    280px;
+    --green:        #2E7D4A;
+    --green-dim:    #EBF5EF;
+    --green-brd:    #A8D8BA;
+    --red:          #C04040;
+    --red-dim:      #FDEEF0;
+    --red-brd:      #F0A8A8;
+    --amber:        #A07820;
+    --amber-dim:    #FDF6E8;
+    --amber-brd:    #E8D098;
+    --blue:         #2060A0;
+    --blue-dim:     #EEF3FB;
+    --blue-brd:     #A0C0E0;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--blush);
+    color: var(--text-body);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--mg-deep);
+    position: fixed; top: 0; left: 0;
+    height: 100vh; overflow-y: auto;
+    z-index: 100; display: flex; flex-direction: column;
+    transition: transform .3s ease;
+  }
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--mg-soft); border-radius: 4px; }
+
+  .sidebar-header {
+    padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,.08);
+    position: sticky; top: 0; background: var(--mg-deep); z-index: 1;
+  }
+  .sidebar-header .course-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--mg-pale); font-weight: 600; margin-bottom: 6px; }
+  .sidebar-header h1 { font-family: 'Lora', serif; font-size: 15px; color: var(--white); font-weight: 600; line-height: 1.4; }
+
+  .progress-bar-wrap { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .progress-label { font-size: 11px; color: var(--mg-pale); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .progress-track { height: 4px; background: rgba(255,255,255,.1); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--mg-pale), var(--mg-light)); border-radius: 2px; transition: width .4s ease; width: 0%; }
+
+  .nav-list { list-style: none; padding: 12px 0 80px; }
+  .nav-item a {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 20px; text-decoration: none;
+    color: rgba(255,255,255,.55); font-size: 12.5px; line-height: 1.4;
+    transition: all .2s; border-left: 2px solid transparent;
+  }
+  .nav-item a:hover { color: var(--white); background: rgba(255,255,255,.05); }
+  .nav-item.active a { color: var(--mg-light); border-left-color: var(--magenta); background: rgba(255,255,255,.07); font-weight: 500; }
+  .nav-dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; flex-shrink: 0; margin-top: 5px; transition: background .3s; }
+  .nav-item.visited .nav-dot { background: var(--mg-light); border-color: var(--mg-light); }
+  .nav-item .nav-type { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--mg-pale); margin-top: 2px; opacity: .7; }
+
+  /* ── MAIN ────────────────────────────────────────── */
+  #main { margin-left: var(--sidebar-w); flex: 1; max-width: 860px; padding: 48px 52px 120px; }
+
+  /* ── CARDS ───────────────────────────────────────── */
+  .section-card {
+    background: var(--white); border-radius: 12px;
+    border: 1px solid var(--mg-mist); margin-bottom: 34px;
+    overflow: hidden; scroll-margin-top: 32px;
+    box-shadow: 0 2px 10px rgba(45,10,32,.06); transition: box-shadow .2s;
+  }
+  .section-card:hover { box-shadow: 0 4px 22px rgba(45,10,32,.11); }
+
+  .card-header {
+    padding: 22px 28px 18px; border-bottom: 1px solid var(--blush-mid);
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .card-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--mg-mist); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+  .card-meta { flex: 1; }
+  .card-type { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--mg-soft); font-weight: 600; margin-bottom: 4px; }
+  .card-title { font-family: 'Lora', serif; font-size: 20px; font-weight: 700; color: var(--mg-deep); line-height: 1.3; }
+  .card-duration { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+  .card-body { padding: 24px 28px 28px; }
+
+  /* ── TYPOGRAPHY ──────────────────────────────────── */
+  .card-body h2 { font-family: 'Lora', serif; font-size: 18px; color: var(--mg-mid); margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1.5px solid var(--mg-mist); }
+  .card-body h3 { font-family: 'Lora', serif; font-size: 15.5px; color: var(--mg-deep); margin: 22px 0 10px; font-style: italic; }
+  .card-body h4 { font-family: 'Lora', serif; font-size: 14px; color: var(--mg-mid); margin: 16px 0 8px; font-weight: 700; }
+  .card-body p { margin-bottom: 12px; font-size: 14.5px; }
+  .card-body ul, .card-body ol { margin: 8px 0 14px 20px; font-size: 14.5px; }
+  .card-body li { margin-bottom: 5px; }
+  .card-body strong { color: var(--mg-deep); font-weight: 600; }
+  .card-body em { color: var(--mg-soft); }
+
+  /* ── CALLOUTS ────────────────────────────────────── */
+  .callout-ask {
+    background: #FFF0F5; border-left: 3px solid var(--magenta);
+    border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 15px 0;
+    font-size: 13.5px; color: var(--mg-deep);
+  }
+  .callout-ask .callout-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--magenta); margin-bottom: 4px; }
+  .callout-note {
+    background: #FDF0F6; border-left: 3px solid var(--mg-soft);
+    border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 15px 0;
+    font-size: 13.5px; color: var(--mg-deep);
+  }
+  .callout-note .callout-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mg-soft); margin-bottom: 4px; }
+  .callout-viz {
+    background: #FDF5F9; border: 1.5px dashed var(--mg-pale);
+    border-radius: 10px; padding: 14px 18px; margin: 15px 0;
+    font-size: 13.5px; color: var(--mg-deep);
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .callout-viz .viz-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .callout-viz .viz-body { flex: 1; }
+  .callout-viz .viz-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mg-soft); margin-bottom: 5px; }
+  .callout-viz a { color: var(--mg-mid); font-weight: 600; word-break: break-all; }
+
+  /* ── TABLE ───────────────────────────────────────── */
+  .card-body table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 14px 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--mg-mist); }
+  .card-body th { background: var(--mg-mid); color: var(--white); padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12px; letter-spacing: .04em; }
+  .card-body td { padding: 9px 14px; border-top: 1px solid var(--blush-mid); font-size: 13px; }
+  .card-body tr:nth-child(even) td { background: var(--blush); }
+
+  /* ── CODE ────────────────────────────────────────── */
+  .card-body pre { background: var(--charcoal); color: #F4A8CC; border-radius: 8px; padding: 16px 18px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; overflow-x: auto; margin: 14px 0; line-height: 1.6; }
+  .card-body code { font-family: 'JetBrains Mono', monospace; background: var(--blush-mid); color: var(--mg-mid); padding: 2px 6px; border-radius: 4px; font-size: 12.5px; }
+  .card-body pre code { background: none; color: inherit; padding: 0; }
+
+  .output-wrap { margin: -4px 0 14px; }
+  .output-label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--mg-pale); font-weight: 600; margin-bottom: 5px; }
+  .output-block { background: #FBF4F8; border: 1px solid var(--mg-mist); border-radius: 8px; padding: 12px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-body); line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+
+  /* ── EQUATION ────────────────────────────────────── */
+  .equation { background: var(--blush-mid); border: 1.5px solid var(--mg-mist); border-radius: 8px; padding: 14px 20px; margin: 14px 0; text-align: center; font-family: 'Lora', serif; font-size: 16px; font-style: italic; color: var(--mg-deep); letter-spacing: .02em; }
+
+  /* ── QUIZ ────────────────────────────────────────── */
+  .quiz-card .card-icon { background: #F8D0E4; }
+  .quiz-question { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; color: var(--mg-deep); margin-bottom: 18px; line-height: 1.5; }
+  .quiz-options { list-style: none; margin: 0; }
+  .quiz-option { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border: 1.5px solid var(--mg-mist); border-radius: 8px; margin-bottom: 9px; cursor: pointer; font-size: 14px; transition: all .2s; user-select: none; background: var(--white); }
+  .quiz-option:hover { border-color: var(--mg-soft); background: var(--blush); }
+  .quiz-option.selected-correct { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+  .quiz-option.selected-wrong { border-color: var(--red); background: var(--red-dim); color: var(--red); }
+  .quiz-option.reveal-correct { border-color: var(--green); background: var(--green-dim); }
+  .quiz-circle { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--mg-mist); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; transition: all .2s; }
+  .selected-correct .quiz-circle { border-color: var(--green); background: var(--green); color: #fff; }
+  .selected-wrong .quiz-circle { border-color: var(--red); background: var(--red); color: #fff; }
+  .reveal-correct .quiz-circle { border-color: var(--green); background: var(--green-dim); }
+  .quiz-feedback { margin-top: 13px; padding: 11px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 500; display: none; }
+  .quiz-feedback.correct { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); display: block; }
+  .quiz-feedback.wrong { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-brd); display: block; }
+
+  /* ── IMBALANCE SPECTRUM ──────────────────────────── */
+  .imbalance-strip { display: flex; gap: 0; margin: 16px 0; border-radius: 8px; overflow: hidden; height: 48px; font-size: 12px; font-weight: 600; }
+  .strip-seg { display: flex; align-items: center; justify-content: center; padding: 0 12px; white-space: nowrap; }
+  .strip-balanced  { background: var(--green-dim);  color: var(--green); border: 1px solid var(--green-brd); flex: 2; }
+  .strip-slight    { background: var(--amber-dim);  color: var(--amber); border: 1px solid var(--amber-brd); flex: 2; }
+  .strip-imbal     { background: #FDE8F0;            color: var(--mg-soft); border: 1px solid var(--mg-mist); flex: 2; }
+  .strip-extreme   { background: var(--red-dim);    color: var(--red);   border: 1px solid var(--red-brd);  flex: 2; }
+
+  /* ── HANDLING METHODS GRID ───────────────────────── */
+  .methods-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0; }
+  .method-card { background: var(--blush); border: 1.5px solid var(--mg-mist); border-radius: 10px; padding: 16px; transition: all .2s; }
+  .method-card:hover { border-color: var(--mg-soft); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(45,10,32,.08); }
+  .method-card .mc-icon { font-size: 22px; margin-bottom: 8px; }
+  .method-card .mc-name { font-family: 'Lora', serif; font-size: 14.5px; font-weight: 700; color: var(--mg-deep); margin-bottom: 5px; }
+  .method-card .mc-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+  .method-card .mc-when { font-size: 11px; font-weight: 600; margin-top: 6px; color: var(--mg-soft); }
+
+  /* ── SMOTE FLOW ──────────────────────────────────── */
+  .smote-flow { display: flex; align-items: center; gap: 0; margin: 16px 0; overflow-x: auto; padding-bottom: 4px; }
+  .smote-step { display: flex; flex-direction: column; align-items: center; min-width: 120px; flex-shrink: 0; }
+  .smote-box { background: var(--mg-mid); color: #fff; border-radius: 8px; padding: 10px 12px; font-size: 12px; font-weight: 600; text-align: center; width: 100%; line-height: 1.4; }
+  .smote-box.alt { background: var(--mg-soft); }
+  .smote-box.out { background: var(--green); }
+  .smote-arrow { width: 28px; height: 2px; background: var(--mg-mist); flex-shrink: 0; position: relative; }
+  .smote-arrow::after { content: '▶'; position: absolute; right: -6px; top: -7px; color: var(--mg-pale); font-size: 11px; }
+  .smote-label { font-size: 10px; color: var(--text-muted); margin-top: 6px; text-align: center; }
+
+  /* ── DT TERMINOLOGY ──────────────────────────────── */
+  .dt-terms { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+  .dt-term { background: var(--blush); border: 1.5px solid var(--mg-mist); border-radius: 9px; padding: 14px; text-align: center; transition: all .2s; }
+  .dt-term:hover { border-color: var(--mg-soft); }
+  .dt-term .dt-icon { font-size: 22px; margin-bottom: 6px; }
+  .dt-term .dt-name { font-family: 'Lora', serif; font-size: 13.5px; font-weight: 700; color: var(--mg-deep); margin-bottom: 4px; }
+  .dt-term .dt-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+  /* ── KNN IMPUTATION FLOW ─────────────────────────── */
+  .imp-steps { margin: 16px 0; }
+  .imp-step { display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; border-bottom: 1px dashed var(--mg-mist); }
+  .imp-step:last-child { border-bottom: none; }
+  .imp-num { width: 30px; height: 30px; border-radius: 50%; background: var(--mg-mid); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .imp-content h4 { font-family: 'Lora', serif; font-size: 13.5px; font-weight: 700; color: var(--mg-deep); margin-bottom: 3px; }
+  .imp-content p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  /* ── F1 COMPARISON TABLE ─────────────────────────── */
+  .f1-row-bad td { color: var(--red); font-weight: 600; }
+  .f1-row-ok td  { color: var(--amber); font-weight: 600; }
+  .f1-row-good td { color: var(--green); font-weight: 600; }
+
+  /* ── SUMMARY GRID ────────────────────────────────── */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .summary-item { background: var(--blush); border: 1px solid var(--mg-mist); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--mg-deep); display: flex; align-items: flex-start; gap: 8px; }
+  .summary-item::before { content: '▸'; color: var(--mg-soft); font-size: 11px; margin-top: 2px; flex-shrink: 0; }
+
+  /* ── HAMBURGER ───────────────────────────────────── */
+  #hamburger { display: none; position: fixed; top: 16px; left: 16px; z-index: 200; background: var(--mg-deep); border: none; border-radius: 8px; padding: 8px 10px; cursor: pointer; flex-direction: column; gap: 5px; }
+  #hamburger span { display: block; width: 20px; height: 2px; background: #fff; border-radius: 1px; }
+  #overlay { display: none; }
+
+  @media (max-width: 768px) {
+    #hamburger { display: flex; }
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; padding: 24px 18px 80px; max-width: 100%; }
+    #overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; opacity: 0; pointer-events: none; transition: opacity .3s; }
+    #overlay.active { opacity: 1; pointer-events: all; }
+    .methods-grid, .dt-terms, .summary-grid { grid-template-columns: 1fr; }
+    .card-body { padding: 18px 18px 22px; }
+    .card-header { padding: 18px 18px 14px; }
+  }
+
+  /* ── BACK TO TOP ─────────────────────────────────── */
+  #back-top { position: fixed; bottom: 32px; right: 32px; background: var(--mg-mid); color: #fff; border: none; border-radius: 50%; width: 44px; height: 44px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(45,10,32,.3); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 50; }
+  #back-top.visible { opacity: 1; pointer-events: all; }
+  #back-top:hover { background: var(--mg-deep); }
+
+  .card-body a { color: var(--mg-soft); text-decoration: underline; text-underline-offset: 3px; }
+  .card-body a:hover { color: var(--mg-deep); }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations 8 · KNN imputation and imbalance</span><span class="pn"><a href="../Model-evaluation-and-Intro-to-KNN/" title="ML Foundations 7 · Model evaluation and KNN">← Prev</a><a href="../naive-bayes/" title="Naive Bayes · Spam detection from word counts">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><button id="hamburger" aria-label="Open menu" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</button>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="course-label">ML Foundations · Lecture 8</div>
+    <h1>KNN Imputation & Decision Trees</h1>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-label"><span>Progress</span><span id="progress-pct">0%</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item" data-target="s-recap"><a href="#s-recap"><span class="nav-dot"></span><span><div>Recap</div><div class="nav-type">Review</div></span></a></li>
+    <li class="nav-item" data-target="s-multiclass"><a href="#s-multiclass"><span class="nav-dot"></span><span><div>Multiclass KNN</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-outliers"><a href="#s-outliers"><span class="nav-dot"></span><span><div>Outliers & KNN</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-imputation"><a href="#s-imputation"><span class="nav-dot"></span><span><div>KNN-Based Imputation</div><div class="nav-type">Technique</div></span></a></li>
+    <li class="nav-item" data-target="s-imbalanced"><a href="#s-imbalanced"><span class="nav-dot"></span><span><div>Imbalanced Data</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="q1"><a href="#q1"><span class="nav-dot"></span><span><div>Quiz 1 — Balanced Dataset</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="q2"><a href="#q2"><span class="nav-dot"></span><span><div>Quiz 2 — Majority Class</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-churn"><a href="#s-churn"><span class="nav-dot"></span><span><div>Case Study: Churn Prediction</div><div class="nav-type">Case Study</div></span></a></li>
+    <li class="nav-item" data-target="s-why-acc"><a href="#s-why-acc"><span class="nav-dot"></span><span><div>Why Not Accuracy?</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="q3"><a href="#q3"><span class="nav-dot"></span><span><div>Quiz 3 — Imbalanced Metric</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-handling"><a href="#s-handling"><span class="nav-dot"></span><span><div>Handling Imbalance — Overview</div><div class="nav-type">Technique</div></span></a></li>
+    <li class="nav-item" data-target="s-weighted"><a href="#s-weighted"><span class="nav-dot"></span><span><div>Weighted Loss</div><div class="nav-type">Technique</div></span></a></li>
+    <li class="nav-item" data-target="q4"><a href="#q4"><span class="nav-dot"></span><span><div>Quiz 4 — Class Weights</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-undersampling"><a href="#s-undersampling"><span class="nav-dot"></span><span><div>Undersampling</div><div class="nav-type">Technique</div></span></a></li>
+    <li class="nav-item" data-target="s-oversampling"><a href="#s-oversampling"><span class="nav-dot"></span><span><div>Oversampling</div><div class="nav-type">Technique</div></span></a></li>
+    <li class="nav-item" data-target="q5"><a href="#q5"><span class="nav-dot"></span><span><div>Quiz 5 — Sampling Choice</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-smote"><a href="#s-smote"><span class="nav-dot"></span><span><div>SMOTE</div><div class="nav-type">Technique</div></span></a></li>
+    <li class="nav-item" data-target="q6"><a href="#q6"><span class="nav-dot"></span><span><div>Quiz 6 — SMOTE xnew Count</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-results"><a href="#s-results"><span class="nav-dot"></span><span><div>Method Comparison</div><div class="nav-type">Results</div></span></a></li>
+    <li class="nav-item" data-target="s-dtree"><a href="#s-dtree"><span class="nav-dot"></span><span><div>Decision Trees — Intro</div><div class="nav-type">Algorithm</div></span></a></li>
+    <li class="nav-item" data-target="s-wrap"><a href="#s-wrap"><span class="nav-dot"></span><span><div>Wrap Up</div><div class="nav-type">Summary</div></span></a></li>
+  </ul>
+</nav>
+
+<main id="main">
+
+  <!-- RECAP -->
+  <section class="section-card" id="s-recap">
+    <div class="card-header">
+      <div class="card-icon">🔁</div>
+      <div class="card-meta">
+        <div class="card-type">Review</div>
+        <div class="card-title">Recap from Lecture 7</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Last session we completed the metrics landscape and introduced KNN:</p>
+      <ul>
+        <li>ROC Curve, AUC — threshold-independent model comparison</li>
+        <li>Classification threshold tuning — lower threshold → higher recall</li>
+        <li>KNN algorithm: lazy learner, distance-based, no explicit training</li>
+        <li>Distance metrics: Euclidean, Manhattan, Minkowski, Cosine</li>
+        <li>Weighted KNN — closer neighbors get higher vote weight</li>
+        <li>K controls bias-variance: small K → overfit, large K → underfit</li>
+      </ul>
+      <div class="callout-note">
+        <div class="callout-label">📌 Today's Focus</div>
+        We extend KNN to multiclass problems, explore how outliers affect it, use it for missing value imputation, and tackle one of the most common real-world ML problems: <strong>imbalanced datasets</strong>. We close by introducing <strong>Decision Trees</strong>.
+      </div>
+    </div>
+  </section>
+
+  <!-- MULTICLASS KNN -->
+  <section class="section-card" id="s-multiclass">
+    <div class="card-header">
+      <div class="card-icon">🏷️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Multiclass Classification with KNN</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>KNN requires no modification to handle more than two classes. The majority vote simply counts across <em>all</em> class labels present among the K nearest neighbors — whichever class appears most often wins.</p>
+
+      <h3>Handling Ties in Multiclass KNN</h3>
+      <p>With K=5 and 3 classes, it's possible for two classes to tie (e.g., 2 votes each for Class A and Class B, 1 for Class C). Options:</p>
+      <ul>
+        <li>Try a different K (odd K doesn't guarantee no ties with 3+ classes)</li>
+        <li>Fall back to the class of the single nearest neighbor</li>
+        <li>Use Weighted KNN to break the tie by distance</li>
+      </ul>
+      <div class="callout-ask">
+        <div class="callout-label">🤔 The Unreliable Neighbor Analogy</div>
+        KNN trusts its neighbors blindly. If an outlier lives near your query point, it gets a vote — even if it doesn't truly represent its class. This is the core vulnerability of KNN: it cannot distinguish genuine neighbors from noise.
+      </div>
+    </div>
+  </section>
+
+  <!-- OUTLIERS -->
+  <section class="section-card" id="s-outliers">
+    <div class="card-header">
+      <div class="card-icon">⚠️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Outliers and Their Effect on KNN</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Consider a dataset with 3 outliers near a query point x_q. Whether they affect the prediction depends entirely on K:</p>
+      <table>
+        <tr><th>K value</th><th>Effect of Outliers</th><th>Reason</th></tr>
+        <tr><td><strong>K = 1</strong></td><td style="color:var(--red)">Both outliers affect prediction</td><td>Nearest neighbor could be the outlier itself</td></tr>
+        <tr><td><strong>K = 3</strong></td><td style="color:var(--amber)">Partial effect</td><td>2 outliers in neighborhood can still produce a wrong majority</td></tr>
+        <tr><td><strong>K = 7</strong></td><td style="color:var(--green)">No effect</td><td>Majority of the larger neighborhood correctly labels x_q</td></tr>
+      </table>
+      <div class="callout-note">
+        <div class="callout-label">📌 Key Takeaway</div>
+        <strong>Larger K is more robust to outliers.</strong> But too large a K causes underfitting. The practical solution: clean outliers from the dataset before training, and tune K on validation data.
+      </div>
+    </div>
+  </section>
+
+  <!-- KNN IMPUTATION -->
+  <section class="section-card" id="s-imputation">
+    <div class="card-header">
+      <div class="card-icon">🩺</div>
+      <div class="card-meta">
+        <div class="card-type">Technique</div>
+        <div class="card-title">KNN-Based Imputation</div>
+        <div class="card-duration">⏱ 11 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Mean/median imputation ignores the structure of the data — it gives every missing value the same fill regardless of what that row's other features say. KNN imputation personalizes the fill by asking: <em>what do similar rows have in that column?</em></p>
+
+      <h3>Why Values Go Missing</h3>
+      <ul>
+        <li>Equipment or sensor malfunction</li>
+        <li>Researcher or data-entry error</li>
+        <li>Unavailable respondents in surveys</li>
+        <li>Accidental deletion or accounting errors</li>
+      </ul>
+
+      <h3>The KNN Imputation Algorithm</h3>
+      <div class="imp-steps">
+        <div class="imp-step">
+          <div class="imp-num">1</div>
+          <div class="imp-content">
+            <h4>Identify the missing dimension</h4>
+            <p>For point xᵢ, dimension j is missing. We need to estimate xᵢⱼ.</p>
+          </div>
+        </div>
+        <div class="imp-step">
+          <div class="imp-num">2</div>
+          <div class="imp-content">
+            <h4>Compute distances excluding j</h4>
+            <p>Find K nearest neighbors for xᵢ using all dimensions <em>except</em> the missing one j.</p>
+          </div>
+        </div>
+        <div class="imp-step">
+          <div class="imp-num">3</div>
+          <div class="imp-content">
+            <h4>Aggregate neighbor values</h4>
+            <p>For numerical: take the mean of xⱼ from all K neighbors. For categorical: take the mode (most frequent value).</p>
+          </div>
+        </div>
+        <div class="imp-step">
+          <div class="imp-num">4</div>
+          <div class="imp-content">
+            <h4>Fill the missing value</h4>
+            <p>Set xᵢⱼ = aggregated neighbor value. Repeat for every missing entry.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">⚠️ Scale Before Imputing</div>
+        KNN Imputer uses distance — features on larger scales will dominate the neighbor search. Always <strong>normalize first</strong> (e.g., MinMaxScaler) before applying KNNImputer.
+      </div>
+
+      <h3>Numerical Imputation Code</h3>
+      <pre><code>from sklearn.impute import KNNImputer
+from sklearn.preprocessing import MinMaxScaler
+import pandas as pd
+
+df_imp = pd.read_csv('knn_imputation.csv').drop('Unnamed: 0', axis=1)
+
+# Scale first — KNNImputer is distance-based
+scaler = MinMaxScaler()
+df_imp = pd.DataFrame(scaler.fit_transform(df_imp), columns=df_imp.columns)
+
+# Impute with K=5 neighbors
+imputer = KNNImputer(n_neighbors=5)
+df_imp = pd.DataFrame(imputer.fit_transform(df_imp), columns=df_imp.columns)
+
+print(df_imp.isna().sum())  # should all be 0</code></pre>
+
+      <h3>Validating Imputation Quality</h3>
+      <p>Two checks to confirm the imputation didn't introduce bias:</p>
+      <ul>
+        <li><strong>Mean check:</strong> The column mean before and after imputation should remain close — systematic shift means biased imputation.</li>
+        <li><strong>Histogram check:</strong> The distribution shape should look the same before and after. If it shifts noticeably, the imputed values aren't representative.</li>
+      </ul>
+
+      <h3>Categorical Imputation</h3>
+      <p>KNNImputer only works on numeric values. For categorical columns, encode them first:</p>
+      <pre><code>df["gender_map"] = df.gender.map({"Male": 0, "Female": 1})
+
+imputer = KNNImputer(n_neighbors=2)
+df_filled = pd.DataFrame(
+    imputer.fit_transform(df[["age", "gender_map"]]),
+    columns=["age", "gender_mapping"]
+)</code></pre>
+      <p>Round the imputed gender_mapping back to 0 or 1, then reverse-map to "Male"/"Female".</p>
+    </div>
+  </section>
+
+  <!-- IMBALANCED DATA -->
+  <section class="section-card" id="s-imbalanced">
+    <div class="card-header">
+      <div class="card-icon">⚖️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">What Is Imbalanced Data?</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Imbalanced data occurs when one class (the <strong>majority class</strong>) has far more samples than another (the <strong>minority class</strong>). Most real-world classification problems are imbalanced to some degree.</p>
+
+      <div class="imbalance-strip">
+        <div class="strip-seg strip-balanced">Balanced (50/50)</div>
+        <div class="strip-seg strip-slight">Slight (70/30)</div>
+        <div class="strip-seg strip-imbal">Imbalanced (90/10)</div>
+        <div class="strip-seg strip-extreme">Extreme (99/1)</div>
+      </div>
+
+      <table>
+        <tr><th>Split Ratio</th><th>Classification</th><th>Common Examples</th></tr>
+        <tr><td>70 / 30</td><td>Slightly imbalanced</td><td>Customer satisfaction surveys</td></tr>
+        <tr><td>80 / 20 or 90 / 10</td><td>Imbalanced</td><td>Customer churn, loan defaults</td></tr>
+        <tr><td>95 / 5 or worse</td><td>Extremely imbalanced</td><td>Fraud detection, rare disease diagnosis</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- QUIZ 1 -->
+  <section class="section-card quiz-card" id="q1">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 1</div>
+        <div class="card-title">Identifying a Balanced Dataset</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Which of the following is a <strong>balanced dataset</strong>?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>50 negative samples, 50 positive samples</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>100 negative samples, 10 positive samples</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>10 negative samples, 100 positive samples</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>2 negative samples, 98 positive samples</li>
+      </ul>
+      <div class="quiz-feedback" id="q1-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        A balanced dataset has roughly equal class proportions. 50/50 is perfectly balanced. All other options here have ratios of 10:1 or worse — heavily imbalanced.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 2 -->
+  <section class="section-card quiz-card" id="q2">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 2</div>
+        <div class="card-title">Majority Class in Spam Classification</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">For a <strong>Spam Classifier</strong>, which is the majority class?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Spam</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>Non-Spam</li>
+      </ul>
+      <div class="quiz-feedback" id="q2-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        In any inbox, the vast majority of emails are legitimate — spam is the rare minority class. A model that predicts "non-spam" for everything would still achieve very high accuracy, making accuracy useless here.
+      </div>
+    </div>
+  </section>
+
+  <!-- CHURN CASE STUDY -->
+  <section class="section-card" id="s-churn">
+    <div class="card-header">
+      <div class="card-icon">📱</div>
+      <div class="card-meta">
+        <div class="card-type">Case Study</div>
+        <div class="card-title">Case Study: Telecom Churn Prediction</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>A telecom company wants to predict which customers will switch to a competitor (<strong>churn</strong>). Predicting churners lets the company proactively offer them deals before they leave.</p>
+      <p>Dataset: 3,333 customers, 21 features, no nulls, no duplicates.</p>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Why Is This Imbalanced?</div>
+        Only a small fraction of customers churn at any given time — most stay. Churn samples are far fewer than non-churn, making this a naturally imbalanced problem.
+      </div>
+
+      <h3>Finding Kbest on Imbalanced Data</h3>
+      <pre><code>from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_val_scaled   = scaler.transform(X_val)
+X_test_scaled  = scaler.transform(X_test)
+
+error = []
+for i in range(1, 51):
+    knn = KNeighborsClassifier(n_neighbors=i, metric='euclidean')
+    knn.fit(X_train_scaled, y_train)
+    pred = knn.predict(X_val_scaled)
+    error.append(np.mean(pred != y_val))
+
+# Kbest = K with lowest validation error
+# Result: Kbest = 2</code></pre>
+
+      <pre><code>knn = KNeighborsClassifier(n_neighbors=2, metric='euclidean')
+knn.fit(X_train_scaled, y_train)
+print("Test Accuracy:", knn.score(X_test_scaled, y_test))  # 0.883
+print("Test F1-Score:", f1_score(y_test, knn.predict(X_test_scaled)))  # 0.473</code></pre>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Accuracy vs F1 Gap</div>
+        Accuracy = 88.3% sounds great. But F1-Score = 0.473 — terrible. The model is mostly predicting "not churn" and getting credit for it. This is the accuracy trap on imbalanced data.
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY NOT ACCURACY -->
+  <section class="section-card" id="s-why-acc">
+    <div class="card-header">
+      <div class="card-icon">🚫</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Why Accuracy Fails on Imbalanced Data</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>If 85.5% of the dataset is class 0 (non-churn), a model that always predicts 0 achieves <strong>85.5% accuracy without learning anything useful</strong>. It would still fail every single churn customer.</p>
+      <div class="callout-ask">
+        <div class="callout-label">⚠️ The Dumb Model Trap</div>
+        Predicting the majority class for every observation is the laziest possible model — yet it "performs" well by accuracy on imbalanced data. Accuracy is blind to how badly it fails on the minority class.
+      </div>
+      <p>The solution: use <strong>F1-Score, Precision, Recall, or ROC-AUC</strong> — metrics that require the model to actually identify minority class instances correctly. The choice depends on whether FP or FN is more costly for your use case.</p>
+    </div>
+  </section>
+
+  <!-- QUIZ 3 -->
+  <section class="section-card quiz-card" id="q3">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 3</div>
+        <div class="card-title">Preferred Metric for Imbalanced Data</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Which metric should be preferred for imbalanced data when giving equal importance to TP, FP, FN, and TN?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>F1-Score</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Accuracy</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Precision</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Recall</li>
+      </ul>
+      <div class="quiz-feedback" id="q3-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        F1-Score is the harmonic mean of Precision and Recall — it cares about both false positives and false negatives equally. Accuracy ignores imbalance. Precision focuses only on FP. Recall focuses only on FN.
+      </div>
+    </div>
+  </section>
+
+  <!-- HANDLING OVERVIEW -->
+  <section class="section-card" id="s-handling">
+    <div class="card-header">
+      <div class="card-icon">🔧</div>
+      <div class="card-meta">
+        <div class="card-type">Technique</div>
+        <div class="card-title">Handling Imbalanced Data — Four Approaches</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="methods-grid">
+        <div class="method-card">
+          <div class="mc-icon">⚖️</div>
+          <div class="mc-name">Weighted Loss</div>
+          <div class="mc-desc">Multiply the minority class's contribution to the loss function by a weight proportional to how underrepresented it is.</div>
+          <div class="mc-when">✅ Works on model parameters — no data change</div>
+        </div>
+        <div class="method-card">
+          <div class="mc-icon">🗑️</div>
+          <div class="mc-name">Undersampling</div>
+          <div class="mc-desc">Randomly remove majority class samples until classes are balanced. Simple, but throws away real information.</div>
+          <div class="mc-when">✅ Use only when n is enormous (1B+)</div>
+        </div>
+        <div class="method-card">
+          <div class="mc-icon">📋</div>
+          <div class="mc-name">Oversampling</div>
+          <div class="mc-desc">Duplicate minority class samples until classes are balanced. Preserves all data but repeats the same points.</div>
+          <div class="mc-when">✅ Better than undersampling; risk of overfitting</div>
+        </div>
+        <div class="method-card">
+          <div class="mc-icon">🧬</div>
+          <div class="mc-name">SMOTE</div>
+          <div class="mc-desc">Synthetically generate new minority class points between existing ones using KNN. Smarter than naive oversampling.</div>
+          <div class="mc-when">✅ Best general-purpose approach</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WEIGHTED LOSS -->
+  <section class="section-card" id="s-weighted">
+    <div class="card-header">
+      <div class="card-icon">⚖️</div>
+      <div class="card-meta">
+        <div class="card-type">Technique</div>
+        <div class="card-title">Weighted Loss</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>The Idea</h3>
+      <p>The loss function normally treats every data point equally. We can add a <strong>class weight</strong> <code>wᵢ</code> to each term:</p>
+      <div class="equation">Loss = Σ (log-lossᵢ × wᵢ)</div>
+      <p>The minority class gets a higher weight, so the optimizer penalizes getting those examples wrong more severely.</p>
+
+      <h3>Calculating Class Weights</h3>
+      <p>With 850 negative samples and 150 positive samples:</p>
+      <ul>
+        <li>Minority class (positive, y=1): w₁ = 850 / 150 ≈ <strong>6</strong></li>
+        <li>Majority class (negative, y=0): w₀ = <strong>1</strong></li>
+      </ul>
+      <p>Every positive example now contributes 6× as much to the loss — the model is forced to take it seriously.</p>
+
+      <h3>Code — Logistic Regression with Class Weights</h3>
+      <pre><code>from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import f1_score
+
+# Without weights: best validation F1 = 0.319
+# With weights:
+scaled_lr = make_pipeline(
+    StandardScaler(),
+    LogisticRegression(C=1/l_best, class_weight={0: 1, 1: 6})
+)
+scaled_lr.fit(X_train, y_train)
+print("Test F1:", f1_score(y_test, scaled_lr.predict(X_test)))</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Without weights → Validation F1: 0.319
+With weights    → Validation F1: 0.466
+Test F1 (weighted): 0.510</div>
+      </div>
+      <div class="callout-note">
+        <div class="callout-label">✅ Result</div>
+        Weighted loss improved test F1 from ~0.32 to 0.51 — a 60% improvement, with zero data modification. This works directly on the loss function during training.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 4 -->
+  <section class="section-card quiz-card" id="q4">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 4</div>
+        <div class="card-title">Calculating Class Weights</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">We have 1000 samples: <strong>200 positive (Y=1)</strong> and <strong>800 negative (Y=0)</strong>. What should the class weights (W₁, W₀) be?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>W₁ = 4, W₀ = 1</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>W₁ = 1, W₀ = 4</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>W₁ = 5, W₀ = 1.25</li>
+      </ul>
+      <div class="quiz-feedback" id="q4-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        The minority class (Y=1) gets weight = majority count / minority count = 800/200 = 4. The majority class (Y=0) gets weight = 1. This compensates for underrepresentation of positives in the loss.
+      </div>
+    </div>
+  </section>
+
+  <!-- UNDERSAMPLING -->
+  <section class="section-card" id="s-undersampling">
+    <div class="card-header">
+      <div class="card-icon">🗑️</div>
+      <div class="card-meta">
+        <div class="card-type">Technique</div>
+        <div class="card-title">Undersampling</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Randomly remove majority class samples until both classes have equal size.</p>
+
+      <pre><code>from imblearn.under_sampling import RandomUnderSampler
+
+undersampler = RandomUnderSampler()
+X_us, y_us = undersampler.fit_resample(X_train_scaled, y_train)
+
+# Before: 1718 non-churn, 281 churn
+# After:  281 non-churn, 281 churn</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Result</div>
+        <div class="output-block">Training F1: 0.780  |  Testing F1: 0.506</div>
+      </div>
+
+      <div class="callout-ask">
+        <div class="callout-label">⚠️ The Information Loss Problem</div>
+        Undersampling discards 1437 real training examples. The model never sees most of its available data — information that might help it learn better boundaries. This is why undersampling is only recommended when n is very large (hundreds of millions+), where data loss has negligible impact.
+      </div>
+    </div>
+  </section>
+
+  <!-- OVERSAMPLING -->
+  <section class="section-card" id="s-oversampling">
+    <div class="card-header">
+      <div class="card-icon">📋</div>
+      <div class="card-meta">
+        <div class="card-type">Technique</div>
+        <div class="card-title">Oversampling (Random)</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Duplicate minority class samples until both classes are equal — no data is discarded.</p>
+
+      <pre><code>from imblearn.over_sampling import RandomOverSampler
+
+oversampler = RandomOverSampler()
+X_os, y_os = oversampler.fit_resample(X_train_scaled, y_train)
+
+# Before: 1718 non-churn, 281 churn
+# After:  1718 non-churn, 1718 churn (duplicates)</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Result</div>
+        <div class="output-block">Training F1: 0.749  |  Testing F1: 0.505</div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 The Repetition Problem</div>
+        Oversampling preserves data but the model sees the same 281 churn examples repeated 6+ times. It learns nothing new about the minority class — just memorizes those exact points. This can cause overfitting to the specific minority examples that happen to be in the training set.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 5 -->
+  <section class="section-card quiz-card" id="q5">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 5</div>
+        <div class="card-title">Choosing the Right Sampling Strategy</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">A dataset has <strong>200 positive</strong> and <strong>100 negative</strong> class labels. We <strong>do not want to lose any data information</strong>. What should we do?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Oversample the positive class labels</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Undersample the negative class labels</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>Oversample the negative class labels</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Undersample the positive class labels</li>
+      </ul>
+      <div class="quiz-feedback" id="q5-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        The minority class is negative (100 samples). To balance without losing data, oversample the negative (minority) class to 200. Undersampling the majority would discard 100 positive examples.
+      </div>
+    </div>
+  </section>
+
+  <!-- SMOTE -->
+  <section class="section-card" id="s-smote">
+    <div class="card-header">
+      <div class="card-icon">🧬</div>
+      <div class="card-meta">
+        <div class="card-type">Technique</div>
+        <div class="card-title">SMOTE — Synthetic Minority Oversampling Technique</div>
+        <div class="card-duration">⏱ 10 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>SMOTE fixes oversampling's repetition problem by <strong>generating new synthetic minority points</strong> rather than copying existing ones — using KNN to guide where new points should appear.</p>
+
+      <h3>How SMOTE Works</h3>
+      <ol style="margin-left:20px; font-size:14.5px">
+        <li>Pick a random minority class point <strong>x₁</strong></li>
+        <li>Find its K nearest neighbors (within the minority class)</li>
+        <li>For each neighbor <strong>x₂</strong>: compute the distance d(x₁, x₂)</li>
+        <li>Pick a random scalar λ ∈ [0, 1]</li>
+        <li>Generate: <strong>x_new = x₁ + λ × d(x₁, x₂)</strong></li>
+        <li>Add x_new to the dataset as a new minority class point</li>
+        <li>Repeat for all K neighbors and for each minority point</li>
+      </ol>
+
+      <div class="smote-flow">
+        <div class="smote-step"><div class="smote-box">Pick minority point x₁</div><div class="smote-label">Start</div></div>
+        <div class="smote-arrow"></div>
+        <div class="smote-step"><div class="smote-box alt">Find K neighbors</div><div class="smote-label">KNN Search</div></div>
+        <div class="smote-arrow"></div>
+        <div class="smote-step"><div class="smote-box alt">Pick λ ∈ [0,1]</div><div class="smote-label">Random scalar</div></div>
+        <div class="smote-arrow"></div>
+        <div class="smote-step"><div class="smote-box alt">x_new = x₁ + λ·d</div><div class="smote-label">Interpolate</div></div>
+        <div class="smote-arrow"></div>
+        <div class="smote-step"><div class="smote-box out">New minority point</div><div class="smote-label">Output</div></div>
+      </div>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          Compare naive oversampling (copy-paste) vs SMOTE (interpolated new points):<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/smote-synthetic-point-generation/" target="_blank">SMOTE Synthetic Point Generation →</a>
+        </div>
+      </div>
+
+      <h3>Code</h3>
+      <pre><code>from imblearn.over_sampling import SMOTE
+from collections import Counter
+
+smt = SMOTE()
+X_sm, y_sm = smt.fit_resample(X_train, y_train)
+
+print('Resampled shape:', Counter(y_sm))
+# Counter({0: 1718, 1: 1718})  ← balanced, with synthetic points</code></pre>
+
+      <h3>SMOTE vs Weighted Loss for Logistic Regression</h3>
+      <table>
+        <tr><th>Method</th><th>Validation F1</th><th>Test F1</th><th>Note</th></tr>
+        <tr class="f1-row-bad"><td>No rebalancing</td><td>0.319</td><td>—</td><td>Model ignores minority class</td></tr>
+        <tr class="f1-row-ok"><td>SMOTE + LogReg</td><td>0.409</td><td>0.461</td><td>Improvement, but weighted loss beats it</td></tr>
+        <tr class="f1-row-good"><td>Weighted Loss</td><td>0.466</td><td>0.510</td><td>Best for Logistic Regression</td></tr>
+      </table>
+
+      <h3>SMOTE + KNN</h3>
+      <pre><code>X_sm_scaled = scaler.fit_transform(X_sm)
+
+# Find Kbest on SMOTE data → Kbest = 2
+knn = KNeighborsClassifier(n_neighbors=2, metric='euclidean')
+knn.fit(X_sm_scaled, y_sm)
+print("F1-Score:", f1_score(y_test, knn.predict(X_test_scaled)))</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">F1-Score: 0.5431  (improved from 0.473 without SMOTE)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 6 -->
+  <section class="section-card quiz-card" id="q6">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 6</div>
+        <div class="card-title">SMOTE Synthetic Points — How Many?</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">If <strong>k = 10</strong>, how many <strong>x_new</strong> datapoints will be created for a single minority point <strong>x₁</strong>?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>10</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>1</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>3</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>5</li>
+      </ul>
+      <div class="quiz-feedback" id="q6-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        For each minority point x₁, SMOTE loops from 1 to K — creating one synthetic point per neighbor. With K=10, exactly 10 new points are generated for x₁ (one interpolated toward each of the 10 nearest neighbors).
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTS COMPARISON -->
+  <section class="section-card" id="s-results">
+    <div class="card-header">
+      <div class="card-icon">📊</div>
+      <div class="card-meta">
+        <div class="card-type">Results</div>
+        <div class="card-title">Full Method Comparison — Churn Prediction</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <table>
+        <tr><th>Model</th><th>Rebalancing Method</th><th>Test F1</th><th>Test Accuracy</th></tr>
+        <tr class="f1-row-bad"><td>KNN (K=2)</td><td>None</td><td>0.473</td><td>88.3%</td></tr>
+        <tr class="f1-row-ok"><td>Logistic Regression</td><td>None</td><td>~0.32</td><td>—</td></tr>
+        <tr class="f1-row-ok"><td>Logistic Regression</td><td>Undersampling</td><td>0.506</td><td>—</td></tr>
+        <tr class="f1-row-ok"><td>Logistic Regression</td><td>Oversampling</td><td>0.505</td><td>—</td></tr>
+        <tr class="f1-row-good"><td>Logistic Regression</td><td>Weighted Loss</td><td>0.510</td><td>78%</td></tr>
+        <tr class="f1-row-ok"><td>Logistic Regression</td><td>SMOTE</td><td>0.461</td><td>71%</td></tr>
+        <tr class="f1-row-good"><td>KNN (K=2)</td><td>SMOTE</td><td>0.543</td><td>84%</td></tr>
+      </table>
+      <div class="callout-note">
+        <div class="callout-label">📌 Key Insight</div>
+        There's no universal winner. Weighted Loss works best for Logistic Regression. SMOTE works better for KNN. The right approach depends on both the algorithm and the dataset structure — always experiment and evaluate with F1, not accuracy.
+      </div>
+    </div>
+  </section>
+
+  <!-- DECISION TREES -->
+  <section class="section-card" id="s-dtree">
+    <div class="card-header">
+      <div class="card-icon">🌲</div>
+      <div class="card-meta">
+        <div class="card-type">Algorithm</div>
+        <div class="card-title">Decision Trees — Intuition</div>
+        <div class="card-duration">⏱ 7 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Why Not KNN or Logistic Regression?</h3>
+      <p>Consider attrition data with features Age and Overtime — the scatter plot shows a non-linear, non-separable pattern:</p>
+      <ul>
+        <li><strong>Logistic Regression:</strong> can't fit — it assumes a linear boundary</li>
+        <li><strong>KNN:</strong> can fit — but <em>cannot be productionized at scale</em>. At inference time it scans all training data. With millions of employees, this is far too slow.</li>
+      </ul>
+
+      <h3>A Better Approach: Axis-Parallel Splits</h3>
+      <p>Instead of comparing to all training points, what if we just asked a sequence of simple yes/no questions?</p>
+      <ul>
+        <li><em>Is Age &gt; 35?</em></li>
+        <li><em>Does the employee work Overtime?</em></li>
+      </ul>
+      <p>Each question splits the feature space into two regions along an axis. Recursively applying these splits creates <strong>homogenous rectangular regions</strong> — each region predominantly contains one class. Any new point just follows the same sequence of questions to reach its prediction.</p>
+
+      <h3>Anatomy of a Decision Tree</h3>
+      <div class="dt-terms">
+        <div class="dt-term">
+          <div class="dt-icon">🌱</div>
+          <div class="dt-name">Root Node</div>
+          <div class="dt-desc">The topmost node — contains the first split question, applied to the full dataset</div>
+        </div>
+        <div class="dt-term">
+          <div class="dt-icon">⚙️</div>
+          <div class="dt-name">Internal Node</div>
+          <div class="dt-desc">Any node between the root and leaves — applies a split condition to its subset</div>
+        </div>
+        <div class="dt-term">
+          <div class="dt-icon">🍃</div>
+          <div class="dt-name">Leaf Node</div>
+          <div class="dt-desc">Terminal node — no further splits. Returns the majority class of points that reach it</div>
+        </div>
+      </div>
+
+      <h3>Decision Tree vs KNN</h3>
+      <table>
+        <tr><th>Property</th><th>KNN</th><th>Decision Tree</th></tr>
+        <tr><td>Training phase</td><td>None (lazy)</td><td>Learns split conditions from data</td></tr>
+        <tr><td>Prediction</td><td>O(n·d) — scans all training data</td><td>O(depth) — follows one path in the tree</td></tr>
+        <tr><td>Interpretability</td><td>Low — "black box" distances</td><td>High — explicit if/else rules</td></tr>
+        <tr><td>Handles non-linear boundaries</td><td>Yes</td><td>Yes (axis-parallel)</td></tr>
+        <tr><td>Scalable to production</td><td>❌ Slow at inference</td><td>✅ Very fast at inference</td></tr>
+      </table>
+
+      <div class="callout-note">
+        <div class="callout-label">🔮 Coming Up Next</div>
+        In the next lecture we dive deep into <em>how</em> the tree chooses its splits — using <strong>Entropy</strong> and <strong>Information Gain</strong> to find the most informative questions to ask at each node.
+      </div>
+    </div>
+  </section>
+
+  <!-- WRAP UP -->
+  <section class="section-card" id="s-wrap">
+    <div class="card-header">
+      <div class="card-icon">✅</div>
+      <div class="card-meta">
+        <div class="card-type">Summary</div>
+        <div class="card-title">Wrapping Up</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="summary-grid">
+        <div class="summary-item">KNN handles multiclass via majority vote — no changes needed</div>
+        <div class="summary-item">Larger K = more robust to outliers (but risks underfitting)</div>
+        <div class="summary-item">KNN Imputation: fill missing values using K similar rows</div>
+        <div class="summary-item">Always MinMaxScale before KNNImputer</div>
+        <div class="summary-item">Validate imputation: means and histograms should match</div>
+        <div class="summary-item">Imbalance thresholds: 70/30 slight, 90/10 heavy, 95/5 extreme</div>
+        <div class="summary-item">Accuracy is useless on imbalanced data — use F1 or AUC</div>
+        <div class="summary-item">Weighted Loss: w₁ = majority_count / minority_count</div>
+        <div class="summary-item">Undersampling: discard majority — only for massive datasets</div>
+        <div class="summary-item">Oversampling: duplicate minority — no data loss but repeats</div>
+        <div class="summary-item">SMOTE: synthetic minority points via KNN interpolation</div>
+        <div class="summary-item">Decision Trees: axis-parallel splits → fast, interpretable, scalable</div>
+      </div>
+      <blockquote style="border-left:3px solid var(--magenta); padding:10px 16px; margin:20px 0 0; background:#FFF0F5; border-radius:0 8px 8px 0; font-family:'Lora',serif; font-style:italic; color:var(--mg-deep); font-size:14.5px;">
+        KNN is simple and powerful but slow at inference. Decision Trees solve that — they learn the decision rules once and apply them in O(depth) time, making them production-friendly for large datasets.
+      </blockquote>
+    </div>
+  </section>
+
+</main>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script>
+  document.querySelectorAll('.quiz-options').forEach(list => {
+    list.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const card = list.closest('.section-card');
+        if (card.dataset.answered) return;
+        card.dataset.answered = '1';
+        const isCorrect = opt.dataset.correct === 'true';
+        const feedback = list.closest('.card-body').querySelector('.quiz-feedback');
+        list.querySelectorAll('.quiz-option').forEach(o => { o.style.cursor = 'default'; });
+        if (isCorrect) {
+          opt.classList.add('selected-correct');
+          opt.querySelector('.quiz-circle').textContent = '✓';
+          feedback.textContent = '✅ Correct!';
+          feedback.className = 'quiz-feedback correct';
+        } else {
+          opt.classList.add('selected-wrong');
+          opt.querySelector('.quiz-circle').textContent = '✗';
+          feedback.textContent = '❌ Not quite — check the explanation below.';
+          feedback.className = 'quiz-feedback wrong';
+          list.querySelectorAll('.quiz-option[data-correct="true"]').forEach(o => {
+            o.classList.add('reveal-correct');
+            o.querySelector('.quiz-circle').textContent = '✓';
+          });
+        }
+      });
+    });
+  });
+
+  const sections    = document.querySelectorAll('.section-card');
+  const navItems    = document.querySelectorAll('.nav-item');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct  = document.getElementById('progress-pct');
+  const visited = new Set();
+
+  function onScroll() {
+    let current = '';
+    sections.forEach(sec => {
+      if (sec.getBoundingClientRect().top <= 120) { current = sec.id; visited.add(sec.id); }
+    });
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.target === current);
+      if (visited.has(item.dataset.target)) item.classList.add('visited');
+    });
+    const pct = Math.round((visited.size / sections.length) * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent  = pct + '%';
+    document.getElementById('back-top').classList.toggle('visible', window.scrollY > 400);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('active');
+  }
+  document.querySelectorAll('.nav-item a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth <= 768) toggleSidebar(); });
+  });
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/KNN-based-imputation-and-Decision-Trees-intro" target="_blank" rel="noopener">github.com/scaler-content/KNN-based-imputation-and-Decision-Trees-intro</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

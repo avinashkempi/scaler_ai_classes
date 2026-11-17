@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gaussian Mixture Models post read</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --paper:#f6f4e8;
+    --paper-deep:#ece7d3;
+    --card:#fbfaf3;
+    --ink:#262a1c;
+    --ink-soft:#565c45;
+    --olive-950:#20250f;
+    --olive-900:#2c3319;
+    --olive-800:#3a4322;
+    --olive-700:#4f5d2f;
+    --olive-600:#5f7238;
+    --olive-500:#78894c;
+    --olive-400:#93a066;
+    --olive-300:#aab887;
+    --olive-200:#d3d9bd;
+    --olive-100:#e6e9d8;
+    --gold:#b8842c;
+    --gold-soft:#e4c073;
+    --rose:#a3492f;
+    --radius-lg:20px;
+    --radius-md:14px;
+    --radius-sm:8px;
+    --shadow: 0 10px 30px rgba(32,37,15,0.14);
+    --shadow-sm: 0 4px 14px rgba(32,37,15,0.10);
+    --maxw: 780px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Source Sans 3', sans-serif;
+    font-size:17px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--gold-soft); color:var(--olive-950);}
+
+  h1,h2,h3,h4{
+    font-family:'Fraunces', serif;
+    color:var(--olive-950);
+    line-height:1.15;
+    margin:0 0 0.5em 0;
+    font-weight:600;
+  }
+  p{margin:0 0 1.1em 0;}
+  a{color:var(--olive-700);}
+  img{max-width:100%; display:block; border-radius:var(--radius-sm);}
+  code{
+    font-family:'IBM Plex Mono', monospace;
+    background:var(--olive-100);
+    padding:0.1em 0.4em;
+    border-radius:5px;
+    font-size:0.88em;
+    color:var(--olive-900);
+  }
+  .visually-hidden{
+    position:absolute; width:1px; height:1px; overflow:hidden;
+    clip:rect(0 0 0 0); white-space:nowrap;
+  }
+  a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible{
+    outline:3px solid var(--gold);
+    outline-offset:2px;
+    border-radius:4px;
+  }
+
+  /* ---------- Skip link ---------- */
+  .skip-link{
+    position:absolute; top:-60px; left:12px; background:var(--olive-900); color:var(--paper);
+    padding:10px 16px; border-radius:8px; z-index:200; transition:top .15s;
+  }
+  .skip-link:focus{top:12px;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:100;
+    background:rgba(44,51,25,0.96);
+    backdrop-filter:blur(6px);
+    color:var(--paper);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 22px;
+    border-bottom:1px solid rgba(230,233,216,0.15);
+  }
+  .topbar .brand{
+    font-family:'Fraunces', serif; font-weight:600; font-size:1.05rem; letter-spacing:0.01em;
+    display:flex; align-items:center; gap:10px;
+  }
+  .brand-mark{
+    width:22px;height:22px;flex:0 0 auto;
+  }
+  .nav-toggle{
+    display:none;
+    background:none; border:1px solid rgba(230,233,216,0.4); color:var(--paper);
+    border-radius:8px; padding:8px 12px; font-family:'Source Sans 3',sans-serif; font-size:0.9rem; cursor:pointer;
+  }
+  .progress-track{
+    position:fixed; top:0; left:0; height:3px; background:var(--gold);
+    z-index:110; width:0%; transition:width .1s linear;
+  }
+
+  /* ---------- Layout shell ---------- */
+  .shell{
+    display:grid;
+    grid-template-columns:250px minmax(0,1fr);
+    gap:0;
+    max-width:1180px;
+    margin:0 auto;
+  }
+  .toc{
+    padding:34px 18px 60px 22px;
+    position:sticky; top:58px; align-self:start;
+    height:calc(100vh - 58px);
+    overflow-y:auto;
+  }
+  .toc-label{
+    font-family:'IBM Plex Mono', monospace; font-size:0.72rem; letter-spacing:0.12em;
+    text-transform:uppercase; color:var(--olive-600); margin-bottom:14px; display:block;
+  }
+  .toc ol{list-style:none; margin:0; padding:0; border-left:1px solid var(--olive-200);}
+  .toc li{margin:0;}
+  .toc a{
+    display:block; text-decoration:none; color:var(--ink-soft);
+    padding:7px 0 7px 16px; font-size:0.87rem; border-left:2px solid transparent; margin-left:-1px;
+    transition:color .15s, border-color .15s;
+  }
+  .toc a:hover{color:var(--olive-800);}
+  .toc a.active{
+    color:var(--olive-900); font-weight:600; border-left-color:var(--gold);
+  }
+
+  main{min-width:0; padding-bottom:40px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    background:
+      radial-gradient(ellipse at 15% 20%, rgba(184,132,44,0.16), transparent 55%),
+      linear-gradient(160deg, var(--olive-950), var(--olive-800) 70%);
+    color:var(--paper);
+    padding:76px 44px 64px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero-eyebrow{
+    font-family:'IBM Plex Mono', monospace; text-transform:uppercase; letter-spacing:0.16em;
+    font-size:0.75rem; color:var(--gold-soft); margin-bottom:18px; display:flex; gap:10px; align-items:center;
+  }
+  .hero-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--gold-soft);}
+  .hero h1{
+    color:var(--paper); font-size:clamp(2.1rem, 5vw, 3.3rem); max-width:14ch; margin-bottom:0.3em;
+  }
+  .hero .subhead{
+    color:var(--olive-200); font-size:1.15rem; max-width:46ch; margin-bottom:1.6em; font-family:'Fraunces',serif; font-style:italic; font-weight:500;
+  }
+  .hero-brief{
+    background:rgba(246,244,232,0.06);
+    border:1px solid rgba(246,244,232,0.16);
+    border-radius:var(--radius-md);
+    padding:22px 24px;
+    max-width:640px;
+    backdrop-filter:blur(3px);
+  }
+  .hero-brief .role{
+    font-family:'IBM Plex Mono', monospace; font-size:0.78rem; color:var(--gold-soft);
+    text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px;
+  }
+  .hero-brief p{color:var(--olive-100); margin-bottom:0.8em; font-size:0.98rem;}
+  .hero-brief p:last-child{margin-bottom:0;}
+  .hero-quote{
+    border-left:3px solid var(--gold); padding-left:14px; font-style:italic; color:var(--paper);
+    font-family:'Fraunces', serif; font-size:1.02rem;
+  }
+  .hero-stats{
+    display:flex; gap:28px; margin-top:32px; flex-wrap:wrap;
+  }
+  .hero-stat b{
+    display:block; font-family:'Fraunces', serif; font-size:1.7rem; color:var(--gold-soft);
+  }
+  .hero-stat span{font-size:0.8rem; color:var(--olive-300); font-family:'IBM Plex Mono',monospace;}
+
+  /* ---------- Section shell ---------- */
+  section.chapter{
+    padding:56px 44px 8px;
+    border-bottom:1px solid var(--olive-100);
+    scroll-margin-top:70px;
+  }
+  section.chapter:last-of-type{border-bottom:none;}
+  .chapter-eyebrow{
+    display:flex; align-items:baseline; gap:10px; margin-bottom:10px;
+  }
+  .chapter-num{
+    font-family:'IBM Plex Mono', monospace; color:var(--gold); font-weight:600; font-size:0.85rem;
+    background:var(--olive-100); padding:3px 9px; border-radius:6px;
+  }
+  .chapter-kicker{
+    font-family:'IBM Plex Mono', monospace; text-transform:uppercase; letter-spacing:0.1em;
+    font-size:0.74rem; color:var(--olive-600);
+  }
+  .chapter h2{font-size:clamp(1.5rem, 3vw, 2.05rem); max-width:22ch;}
+  .lede{font-size:1.08rem; color:var(--ink-soft); max-width:62ch;}
+  .prose{max-width:var(--maxw);}
+  .prose h3{font-size:1.18rem; margin-top:1.6em;}
+  .prose ul, .prose ol{padding-left:1.3em; margin-bottom:1.1em;}
+  .prose li{margin-bottom:0.4em;}
+  .prose strong{color:var(--olive-900);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    background:var(--card);
+    border:1px solid var(--olive-200);
+    border-left:4px solid var(--olive-600);
+    border-radius:var(--radius-sm);
+    padding:18px 20px;
+    margin:22px 0;
+    max-width:var(--maxw);
+  }
+  .callout.gold{border-left-color:var(--gold); background:linear-gradient(0deg, var(--card), #fbf6ea);}
+  .callout p:last-child{margin-bottom:0;}
+  .callout .callout-label{
+    font-family:'IBM Plex Mono', monospace; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--olive-600); margin-bottom:6px; display:block;
+  }
+
+  .back-at-veloura{
+    background:var(--olive-900);
+    color:var(--olive-100);
+    border-radius:var(--radius-md);
+    padding:20px 24px;
+    margin:24px 0;
+    max-width:var(--maxw);
+  }
+  .back-at-veloura .callout-label{color:var(--gold-soft);}
+  .back-at-veloura p{margin-bottom:0; color:var(--olive-100);}
+  .back-at-veloura p em{color:var(--gold-soft); font-style:italic;}
+
+  /* ---------- Figures ---------- */
+  figure.viz{
+    margin:30px 0; max-width:var(--maxw);
+    background:var(--card); border:1px solid var(--olive-200); border-radius:var(--radius-md);
+    padding:16px; box-shadow:var(--shadow-sm);
+  }
+  figure.viz img{border-radius:8px; border:1px solid var(--olive-100);}
+  figure.viz figcaption{
+    font-size:0.88rem; color:var(--ink-soft); padding-top:12px; line-height:1.5;
+  }
+  figure.viz figcaption b{color:var(--olive-800);}
+  .viz-wide{max-width:840px;}
+
+  /* ---------- Formula block ---------- */
+  .formula{
+    font-family:'IBM Plex Mono', monospace;
+    background:var(--olive-950);
+    color:var(--olive-100);
+    padding:18px 22px;
+    border-radius:var(--radius-sm);
+    font-size:1.02rem;
+    overflow-x:auto;
+    max-width:var(--maxw);
+    margin:18px 0;
+  }
+  .formula .accent{color:var(--gold-soft);}
+
+  /* ---------- Interactive panels ---------- */
+  .panel{
+    background:var(--card);
+    border:1px solid var(--olive-200);
+    border-radius:var(--radius-lg);
+    padding:26px;
+    margin:28px 0;
+    max-width:840px;
+    box-shadow:var(--shadow-sm);
+  }
+  .panel-head{margin-bottom:14px;}
+  .panel-head .tag{
+    font-family:'IBM Plex Mono', monospace; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em;
+    color:var(--gold); background:var(--olive-950); display:inline-block; padding:4px 10px; border-radius:20px; margin-bottom:10px;
+  }
+  .panel-head h4{font-size:1.15rem; margin-bottom:4px;}
+  .panel-head p{color:var(--ink-soft); font-size:0.94rem; margin-bottom:0;}
+
+  .control-row{display:flex; flex-wrap:wrap; gap:22px; margin:16px 0;}
+  .control{flex:1 1 200px; min-width:150px;}
+  .control label{
+    display:flex; justify-content:space-between; font-family:'IBM Plex Mono', monospace;
+    font-size:0.78rem; color:var(--olive-700); margin-bottom:6px;
+  }
+  .control label .val{color:var(--gold); font-weight:600;}
+  input[type=range]{
+    width:100%; -webkit-appearance:none; height:6px; border-radius:4px; background:var(--olive-200); outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--olive-700);
+    border:3px solid var(--paper); box-shadow:0 0 0 1px var(--olive-700); cursor:pointer; margin-top:-6px;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px; height:18px; border-radius:50%; background:var(--olive-700); border:3px solid var(--paper);
+    box-shadow:0 0 0 1px var(--olive-700); cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-runnable-track{height:6px; border-radius:4px;}
+
+  .viz-canvas-wrap{
+    background:var(--paper); border-radius:var(--radius-sm); border:1px solid var(--olive-200);
+    padding:10px; margin-top:14px;
+  }
+  svg.demo-svg{width:100%; height:auto; display:block;}
+  .demo-readout{
+    font-family:'IBM Plex Mono', monospace; font-size:0.85rem; color:var(--ink-soft); margin-top:12px;
+    display:flex; gap:18px; flex-wrap:wrap;
+  }
+  .demo-readout span b{color:var(--olive-800);}
+
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;}
+  .chip-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:0.78rem; background:var(--olive-100); color:var(--olive-800);
+    border:1px solid var(--olive-300); border-radius:20px; padding:6px 14px; cursor:pointer; transition:.15s;
+  }
+  .chip-btn:hover{background:var(--olive-300); color:var(--olive-950);}
+  .chip-btn.active{background:var(--olive-700); color:var(--paper); border-color:var(--olive-700);}
+
+  /* ---------- Steps / EM explorer ---------- */
+  .step-explorer{max-width:840px;}
+  .step-nav{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;}
+  .step-dot{
+    display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono',monospace; font-size:0.8rem;
+    background:var(--olive-100); border:1px solid var(--olive-200); border-radius:24px; padding:7px 14px 7px 8px;
+    cursor:pointer; color:var(--ink-soft);
+  }
+  .step-dot .num{
+    width:20px; height:20px; border-radius:50%; background:var(--olive-300); color:var(--olive-950);
+    display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700;
+  }
+  .step-dot.active{background:var(--olive-800); color:var(--paper); border-color:var(--olive-800);}
+  .step-dot.active .num{background:var(--gold); color:var(--olive-950);}
+  .step-panel{display:none; animation:fadein .25s ease;}
+  .step-panel.active{display:block;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+  .step-panel h4{font-size:1.1rem; margin-bottom:8px;}
+
+  /* ---------- External visualizer embed ---------- */
+  .live-viz{
+    border:1px solid var(--olive-300); border-radius:var(--radius-md); overflow:hidden;
+    margin:18px 0; background:var(--paper-deep);
+  }
+  .live-viz .live-viz-bar{
+    display:flex; justify-content:space-between; align-items:center; padding:10px 16px;
+    background:var(--olive-900); color:var(--olive-100); font-family:'IBM Plex Mono',monospace; font-size:0.78rem;
+  }
+  .live-viz .live-viz-bar a{color:var(--gold-soft); text-decoration:none;}
+  .live-viz iframe{width:100%; height:480px; border:none; display:block; background:#fff;}
+
+  /* ---------- Quiz ---------- */
+  .quiz-card{
+    background:linear-gradient(180deg, var(--olive-950), var(--olive-900));
+    color:var(--olive-100); border-radius:var(--radius-lg); padding:28px; margin:32px 0; max-width:840px;
+    box-shadow:var(--shadow);
+  }
+  .quiz-card .tag{
+    font-family:'IBM Plex Mono', monospace; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em;
+    color:var(--olive-950); background:var(--gold-soft); display:inline-block; padding:4px 10px; border-radius:20px; margin-bottom:14px;
+  }
+  .quiz-card h4{color:var(--paper); font-size:1.2rem; margin-bottom:18px;}
+  .quiz-choices{list-style:none; margin:0 0 16px 0; padding:0; display:flex; flex-direction:column; gap:10px;}
+  .quiz-choice{
+    display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border-radius:10px;
+    background:rgba(246,244,232,0.06); border:1px solid rgba(246,244,232,0.16); cursor:pointer; transition:.15s;
+  }
+  .quiz-choice:hover{background:rgba(246,244,232,0.12);}
+  .quiz-choice input{margin-top:3px;}
+  .quiz-choice.correct{background:rgba(120,137,76,0.35); border-color:var(--olive-400);}
+  .quiz-choice.incorrect{background:rgba(163,73,47,0.32); border-color:var(--rose);}
+  .quiz-actions{display:flex; align-items:center; gap:14px;}
+  .quiz-submit{
+    font-family:'IBM Plex Mono', monospace; background:var(--gold); color:var(--olive-950); border:none;
+    padding:10px 20px; border-radius:24px; font-weight:600; cursor:pointer; font-size:0.85rem;
+  }
+  .quiz-submit:disabled{opacity:0.5; cursor:default;}
+  .quiz-feedback{font-size:0.9rem; font-family:'IBM Plex Mono', monospace;}
+  .quiz-feedback.ok{color:var(--olive-300);}
+  .quiz-feedback.no{color:#e2a78f;}
+  .quiz-explain{
+    margin-top:16px; padding-top:16px; border-top:1px solid rgba(246,244,232,0.18);
+    font-size:0.94rem; color:var(--olive-200); display:none;
+  }
+  .quiz-explain.show{display:block; animation:fadein .3s ease;}
+
+  /* ---------- Tables ---------- */
+  table.data-table{
+    border-collapse:collapse; width:100%; max-width:var(--maxw); margin:20px 0; font-size:0.92rem;
+    background:var(--card); border-radius:var(--radius-sm); overflow:hidden; box-shadow:var(--shadow-sm);
+  }
+  table.data-table th, table.data-table td{
+    text-align:left; padding:10px 14px; border-bottom:1px solid var(--olive-100);
+  }
+  table.data-table thead th{
+    background:var(--olive-900); color:var(--olive-100); font-family:'IBM Plex Mono',monospace; font-weight:500; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.04em;
+  }
+  table.data-table tbody tr:last-child td{border-bottom:none;}
+  table.data-table td.mono, table.data-table th.mono{font-family:'IBM Plex Mono',monospace;}
+
+  /* ---------- Comparison tabs ---------- */
+  .tabs{max-width:840px; margin:26px 0;}
+  .tab-bar{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;}
+  .tab-btn{
+    font-family:'Fraunces', serif; font-weight:600; font-size:0.98rem; background:var(--olive-100);
+    color:var(--olive-800); border:1px solid var(--olive-200); padding:9px 20px; border-radius:24px; cursor:pointer;
+  }
+  .tab-btn.active{background:var(--olive-800); color:var(--paper); border-color:var(--olive-800);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block; animation:fadein .25s ease;}
+
+  /* ---------- Feature cards / grids ---------- */
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:18px; max-width:840px; margin:24px 0;}
+  .feature-card{
+    background:var(--card); border:1px solid var(--olive-200); border-radius:var(--radius-md);
+    padding:18px 20px;
+  }
+  .feature-card h5{
+    font-family:'Fraunces', serif; font-size:1.02rem; color:var(--olive-900); margin:0 0 8px 0;
+  }
+  .feature-card p{font-size:0.92rem; color:var(--ink-soft); margin:0;}
+
+  .stat-cards{display:flex; gap:16px; flex-wrap:wrap; max-width:840px; margin:22px 0;}
+  .stat-card{
+    flex:1 1 150px; background:var(--olive-900); color:var(--paper); border-radius:var(--radius-md); padding:18px 20px;
+  }
+  .stat-card b{font-family:'Fraunces',serif; font-size:1.6rem; display:block; color:var(--gold-soft);}
+  .stat-card span{font-size:0.8rem; color:var(--olive-300); font-family:'IBM Plex Mono',monospace;}
+
+  /* customer probability cards */
+  .customer-card{
+    background:var(--card); border:1px solid var(--olive-200); border-radius:var(--radius-md);
+    padding:18px 20px; margin-bottom:16px;
+  }
+  .customer-card h5{font-family:'IBM Plex Mono',monospace; color:var(--olive-800); font-size:0.9rem; margin:0 0 10px 0;}
+  .prob-bar-row{display:flex; align-items:center; gap:10px; margin-bottom:8px; font-size:0.85rem;}
+  .prob-bar-row .seg-label{width:120px; flex:0 0 auto; font-family:'IBM Plex Mono',monospace; color:var(--ink-soft);}
+  .prob-bar-track{flex:1; height:10px; background:var(--olive-100); border-radius:6px; overflow:hidden;}
+  .prob-bar-fill{height:100%; background:linear-gradient(90deg, var(--olive-500), var(--olive-700));}
+  .prob-bar-val{width:44px; text-align:right; font-family:'IBM Plex Mono',monospace; color:var(--olive-800);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{
+    background:var(--olive-950);
+    color:var(--olive-100);
+    padding:60px 44px;
+    margin-top:24px;
+  }
+  .takeaways h2{color:var(--paper);}
+  .takeaway-list{list-style:none; margin:24px 0 0 0; padding:0; max-width:760px; display:flex; flex-direction:column; gap:16px;}
+  .takeaway-list li{
+    display:flex; gap:14px; align-items:flex-start; padding:16px 18px; background:rgba(246,244,232,0.05);
+    border-radius:var(--radius-md); border:1px solid rgba(246,244,232,0.12);
+  }
+  .takeaway-list .leaf{
+    flex:0 0 auto; width:26px; height:26px; color:var(--gold-soft);
+  }
+  .takeaway-list b{color:var(--gold-soft);}
+  .teaser{
+    margin-top:28px; padding:18px 22px; border-left:3px solid var(--gold); font-family:'Fraunces',serif;
+    font-style:italic; color:var(--olive-200); max-width:760px;
+  }
+
+  footer{
+    background:var(--olive-900); color:var(--olive-300); text-align:center; padding:26px 20px; font-size:0.85rem;
+    font-family:'IBM Plex Mono', monospace; letter-spacing:0.02em;
+  }
+  footer b{color:var(--paper); font-family:'Fraunces',serif; font-style:italic;}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 940px){
+    .shell{grid-template-columns:1fr;}
+    .toc{
+      position:fixed; top:57px; left:0; right:0; height:auto; max-height:0; overflow:hidden;
+      background:var(--olive-950); z-index:99; padding:0 22px; transition:max-height .25s ease, padding .25s ease;
+      border-bottom:1px solid rgba(246,244,232,0.1);
+    }
+    .toc.open{max-height:70vh; overflow-y:auto; padding:20px 22px 26px;}
+    .toc-label{color:var(--olive-300);}
+    .toc ol{border-left-color:rgba(246,244,232,0.15);}
+    .toc a{color:var(--olive-200);}
+    .toc a.active{color:var(--paper);}
+    .nav-toggle{display:inline-block;}
+    .grid-2{grid-template-columns:1fr;}
+    section.chapter{padding:44px 22px 6px;}
+    .hero{padding:56px 22px 46px;}
+    .takeaways{padding:46px 22px;}
+    .live-viz iframe{height:420px;}
+  }
+  @media (max-width: 520px){
+    body{font-size:16px;}
+    .hero h1{font-size:1.8rem;}
+    .prob-bar-row .seg-label{width:84px; font-size:0.72rem;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Clustering · Gaussian mixture models with EM</span><span class="pn"><a href="../DBSCAN/" title="Clustering · DBSCAN density-based clustering">← Prev</a><a href="../Principal-Component-Analysis/" title="Dimensionality reduction · PCA for a wall-screen view">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a href="#main-content" class="skip-link">Skip to content</a>
+<div class="progress-track" id="progressTrack"></div>
+
+<div class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 21C12 21 4 16.5 4 10.2C4 6.5 6.7 4 10 4C11.3 4 12 5 12 5C12 5 12.7 4 14 4C17.3 4 20 6.5 20 10.2C20 16.5 12 21 12 21Z" fill="#e4c073"/>
+    </svg>
+    Gaussian Mixture Models post read
+  </div>
+  <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="tocNav">Contents</button>
+</div>
+
+<div class="shell">
+  <nav class="toc" id="tocNav" aria-label="Table of contents">
+    <span class="toc-label">On this page</span>
+    <ol id="tocList">
+      <li><a href="#hero">Start</a></li>
+      <li><a href="#s1">1 · The recap</a></li>
+      <li><a href="#s2">2 · Where hierarchical breaks</a></li>
+      <li><a href="#s3">3 · Soft clustering</a></li>
+      <li><a href="#s4">4 · Gaussians in 1D</a></li>
+      <li><a href="#s5">5 · Gaussians in 2D</a></li>
+      <li><a href="#s6">6 · GMM intuition</a></li>
+      <li><a href="#s7">7 · Expectation–Maximization</a></li>
+      <li><a href="#s8">8 · Segmenting Veloura</a></li>
+      <li><a href="#s9">9 · GMM vs KMeans</a></li>
+      <li><a href="#bonus">Bonus · Taking it live</a></li>
+      <li><a href="#wrap">Key takeaways</a></li>
+    </ol>
+  </nav>
+
+  <main id="main-content">
+
+    <!-- ============ HERO ============ -->
+    <header class="hero" id="hero">
+      <div class="hero-eyebrow"><span class="dot"></span> Unsupervised learning · Clustering</div>
+      <h1>Gaussian Mixture Models</h1>
+      <p class="subhead">Teaching a clustering algorithm to say "maybe."</p>
+      <div class="hero-brief">
+        <div class="role">The brief — Veloura, Growth &amp; Marketing Analytics</div>
+        <p class="hero-quote">"We have ~4–5 years of customer purchase data across ~40,000 customers, 12 behavioral features. We want to stop blasting the same discount email to everyone — segment customers so we can personalize campaigns."</p>
+        <p>You're the analyst on the Growth/Marketing Analytics team at <strong style="color:var(--paper)">Veloura</strong>, a mid-size online fashion &amp; lifestyle retailer. Last time, you reached for <strong style="color:var(--paper)">Hierarchical Clustering</strong> — the tool you already knew. This is where it breaks, and what you reach for instead.</p>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><b>~40,000</b><span>customers to segment</span></div>
+        <div class="hero-stat"><b>12</b><span>behavioral features</span></div>
+        <div class="hero-stat"><b>1</b><span>algorithm that says "maybe"</span></div>
+      </div>
+    </header>
+
+    <!-- ============ SECTION 1 ============ -->
+    <section class="chapter" id="s1">
+      <div class="chapter-eyebrow"><span class="chapter-num">01</span><span class="chapter-kicker">Story setup</span></div>
+      <h2>Recap: Hierarchical Clustering, and where it left off</h2>
+      <p class="lede">Marketing wants to stop emailing every one of Veloura's ~40,000 customers the same 20%-off code. Last session's tool was Hierarchical Clustering — it doesn't need a pre-picked number of clusters, and it gives a dendrogram to explore structure at different granularities.</p>
+      <div class="prose">
+        <h3>Quick recap</h3>
+        <ul>
+          <li><strong>Agglomerative</strong> hierarchical clustering starts with every customer as their own cluster, and repeatedly merges the two closest clusters until everything is one cluster.</li>
+          <li>A <strong>dendrogram</strong> records the order and distance of every merge — cutting it at a given height gives a specific number of clusters.</li>
+          <li>No need to decide <code>k</code> up front — that decision comes after looking at the dendrogram.</li>
+        </ul>
+
+        <figure class="viz viz-wide">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/005/original/Screenshot_2026-08-11_125811.png?1786451301" alt="Dendrogram of 60 sampled Veloura customers using Ward linkage, with two dashed horizontal cut lines marked Cut A and Cut B producing different numbers of segments.">
+          <figcaption><b>Dendrogram, 60 sampled Veloura customers (Ward linkage).</b> Different horizontal cuts of the same tree give different numbers of segments — the flexibility that made Hierarchical Clustering attractive to start with.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 2 ============ -->
+    <section class="chapter" id="s2">
+      <div class="chapter-eyebrow"><span class="chapter-num">02</span><span class="chapter-kicker">The breaking point</span></div>
+      <h2>Where Hierarchical Clustering breaks for Veloura</h2>
+      <p class="lede">That flexibility looked great on 60 customers. Veloura has ~40,000. Two problems show up fast.</p>
+
+      <div class="prose">
+        <h3>Problem 1 — Scale</h3>
+        <p>Hierarchical clustering has to track distances between every pair of clusters as it merges. On 40,000 customers, that's on the order of <strong>~800 million pairwise distances</strong> just to start.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="tag">Recreated from notebook output</span>
+          <h4>Runtime blow-up as the customer count grows</h4>
+          <p>Actual fit times for Agglomerative Clustering as <code>n</code> increases — hover a point for its value.</p>
+        </div>
+        <div class="viz-canvas-wrap">
+          <svg class="demo-svg" id="runtimeChart" viewBox="0 0 640 320" role="img" aria-label="Line chart of hierarchical clustering fit time in seconds versus number of customers, rising from 0.003 seconds at 200 customers to 1.955 seconds at 6000 customers."></svg>
+        </div>
+        <p style="font-size:0.85rem; color:var(--ink-soft); margin-top:10px; margin-bottom:0;">At Veloura's real scale (~40,000 customers) this curve keeps climbing — both compute time <em>and</em> the memory needed to hold the full distance matrix.</p>
+      </div>
+
+      <div class="prose">
+        <h3>Problem 2 — Rigid, hard-boundary assignment</h3>
+        <p>Imagine a customer who spends a lot <em>and</em> always waits for a discount code. They sit right at the boundary between two segments. Hierarchical clustering still has to drop them fully into exactly one branch — there's no way to say "this customer is kind of both."</p>
+        <p>Two real-looking Veloura behaviors overlap in feature space: <strong>"weekend browsers"</strong> (moderate spend, come back often just to browse) and <strong>"deal hunters"</strong> (lower spend, high frequency, but only when there's a discount).</p>
+
+        <figure class="viz viz-wide">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/007/original/Screenshot_2026-08-11_125851.png?1786451390" alt="Two scatter plots side by side. Left: reality, weekend browsers and deal hunters shown as two overlapping colored clouds of points. Right: Hierarchical clustering's hard assignment, drawing one line straight through the overlap and forcing every customer into exactly one segment.">
+          <figcaption><b>Reality vs. forced assignment.</b> Notice the customers sitting in the overlap zone — Hierarchical Clustering draws a hard line straight through them. Whichever side they land on, the model gives no way to express "this customer resembles both segments."</figcaption>
+        </figure>
+
+        <h3>The core idea</h3>
+        <p><strong>Hard clustering</strong>: every point gets assigned to exactly one cluster, no matter how ambiguous its location is. Hierarchical Clustering and KMeans are both hard clustering methods — the assignment step gives a single, final label with no notion of "maybe." That rigidity, combined with the scale problem, is exactly the gap the rest of this article closes.</p>
+      </div>
+
+      <div class="quiz-card" data-quiz>
+        <span class="tag">Check yourself · Q1</span>
+        <h4>A Veloura customer spends a lot <em>and</em> always waits for discount codes. Under a hard clustering method like Hierarchical Clustering or K-Means, how would this customer be treated?</h4>
+        <ul class="quiz-choices" data-choices>
+          <li class="quiz-choice"><input type="radio" name="q1" id="q1a"><label for="q1a">Split proportionally across both relevant clusters.</label></li>
+          <li class="quiz-choice" data-correct="true"><input type="radio" name="q1" id="q1b"><label for="q1b">Forced into exactly one cluster, even though they resemble both.</label></li>
+          <li class="quiz-choice"><input type="radio" name="q1" id="q1c"><label for="q1c">Automatically flagged as noise.</label></li>
+          <li class="quiz-choice"><input type="radio" name="q1" id="q1d"><label for="q1d">Ignored during clustering.</label></li>
+        </ul>
+        <div class="quiz-actions">
+          <button class="quiz-submit" data-submit>Check answer</button>
+          <span class="quiz-feedback" data-feedback></span>
+        </div>
+        <div class="quiz-explain" data-explain>Hard clustering assigns every point to a single nearest cluster; there's no mechanism to express partial membership — which is exactly the gap GMM is built to close.</div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 3 ============ -->
+    <section class="chapter" id="s3">
+      <div class="chapter-eyebrow"><span class="chapter-num">03</span><span class="chapter-kicker">The missing idea</span></div>
+      <h2>Soft clustering</h2>
+      <div class="prose">
+        <p>Remember the customer from Section 2 who spends a lot and waits for discounts? Here's the fix: instead of forcing them into one bucket, give every customer a <strong>probability</strong> of belonging to each segment.</p>
+      </div>
+      <div class="grid-2">
+        <div class="feature-card">
+          <h5>High spender</h5>
+          <p style="font-size:1.6rem; font-family:'Fraunces',serif; color:var(--olive-700); margin-bottom:4px;">60%</p>
+          <p>Likelihood of belonging to this segment.</p>
+        </div>
+        <div class="feature-card">
+          <h5>Deal hunter</h5>
+          <p style="font-size:1.6rem; font-family:'Fraunces',serif; color:var(--olive-700); margin-bottom:4px;">40%</p>
+          <p>Likelihood of belonging to this segment.</p>
+        </div>
+      </div>
+      <div class="prose">
+        <p>That's <strong>soft clustering</strong>: every point gets a <em>distribution</em> over clusters instead of a single hard label. So — how do we actually produce these probabilities in a principled way? That's where the Gaussian distribution comes in.</p>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 4 ============ -->
+    <section class="chapter" id="s4">
+      <div class="chapter-eyebrow"><span class="chapter-num">04</span><span class="chapter-kicker">Building block</span></div>
+      <h2>Gaussian distributions — 1D</h2>
+      <div class="prose">
+        <p><strong>Why a Gaussian, specifically?</strong> Most natural, continuous behavioral metrics — like a customer's average order value — cluster around some typical value and taper off symmetrically on either side. Most customers spend "around normal," fewer spend way more or way less. That empirical shape is a bell curve: the Gaussian (Normal) distribution.</p>
+        <p>Key properties: <strong>mean = median = mode</strong>, and it's symmetric around the mean.</p>
+
+        <figure class="viz viz-wide">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/008/original/Screenshot_2026-08-11_125902.png?1786451426" alt="A bell curve Gaussian distribution with mean 90 and standard deviation 25. A dashed vertical line marks the mean, and a red marker shows a specific customer at an average order value of 130, with a line dropping to the curve's height at that point.">
+          <figcaption><b>Likelihood of a point</b> = the height of the curve at that x-value. For a customer with average order value = 130 under this Gaussian, the likelihood is 0.00766 — that number is the formula below, evaluated at x = 130.</figcaption>
+        </figure>
+
+        <div class="formula">f(x | μ, σ) = <span class="accent">(1 / σ√2π)</span> · e <sup>−(x−μ)² / 2σ²</sup></div>
+        <ul>
+          <li><em>μ</em> (mean) — where the peak sits</li>
+          <li><em>σ</em> (standard deviation) — how spread out the curve is</li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="tag">Interactive</span>
+          <h4>Drag μ and σ yourself</h4>
+          <p>Live re-creation of the notebook's slider widget — moving μ shifts the peak; moving σ changes the spread.</p>
+        </div>
+        <div class="control-row">
+          <div class="control">
+            <label for="muSlider">μ (mean average order value) <span class="val" id="muVal">90</span></label>
+            <input type="range" id="muSlider" min="0" max="200" step="5" value="90">
+          </div>
+          <div class="control">
+            <label for="sigmaSlider">σ (spread) <span class="val" id="sigmaVal">25</span></label>
+            <input type="range" id="sigmaSlider" min="5" max="60" step="1" value="25">
+          </div>
+        </div>
+        <div class="viz-canvas-wrap">
+          <svg class="demo-svg" id="gaussian1d" viewBox="0 0 640 260" role="img" aria-label="1D Gaussian bell curve that redraws as mu and sigma sliders change"></svg>
+        </div>
+        <div class="demo-readout" id="gaussianReadout"></div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 5 ============ -->
+    <section class="chapter" id="s5">
+      <div class="chapter-eyebrow"><span class="chapter-num">05</span><span class="chapter-kicker">Building block, continued</span></div>
+      <h2>Gaussian distributions — 2D</h2>
+      <div class="prose">
+        <p>Veloura customers aren't described by one number — spend, frequency, recency, and more, all at once. So we need the multivariate version of the Gaussian: instead of a curve, a <strong>surface</strong> over a 2D plane (say, "avg order value" × "visit frequency").</p>
+
+        <figure class="viz viz-wide">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/011/original/Screenshot_2026-08-11_125950.png?1786451550" alt="Left: a 3D bell-shaped surface plot representing the bivariate Gaussian probability density over average order value and visit frequency. Right: a top-down contour plot of the same surface, showing concentric rings around the peak.">
+          <figcaption><b>Left:</b> the bivariate Gaussian as a 3D probability surface — the peak is the most likely (AOV, frequency) combination, and probability density falls off in any direction away from center. <b>Right:</b> the same surface viewed from above as a contour plot — every point on the same contour ring sits at the same height on the surface, i.e. the same likelihood, even though the (AOV, frequency) combinations differ.</figcaption>
+        </figure>
+
+        <h3>Why does the ellipse tilt for real customers?</h3>
+        <p>With just a mean and variance per axis, we only get <strong>axis-aligned</strong> ellipses — that assumes spend and frequency are independent. In reality they're often <strong>correlated</strong>: deal hunters tend to have low spend and high frequency together. That correlation is exactly what <strong>covariance</strong> captures — the extra parameter that lets the ellipse rotate to match how two features actually move together.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="tag">Interactive · Signature</span>
+          <h4>Weave the correlation in</h4>
+          <p>Drag the correlation slider and watch the same two Gaussians rotate and stretch — this is the geometry that lets GMM tell "weekend browsers" apart from "deal hunters."</p>
+        </div>
+        <div class="control-row">
+          <div class="control">
+            <label for="corrSlider">Correlation between spend &amp; frequency <span class="val" id="corrVal">0.00</span></label>
+            <input type="range" id="corrSlider" min="-90" max="90" step="1" value="0">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="chip-btn" data-corr-preset="0">No correlation</button>
+          <button class="chip-btn" data-corr-preset="60">Positive (spend ↑ freq ↑)</button>
+          <button class="chip-btn" data-corr-preset="-60">Negative — deal hunters</button>
+        </div>
+        <div class="viz-canvas-wrap">
+          <svg class="demo-svg" id="ellipseDemo" viewBox="0 0 640 320" role="img" aria-label="Contour ellipse of a bivariate Gaussian that tilts as the correlation slider changes"></svg>
+        </div>
+        <div class="demo-readout" id="ellipseReadout"></div>
+      </div>
+
+      <div class="prose">
+        <ul>
+          <li><strong>No correlation:</strong> contours are axis-aligned — average order value and visit frequency are independent.</li>
+          <li><strong>Positive correlation:</strong> contours tilt upward — customers who spend more also tend to visit more frequently.</li>
+          <li><strong>Negative correlation:</strong> contours tilt downward — customers who spend more may visit less often (deal-hunter pattern).</li>
+          <li>The amount and direction of tilt is controlled by the covariance (correlation) term in the covariance matrix. Modeling this lets a Gaussian capture real customer behavior instead of assuming every feature varies independently.</li>
+        </ul>
+      </div>
+
+      <div class="quiz-card" data-quiz>
+        <span class="tag">Check yourself · Q2</span>
+        <h4>In a 2D Gaussian, why do all points on the same contour ring have the same likelihood?</h4>
+        <ul class="quiz-choices" data-choices>
+          <li class="quiz-choice"><input type="radio" name="q2" id="q2a"><label for="q2a">They have the same x-coordinate.</label></li>
+          <li class="quiz-choice"><input type="radio" name="q2" id="q2b"><label for="q2b">They are equidistant from the origin.</label></li>
+          <li class="quiz-choice" data-correct="true"><input type="radio" name="q2" id="q2c"><label for="q2c">They lie at the same "height" on the probability surface.</label></li>
+          <li class="quiz-choice"><input type="radio" name="q2" id="q2d"><label for="q2d">They belong to the same cluster by definition.</label></li>
+        </ul>
+        <div class="quiz-actions">
+          <button class="quiz-submit" data-submit>Check answer</button>
+          <span class="quiz-feedback" data-feedback></span>
+        </div>
+        <div class="quiz-explain" data-explain>A contour ring is a horizontal slice through the 3D probability surface, so by construction every point on it has identical height (likelihood) — the ring is defined by constant probability density, not by geometry alone.</div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 6 ============ -->
+    <section class="chapter" id="s6">
+      <div class="chapter-eyebrow"><span class="chapter-num">06</span><span class="chapter-kicker">Putting it together</span></div>
+      <h2>Gaussian Mixture Model — intuition</h2>
+
+      <div class="back-at-veloura">
+        <span class="callout-label">Back at Veloura</span>
+        <p>Remember "weekend browsers" vs "deal hunters" overlapping in Section 2? Here's the fix: instead of fitting <em>one</em> Gaussian to everything, fit <em>multiple</em> Gaussians — one per segment — and let every customer get a likelihood score under each Gaussian.</p>
+      </div>
+
+      <div class="prose">
+        <p><strong>The core idea, in one line:</strong> the more likely a point is under a given Gaussian, the more it belongs to that segment. That's the intuitive definition — Expectation-Maximization (next section) is what makes it mathematically rigorous.</p>
+
+        <figure class="viz viz-wide">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/015/original/Screenshot_2026-08-11_130048.png?1786451701" alt="Scatter plot of weekend browsers and deal hunters with two overlapping sets of Gaussian contour rings fitted over them, instead of a single hard dividing line." class="viz-wide">
+          <figcaption><b>Two fitted Gaussians over the same overlap zone</b> (compare to Section 2's hard line). Customers in the overlap zone now sit under both contour sets — GMM can score them against both segments instead of drawing one hard boundary through them.</figcaption>
+        </figure>
+
+        <p><strong>One constraint carries over from KMeans:</strong> you still have to choose <code>k</code> (the number of Gaussians / segments) up front — typically from domain knowledge, e.g. "Marketing works with 4 tiers today." A familiar constraint, not a new one.</p>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 7 ============ -->
+    <section class="chapter" id="s7">
+      <div class="chapter-eyebrow"><span class="chapter-num">07</span><span class="chapter-kicker">The engine underneath</span></div>
+      <h2>Expectation–Maximization (EM)</h2>
+      <p class="lede">So how do we actually fit <code>k</code> Gaussians to Veloura's customers — finding the best μ, σ, and mixing weight for each segment? EM, in four steps.</p>
+
+      <div class="panel step-explorer">
+        <div class="panel-head">
+          <span class="tag">Step-by-step</span>
+          <h4>Walk through EM</h4>
+          <p>Click a step to read it — the algorithm repeats steps 2 and 3 until convergence.</p>
+        </div>
+        <div class="step-nav" id="emStepNav">
+          <button class="step-dot active" data-step="1"><span class="num">1</span> Initialization</button>
+          <button class="step-dot" data-step="2"><span class="num">2</span> Expectation</button>
+          <button class="step-dot" data-step="3"><span class="num">3</span> Maximization</button>
+          <button class="step-dot" data-step="4"><span class="num">4</span> Repeat</button>
+        </div>
+
+        <div class="step-panel active" data-step-panel="1">
+          <h4>1 · Initialization</h4>
+          <p>Pick <code>k</code> random customers as the initial means, and initialize each Gaussian's variance from the spread of the sampled data. This is a reasonable starting guess — not arbitrary — because real customers are more representative starting points than random numbers.</p>
+        </div>
+
+        <div class="step-panel" data-step-panel="2">
+          <h4>2 · Expectation (E) step</h4>
+          <p>For every customer, compute their likelihood under each Gaussian, then <strong>normalize</strong> those likelihoods into probabilities that sum to 1 across segments.</p>
+          <p><em>Why normalize?</em> Think of it like: "given it's raining, what's the probability you're in Delhi vs. New York?" You don't just look at how likely rain is in Delhi alone — you compare it against how likely rain is in Delhi <strong>relative</strong> to New York. A customer's raw likelihood under Segment A only matters relative to their likelihood under Segments B, C, and so on.</p>
+          <div class="formula">responsibility<sub>i,k</sub> = <span class="accent">P<sub>k</sub>(x<sub>i</sub>)</span> / (P<sub>1</sub>(x<sub>i</sub>) + P<sub>2</sub>(x<sub>i</sub>) + ⋯ + P<sub>k</sub>(x<sub>i</sub>))</div>
+          <div class="live-viz">
+            <div class="live-viz-bar">
+              <span>Live visualizer — responsibility calculation</span>
+              <a href="https://aiml-vizs-new.vercel.app/un-supervised-learning/em-e-step-responsibility-calculation/" target="_blank" rel="noopener">Open in new tab ↗</a>
+            </div>
+            <iframe src="https://aiml-vizs-new.vercel.app/un-supervised-learning/em-e-step-responsibility-calculation/" loading="lazy" title="Interactive visualizer for the EM E-step responsibility calculation"></iframe>
+          </div>
+        </div>
+
+        <div class="step-panel" data-step-panel="3">
+          <h4>3 · Maximization (M) step</h4>
+          <p>Update each Gaussian's μ and σ as the <strong>likelihood-weighted average</strong> of all customers. Customers who are more confidently in a segment (higher responsibility) pull that segment's mean toward them more strongly — a weighted average, not a hard nearest-point average like KMeans' centroid update.</p>
+        </div>
+
+        <div class="step-panel" data-step-panel="4">
+          <h4>4 · Repeat E and M</h4>
+          <p>Repeat the Expectation and Maximization steps until the parameters stop changing much — convergence.</p>
+          <figure class="viz" style="margin-top:16px;">
+            <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/021/original/Screenshot_2026-08-11_180539.png?1786452122" alt="Grid of eight small scatter plots labeled EM iteration 1 through 8, showing two Gaussian contour sets gradually moving from a rough initial guess toward a stable, well-separated fit over the overlapping weekend-browsers and deal-hunters data.">
+            <figcaption><b>EM converging</b> on the overlap dataset. By the last few iterations, the means and covariances barely move — that's convergence.</figcaption>
+          </figure>
+          <div class="live-viz">
+            <div class="live-viz-bar">
+              <span>Live visualizer — EM convergence, step by step</span>
+              <a href="https://aiml-vizs-new.vercel.app/un-supervised-learning/em-convergence-step-by-step-split-screen-before-after-diff/" target="_blank" rel="noopener">Open in new tab ↗</a>
+            </div>
+            <iframe src="https://aiml-vizs-new.vercel.app/un-supervised-learning/em-convergence-step-by-step-split-screen-before-after-diff/" loading="lazy" title="Interactive visualizer for EM convergence, split screen before and after diff"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="quiz-card" data-quiz>
+        <span class="tag">Check yourself · Q3</span>
+        <h4>In the Maximization step of EM, how is a Gaussian's mean updated?</h4>
+        <ul class="quiz-choices" data-choices>
+          <li class="quiz-choice"><input type="radio" name="q3" id="q3a"><label for="q3a">It's set to the exact center of all points closest to it.</label></li>
+          <li class="quiz-choice" data-correct="true"><input type="radio" name="q3" id="q3b"><label for="q3b">It's the likelihood-weighted average of all data points.</label></li>
+          <li class="quiz-choice"><input type="radio" name="q3" id="q3c"><label for="q3c">It stays fixed once initialized.</label></li>
+          <li class="quiz-choice"><input type="radio" name="q3" id="q3d"><label for="q3d">It's chosen randomly again each iteration.</label></li>
+        </ul>
+        <div class="quiz-actions">
+          <button class="quiz-submit" data-submit>Check answer</button>
+          <span class="quiz-feedback" data-feedback></span>
+        </div>
+        <div class="quiz-explain" data-explain>Because the Expectation step gave every point a soft membership weight per Gaussian, Maximization uses those weights to pull the mean toward points proportional to how confidently they belong — not a hard nearest-point average like KMeans' centroid update.</div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 8 ============ -->
+    <section class="chapter" id="s8">
+      <div class="chapter-eyebrow"><span class="chapter-num">08</span><span class="chapter-kicker">Applied</span></div>
+      <h2>Segmenting Veloura customers with GMM</h2>
+
+      <div class="back-at-veloura">
+        <span class="callout-label">Back at Veloura</span>
+        <p>Time to run this for real. The synthetic dataset expands to four behavioral features (closer to the real 12-feature dataset), gets standardized, and a GMM is fit with <code>k = 3</code>, matching three known underlying segments: high spenders, deal hunters, and casual browsers.</p>
+      </div>
+
+      <div class="prose">
+        <p>Because GMM and KMeans are both distance-based, features are standardized first so no single feature (like average order value, which lives on a much larger scale than visit frequency) dominates the fit.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="tag">Fitted result</span>
+          <h4>Segment sizes after fitting GaussianMixture(n_components=3)</h4>
+          <p>6,000 synthetic Veloura customers, standardized across 4 features.</p>
+        </div>
+        <div class="viz-canvas-wrap">
+          <svg class="demo-svg" id="segmentBar" viewBox="0 0 640 200" role="img" aria-label="Bar chart of GMM segment sizes: segment 0 has 1800 customers, segment 1 has 2100 customers, segment 2 has 2100 customers"></svg>
+        </div>
+      </div>
+
+      <div class="prose">
+        <figure class="viz viz-wide">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/019/original/Screenshot_2026-08-11_180622.png?1786452033" alt="Two scatter plots of the same real Veloura features, average order value versus visit frequency. Left, GMM produces soft elliptical color regions. Right, KMeans produces hard circular color regions." class="viz-wide">
+          <figcaption><b>GMM (soft, elliptical) vs. KMeans (hard, spherical)</b>, plotted on the same two real features. GMM's ellipses visibly tilt to follow how spend and frequency move together; KMeans draws circles regardless of that relationship. The real difference shows up at the boundaries.</figcaption>
+        </figure>
+
+        <h3>What GMM hands you at the boundary</h3>
+        <p>Pulling the actual <code>predict_proba</code> values for the two customers with the lowest confidence — the ones sitting closest to a segment boundary:</p>
+      </div>
+
+      <div class="customer-card">
+        <h5>Customer #1245 — AOV $30.65 · Visit freq 9.86 · Days since purchase 8.51 · Orders 9.73</h5>
+        <div class="prob-bar-row"><span class="seg-label">KMeans label</span><span style="font-family:'IBM Plex Mono',monospace;">Segment 1 (hard, no alternative shown)</span></div>
+        <div class="prob-bar-row"><span class="seg-label">GMM · Segment 0</span><div class="prob-bar-track"><div class="prob-bar-fill" style="width:0%"></div></div><span class="prob-bar-val">0.00</span></div>
+        <div class="prob-bar-row"><span class="seg-label">GMM · Segment 1</span><div class="prob-bar-track"><div class="prob-bar-fill" style="width:91%"></div></div><span class="prob-bar-val">0.91</span></div>
+        <div class="prob-bar-row"><span class="seg-label">GMM · Segment 2</span><div class="prob-bar-track"><div class="prob-bar-fill" style="width:9%"></div></div><span class="prob-bar-val">0.09</span></div>
+      </div>
+      <div class="customer-card">
+        <h5>Customer #5192 — AOV $74.20 · Visit freq 6.05 · Days since purchase 20.66 · Orders 6.21</h5>
+        <div class="prob-bar-row"><span class="seg-label">KMeans label</span><span style="font-family:'IBM Plex Mono',monospace;">Segment 0 (hard, no alternative shown)</span></div>
+        <div class="prob-bar-row"><span class="seg-label">GMM · Segment 0</span><div class="prob-bar-track"><div class="prob-bar-fill" style="width:97%"></div></div><span class="prob-bar-val">0.97</span></div>
+        <div class="prob-bar-row"><span class="seg-label">GMM · Segment 1</span><div class="prob-bar-track"><div class="prob-bar-fill" style="width:0%"></div></div><span class="prob-bar-val">0.00</span></div>
+        <div class="prob-bar-row"><span class="seg-label">GMM · Segment 2</span><div class="prob-bar-track"><div class="prob-bar-fill" style="width:3%"></div></div><span class="prob-bar-val">0.03</span></div>
+      </div>
+
+      <div class="callout gold">
+        <span class="callout-label">Notice</span>
+        <p>KMeans just states a segment, full stop. GMM hands Marketing the full probability breakdown per customer — the blended-campaign signal they asked for. These three synthetic segments are fairly well separated, so even the least-confident customers above are still fairly high-probability; on real, messier Veloura data, splits like 55% / 40% / 5% are exactly where GMM earns its keep.</p>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 9 ============ -->
+    <section class="chapter" id="s9">
+      <div class="chapter-eyebrow"><span class="chapter-num">09</span><span class="chapter-kicker">Comparison</span></div>
+      <h2>GMM vs. KMeans</h2>
+
+      <table class="data-table">
+        <thead><tr><th></th><th>KMeans</th><th>GMM</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Cluster shape</strong></td><td>Spherical (circular)</td><td>Elliptical, can be rotated</td></tr>
+          <tr><td><strong>Assignment</strong></td><td>Hard (one label)</td><td>Soft (probability per segment)</td></tr>
+          <tr><td><strong>Needs k upfront?</strong></td><td>Yes</td><td>Yes</td></tr>
+          <tr><td><strong>Captures feature correlation?</strong></td><td>No</td><td>Yes (via covariance)</td></tr>
+          <tr><td><strong>Boundary customers</strong></td><td>Forced to one side</td><td>Get a blended probability</td></tr>
+        </tbody>
+      </table>
+
+      <div class="prose">
+        <h3>KMeans is secretly a special case of GMM</h3>
+        <p>Force every Gaussian to have <strong>equal variance in every direction and zero covariance</strong> (perfectly circular, same size), and a GMM's soft elliptical clusters collapse into KMeans' hard circular ones. Three differently-shaped synthetic blob sets make this concrete.</p>
+
+        <figure class="viz viz-wide">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/017/original/Screenshot_2026-08-11_180645.png?1786451903" alt="A 2 by 3 grid: top row is GMM with tilted covariance ellipses fitted over uncorrelated, positively correlated, and negatively correlated blob clusters; bottom row is KMeans with black X markers and circular partitions on the same three datasets.">
+          <figcaption>Top row: GMM. Bottom row: KMeans. Columns, left to right: no correlation, positive correlation, negative correlation.</figcaption>
+        </figure>
+        <figure class="viz viz-wide">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/018/original/Screenshot_2026-08-11_180859.png?1786451951" alt="Continuation of the GMM versus KMeans ellipse comparison across the three correlation regimes.">
+        </figure>
+
+        <ul>
+          <li>With little or no correlation, GMM learns nearly circular Gaussians, so its behavior looks similar to KMeans.</li>
+          <li>As correlation increases, GMM rotates and stretches its Gaussian components to match the data.</li>
+          <li>KMeans still partitions space based only on distance to centroids and cannot model tilted clusters.</li>
+        </ul>
+      </div>
+
+      <div class="quiz-card" data-quiz>
+        <span class="tag">Check yourself · Q4</span>
+        <h4>What is the core structural difference between K-Means and GMM?</h4>
+        <ul class="quiz-choices" data-choices>
+          <li class="quiz-choice"><input type="radio" name="q4" id="q4a"><label for="q4a">GMM doesn't require specifying the number of clusters.</label></li>
+          <li class="quiz-choice" data-correct="true"><input type="radio" name="q4" id="q4b"><label for="q4b">K-Means does hard assignment to the nearest centroid; GMM assigns soft, probabilistic membership across all clusters.</label></li>
+          <li class="quiz-choice"><input type="radio" name="q4" id="q4c"><label for="q4c">K-Means works only on 1D data.</label></li>
+          <li class="quiz-choice"><input type="radio" name="q4" id="q4d"><label for="q4d">GMM cannot be visualized.</label></li>
+        </ul>
+        <div class="quiz-actions">
+          <button class="quiz-submit" data-submit>Check answer</button>
+          <span class="quiz-feedback" data-feedback></span>
+        </div>
+        <div class="quiz-explain" data-explain>Both require k upfront; the real distinction is the assignment mechanism — nearest-centroid hard labeling vs. likelihood-based soft membership.</div>
+      </div>
+    </section>
+
+    <!-- ============ BONUS ============ -->
+    <section class="chapter" id="bonus">
+      <div class="chapter-eyebrow"><span class="chapter-num">Bonus</span><span class="chapter-kicker">Beyond the notebook</span></div>
+      <h2>Taking GMM live at Veloura</h2>
+
+      <div class="back-at-veloura">
+        <span class="callout-label">Back at Veloura</span>
+        <p>The segments look good, Marketing loves the blended probabilities, and someone asks the obvious next question: <em>"Cool — can this run on our website, live, for every new customer the second they sign up?"</em></p>
+      </div>
+
+      <div class="prose">
+        <p>Everything so far has happened once, on a fixed batch of ~6,000 customers sitting in a notebook. A real Veloura customer might sign up at 2am and Marketing wants their segment right then — not next Tuesday when someone reruns the notebook. Here's what it takes to go from "a model that lives in a notebook" to "a model that answers instantly, all day, every day."</p>
+        <p>The trained GMM and the scaler that feeds it are "frozen" together — those two objects <strong>are</strong> the entire model. Anyone holding that file can reproduce every prediction made, without re-running any training code.</p>
+      </div>
+
+      <div class="stat-cards">
+        <div class="stat-card"><b>2.6 KB</b><span>packaged model size — small enough to email</span></div>
+        <div class="stat-card"><b>31.32 ms</b><span>to score 5 new signups</span></div>
+        <div class="stat-card"><b>~160 / sec</b><span>customers scoreable at that rate</span></div>
+      </div>
+
+      <div class="prose"><p>Five brand-new signups, scored the instant they arrive:</p></div>
+
+      <table class="data-table">
+        <thead><tr><th>New signup</th><th>AOV / Freq / Recency / Orders</th><th>Segment</th><th>Confidence</th><th>Full probability split</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">1</td><td class="mono">175 / 7 / 10 / 8</td><td>Segment 2</td><td class="mono">100%</td><td class="mono">[0, 0, 1]</td></tr>
+          <tr><td class="mono">2</td><td class="mono">40 / 25 / 3 / 22</td><td>Segment 1</td><td class="mono">100%</td><td class="mono">[0, 1, 0]</td></tr>
+          <tr><td class="mono">3</td><td class="mono">60 / 3 / 50 / 3</td><td>Segment 0</td><td class="mono">100%</td><td class="mono">[1, 0, 0]</td></tr>
+          <tr><td class="mono">4</td><td class="mono">95 / 14 / 15 / 12</td><td>Segment 2</td><td class="mono">100%</td><td class="mono">[0, 0, 1]</td></tr>
+          <tr><td class="mono">5</td><td class="mono">50 / 18 / 6 / 17</td><td>Segment 1</td><td class="mono">100%</td><td class="mono">[0, 1, 0]</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:0.9rem; color:var(--ink-soft); max-width:var(--maxw);">That's the whole trick behind "fit once, reuse forever": the same object built during training can sit quietly behind a website and answer instantly, all day long.</p>
+
+      <div class="prose">
+        <h3>Models go stale quietly</h3>
+        <p>Customer behavior doesn't hold still forever. Simulating Veloura's customers slowly drifting over 12 months — spending and visiting a little more each month — shows how confident the <strong>original, never-retrained</strong> model stays about them:</p>
+
+        <figure class="viz viz-wide">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/016/original/Screenshot_2026-08-11_180659.png?1786451857" alt="Line chart titled Same model, 12 months later: does it still recognize Veloura's customers? The average confidence in the model's own segment assignments slowly declines across the 12 months since training.">
+          <figcaption>A model doesn't announce that it's gone stale — it just gets quietly less sure of itself. That's why teams check back in on a live model every so often, instead of shipping it once and forgetting about it.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ TAKEAWAYS ============ -->
+    <section class="takeaways" id="wrap">
+      <div class="chapter-eyebrow"><span class="chapter-kicker" style="color:var(--gold-soft);">Wrap-up</span></div>
+      <h2>Key takeaways</h2>
+      <ul class="takeaway-list">
+        <li>
+          <svg class="leaf" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21C12 21 4 16.5 4 10.2C4 6.5 6.7 4 10 4C11.3 4 12 5 12 5C12 5 12.7 4 14 4C17.3 4 20 6.5 20 10.2C20 16.5 12 21 12 21Z" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span><strong>Hierarchical</strong> breaks at Veloura's scale and forces hard assignment — no way to express an ambiguous customer.</span>
+        </li>
+        <li>
+          <svg class="leaf" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21C12 21 4 16.5 4 10.2C4 6.5 6.7 4 10 4C11.3 4 12 5 12 5C12 5 12.7 4 14 4C17.3 4 20 6.5 20 10.2C20 16.5 12 21 12 21Z" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span><strong>Soft clustering</strong> = a probability of membership per segment, not a single forced label.</span>
+        </li>
+        <li>
+          <svg class="leaf" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21C12 21 4 16.5 4 10.2C4 6.5 6.7 4 10 4C11.3 4 12 5 12 5C12 5 12.7 4 14 4C17.3 4 20 6.5 20 10.2C20 16.5 12 21 12 21Z" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span><strong>Gaussians</strong> (1D → 2D, with covariance) are the mathematical building block — covariance is what lets clusters tilt to match real, correlated customer behavior.</span>
+        </li>
+        <li>
+          <svg class="leaf" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21C12 21 4 16.5 4 10.2C4 6.5 6.7 4 10 4C11.3 4 12 5 12 5C12 5 12.7 4 14 4C17.3 4 20 6.5 20 10.2C20 16.5 12 21 12 21Z" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span><strong>GMM</strong> = fit k Gaussians, and use <strong>EM</strong> to iteratively estimate their parameters — the E-step scores every customer against every Gaussian and normalizes; the M-step updates each Gaussian toward the customers most confidently assigned to it.</span>
+        </li>
+        <li>
+          <svg class="leaf" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21C12 21 4 16.5 4 10.2C4 6.5 6.7 4 10 4C11.3 4 12 5 12 5C12 5 12.7 4 14 4C17.3 4 20 6.5 20 10.2C20 16.5 12 21 12 21Z" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span><strong>GMM ⊃ KMeans</strong>: KMeans is what you get when every Gaussian is forced to be a same-size circle.</span>
+        </li>
+      </ul>
+      <p class="teaser">Next up: teaching the clustering algorithm to say "I don't know" — DBSCAN.</p>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <b>Gaussian Mixture Models post read</b>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Mobile TOC toggle ---------- */
+  var navToggle = document.getElementById('navToggle');
+  var tocNav = document.getElementById('tocNav');
+  navToggle.addEventListener('click', function(){
+    var open = tocNav.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.querySelectorAll('#tocList a').forEach(function(a){
+    a.addEventListener('click', function(){ tocNav.classList.remove('open'); navToggle.setAttribute('aria-expanded','false'); });
+  });
+
+  /* ---------- Scroll progress + scrollspy ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('main section, main header.hero'));
+  var links = Array.prototype.slice.call(document.querySelectorAll('#tocList a'));
+  var progressTrack = document.getElementById('progressTrack');
+
+  function onScroll(){
+    var scrollTop = window.scrollY;
+    var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    progressTrack.style.width = (docHeight > 0 ? (scrollTop / docHeight) * 100 : 0) + '%';
+
+    var current = sections[0];
+    for (var i=0;i<sections.length;i++){
+      if (sections[i].getBoundingClientRect().top - 90 <= 0) current = sections[i];
+    }
+    links.forEach(function(l){
+      var match = l.getAttribute('href') === '#' + current.id;
+      l.classList.toggle('active', match);
+    });
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  /* ---------- Quiz logic ---------- */
+  document.querySelectorAll('[data-quiz]').forEach(function(card){
+    var submit = card.querySelector('[data-submit]');
+    var feedback = card.querySelector('[data-feedback]');
+    var explain = card.querySelector('[data-explain]');
+    var choices = card.querySelectorAll('.quiz-choice');
+
+    submit.addEventListener('click', function(){
+      var checked = card.querySelector('input[type=radio]:checked');
+      if (!checked){
+        feedback.textContent = 'Pick an option first.';
+        feedback.className = 'quiz-feedback no';
+        return;
+      }
+      var chosenLi = checked.closest('.quiz-choice');
+      var isCorrect = chosenLi.getAttribute('data-correct') === 'true';
+
+      choices.forEach(function(li){
+        var input = li.querySelector('input');
+        input.disabled = true;
+        if (li.getAttribute('data-correct') === 'true'){
+          li.classList.add('correct');
+        } else if (li === chosenLi){
+          li.classList.add('incorrect');
+        }
+      });
+
+      feedback.textContent = isCorrect ? 'Correct.' : 'Not quite — see the explanation below.';
+      feedback.className = 'quiz-feedback ' + (isCorrect ? 'ok' : 'no');
+      explain.classList.add('show');
+      submit.disabled = true;
+    });
+  });
+
+  /* ---------- EM step explorer ---------- */
+  var stepNav = document.getElementById('emStepNav');
+  if (stepNav){
+    stepNav.addEventListener('click', function(e){
+      var btn = e.target.closest('[data-step]');
+      if (!btn) return;
+      var step = btn.getAttribute('data-step');
+      stepNav.querySelectorAll('.step-dot').forEach(function(d){ d.classList.toggle('active', d===btn); });
+      document.querySelectorAll('[data-step-panel]').forEach(function(p){
+        p.classList.toggle('active', p.getAttribute('data-step-panel') === step);
+      });
+    });
+  }
+
+  /* ---------- SVG helpers ---------- */
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs){
+    var e = document.createElementNS(SVG_NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function clear(svg){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
+
+  var COLORS = {
+    olive700:'#4f5d2f', olive500:'#78894c', olive300:'#aab887', olive200:'#d3d9bd',
+    olive100:'#e6e9d8', gold:'#b8842c', ink:'#262a1c', inkSoft:'#565c45', card:'#fbfaf3'
+  };
+
+  /* ---------- Chart 1: hierarchical runtime ---------- */
+  (function(){
+    var svg = document.getElementById('runtimeChart');
+    var data = [[200,0.003],[500,0.007],[1000,0.042],[2000,0.181],[4000,0.714],[6000,1.955]];
+    var W=640,H=320, padL=56,padR=20,padT=20,padB=44;
+    var xMax = 6000, yMax = 2.1;
+    function X(n){ return padL + (n/xMax) * (W-padL-padR); }
+    function Y(t){ return H-padB - (t/yMax) * (H-padT-padB); }
+
+    clear(svg);
+    // axes
+    svg.appendChild(el('line',{x1:padL,y1:H-padB,x2:W-padR,y2:H-padB,stroke:COLORS.olive300,'stroke-width':1}));
+    svg.appendChild(el('line',{x1:padL,y1:padT,x2:padL,y2:H-padB,stroke:COLORS.olive300,'stroke-width':1}));
+    // y ticks
+    [0,0.5,1,1.5,2].forEach(function(t){
+      var y = Y(t);
+      svg.appendChild(el('line',{x1:padL-4,y1:y,x2:W-padR,y2:y,stroke:COLORS.olive100,'stroke-width':1}));
+      var lbl = el('text',{x:padL-10,y:y+4,'text-anchor':'end','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:COLORS.inkSoft});
+      lbl.textContent = t + 's'; svg.appendChild(lbl);
+    });
+    data.forEach(function(d){
+      var lbl = el('text',{x:X(d[0]),y:H-padB+18,'text-anchor':'middle','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:COLORS.inkSoft});
+      lbl.textContent = d[0]; svg.appendChild(lbl);
+    });
+    var axisLbl = el('text',{x:W/2,y:H-6,'text-anchor':'middle','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:COLORS.inkSoft});
+    axisLbl.textContent = 'Number of customers (n)'; svg.appendChild(axisLbl);
+
+    var pathD = data.map(function(d,i){ return (i===0?'M':'L') + X(d[0]) + ',' + Y(d[1]); }).join(' ');
+    svg.appendChild(el('path',{d:pathD, fill:'none', stroke:COLORS.gold, 'stroke-width':2.5}));
+
+    data.forEach(function(d){
+      var c = el('circle',{cx:X(d[0]), cy:Y(d[1]), r:5, fill:COLORS.olive700, stroke:COLORS.card,'stroke-width':2});
+      var title = el('title',{}); title.textContent = 'n=' + d[0] + '  →  ' + d[1] + 's';
+      c.appendChild(title);
+      svg.appendChild(c);
+    });
+  })();
+
+  /* ---------- Chart 2: 1D Gaussian live demo ---------- */
+  var gaussSvg = document.getElementById('gaussian1d');
+  var muSlider = document.getElementById('muSlider');
+  var sigmaSlider = document.getElementById('sigmaSlider');
+  var muVal = document.getElementById('muVal');
+  var sigmaVal = document.getElementById('sigmaVal');
+  var readout = document.getElementById('gaussianReadout');
+
+  function normPdf(x, mu, sigma){
+    return (1/(sigma*Math.sqrt(2*Math.PI))) * Math.exp(-((x-mu)*(x-mu))/(2*sigma*sigma));
+  }
+
+  function drawGaussian1d(){
+    var mu = parseFloat(muSlider.value), sigma = parseFloat(sigmaSlider.value);
+    muVal.textContent = mu; sigmaVal.textContent = sigma;
+
+    var W=640,H=260, padL=50,padR=20,padT=20,padB=36;
+    var xMin=-30, xMax=250;
+    var yMaxFixed = 0.045;
+
+    function X(x){ return padL + ((x-xMin)/(xMax-xMin)) * (W-padL-padR); }
+    function Y(y){ return H-padB - (y/yMaxFixed) * (H-padT-padB); }
+
+    clear(gaussSvg);
+    gaussSvg.appendChild(el('line',{x1:padL,y1:H-padB,x2:W-padR,y2:H-padB,stroke:COLORS.olive300,'stroke-width':1}));
+    gaussSvg.appendChild(el('line',{x1:padL,y1:padT,x2:padL,y2:H-padB,stroke:COLORS.olive300,'stroke-width':1}));
+
+    var pts = [];
+    var n = 120;
+    for (var i=0;i<=n;i++){
+      var x = xMin + (xMax-xMin)*(i/n);
+      var y = normPdf(x, mu, sigma);
+      pts.push(X(x) + ',' + Y(Math.min(y,yMaxFixed)));
+    }
+    var areaD = 'M' + X(xMin) + ',' + Y(0) + ' L' + pts.join(' L') + ' L' + X(xMax) + ',' + Y(0) + ' Z';
+    gaussSvg.appendChild(el('path',{d:areaD, fill:COLORS.olive100, stroke:'none'}));
+    var lineD = 'M' + pts.join(' L');
+    gaussSvg.appendChild(el('path',{d:lineD, fill:'none', stroke:COLORS.olive700, 'stroke-width':2.5}));
+
+    // mean line
+    gaussSvg.appendChild(el('line',{x1:X(mu),y1:padT,x2:X(mu),y2:H-padB, stroke:COLORS.gold,'stroke-width':1.5,'stroke-dasharray':'4,4'}));
+    var muLbl = el('text',{x:X(mu),y:padT-6,'text-anchor':'middle','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:COLORS.gold});
+    muLbl.textContent = 'μ = ' + mu; gaussSvg.appendChild(muLbl);
+
+    // example point at 130
+    var point = 130;
+    if (point >= xMin && point <= xMax){
+      var py = normPdf(point, mu, sigma);
+      gaussSvg.appendChild(el('line',{x1:X(point),y1:Y(0),x2:X(point),y2:Y(Math.min(py,yMaxFixed)),stroke:'#a3492f','stroke-width':2}));
+      gaussSvg.appendChild(el('circle',{cx:X(point),cy:Y(Math.min(py,yMaxFixed)),r:5,fill:'#a3492f'}));
+    }
+
+    var axisLbl = el('text',{x:W/2,y:H-6,'text-anchor':'middle','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:COLORS.inkSoft});
+    axisLbl.textContent = 'Average order value ($)'; gaussSvg.appendChild(axisLbl);
+
+    var likelihood = normPdf(130, mu, sigma);
+    readout.innerHTML = '<span>Likelihood at AOV=130: <b>' + likelihood.toFixed(5) + '</b></span><span>Peak height: <b>' + normPdf(mu,mu,sigma).toFixed(5) + '</b></span>';
+  }
+  muSlider.addEventListener('input', drawGaussian1d);
+  sigmaSlider.addEventListener('input', drawGaussian1d);
+  drawGaussian1d();
+
+  /* ---------- Chart 3: correlation ellipse demo ---------- */
+  var corrSlider = document.getElementById('corrSlider');
+  var corrVal = document.getElementById('corrVal');
+  var ellipseSvg = document.getElementById('ellipseDemo');
+  var ellipseReadout = document.getElementById('ellipseReadout');
+
+  function drawEllipse(){
+    var raw = parseFloat(corrSlider.value); // -90..90 representing covariance term
+    var rho = raw / 100; // approx correlation-ish factor
+    corrVal.textContent = rho.toFixed(2);
+
+    var varX = 500, varY = 20;
+    var covXY = raw; // matches source scale, e.g. 60 / -60
+    // 2x2 covariance matrix [[varX, covXY],[covXY, varY]]
+    var a=varX, b=covXY, c=covXY, d=varY;
+    var tr = a+d, det = a*d-b*c;
+    var l1 = tr/2 + Math.sqrt(Math.max(tr*tr/4 - det,0));
+    var l2 = tr/2 - Math.sqrt(Math.max(tr*tr/4 - det,0));
+    var angle = 0.5*Math.atan2(2*b, a-d);
+
+    var W=640,H=320, cx=W/2, cy=H/2;
+    var scale = 5.2; // px per unit std-ish
+    clear(ellipseSvg);
+
+    // axes
+    ellipseSvg.appendChild(el('line',{x1:60,y1:cy,x2:W-40,y2:cy,stroke:COLORS.olive300,'stroke-width':1}));
+    ellipseSvg.appendChild(el('line',{x1:cx,y1:30,x2:cx,y2:H-30,stroke:COLORS.olive300,'stroke-width':1}));
+    var xl = el('text',{x:W-42,y:cy-8,'text-anchor':'end','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:COLORS.inkSoft}); xl.textContent='Avg order value →'; ellipseSvg.appendChild(xl);
+    var yl = el('text',{x:cx+8,y:38,'text-anchor':'start','font-size':'11','font-family':'IBM Plex Mono, monospace',fill:COLORS.inkSoft}); yl.textContent='↑ Visit frequency'; ellipseSvg.appendChild(yl);
+
+    [1,2].forEach(function(nsig){
+      var w = 2*nsig*Math.sqrt(Math.max(l1,0))*Math.sqrt(scale);
+      var h = 2*nsig*Math.sqrt(Math.max(l2,0))*Math.sqrt(scale);
+      var ell = el('ellipse',{cx:cx,cy:cy,rx:w,ry:h, fill:'none', stroke: nsig===1?COLORS.olive700:COLORS.gold, 'stroke-width':2,
+        transform:'rotate(' + (-angle*180/Math.PI) + ' ' + cx + ' ' + cy + ')'});
+      ellipseSvg.appendChild(ell);
+    });
+    ellipseSvg.appendChild(el('circle',{cx:cx,cy:cy,r:4,fill:COLORS.ink}));
+
+    var direction = raw > 4 ? 'positive — spend and frequency rise together' : (raw < -4 ? 'negative — deal-hunter pattern' : 'none — axis-aligned');
+    ellipseReadout.innerHTML = '<span>Covariance term: <b>' + raw.toFixed(0) + '</b></span><span>Correlation direction: <b>' + direction + '</b></span>';
+  }
+  corrSlider.addEventListener('input', drawEllipse);
+  document.querySelectorAll('[data-corr-preset]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      corrSlider.value = btn.getAttribute('data-corr-preset');
+      drawEllipse();
+    });
+  });
+  drawEllipse();
+
+  /* ---------- Chart 4: segment size bar chart ---------- */
+  (function(){
+    var svg = document.getElementById('segmentBar');
+    var data = [['Segment 0', 1800], ['Segment 1', 2100], ['Segment 2', 2100]];
+    var W=640,H=200, padL=100,padR=40,padT=20,padB=30;
+    var max = 2100;
+    var barH = 34, gap = 18;
+    clear(svg);
+    data.forEach(function(d,i){
+      var y = padT + i*(barH+gap);
+      var w = (d[1]/max) * (W-padL-padR);
+      svg.appendChild(el('rect',{x:padL,y:y,width:w,height:barH,rx:6,fill: i%2===0 ? COLORS.olive700 : COLORS.olive500}));
+      var lbl = el('text',{x:padL-12,y:y+barH/2+4,'text-anchor':'end','font-size':'12','font-family':'IBM Plex Mono, monospace',fill:COLORS.ink});
+      lbl.textContent = d[0]; svg.appendChild(lbl);
+      var val = el('text',{x:padL+w+10,y:y+barH/2+4,'text-anchor':'start','font-size':'12','font-family':'IBM Plex Mono, monospace',fill:COLORS.inkSoft, 'font-weight':'600'});
+      val.textContent = d[1].toLocaleString() + ' customers'; svg.appendChild(val);
+    });
+  })();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Gaussian-Mixture-Models-" target="_blank" rel="noopener">github.com/scaler-content/Gaussian-Mixture-Models-</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neural Networks 3 post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+/* ============ Tokens ============ */
+:root{
+  --black:#09090a;
+  --panel:#121214;
+  --panel-2:#1a1a1d;
+  --panel-3:#202023;
+  --line:#26262a;
+  --line-soft:#1c1c1f;
+  --line-strong:#3c3c41;
+  --text:#e9e9ea;
+  --text-dim:#a5a5ab;
+  --text-mute:#6d6d73;
+  --white:#ffffff;
+  --serif:'Fraunces', Georgia, serif;
+  --sans:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono:'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+  --radius:3px;
+  --maxw:700px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto;}
+  *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+}
+body{
+  margin:0;
+  background:var(--black);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:16.5px;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size:64px 64px;
+  opacity:0.35;
+  pointer-events:none;
+  z-index:0;
+}
+h1,h2,h3,h4{font-family:var(--serif); font-weight:500; color:var(--white); margin:0; letter-spacing:-0.01em;}
+p{margin:0 0 1.1em 0;}
+a{color:var(--text);}
+::selection{background:var(--panel-3); color:var(--white);}
+:focus-visible{outline:2px solid var(--white); outline-offset:3px;}
+code, .mono{font-family:var(--mono);}
+
+/* ============ Progress bar ============ */
+#progress{
+  position:fixed; top:0; left:0; height:2px; width:0%;
+  background:var(--white); z-index:100; transition:width 0.08s linear;
+}
+
+/* ============ Top bar (mobile) ============ */
+#topbar{
+  position:fixed; top:0; left:0; right:0; height:52px;
+  display:none; align-items:center; justify-content:space-between;
+  padding:0 16px; background:rgba(9,9,10,0.9); backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line); z-index:90;
+}
+#topbar .tb-title{font-family:var(--mono); font-size:0.8rem; color:var(--text-dim);}
+#navToggle{
+  background:none; border:1px solid var(--line-strong); color:var(--text);
+  width:36px; height:36px; border-radius:var(--radius); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+#navToggle svg{width:16px; height:16px;}
+
+/* ============ Layout ============ */
+.page{
+  position:relative; z-index:1;
+  display:grid; grid-template-columns:250px 1fr; max-width:1180px; margin:0 auto;
+}
+nav#toc{
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+  padding:48px 22px 48px 32px; border-right:1px solid var(--line);
+}
+nav#toc .toc-brand{
+  font-family:var(--mono); font-size:0.72rem; color:var(--text-mute);
+  margin-bottom:28px; line-height:1.5;
+}
+nav#toc ol{list-style:none; margin:0; padding:0; counter-reset:toc;}
+nav#toc li{counter-increment:toc; margin-bottom:2px;}
+nav#toc a{
+  display:flex; gap:10px; text-decoration:none; color:var(--text-mute);
+  font-size:0.87rem; padding:7px 8px; border-radius:var(--radius);
+  border-left:2px solid transparent; transition:color 0.15s, border-color 0.15s;
+}
+nav#toc a::before{
+  content:counter(toc, decimal-leading-zero);
+  font-family:var(--mono); font-size:0.72rem; color:var(--text-mute); flex-shrink:0; padding-top:1px;
+}
+nav#toc a:hover{color:var(--text);}
+nav#toc a.active{color:var(--white); border-left-color:var(--white); background:var(--panel);}
+nav#toc a.active::before{color:var(--white);}
+#navOverlay{display:none;}
+
+main{padding:0 40px 120px 48px; min-width:0;}
+.wrap{max-width:var(--maxw);}
+.wrap-wide{max-width:100%;}
+
+/* ============ Hero ============ */
+.hero{padding:88px 0 56px 0; max-width:var(--maxw);}
+.hero .kicker{
+  font-family:var(--mono); font-size:0.78rem; color:var(--text-mute);
+  margin-bottom:18px;
+}
+.hero h1{font-size:clamp(2.5rem, 5vw, 3.6rem); line-height:1.06;}
+.hero p.lede{
+  font-size:1.15rem; color:var(--text-dim); margin-top:20px; max-width:560px;
+  font-family:var(--serif); font-weight:400; font-style:italic; line-height:1.6;
+}
+.hero-diagram{margin-top:44px;}
+.analogy-table{
+  margin-top:14px; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+}
+.analogy-row{
+  display:grid; grid-template-columns:1fr 1fr;
+  border-top:1px solid var(--line);
+}
+.analogy-row:first-child{border-top:none;}
+.analogy-row > div{padding:13px 18px; font-size:0.92rem;}
+.analogy-row > div:first-child{color:var(--text-dim); font-family:var(--mono); font-size:0.82rem; background:var(--panel);}
+.analogy-row.head > div{font-family:var(--mono); font-size:0.72rem; color:var(--text-mute); background:transparent; padding-bottom:8px;}
+
+/* ============ Sections ============ */
+section.chapter{padding:76px 0; border-top:1px solid var(--line); max-width:var(--maxw);}
+section.chapter:first-of-type{border-top:none;}
+.chapter-num{font-family:var(--mono); font-size:0.78rem; color:var(--text-mute); margin-bottom:10px;}
+.chapter h2{font-size:clamp(1.6rem, 3vw, 2.15rem); margin-bottom:20px; max-width:520px;}
+.chapter h3{font-size:1.18rem; margin:38px 0 14px 0; color:var(--white); font-weight:600; font-family:var(--sans);}
+.chapter p, .chapter li{color:var(--text); font-size:1.01rem;}
+.chapter ul, .chapter ol{padding-left:1.3em; margin:0 0 1.1em 0;}
+.chapter li{margin-bottom:6px;}
+strong{color:var(--white); font-weight:600;}
+
+/* variable lists */
+.varlist{
+  list-style:none; padding:0; margin:18px 0 26px 0;
+  border-left:2px solid var(--line-strong);
+}
+.varlist li{
+  padding:5px 0 5px 16px; font-size:0.94rem; color:var(--text-dim);
+}
+.varlist .v{font-family:var(--mono); color:var(--text); margin-right:8px;}
+
+/* math blocks */
+.eq{
+  margin:22px 0; padding:18px 20px; background:var(--panel);
+  border:1px solid var(--line); border-radius:var(--radius);
+  overflow-x:auto;
+}
+.eq-inline{padding:2px 2px;}
+
+/* callouts */
+.callout{
+  margin:26px 0; padding:18px 20px; border-radius:var(--radius);
+  border:1px solid var(--line); position:relative;
+  background:var(--panel);
+}
+.callout::before, .callout::after{
+  content:""; position:absolute; width:9px; height:9px;
+  border-color:var(--line-strong); border-style:solid;
+}
+.callout::before{top:-1px; left:-1px; border-width:1px 0 0 1px;}
+.callout::after{bottom:-1px; right:-1px; border-width:0 1px 1px 0;}
+.callout .co-label{
+  font-family:var(--mono); font-size:0.72rem; color:var(--text-mute); margin-bottom:8px; display:block;
+}
+.callout p:last-child{margin-bottom:0;}
+.callout.important{border-color:var(--line-strong);}
+.callout.important .co-label{color:var(--white);}
+.callout.faq .co-label{color:var(--text-mute);}
+
+/* figure / diagram exhibits */
+.exhibit{
+  margin:32px 0; border:1px solid var(--line); border-radius:var(--radius);
+  padding:24px 20px 18px 20px; background:var(--panel); position:relative;
+}
+.exhibit::before, .exhibit::after{
+  content:""; position:absolute; width:11px; height:11px;
+  border-color:var(--text-mute); border-style:solid;
+}
+.exhibit::before{top:-1px; left:-1px; border-width:1px 0 0 1px;}
+.exhibit::after{bottom:-1px; right:-1px; border-width:0 1px 1px 0;}
+.exhibit figcaption{
+  font-family:var(--mono); font-size:0.74rem; color:var(--text-mute);
+  margin-top:14px; text-align:center;
+}
+svg.network-diagram, svg.xor-diagram, svg.chart-svg{width:100%; height:auto; display:block;}
+.nd-edge{stroke:var(--line-strong); stroke-width:1; opacity:0.55;}
+.nd-node{fill:var(--panel-3); stroke:var(--text-dim); stroke-width:1.4;}
+.nd-label{fill:var(--text); font:600 11.5px 'IBM Plex Mono',monospace;}
+.nd-title{fill:var(--text-mute); font:11px 'IBM Plex Mono',monospace;}
+.nd-gap{fill:var(--text-dim); font:600 11.5px 'IBM Plex Mono',monospace;}
+
+/* code blocks */
+details.codebox{
+  margin:22px 0; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+}
+details.codebox summary{
+  cursor:pointer; list-style:none; padding:11px 16px;
+  font-family:var(--mono); font-size:0.82rem; color:var(--text-dim);
+  background:var(--panel); display:flex; align-items:center; gap:10px;
+  user-select:none;
+}
+details.codebox summary::-webkit-details-marker{display:none;}
+details.codebox summary::before{content:"▸"; color:var(--text-mute); transition:transform 0.15s;}
+details.codebox[open] summary::before{transform:rotate(90deg);}
+details.codebox pre{
+  margin:0; padding:16px 18px; background:var(--black); overflow-x:auto;
+  border-top:1px solid var(--line); font-family:var(--mono); font-size:0.83rem;
+  line-height:1.6; color:var(--text-dim);
+}
+details.codebox pre code{color:var(--text-dim);}
+
+/* quiz */
+.quiz{
+  margin:30px 0; padding:22px; border:1px solid var(--line); border-radius:var(--radius);
+}
+.quiz-head{display:flex; align-items:center; gap:9px; margin-bottom:14px;}
+.quiz-head svg{width:15px; height:15px; color:var(--text-mute); flex-shrink:0;}
+.quiz-head span{font-family:var(--mono); font-size:0.76rem; color:var(--text-mute);}
+.quiz-question{font-size:0.98rem; color:var(--text); margin-bottom:16px;}
+.quiz-options{display:flex; flex-direction:column; gap:8px;}
+.quiz-option{
+  text-align:left; padding:11px 14px; background:var(--panel);
+  border:1px solid var(--line-strong); border-radius:var(--radius);
+  color:var(--text); font-family:var(--sans); font-size:0.93rem; cursor:pointer;
+}
+.quiz-option:hover:not(:disabled){border-color:var(--text-dim);}
+.quiz-option:disabled{cursor:default;}
+.quiz-option.is-correct{border-color:var(--white); background:var(--panel-3);}
+.quiz-option.is-incorrect{border-color:var(--text-mute); opacity:0.6;}
+.quiz-explanation{
+  margin-top:16px; padding-top:16px; border-top:1px dashed var(--line-strong);
+}
+.quiz-verdict{font-family:var(--mono); font-size:0.85rem; margin-bottom:8px;}
+.verdict-correct .quiz-verdict{color:var(--white);}
+.verdict-incorrect .quiz-verdict{color:var(--text-dim);}
+.quiz-explanation p:last-child{margin-bottom:0; color:var(--text-dim); font-size:0.93rem;}
+
+/* interactive tool boxes */
+.tool{
+  margin:30px 0; border:1px solid var(--line); border-radius:var(--radius); padding:22px;
+}
+.tool-label{font-family:var(--mono); font-size:0.76rem; color:var(--text-mute); margin-bottom:16px; display:block;}
+.tool-row{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-bottom:18px;}
+.tool select, .tool input[type="number"]{
+  background:var(--panel); color:var(--text); border:1px solid var(--line-strong);
+  border-radius:var(--radius); padding:8px 10px; font-family:var(--mono); font-size:0.88rem;
+}
+.tool input[type="number"]{width:70px;}
+.tool label{font-size:0.85rem; color:var(--text-dim); display:flex; align-items:center; gap:8px;}
+input[type="range"]{accent-color:var(--white); width:180px;}
+.tool-readout{
+  font-family:var(--mono); font-size:0.88rem; color:var(--text); padding:12px 14px;
+  background:var(--panel); border-radius:var(--radius); border:1px solid var(--line);
+}
+.tool-readout .num{color:var(--white); font-weight:600;}
+
+.decay-bars{display:flex; align-items:flex-end; gap:4px; height:110px; margin:16px 0 6px 0; border-bottom:1px solid var(--line-strong); padding-bottom:0;}
+.decay-bar-wrap{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
+.decay-bar{width:100%; max-width:16px; background:var(--text-dim); border-radius:2px 2px 0 0; transition:height 0.3s ease;}
+.decay-bar-label{display:none;}
+
+.param-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px;}
+.param-field{display:flex; flex-direction:column; gap:6px;}
+.param-field span{font-size:0.78rem; color:var(--text-mute); font-family:var(--mono);}
+.param-result{
+  border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+}
+.param-result-row{display:flex; justify-content:space-between; padding:10px 14px; font-family:var(--mono); font-size:0.85rem; border-top:1px solid var(--line);}
+.param-result-row:first-child{border-top:none;}
+.param-result-row.total{background:var(--panel); color:var(--white); font-weight:600;}
+.param-result-row span:last-child{color:var(--text);}
+
+/* XOR tabs */
+.tabgroup{display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap;}
+.tabbtn{
+  padding:9px 16px; background:var(--panel); border:1px solid var(--line-strong);
+  border-radius:var(--radius); color:var(--text-dim); font-family:var(--mono); font-size:0.82rem; cursor:pointer;
+}
+.tabbtn[aria-selected="true"]{color:var(--white); border-color:var(--white); background:var(--panel-3);}
+.tabpanel{display:none;}
+.tabpanel.active{display:block;}
+.result-card{
+  margin-top:16px; padding:16px 18px; background:var(--panel); border-left:2px solid var(--line-strong); border-radius:0 var(--radius) var(--radius) 0;
+}
+.result-card p{margin:0; font-size:0.93rem; color:var(--text-dim);}
+
+/* legend for charts */
+.chart-legend{display:flex; gap:22px; flex-wrap:wrap; margin-top:10px; justify-content:center;}
+.legend-item{display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:0.78rem; color:var(--text-dim);}
+.legend-swatch{width:22px; height:2px; background:var(--white);}
+.legend-swatch.dashed{background:repeating-linear-gradient(90deg, var(--text-dim) 0 5px, transparent 5px 9px); height:2px;}
+
+/* recap checklist */
+.recap-list{list-style:none; padding:0; margin:20px 0;}
+.recap-list li{
+  display:flex; gap:12px; padding:13px 0; border-top:1px solid var(--line); font-size:0.97rem; color:var(--text-dim);
+}
+.recap-list li:first-child{border-top:none;}
+.recap-list svg{width:16px; height:16px; flex-shrink:0; margin-top:3px; color:var(--text-mute);}
+
+/* footer */
+footer{
+  border-top:1px solid var(--line); padding:44px 0 60px 0; max-width:var(--maxw);
+}
+footer .foot-title{font-family:var(--mono); font-size:0.82rem; color:var(--text-mute);}
+
+/* responsive */
+@media (max-width:900px){
+  #topbar{display:flex;}
+  body{padding-top:52px;}
+  .page{grid-template-columns:1fr; max-width:100%;}
+  nav#toc{
+    position:fixed; top:0; left:0; height:100vh; width:280px; z-index:95;
+    background:var(--black); transform:translateX(-100%); transition:transform 0.22s ease;
+    padding-top:70px; border-right:1px solid var(--line);
+  }
+  nav#toc.open{transform:translateX(0);}
+  #navOverlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:92;
+  }
+  #navOverlay.open{display:block;}
+  main{padding:36px 20px 100px 20px;}
+  .hero{padding-top:24px;}
+  .analogy-row{grid-template-columns:1fr;}
+  .analogy-row > div:first-child{border-bottom:1px solid var(--line);}
+  .param-grid{grid-template-columns:1fr;}
+}
+@media (max-width:520px){
+  .chapter{padding:56px 0;}
+  .hero h1{font-size:2.1rem;}
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/deep-learning/">Deep learning &amp; neural networks</a><span class="t">· Neural Networks 3 · Layers, depth and the XOR problem</span><span class="pn"><a href="../DSML-NN-2/" title="Neural Networks 2 · Multi-class output and cross-entropy">← Prev</a><a href="../DSML-NN-4/" title="Neural Networks 4 · Notation, softmax and training curves">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progress"></div>
+<div id="topbar">
+  <span class="tb-title">Neural Networks 3</span>
+  <button id="navToggle" aria-label="Open table of contents" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
+</div>
+<div id="navOverlay"></div>
+
+<div class="page">
+  <nav id="toc" aria-label="Table of contents">
+    <div class="toc-brand">Neural Networks 3<br>Post&#8209;read</div>
+    <ol>
+      <li><a href="#intro">A hiring pipeline, one layer at a time</a></li>
+      <li><a href="#panel">From one recruiter to a full panel</a></li>
+      <li><a href="#learning">How the panel learns</a></li>
+      <li><a href="#hidden">One round isn't enough</a></li>
+      <li><a href="#wow">Width vs. depth: the XOR problem</a></li>
+      <li><a href="#activations">Choosing how the panel reacts</a></li>
+      <li><a href="#notation">Naming every round</a></li>
+      <li><a href="#forward">Running the funnel end to end</a></li>
+      <li><a href="#backprop2">Feedback through every round</a></li>
+      <li><a href="#capstone">Back to the real world</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <!-- ============ HERO / INTRO ============ -->
+    <section class="hero" id="intro">
+      <div class="kicker">Neural networks · multi&#8209;layer networks</div>
+      <h1>Neural Networks 3 post read</h1>
+      <p class="lede">You've already built a single neuron that makes one decision. This is about scaling that into a full pipeline — using a hiring process as the running picture, until the math can stand on its own without it.</p>
+
+      <div class="exhibit hero-diagram">
+        <div id="diagramPipeline"></div>
+        <figcaption>Raw signals → a pre-screening round → a final panel → a decision</figcaption>
+      </div>
+
+      <h3 style="margin-top:44px;">The picture we'll keep coming back to</h3>
+      <p>Every idea below has a one-line hiring parallel. It's a support, not a crutch — the goal is to be able to drop the story entirely and still do the math.</p>
+      <div class="analogy-table">
+        <div class="analogy-row head"><div>Network term</div><div>Hiring pipeline equivalent</div></div>
+        <div class="analogy-row"><div>One neuron</div><div>One recruiter, scoring a candidate on two signals</div></div>
+        <div class="analogy-row"><div>A layer</div><div>A panel of interviewers, scoring across several tracks at once</div></div>
+        <div class="analogy-row"><div>A hidden layer</div><div>A pre-screening round, turning raw signals into derived ones</div></div>
+        <div class="analogy-row"><div>Layer 1, 2, … L</div><div>Round 1, Round 2, … Round L</div></div>
+        <div class="analogy-row"><div>Backpropagation</div><div>Recalibrating the panel after a hiring cycle</div></div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: PANEL ============ -->
+    <section class="chapter" id="panel">
+      <div class="chapter-num">01</div>
+      <h2>From one recruiter to a full panel</h2>
+
+      <h3>The single recruiter</h3>
+      <p>Picture one recruiter screening candidates. For every candidate they look at two signals: <span class="eq-inline">\(x_1\)</span> (years of relevant experience) and <span class="eq-inline">\(x_2\)</span> (a classical ML skills score — the fundamentals a screening test would check). They combine these with personal weights, add a personal bias, and pass the result through a sigmoid to get a probability: how likely is this candidate to move forward?</p>
+      <p>That's a single neuron, and it's exactly the logistic regression model from earlier: </p>
+      <div class="eq">$$z = w_1 x_1 + w_2 x_2 + b, \qquad p = \sigma(z) = \frac{1}{1 + e^{-z}}$$</div>
+      <ul class="varlist">
+        <li><span class="v">x₁, x₂</span> the candidate's two input signals</li>
+        <li><span class="v">w₁, w₂</span> how much the recruiter weighs each signal</li>
+        <li><span class="v">b</span> the recruiter's baseline bias</li>
+        <li><span class="v">z</span> the raw score</li>
+        <li><span class="v">p</span> the final probability</li>
+      </ul>
+      <div class="callout faq">
+        <span class="co-label">Worth remembering</span>
+        <p>Swap sigmoid for a step function and this recruiter becomes a strict yes/no gate — a perceptron. Swap it for a hinge-loss boundary and it's a linear SVM. A lot of classical ML is one neuron with a different activation choice.</p>
+      </div>
+
+      <div class="exhibit">
+        <div id="diagramNeuron"></div>
+        <figcaption>One neuron: two signals in, one probability out</figcaption>
+      </div>
+
+      <h3>From one recruiter to a panel</h3>
+      <p>One recruiter can only give one yes/no call. But this company has three open tracks — Backend, ML, and Frontend — and every candidate needs to be scored across all three at once, with the scores forming a single probability distribution. So the process brings in a panel: three interviewers, one per track, all looking at the same two signals.</p>
+      <div class="eq">$$z_k = w_{1k} x_1 + w_{2k} x_2 + b_k, \qquad k = 1, 2, 3$$</div>
+      <p>Stacked across the whole panel:</p>
+      <div class="eq">$$Z = XW + b$$</div>
+      <ul class="varlist">
+        <li><span class="v">X</span> shape (m, d): m candidates, d signals (here d = 2)</li>
+        <li><span class="v">W</span> shape (d, n): one column of weights per interviewer (here n = 3)</li>
+        <li><span class="v">b</span> shape (1, n): one bias per interviewer, broadcast across all m candidates</li>
+        <li><span class="v">Z</span> shape (m, n): the panel's raw scores</li>
+      </ul>
+      <p>Since the three scores need to become one probability distribution over the three tracks — not three independent probabilities — the panel normalizes with softmax:</p>
+      <div class="eq">$$p_{ik} = \frac{e^{z_{ik}}}{\sum_{j=1}^{n} e^{z_{ij}}}$$</div>
+
+      <div class="exhibit">
+        <div id="diagramPanel"></div>
+        <figcaption>A layer: two signals feeding a three-track panel, normalized by softmax</figcaption>
+      </div>
+
+      <details class="codebox">
+        <summary>See the code — scoring two candidates across a three-track panel</summary>
+        <pre><code>import numpy as np
+
+# 2 candidates, 2 signals each, 3 interviewers (tracks)
+X = np.array([[0.8, 0.3],
+              [0.2, 0.9]])          # shape (m=2, d=2)
+
+W = 0.5 * np.random.randn(2, 3)     # shape (d=2, n=3)
+b = np.zeros((1, 3))                # shape (1, n=3)
+
+Z = np.dot(X, W) + b                # raw scores from all 3 interviewers
+exp_Z = np.exp(Z)
+P = exp_Z / np.sum(exp_Z, axis=1, keepdims=True)   # softmax
+
+print("Panel probabilities (P), each row sums to 1:\n", P)</code></pre>
+      </details>
+
+      <div class="quiz" id="quiz1">
+        <div class="quiz-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>Quick check</span>
+        </div>
+        <p class="quiz-question">A classification layer takes d raw input signals and produces n output scores, one per class, via softmax. Every output score has its own weight per input signal, plus its own single bias. If d = 4 signals and n = 5 classes, how many total trainable parameters does this layer have?</p>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="false">9</button>
+          <button class="quiz-option" data-correct="false">20</button>
+          <button class="quiz-option" data-correct="false">25</button>
+          <button class="quiz-option" data-correct="true">29</button>
+        </div>
+        <div class="quiz-explanation" hidden>
+          <p class="quiz-verdict"></p>
+          <p>Weights = d × n = 4 × 5 = 20. Biases = n = 5, one per class. Total = 20 + 5 = 29.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: LEARNING ============ -->
+    <section class="chapter" id="learning">
+      <div class="chapter-num">02</div>
+      <h2>How the panel learns</h2>
+      <p>A freshly assembled panel isn't accurate on day one. After a hiring cycle, the company checks the panel's predicted probabilities against how candidates actually performed on the job, and that mismatch becomes a loss, <span class="eq-inline">\(J\)</span>. Every interviewer now needs to know exactly how to adjust their own weights and bias so the prediction gets closer next cycle.</p>
+      <p>That's backpropagation: using the chain rule to trace how a change in each interviewer's weights affects the final loss. We can't compute <span class="eq-inline">\(\partial J / \partial W\)</span> directly — <span class="eq-inline">\(J\)</span> depends on <span class="eq-inline">\(P\)</span>, which depends on <span class="eq-inline">\(Z\)</span>, which depends on <span class="eq-inline">\(W\)</span>:</p>
+      <div class="eq">$$\frac{\partial J}{\partial W} = \frac{\partial J}{\partial P} \cdot \frac{\partial P}{\partial Z} \cdot \frac{\partial Z}{\partial W}$$</div>
+      <p>The middle two terms combine into one clean result. Call it <span class="eq-inline">\(dZ\)</span>:</p>
+      <div class="eq">$$dZ_{ik} = p_{ik} - y_{ik}$$</div>
+      <ul class="varlist">
+        <li><span class="v">p_ik</span> the panel's predicted probability candidate i belongs to track k</li>
+        <li><span class="v">y_ik</span> 1 if track k is candidate i's true track, else 0 (one-hot label)</li>
+      </ul>
+      <p><strong>Why only the true class gets pushed negative:</strong> for the correct track, we want the score to go up, so its gradient is negative — gradient descent moves against the gradient, so subtracting a negative increases the score. Every other track's gradient stays at <span class="eq-inline">\(p_{ik}\)</span> itself, nudging it down slightly, since all three must still sum to 1.</p>
+      <p>From <span class="eq-inline">\(dZ\)</span> we recover the actual gradients, and the update:</p>
+      <div class="eq">$$dW = X^T \cdot dZ, \qquad db = \sum_{i=1}^m dZ_i$$$$W \leftarrow W - \eta \, dW, \qquad b \leftarrow b - \eta \, db$$</div>
+      <p>where <span class="eq-inline">\(\eta\)</span> is the learning rate — how large a correction gets applied each cycle.</p>
+
+      <div class="callout important">
+        <span class="co-label">Worth being precise about</span>
+        <p>It's easy to assume <span class="eq-inline">\(dZ = p - y\)</span> is a shortcut or approximation. It isn't — it's the exact, fully simplified derivative once you combine softmax with cross-entropy loss.</p>
+      </div>
+
+      <div class="quiz" id="quiz2">
+        <div class="quiz-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>Quick check</span>
+        </div>
+        <p class="quiz-question">A candidate's true track is Track 2 of 3. The model currently predicts probabilities [0.5, 0.2, 0.3] for tracks 1, 2, 3. What is dZ for this candidate?</p>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="false">[0.5, 0.2, 0.3]</button>
+          <button class="quiz-option" data-correct="true">[0.5, &minus;0.8, 0.3]</button>
+          <button class="quiz-option" data-correct="false">[&minus;0.5, 0.2, &minus;0.3]</button>
+          <button class="quiz-option" data-correct="false">[0.5, 0.8, 0.3]</button>
+        </div>
+        <div class="quiz-explanation" hidden>
+          <p class="quiz-verdict"></p>
+          <p>y = [0, 1, 0] for Track 2. dZ = [0.5&minus;0, 0.2&minus;1, 0.3&minus;0] = [0.5, &minus;0.8, 0.3]. Only the true class's entry goes negative — the signal telling that track's interviewer to raise this candidate's score.</p>
+        </div>
+      </div>
+
+      <div class="callout faq">
+        <span class="co-label">Why exponentials, not just a plain ratio?</span>
+        <p>A natural question: why does softmax use <span class="eq-inline">\(e^z\)</span> instead of just dividing each raw score by the sum of all raw scores? The answer is that raw scores can be negative, and a plain ratio can produce negative or undefined "probabilities" — that breaks the whole premise of a valid distribution. Exponentiation guarantees every value is positive and amplifies the differences between scores, both of which a well-behaved probability distribution requires.</p>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: HIDDEN ============ -->
+    <section class="chapter" id="hidden">
+      <div class="chapter-num">03</div>
+      <h2>One round isn't enough</h2>
+      <p>The panel we've built has a ceiling: it can only decide based directly on the two raw signals it's handed. Real hiring signals are messier than "years of experience" and "ML skills score" as two clean numbers — there's leadership potential, technical depth, growth trajectory, dozens of things a recruiter only picks up by combining raw signals in more complex ways.</p>
+      <p>So the process adds a pre-screening round before the final panel: a stage that reads the raw signals first and produces its own synthesized reads — one unit might specialize in detecting "leadership signal," another in "technical depth," and so on. The panel then sees these derived signals, not the raw ones. This pre-screening round is a <strong>hidden layer</strong> — the candidate and the hiring committee never interact with it directly, they only see the raw signals going in and the final verdict coming out.</p>
+      <p>The notation gets a superscript for which round a quantity belongs to: the pre-screening round's weights and bias are <span class="eq-inline">\(W^1, b^1\)</span>; the final panel's are <span class="eq-inline">\(W^2, b^2\)</span>.</p>
+
+      <div class="exhibit">
+        <div id="diagramHidden"></div>
+        <figcaption>A hidden layer sits between the raw signals and the final panel</figcaption>
+      </div>
+
+      <h3>Why the pre-screening round needs non-linear judgment</h3>
+      <p>Here's the subtlety: if every unit in the pre-screening round just computes a weighted average and passes it along untouched — purely linear — does the round add anything at all?</p>
+      <p>Suppose one pre-screening unit computes <span class="eq-inline">\(g(x) = 2x + 1\)</span>, and the panel then applies its own linear combination, <span class="eq-inline">\(f(u) = 3u + 4\)</span>:</p>
+      <div class="eq">$$f(g(x)) = 3(2x + 1) + 4 = 6x + 7$$</div>
+      <p>Still linear in x. Stack as many purely linear rounds as you like and the whole thing collapses back into one linear function — a 64-unit purely linear hidden layer performs identically to a single linear neuron, because mathematically, it is one.</p>
+      <p>Now suppose the pre-screening unit applies a non-linear read, <span class="eq-inline">\(g(x) = x^2 + 1\)</span>:</p>
+      <div class="eq">$$f(g(x)) = 3(x^2 + 1) + 4 = 3x^2 + 7$$</div>
+      <p>Genuinely non-linear — a decision boundary one recruiter alone could never draw. This is exactly why every hidden layer needs a non-linear activation: it's the only thing that makes stacking layers buy you anything.</p>
+      <p>The final layer still uses softmax — it needs to output a valid probability distribution. Non-linearity is non-negotiable specifically in the hidden layers. Different rounds could in principle use different activations, but in practice mixing rarely helps, so most networks keep one choice throughout the hidden layers.</p>
+
+      <div class="quiz" id="quiz3">
+        <div class="quiz-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>Quick check</span>
+        </div>
+        <p class="quiz-question">Two purely linear functions are applied one after another: first h(x) = 4x &minus; 2, then g(h(x)) = 0.5·h(x) + 3. Is the combined function linear or non-linear in x?</p>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="false">Non-linear, because two functions were combined</button>
+          <button class="quiz-option" data-correct="true">Linear, because a composition of linear functions is always linear</button>
+          <button class="quiz-option" data-correct="false">Non-linear, because the coefficients changed</button>
+          <button class="quiz-option" data-correct="false">Cannot be determined without knowing x</button>
+        </div>
+        <div class="quiz-explanation" hidden>
+          <p class="quiz-verdict"></p>
+          <p>g(h(x)) = 0.5(4x&minus;2)+3 = 2x+2 — still linear. Composing any number of linear functions always produces another linear function, which is exactly why hidden layers need non-linearity to be useful at all.</p>
+        </div>
+      </div>
+
+      <div class="callout faq">
+        <span class="co-label">Where this shows up later</span>
+        <p>This "linear combination, then non-linear activation, repeated" pattern is the same feed-forward block inside every layer of the transformer architecture behind today's large language models — attention, then this exact structure, just with GELU or SwiGLU instead of sigmoid or ReLU. Same reasoning, same math, different scale.</p>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: WOW / WIDTH VS DEPTH ============ -->
+    <section class="chapter" id="wow">
+      <div class="chapter-num">04</div>
+      <h2>Width vs. depth: the XOR problem</h2>
+      <p>Here's a question worth sitting with: if you're given a single layer of neurons — as many as you want, a hundred, a million — is there any pattern in the data that a layer like that could never learn, no matter how wide it gets?</p>
+      <p>Set up a concrete scenario: hire the candidate only if they're strong in <em>exactly one</em> of two areas — say, classical ML depth or systems/backend depth — not weak in both, and not strong in both either. Plotted on a simple 2D grid, two points that should be "hire" sit diagonally opposite two points that should be "no." That's the XOR pattern.</p>
+
+      <div class="exhibit">
+        <div id="diagramXOR"></div>
+        <figcaption>Hire only if exactly one signal is strong — no straight line separates the two classes</figcaption>
+      </div>
+
+      <p>Two architectures were tried head to head, live, on exactly this problem:</p>
+
+      <div class="tabgroup" role="tablist" aria-label="XOR experiment attempts">
+        <button class="tabbtn" role="tab" aria-selected="true" data-tab="attempt1">Attempt 1 — wide but linear</button>
+        <button class="tabbtn" role="tab" aria-selected="false" data-tab="attempt2">Attempt 2 — tiny but non-linear</button>
+      </div>
+
+      <div class="tabpanel active" id="attempt1">
+        <p>64 hidden units — plenty of capacity on paper — but no activation function between the two linear layers.</p>
+        <details class="codebox">
+          <summary>See the code</summary>
+          <pre><code>wide_linear = nn.Sequential(
+    nn.Linear(2, 64),   # 64 hidden units, plenty of capacity
+    nn.Linear(64, 1)    # but no non-linearity in between
+)
+# trained 2000 steps with Adam, lr=0.05, BCEWithLogitsLoss</code></pre>
+        </details>
+        <div class="result-card">
+          <p><strong>Result:</strong> the wide-but-linear network never reaches full accuracy. It plateaus with predictions collapsing toward an uninformative ~0.5 for every candidate — because mathematically, those 64 linear units collapse into exactly one linear function, no matter how training goes.</p>
+        </div>
+      </div>
+      <div class="tabpanel" id="attempt2">
+        <p>Just 4 hidden units — but with a Tanh non-linearity between the two layers.</p>
+        <details class="codebox">
+          <summary>See the code</summary>
+          <pre><code>tiny_nonlinear = nn.Sequential(
+    nn.Linear(2, 4),
+    nn.Tanh(),          # the only change that matters
+    nn.Linear(4, 1)
+)
+# trained 2000 steps with Adam, lr=0.05, BCEWithLogitsLoss</code></pre>
+        </details>
+        <div class="result-card">
+          <p><strong>Result:</strong> the tiny non-linear network reaches 100% accuracy on the XOR pattern — with a sixteenth of the hidden units.</p>
+        </div>
+      </div>
+
+      <div class="callout important">
+        <span class="co-label">The takeaway</span>
+        <p>So was the problem ever about how many neurons the layer had? No — it was never about width. Depth only helps when there's non-linearity between the rounds. Going back to the opening question: yes, some patterns are impossible for a single layer, no matter how wide it gets.</p>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: ACTIVATIONS ============ -->
+    <section class="chapter" id="activations">
+      <div class="chapter-num">05</div>
+      <h2>Choosing how the panel reacts</h2>
+      <p>Hidden layers need non-linearity — now the question is which one, and why the choice matters more as the pipeline gets deeper.</p>
+
+      <h3>Sigmoid and tanh, revisited</h3>
+      <p>Sigmoid's output is always between 0 and 1 — a natural fit for a single probability, and for decades it was also the default for hidden layers. Its cousin, tanh, ranges from &minus;1 to 1 and is zero-centered:</p>
+      <div class="eq">$$\tanh(z) = \frac{e^z - e^{-z}}{e^z + e^{-z}}, \qquad \tanh'(z) = 1 - \tanh^2(z)$$</div>
+      <p>Both derivatives always sit between 0 and 1.</p>
+
+      <h3>When the pipeline gets too deep: vanishing gradients</h3>
+      <p>Imagine the hiring process grows to 20 sequential rounds before the final "was this a good hire" feedback is even measured. That feedback has to travel all the way back through every round to reach Round 1's original screening criteria.</p>
+      <p>Here's the problem: if every round uses sigmoid or tanh, its derivative is always below 1 — often much closer to 0. Backpropagation multiplies these derivatives together at every step of the chain rule. A long chain of numbers each less than 1 compounds into something vanishingly small. By the time feedback reaches Round 1, it's shrunk to almost nothing, and gradient descent barely updates those original weights. This is the <strong>vanishing gradient problem</strong> — historically the reason networks deeper than 3&ndash;4 layers were considered impractical to train.</p>
+      <p>An ideal activation would be differentiable, non-linear, cheap to compute, and have a derivative that stays close to 1 across a wide input range instead of shrinking toward 0.</p>
+
+      <div class="exhibit">
+        <div id="gradientChart"></div>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="legend-swatch"></span>Sigmoid, every hidden layer</span>
+          <span class="legend-item"><span class="legend-swatch dashed"></span>ReLU, every hidden layer</span>
+        </div>
+        <figcaption>Gradient norm at each of 21 layers in a 20-hidden-layer network, log scale, Round 1 (nearest the input) on the left. Hover a point for its exact value.</figcaption>
+      </div>
+      <p>The earliest layers' gradient norms in the sigmoid network are many orders of magnitude smaller than the last layer's — small enough to be functionally zero for training purposes. The ReLU network's norms stay far healthier across the same depth.</p>
+
+      <details class="codebox">
+        <summary>See the code that produced this chart</summary>
+        <pre><code>def gradient_norms_by_depth(activation_cls, num_layers=20, width=20):
+    layers = []
+    for _ in range(num_layers):
+        layers.append(nn.Linear(width, width))
+        layers.append(activation_cls())
+    layers.append(nn.Linear(width, 1))
+    net = nn.Sequential(*layers)
+
+    out = net(x)
+    loss = ((out - target) ** 2).mean()
+    loss.backward()
+
+    # gradient norm of each Linear layer's weight, in order
+    return [m.weight.grad.norm().item() for m in net if isinstance(m, nn.Linear)]</code></pre>
+      </details>
+
+      <div class="callout important">
+        <span class="co-label">Not "broken," just misapplied</span>
+        <p>This doesn't mean sigmoid is wrong. It's still the right choice for a final output layer producing one probability. The failure mode is specifically about using it repeatedly, deep in the hidden stack.</p>
+      </div>
+
+      <h3>ReLU — a decisive recruiter</h3>
+      <div class="eq">$$\text{ReLU}(z) = \max(z, 0), \qquad \text{ReLU}'(z) = \begin{cases} 1, & z &gt; 0 \\ 0, & z \le 0 \end{cases}$$</div>
+      <p>A ReLU unit is decisive: if a candidate impresses it at all, the gradient is a full 1 — no shrinking, no matter how many rounds deep. This directly fixes the compounding-shrinkage problem for the "impressed" case, and it's extremely cheap to compute — part of why it became the default hidden-layer choice.</p>
+      <p>But it has its own failure mode. If a unit's raw score ends up negative for every candidate it ever sees, its gradient is permanently 0 — it stops learning entirely, forever. This is the <strong>dying ReLU problem</strong>: a recruiter who's burned out and checked out of the process, no longer reachable by any feedback.</p>
+
+      <h3>Leaky ReLU — staying reachable</h3>
+      <div class="eq">$$\text{Leaky ReLU}'(z) = \begin{cases} 1, & z &gt; 0 \\ \alpha, & z \le 0 \end{cases}$$</div>
+      <p>where α is small, commonly around 0.01. Still mostly decisive, but never fully unreachable.</p>
+
+      <h3>What's actually used today</h3>
+      <p>Modern large models mostly don't use plain ReLU either — GELU and SiLU/Swish (both smooth, differentiable-everywhere curves that resemble ReLU but with a gentle bend near zero instead of a hard corner) are now the default in most transformer architectures, largely because that smoothness gives slightly better gradient flow in very deep networks. The core lesson doesn't change: cheap, non-linear, and a derivative that doesn't collapse toward 0.</p>
+      <p>Weight initialization matters for the same reason. Layers followed by ReLU specifically benefit from <strong>He initialization</strong>, which scales initial weights to keep activation variance stable across layers. Swap in naive tiny-random initialization at extreme depth and even a ReLU network can struggle to train well — initialization and activation choice solve related, but not identical, problems.</p>
+
+      <div class="quiz" id="quiz4">
+        <div class="quiz-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>Quick check</span>
+        </div>
+        <p class="quiz-question">Backpropagation multiplies together the derivatives of every activation function between a layer and the output. Sigmoid/tanh derivatives sit between 0 and 1 (often near 0); ReLU's derivative is exactly 1 or exactly 0. Which statement is correct?</p>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="false">Vanishing gradients happen because ReLU derivatives are always &lt; 1</button>
+          <button class="quiz-option" data-correct="true">Vanishing gradients happen because sigmoid/tanh derivatives are below 1 for most inputs, and multiplying them across many layers compounds the shrinkage</button>
+          <button class="quiz-option" data-correct="false">Vanishing gradients happen because backpropagation adds derivatives across layers</button>
+          <button class="quiz-option" data-correct="false">Vanishing gradients occur only when the training dataset is too small</button>
+        </div>
+        <div class="quiz-explanation" hidden>
+          <p class="quiz-verdict"></p>
+          <p>Sigmoid/tanh derivatives are bounded below 1 across most of their range, and because backprop multiplies these across every layer, the compounded product shrinks fast with depth — leaving early layers with almost no usable signal. ReLU's derivative is exactly 1 or exactly 0, so it doesn't cause this particular compounding when the derivative is 1.</p>
+        </div>
+      </div>
+
+      <h3>Try it: watching a feedback signal decay</h3>
+      <p>The same compounding effect can be explored directly: pick an activation, pick how many rounds the feedback has to travel back through, and watch the relative signal strength that survives the trip.</p>
+      <div class="tool">
+        <span class="tool-label">Interactive — signal decay across depth</span>
+        <div class="tool-row">
+          <label>Activation
+            <select id="decayActivation">
+              <option value="sigmoid">Sigmoid</option>
+              <option value="tanh">Tanh</option>
+              <option value="relu">ReLU</option>
+              <option value="leaky">Leaky ReLU</option>
+            </select>
+          </label>
+          <label>Rounds: <span id="decayRoundsVal">5</span>
+            <input type="range" id="decayRounds" min="1" max="20" value="5">
+          </label>
+        </div>
+        <div class="decay-bars" id="decayBars" aria-hidden="true"></div>
+        <div class="tool-readout" id="decayReadout"></div>
+      </div>
+
+      <div class="callout faq">
+        <span class="co-label">Recognizing it in practice</span>
+        <p>The telltale pattern: training loss barely moves after the first epoch, staying near its random-initialization value. The last layer's weights update fine, but the earliest layers' weights barely change even after many epochs. That combination points to vanishing gradients, not a bad learning rate or a data problem. The fix is rarely one thing alone — swapping in a ReLU-family activation, using proper initialization such as He init, adding residual connections, and adding normalization all attack the same compounding effect from different angles.</p>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: NOTATION ============ -->
+    <section class="chapter" id="notation">
+      <div class="chapter-num">06</div>
+      <h2>Naming every round</h2>
+      <p>As the pipeline grows, plain letters like w₁, w₂, … stop being enough — the notation needs to track both which round a weight belongs to, and which pair of units it connects. For a network with any number of layers:</p>
+      <div class="eq">$$w^{L}_{ij}, \qquad b^{L}_{i}$$</div>
+      <ul class="varlist">
+        <li><span class="v">L</span> the layer number</li>
+        <li><span class="v">i</span> the "from" neuron, in layer L&minus;1</li>
+        <li><span class="v">j</span> the "to" neuron, in layer L</li>
+        <li><span class="v">b^L_i</span> bias for neuron i in layer L</li>
+      </ul>
+
+      <h3>Sizing up a pipeline</h3>
+      <p>3 raw signals feed a pre-screening round of 5 units, which feeds a final panel of 2 tracks.</p>
+      <ul>
+        <li><strong>Round 1:</strong> 3 × 5 = 15 weights + 5 biases = 20 parameters</li>
+        <li><strong>Round 2:</strong> 5 × 2 = 10 weights + 2 biases = 12 parameters</li>
+        <li><strong>Total:</strong> 32 trainable parameters</li>
+      </ul>
+      <p>Shapes: W¹ is (3,5), b¹ is (1,5), W² is (5,2), b² is (1,2). The pattern to remember: a layer's weight-matrix rows are the neurons feeding in; its columns are the neurons in that layer.</p>
+
+      <div class="tool">
+        <span class="tool-label">Interactive — parameter counter</span>
+        <div class="param-grid">
+          <div class="param-field"><span>Input signals (d)</span><input type="number" id="pcD" value="3" min="1" max="64"></div>
+          <div class="param-field"><span>Hidden units (h)</span><input type="number" id="pcH" value="5" min="1" max="256"></div>
+          <div class="param-field"><span>Output tracks (n)</span><input type="number" id="pcN" value="2" min="1" max="64"></div>
+        </div>
+        <div class="param-result">
+          <div class="param-result-row"><span>Round 1 (d × h + h)</span><span id="pcR1">20</span></div>
+          <div class="param-result-row"><span>Round 2 (h × n + n)</span><span id="pcR2">12</span></div>
+          <div class="param-result-row total"><span>Total parameters</span><span id="pcTotal">32</span></div>
+        </div>
+      </div>
+      <p style="font-size:0.92rem; color:var(--text-dim);">Try 4 inputs, 8 hidden units, 3 outputs in the calculator above — it should land on 67 total parameters. Then, on paper, sketch what the multi-path chain rule (covered further down) would look like for that same shape.</p>
+    </section>
+
+    <!-- ============ SECTION: FORWARD ============ -->
+    <section class="chapter" id="forward">
+      <div class="chapter-num">07</div>
+      <h2>Running the funnel, end to end</h2>
+      <p>Running the pipeline start to finish — raw signals to final probabilities — is forward propagation, the easier half. At every layer: compute Z, apply that layer's activation to get A, pass A forward.</p>
+      <p>For the 3-signal, 5-unit, 2-track example, using ReLU for pre-screening and softmax for the final panel:</p>
+      <div class="eq">$$Z^1 = X W^1 + b^1, \qquad A^1 = \text{ReLU}(Z^1)$$$$Z^2 = A^1 W^2 + b^2, \qquad A^2 = \text{softmax}(Z^2)$$</div>
+      <p>Loss stays categorical cross-entropy — only how many layers produced A² has changed.</p>
+
+      <details class="codebox">
+        <summary>See the code</summary>
+        <pre><code>d, h, n, m = 3, 5, 2, 4   # 3 signals, 5 pre-screen units, 2 tracks, 4 candidates
+
+X = np.random.randn(m, d)
+W1 = 0.01 * np.random.randn(d, h); b1 = np.zeros((1, h))
+W2 = 0.01 * np.random.randn(h, n); b2 = np.zeros((1, n))
+
+def relu(z): return np.maximum(0, z)
+def softmax(z):
+    e = np.exp(z); return e / np.sum(e, axis=1, keepdims=True)
+
+Z1 = np.dot(X, W1) + b1; A1 = relu(Z1)
+Z2 = np.dot(A1, W2) + b2; A2 = softmax(Z2)
+
+# Z1: (4,5)  A1: (4,5)  Z2: (4,2)  A2: (4,2), each row of A2 sums to 1</code></pre>
+      </details>
+    </section>
+
+    <!-- ============ SECTION: BACKPROP DEEP ============ -->
+    <section class="chapter" id="backprop2">
+      <div class="chapter-num">08</div>
+      <h2>Feedback through every round</h2>
+      <p>Backprop for a single layer was derived earlier. Now: what changes once feedback has to travel back through a pre-screening round too?</p>
+      <p>For the final layer, nothing changes:</p>
+      <div class="eq">$$dZ^2 = A^2 - Y, \qquad dW^2 = (A^1)^T dZ^2, \qquad db^2 = \sum dZ^2$$</div>
+      <p>The interesting part is dW¹ and db¹. Feedback for a pre-screening unit doesn't arrive through one path — it arrives once for every final-panel interviewer that unit's output influenced. If a unit feeds into all n interviewers, its gradient is the <strong>sum</strong> of feedback from every one of them:</p>
+      <div class="eq">$$\frac{\partial J}{\partial a^1_i} = \sum_{k=1}^{n} \frac{\partial J}{\partial z^2_k} \cdot \frac{\partial z^2_k}{\partial a^1_i}$$</div>
+      <p>This is the <strong>multi-path chain rule</strong>: whenever a quantity influences the loss through more than one route, its total gradient is the sum across every route, not just one. Once <span class="eq-inline">\(\partial J / \partial a^1_i\)</span> is known, that unit's own activation-function derivative (ReLU, here) is still applied before computing dW¹ and db¹ — the same chain-rule step, one layer further back.</p>
+
+      <div class="callout faq">
+        <span class="co-label">Why this matters for PyTorch</span>
+        <p>This is exactly what <code>.backward()</code> does. Every time a tensor feeds into more than one downstream computation, autograd sums the incoming gradients automatically — the multi-path rule isn't a special case PyTorch handles separately, it's the default behavior of the whole system.</p>
+      </div>
+
+      <div class="quiz" id="quiz5">
+        <div class="quiz-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>Quick check</span>
+        </div>
+        <p class="quiz-question">A hidden unit's output feeds forward into 4 separate output neurons in the next layer. During backpropagation, each of those 4 neurons sends back its own gradient signal. What should be done with the 4 incoming signals to get this unit's total gradient?</p>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="false">Use only the signal from the neuron with the largest gradient</button>
+          <button class="quiz-option" data-correct="false">Average the 4 signals</button>
+          <button class="quiz-option" data-correct="true">Sum the 4 signals</button>
+          <button class="quiz-option" data-correct="false">Multiply the 4 signals together</button>
+        </div>
+        <div class="quiz-explanation" hidden>
+          <p class="quiz-verdict"></p>
+          <p>Whenever one neuron's output feeds forward along multiple paths, its total gradient is the sum of the gradients from every path — never an average or a product. This is a direct consequence of the multivariable chain rule: if a variable affects the loss through several routes, its overall sensitivity is the combined effect of all of them.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: CAPSTONE ============ -->
+    <section class="chapter" id="capstone">
+      <div class="chapter-num">09</div>
+      <h2>Back to the real world</h2>
+      <p>Vanishing gradients don't just go away once networks get deeper in practice — they get engineered around. This is why:</p>
+      <ul>
+        <li><strong>ResNets</strong> add skip connections, giving gradients a direct shortcut path back to early layers, bypassing the long multiplicative chain</li>
+        <li><strong>LayerNorm</strong>, used throughout transformers, keeps activation scales stable layer to layer, so derivatives don't drift toward 0 or explode</li>
+        <li>Modern architectures can be hundreds of layers deep specifically because of fixes like these — not because vanishing gradients stopped being a real problem</li>
+      </ul>
+      <div class="callout important">
+        <span class="co-label">Worth being able to answer</span>
+        <p>Why can a transformer be 96 layers deep when a plain sigmoid MLP starts failing past 5&ndash;10? Not because transformers are magically immune to vanishing gradients — it's residual/skip connections, normalization, and non-saturating activations working together to keep gradients alive across depth.</p>
+      </div>
+
+      <h3>Recap</h3>
+      <ul class="recap-list">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Single neuron → multi-class panel, using softmax for a valid probability distribution</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Backprop for that panel: dZ = p &minus; y, then dW, db</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Why a single layer has a capacity ceiling, and why hidden layers need non-linearity — proven with math and a live XOR experiment</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Sigmoid/tanh → vanishing gradients → ReLU → dying ReLU → Leaky ReLU → where GELU/SiLU and weight init fit in</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>General L-layer notation and shape / parameter counting</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>The same network, run forward end to end</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Backprop generalized via the multi-path chain rule — exactly what <code>.backward()</code> automates</li>
+      </ul>
+      <p>Everything from here builds on this directly: the same pipeline, scaled up with more rounds and more units per round, engineered with the fixes above, <em>is</em> a modern deep network.</p>
+    </section>
+
+    <footer>
+      <div class="foot-title">Neural Networks 3 post read</div>
+    </footer>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script>
+/* ============ Math rendering ============ */
+document.addEventListener('DOMContentLoaded', function(){
+  if(window.renderMathInElement){
+    renderMathInElement(document.body, {
+      delimiters:[
+        {left:"$$", right:"$$", display:true},
+        {left:"\\(", right:"\\)", display:false}
+      ],
+      throwOnError:false
+    });
+  }
+});
+
+/* ============ Progress bar + scrollspy ============ */
+(function(){
+  var bar = document.getElementById('progress');
+  var links = Array.from(document.querySelectorAll('#toc a'));
+  var sections = links.map(function(l){ return document.querySelector(l.getAttribute('href')); }).filter(Boolean);
+
+  function onScroll(){
+    var h = document.documentElement;
+    var scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    bar.style.width = scrolled + '%';
+
+    var pos = window.scrollY + 140;
+    var current = sections[0];
+    sections.forEach(function(s){ if(s.offsetTop <= pos) current = s; });
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var idx = sections.indexOf(current);
+    if(idx > -1) links[idx].classList.add('active');
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+
+/* ============ Mobile nav ============ */
+(function(){
+  var toggle = document.getElementById('navToggle');
+  var toc = document.getElementById('toc');
+  var overlay = document.getElementById('navOverlay');
+  function close(){ toc.classList.remove('open'); overlay.classList.remove('open'); toggle.setAttribute('aria-expanded','false'); }
+  function open(){ toc.classList.add('open'); overlay.classList.add('open'); toggle.setAttribute('aria-expanded','true'); }
+  toggle.addEventListener('click', function(){ toc.classList.contains('open') ? close() : open(); });
+  overlay.addEventListener('click', close);
+  document.querySelectorAll('#toc a').forEach(function(a){ a.addEventListener('click', close); });
+})();
+
+/* ============ Network diagram renderer ============ */
+function networkDiagram(layers, gaps, opts){
+  opts = opts || {};
+  var w = opts.w || 620, h = opts.h || 300;
+  var marginX = opts.marginX || 66, topPad = 34, botPad = 46;
+  var usableH = h - topPad - botPad;
+  var n = layers.length;
+  var stepX = (w - 2*marginX) / (n - 1);
+
+  layers.forEach(function(layer, li){
+    var cnt = layer.nodes.length;
+    layer._pos = layer.nodes.map(function(lbl, i){
+      var y = cnt > 1 ? topPad + i * (usableH / (cnt - 1)) : (topPad + usableH/2);
+      return { x: marginX + li*stepX, y: y, label: lbl };
+    });
+  });
+
+  var edgeSVG = '';
+  for(var li=0; li<n-1; li++){
+    layers[li]._pos.forEach(function(a){
+      layers[li+1]._pos.forEach(function(b){
+        edgeSVG += '<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" class="nd-edge"/>';
+      });
+    });
+  }
+  var nodeSVG = '';
+  layers.forEach(function(layer){
+    layer._pos.forEach(function(p){
+      nodeSVG += '<circle cx="'+p.x+'" cy="'+p.y+'" r="20" class="nd-node"/>';
+      nodeSVG += '<text x="'+p.x+'" y="'+(p.y+4)+'" class="nd-label" text-anchor="middle">'+p.label+'</text>';
+    });
+  });
+  var titleSVG = '';
+  layers.forEach(function(layer){
+    if(layer.title){
+      var maxY = Math.max.apply(null, layer._pos.map(function(p){return p.y;}));
+      var x = layer._pos[0].x;
+      titleSVG += '<text x="'+x+'" y="'+(maxY+34)+'" class="nd-title" text-anchor="middle">'+layer.title+'</text>';
+    }
+  });
+  var gapSVG = '';
+  if(gaps){
+    gaps.forEach(function(g, i){
+      if(!g) return;
+      var x = marginX + i*stepX + stepX/2;
+      gapSVG += '<text x="'+x+'" y="'+(topPad-14)+'" class="nd-gap" text-anchor="middle">'+g+'</text>';
+    });
+  }
+  return '<svg viewBox="0 0 '+w+' '+h+'" class="network-diagram" role="img" aria-label="'+(opts.alt||'network diagram')+'">'+edgeSVG+nodeSVG+titleSVG+gapSVG+'</svg>';
+}
+
+document.getElementById('diagramPipeline').innerHTML = networkDiagram(
+  [
+    {nodes:['x₁','x₂','x₃'], title:'Raw signals'},
+    {nodes:['h₁','h₂','h₃','h₄','h₅'], title:'Pre-screening round'},
+    {nodes:['p₁','p₂'], title:'Final panel'}
+  ],
+  ['ReLU','softmax'],
+  {h:300, alt:'Pipeline: raw signals into a pre-screening round into a final panel'}
+);
+
+document.getElementById('diagramNeuron').innerHTML = networkDiagram(
+  [
+    {nodes:['x₁','x₂'], title:'Inputs'},
+    {nodes:['Σ, σ'], title:'Neuron'},
+    {nodes:['p'], title:'Output'}
+  ],
+  [null,'sigmoid'],
+  {h:220, alt:'A single neuron combining two signals into one probability'}
+);
+
+document.getElementById('diagramPanel').innerHTML = networkDiagram(
+  [
+    {nodes:['x₁','x₂'], title:'2 signals'},
+    {nodes:['Backend','ML','Frontend'], title:'3 interviewers'},
+    {nodes:['p₁','p₂','p₃'], title:'Track probabilities'}
+  ],
+  [null,'softmax'],
+  {h:320, alt:'A panel of three interviewers scoring two signals, normalized with softmax'}
+);
+
+document.getElementById('diagramHidden').innerHTML = networkDiagram(
+  [
+    {nodes:['x₁','x₂','x₃'], title:'Raw signals (W¹, b¹)'},
+    {nodes:['h₁','h₂','h₃','h₄','h₅'], title:'Pre-screening round'},
+    {nodes:['p₁','p₂'], title:'Final panel (W², b²)'}
+  ],
+  ['non-linear','softmax'],
+  {h:320, alt:'A hidden layer between raw signals and the final panel'}
+);
+
+/* ============ XOR diagram ============ */
+(function(){
+  var pts = [
+    {x:0,y:0,hire:false},{x:0,y:1,hire:true},{x:1,y:0,hire:true},{x:1,y:1,hire:false}
+  ];
+  var w=460,h=320, pad=70;
+  function px(v){ return pad + v*(w-2*pad); }
+  function py(v){ return (h-pad) - v*(h-2*pad); }
+  var svg = '<svg viewBox="0 0 '+w+' '+h+'" class="xor-diagram" role="img" aria-label="XOR pattern: hire only when exactly one signal is strong">';
+  svg += '<line x1="'+pad+'" y1="'+(h-pad)+'" x2="'+(w-pad+10)+'" y2="'+(h-pad)+'" stroke="var(--line-strong)" stroke-width="1"/>';
+  svg += '<line x1="'+pad+'" y1="'+(h-pad)+'" x2="'+pad+'" y2="'+(pad-10)+'" stroke="var(--line-strong)" stroke-width="1"/>';
+  svg += '<text x="'+(w/2)+'" y="'+(h-24)+'" text-anchor="middle" class="nd-title">classical ML depth →</text>';
+  svg += '<text x="18" y="'+(h/2)+'" text-anchor="middle" class="nd-title" transform="rotate(-90 18 '+(h/2)+')">systems/backend depth →</text>';
+  pts.forEach(function(p){
+    var cx = px(p.x), cy = py(p.y);
+    svg += '<circle cx="'+cx+'" cy="'+cy+'" r="9" fill="'+(p.hire?'var(--white)':'var(--panel)')+'" stroke="var(--text)" stroke-width="1.5"/>';
+    svg += '<text x="'+cx+'" y="'+(cy - 18)+'" text-anchor="middle" class="nd-label">'+(p.hire?'hire':'no')+'</text>';
+  });
+  svg += '</svg>';
+  document.getElementById('diagramXOR').innerHTML = svg;
+})();
+
+/* ============ Gradient norm chart (real measured data) ============ */
+(function(){
+  var sigmoidNorms = [1.34e-17,1.21e-16,9.16e-16,6.60e-15,4.81e-14,2.96e-13,2.53e-12,1.68e-11,1.24e-10,7.12e-10,5.16e-09,3.81e-08,2.18e-07,1.75e-06,1.42e-05,1.11e-04,6.48e-04,5.01e-03,3.92e-02,2.94e-01,1.92e+00];
+  var reluNorms = [6.43e-09,6.94e-09,6.50e-09,1.10e-08,3.44e-08,1.47e-07,4.55e-07,1.04e-06,1.96e-06,4.36e-06,1.19e-05,4.00e-05,8.67e-05,3.19e-04,9.40e-04,2.04e-03,2.34e-03,1.38e-02,3.95e-02,8.39e-02,2.08e-01];
+
+  var w=640, h=320, m={left:56,right:18,top:16,bottom:34};
+  var yMin=-18, yMax=1;
+  var n = sigmoidNorms.length;
+
+  function xPos(i){ return m.left + (i/(n-1)) * (w-m.left-m.right); }
+  function yPos(v){ var lg = Math.log10(v); return h-m.bottom - ((lg-yMin)/(yMax-yMin)) * (h-m.top-m.bottom); }
+
+  function pathFor(data){
+    return data.map(function(v,i){ return (i===0?'M':'L') + xPos(i).toFixed(1) + ',' + yPos(v).toFixed(1); }).join(' ');
+  }
+  function markers(data, cls){
+    return data.map(function(v,i){
+      return '<circle cx="'+xPos(i).toFixed(1)+'" cy="'+yPos(v).toFixed(1)+'" r="2.6" class="'+cls+'"><title>Layer '+(i+1)+': '+v.toExponential(2)+'</title></circle>';
+    }).join('');
+  }
+
+  var grid = '';
+  var ticks = [0,-3,-6,-9,-12,-15,-18];
+  ticks.forEach(function(t){
+    var y = yPos(Math.pow(10,t));
+    grid += '<line x1="'+m.left+'" y1="'+y.toFixed(1)+'" x2="'+(w-m.right)+'" y2="'+y.toFixed(1)+'" stroke="var(--line-soft)" stroke-width="1"/>';
+    var label = t===0 ? '1' : '1e'+t;
+    grid += '<text x="'+(m.left-8)+'" y="'+(y+3).toFixed(1)+'" text-anchor="end" class="nd-title">'+label+'</text>';
+  });
+  var xticks = '';
+  [1,5,10,15,21].forEach(function(i){
+    var x = xPos(i-1);
+    xticks += '<text x="'+x.toFixed(1)+'" y="'+(h-8)+'" text-anchor="middle" class="nd-title">'+i+'</text>';
+  });
+
+  var svg = '<svg viewBox="0 0 '+w+' '+h+'" class="chart-svg" role="img" aria-label="Gradient norm by layer depth, sigmoid versus ReLU, log scale">';
+  svg += grid + xticks;
+  svg += '<path d="'+pathFor(sigmoidNorms)+'" fill="none" stroke="var(--white)" stroke-width="1.6"/>';
+  svg += '<path d="'+pathFor(reluNorms)+'" fill="none" stroke="var(--text-dim)" stroke-width="1.6" stroke-dasharray="5 4"/>';
+  svg += markers(sigmoidNorms,'nd-node');
+  svg += markers(reluNorms,'nd-node');
+  svg += '</svg>';
+  document.getElementById('gradientChart').innerHTML = svg;
+})();
+
+/* ============ Signal decay explorer ============ */
+(function(){
+  function sampleNormal(count, std){
+    var out = [];
+    for(var i=0;i<count;i+=2){
+      var u1=Math.random(), u2=Math.random();
+      var r = Math.sqrt(-2*Math.log(u1));
+      out.push(r*Math.cos(2*Math.PI*u2)*std);
+      out.push(r*Math.sin(2*Math.PI*u2)*std);
+    }
+    return out.slice(0,count);
+  }
+  function sigmoidD(z){ var s=1/(1+Math.exp(-z)); return s*(1-s); }
+  function tanhD(z){ var t=Math.tanh(z); return 1-t*t; }
+  function reluD(z){ return z>0?1:0; }
+  function leakyD(z){ return z>0?1:0.1; }
+  var fns = {sigmoid:sigmoidD, tanh:tanhD, relu:reluD, leaky:leakyD};
+
+  var select = document.getElementById('decayActivation');
+  var slider = document.getElementById('decayRounds');
+  var roundsVal = document.getElementById('decayRoundsVal');
+  var bars = document.getElementById('decayBars');
+  var readout = document.getElementById('decayReadout');
+
+  function update(){
+    var rounds = parseInt(slider.value,10);
+    roundsVal.textContent = rounds;
+    var fn = fns[select.value];
+    var zs = sampleNormal(500, 2);
+    var sum = 0;
+    for(var i=0;i<zs.length;i++) sum += fn(zs[i]);
+    var avg = sum/zs.length;
+
+    var signal = [1];
+    for(var r=0;r<rounds;r++) signal.push(signal[signal.length-1]*avg);
+
+    bars.innerHTML = signal.map(function(v){
+      var pct = Math.max(v*100, 1);
+      return '<div class="decay-bar-wrap"><div class="decay-bar" style="height:'+pct+'%"></div></div>';
+    }).join('');
+
+    var final = signal[signal.length-1];
+    readout.innerHTML = 'Average derivative magnitude ≈ <span class="num">'+avg.toFixed(4)+'</span> · signal strength after '+rounds+' rounds ≈ <span class="num">'+final.toExponential(3)+'</span>';
+  }
+  select.addEventListener('change', update);
+  slider.addEventListener('input', update);
+  update();
+})();
+
+/* ============ Parameter counter ============ */
+(function(){
+  var d = document.getElementById('pcD'), hEl = document.getElementById('pcH'), nEl = document.getElementById('pcN');
+  var r1 = document.getElementById('pcR1'), r2 = document.getElementById('pcR2'), total = document.getElementById('pcTotal');
+  function update(){
+    var dv = Math.max(1, parseInt(d.value,10)||0);
+    var hv = Math.max(1, parseInt(hEl.value,10)||0);
+    var nv = Math.max(1, parseInt(nEl.value,10)||0);
+    var round1 = dv*hv + hv;
+    var round2 = hv*nv + nv;
+    r1.textContent = round1;
+    r2.textContent = round2;
+    total.textContent = round1+round2;
+  }
+  [d,hEl,nEl].forEach(function(el){ el.addEventListener('input', update); });
+  update();
+})();
+
+/* ============ XOR tabs ============ */
+(function(){
+  var tabs = document.querySelectorAll('.tabbtn');
+  tabs.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      tabs.forEach(function(b){ b.setAttribute('aria-selected','false'); });
+      btn.setAttribute('aria-selected','true');
+      document.querySelectorAll('.tabpanel').forEach(function(p){ p.classList.remove('active'); });
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+  });
+})();
+
+/* ============ Quizzes ============ */
+(function(){
+  document.querySelectorAll('.quiz').forEach(function(quiz){
+    var options = quiz.querySelectorAll('.quiz-option');
+    var explanation = quiz.querySelector('.quiz-explanation');
+    var verdict = explanation.querySelector('.quiz-verdict');
+    var answered = false;
+    options.forEach(function(opt){
+      opt.addEventListener('click', function(){
+        if(answered) return;
+        answered = true;
+        var correct = opt.dataset.correct === 'true';
+        options.forEach(function(o){
+          o.disabled = true;
+          if(o.dataset.correct === 'true') o.classList.add('is-correct');
+        });
+        if(!correct) opt.classList.add('is-incorrect');
+        explanation.hidden = false;
+        explanation.classList.add(correct ? 'verdict-correct' : 'verdict-incorrect');
+        verdict.textContent = correct ? '✓ Correct' : '✗ Not quite';
+      });
+    });
+  });
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-NN-3" target="_blank" rel="noopener">github.com/scaler-content/DSML-NN-3</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

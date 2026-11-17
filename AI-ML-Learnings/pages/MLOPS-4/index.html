@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ML project using FastAPI post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg:#0b0a08;
+  --bg-elevated:#131110;
+  --bg-card:#161310;
+  --bg-card-2:#1b1712;
+  --border:rgba(201,162,39,0.16);
+  --border-strong:rgba(201,162,39,0.38);
+  --gold:#c9a227;
+  --gold-bright:#e7c257;
+  --gold-dim:#8a6d1a;
+  --gold-wash:rgba(201,162,39,0.10);
+  --ivory:#ece5d3;
+  --ivory-dim:#b6ac97;
+  --muted:#8a8272;
+  --danger:#c06a4a;
+  --danger-wash:rgba(192,106,74,0.12);
+  --good:#8fa878;
+  --good-wash:rgba(143,168,120,0.12);
+  --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --maxprose:700px;
+  --maxwide:920px;
+  --radius:8px;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html{scroll-behavior:smooth; scroll-padding-top:24px;}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto;}
+  *,*::before,*::after{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ivory);
+  font-family:var(--font-body);
+  font-size:16px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+img,svg{max-width:100%;}
+a{color:var(--gold-bright);}
+a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible{
+  outline:2px solid var(--gold-bright);
+  outline-offset:2px;
+  border-radius:3px;
+}
+h1,h2,h3,h4{font-family:var(--font-display); font-weight:600; color:var(--ivory); line-height:1.18; margin:0 0 .5em;}
+p{margin:0 0 1.1em;}
+code, .mono{font-family:var(--font-mono);}
+
+/* ============ PROGRESS BAR ============ */
+#progress{
+  position:fixed; top:0; left:0; height:3px; width:0%;
+  background:linear-gradient(90deg,var(--gold-dim),var(--gold-bright));
+  z-index:200; transition:width .1s linear;
+}
+
+/* ============ LAYOUT ============ */
+.layout{
+  display:grid;
+  grid-template-columns: 250px minmax(0,1fr);
+  max-width:1280px;
+  margin:0 auto;
+}
+@media (max-width: 980px){
+  .layout{grid-template-columns:1fr;}
+}
+
+/* ============ NAV ============ */
+.toc-toggle{
+  display:none;
+  position:sticky; top:0; z-index:150;
+  background:var(--bg-elevated);
+  border-bottom:1px solid var(--border);
+  padding:12px 20px;
+  align-items:center;
+  justify-content:space-between;
+  color:var(--ivory);
+  font-family:var(--font-mono);
+  font-size:.8rem;
+  letter-spacing:.02em;
+}
+.toc-toggle button{
+  background:transparent;
+  border:1px solid var(--border-strong);
+  color:var(--gold-bright);
+  padding:6px 12px;
+  border-radius:5px;
+  font-family:var(--font-mono);
+  font-size:.75rem;
+  cursor:pointer;
+}
+nav.toc{
+  position:sticky; top:0; align-self:start;
+  height:100vh;
+  overflow-y:auto;
+  padding:28px 18px 40px 28px;
+  border-right:1px solid var(--border);
+  scrollbar-width:thin;
+  scrollbar-color:var(--border-strong) transparent;
+}
+nav.toc::-webkit-scrollbar{width:6px;}
+nav.toc::-webkit-scrollbar-thumb{background:var(--border-strong); border-radius:3px;}
+.toc-brand{
+  font-family:var(--font-display);
+  font-size:1.02rem;
+  color:var(--gold-bright);
+  margin-bottom:26px;
+  padding-bottom:16px;
+  border-bottom:1px solid var(--border);
+  line-height:1.3;
+}
+.toc-brand small{display:block; font-family:var(--font-mono); font-size:.68rem; color:var(--muted); margin-top:6px; letter-spacing:.03em;}
+.toc-list{list-style:none; margin:0; padding:0;}
+.toc-list li{margin:0;}
+.toc-list a{
+  display:flex; gap:10px;
+  padding:7px 8px;
+  margin:1px 0;
+  border-radius:5px;
+  color:var(--ivory-dim);
+  text-decoration:none;
+  font-size:.85rem;
+  line-height:1.35;
+  border-left:2px solid transparent;
+}
+.toc-list a .n{font-family:var(--font-mono); color:var(--muted); font-size:.78rem; min-width:1.4em;}
+.toc-list a:hover{color:var(--ivory); background:var(--gold-wash);}
+.toc-list a.active{color:var(--gold-bright); background:var(--gold-wash); border-left-color:var(--gold);}
+.toc-list a.active .n{color:var(--gold-bright);}
+
+@media (max-width:980px){
+  .toc-toggle{display:flex;}
+  nav.toc{
+    position:fixed; inset:0 15% 0 0; top:49px; height:calc(100vh - 49px);
+    background:var(--bg); z-index:140;
+    transform:translateX(-100%);
+    transition:transform .22s ease;
+    border-right:1px solid var(--border-strong);
+  }
+  nav.toc.open{transform:translateX(0);}
+}
+
+/* ============ MAIN ============ */
+main{min-width:0; padding-bottom:80px;}
+
+/* ---- hero ---- */
+.hero{
+  padding:76px 40px 56px;
+  border-bottom:1px solid var(--border);
+  background:
+    radial-gradient(ellipse 900px 420px at 15% -10%, rgba(201,162,39,0.09), transparent 60%),
+    var(--bg);
+}
+.hero-inner{max-width:var(--maxwide); margin:0 auto;}
+.kicker{
+  font-family:var(--font-mono); font-size:.78rem; color:var(--gold);
+  letter-spacing:.02em; margin-bottom:18px;
+}
+.kicker::before{content:'— '; color:var(--gold-dim);}
+h1.title{
+  font-size:clamp(2.1rem, 5vw, 3.3rem);
+  max-width:14ch;
+  margin-bottom:.4em;
+}
+.hero-sub{
+  font-size:1.15rem; color:var(--ivory-dim); max-width:52ch; margin-bottom:34px;
+  font-family:var(--font-display); font-weight:400; font-style:italic; line-height:1.5;
+}
+.stat-strip{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+  background:var(--border); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;
+}
+.stat-strip .stat{background:var(--bg-card); padding:18px 16px;}
+.stat-strip .stat .num{font-family:var(--font-mono); font-size:1.35rem; color:var(--gold-bright); display:block; margin-bottom:4px;}
+.stat-strip .stat .lbl{font-size:.76rem; color:var(--muted); line-height:1.3;}
+@media (max-width:700px){
+  .hero{padding:48px 20px 40px;}
+  .stat-strip{grid-template-columns:repeat(2,1fr);}
+}
+
+/* ---- sections ---- */
+section.chapter{
+  padding:56px 40px;
+  border-bottom:1px solid var(--border);
+  max-width:var(--maxwide);
+  margin:0 auto;
+}
+section.chapter:last-of-type{border-bottom:none;}
+@media (max-width:700px){ section.chapter{padding:40px 20px;} }
+
+.chapter-eyebrow{
+  font-family:var(--font-mono); font-size:.75rem; color:var(--gold); margin-bottom:10px;
+}
+.chapter h2{font-size:clamp(1.5rem,3.4vw,2.05rem); max-width:26ch;}
+.chapter .lede{
+  font-family:var(--font-display); font-style:italic; font-weight:400;
+  color:var(--ivory-dim); font-size:1.12rem; max-width:var(--maxprose); margin-bottom:1.6em;
+}
+.prose{max-width:var(--maxprose);}
+.prose p{font-size:1rem; color:var(--ivory);}
+.prose h3{font-size:1.18rem; margin-top:2em; color:var(--gold-bright);}
+.prose h4{font-size:1rem; margin-top:1.6em; color:var(--ivory);}
+.prose ul, .prose ol{max-width:var(--maxprose); padding-left:1.3em; margin:0 0 1.1em;}
+.prose li{margin-bottom:.5em;}
+.prose strong{color:#fff;}
+
+/* ---- pull quote / callout ---- */
+.callout{
+  border-left:3px solid var(--gold);
+  background:var(--gold-wash);
+  padding:16px 20px;
+  border-radius:0 6px 6px 0;
+  margin:1.6em 0;
+  max-width:var(--maxprose);
+}
+.callout p{margin:0; color:var(--ivory);}
+.callout.danger{border-left-color:var(--danger); background:var(--danger-wash);}
+.callout.good{border-left-color:var(--good); background:var(--good-wash);}
+
+.bignum{
+  font-family:var(--font-display); font-size:2.6rem; color:var(--gold-bright); line-height:1;
+}
+.bignum-row{display:flex; gap:36px; flex-wrap:wrap; margin:1.6em 0;}
+.bignum-item .lbl{font-size:.82rem; color:var(--muted); margin-top:6px; max-width:22ch;}
+
+/* ---- code blocks ---- */
+pre.code{
+  background:var(--bg-elevated);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:16px 18px;
+  overflow-x:auto;
+  font-family:var(--font-mono);
+  font-size:.82rem;
+  line-height:1.6;
+  color:#dcd3ba;
+  margin:1.2em 0;
+  max-width:100%;
+}
+pre.code .cm{color:var(--muted);}
+pre.code .kw{color:var(--gold-bright);}
+pre.code .st{color:#b8c98a;}
+.code-path{
+  font-family:var(--font-mono); font-size:.72rem; color:var(--gold);
+  margin:1.4em 0 -.6em; letter-spacing:.02em;
+}
+
+/* ---- tables ---- */
+.tbl-wrap{overflow-x:auto; margin:1.4em 0; max-width:100%;}
+table{border-collapse:collapse; width:100%; font-size:.88rem; min-width:480px;}
+table caption{caption-side:top; text-align:left; font-family:var(--font-mono); font-size:.74rem; color:var(--muted); margin-bottom:8px;}
+th,td{text-align:left; padding:9px 14px; border-bottom:1px solid var(--border);}
+th{font-family:var(--font-mono); font-size:.72rem; color:var(--gold); font-weight:600; letter-spacing:.03em; text-transform:none;}
+tr:last-child td{border-bottom:none;}
+td .mono{color:var(--ivory-dim);}
+tr.hl td{background:var(--gold-wash);}
+.badge{
+  display:inline-block; font-family:var(--font-mono); font-size:.72rem;
+  padding:2px 8px; border-radius:20px; border:1px solid var(--border-strong); color:var(--gold-bright);
+}
+.badge.good{color:var(--good); border-color:rgba(143,168,120,.4);}
+.badge.bad{color:var(--danger); border-color:rgba(192,106,74,.4);}
+
+/* ---- cards / grids ---- */
+.card-grid{display:grid; gap:16px; margin:1.6em 0; max-width:var(--maxwide);}
+.card-grid.cols-3{grid-template-columns:repeat(3,1fr);}
+.card-grid.cols-2{grid-template-columns:repeat(2,1fr);}
+.card-grid.cols-4{grid-template-columns:repeat(4,1fr);}
+@media (max-width:820px){
+  .card-grid.cols-3, .card-grid.cols-4{grid-template-columns:1fr 1fr;}
+}
+@media (max-width:560px){
+  .card-grid.cols-2, .card-grid.cols-3, .card-grid.cols-4{grid-template-columns:1fr;}
+}
+.card{
+  background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:18px 20px;
+}
+.card h4{margin-top:0; color:var(--gold-bright); font-size:1rem;}
+.card p{font-size:.9rem; color:var(--ivory-dim); margin-bottom:0;}
+.card .mini-stat{font-family:var(--font-mono); color:var(--gold-bright); font-size:1.15rem; display:block; margin:6px 0;}
+
+/* ---- switchers (tabs / toggles / demo buttons) ---- */
+.switcher{
+  border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-card);
+  margin:1.6em 0; max-width:var(--maxwide); overflow:hidden;
+}
+.switch-buttons{
+  display:flex; flex-wrap:wrap; gap:6px; padding:14px 16px;
+  border-bottom:1px solid var(--border); background:var(--bg-elevated);
+}
+.switch-buttons button{
+  font-family:var(--font-mono); font-size:.78rem; color:var(--ivory-dim);
+  background:transparent; border:1px solid var(--border-strong); border-radius:20px;
+  padding:6px 14px; cursor:pointer; transition:background .15s, color .15s;
+}
+.switch-buttons button:hover{color:var(--ivory); border-color:var(--gold);}
+.switch-buttons button.is-active{background:var(--gold); color:#141210; border-color:var(--gold); font-weight:600;}
+.switch-panels{padding:20px 22px;}
+.switch-panels [data-switch-panel]{ }
+.status-pill{
+  display:inline-flex; align-items:center; gap:8px; font-family:var(--font-mono);
+  font-size:.85rem; padding:4px 12px; border-radius:20px; margin-bottom:12px;
+}
+.status-pill.s2{background:var(--good-wash); color:var(--good); border:1px solid rgba(143,168,120,.4);}
+.status-pill.s4{background:var(--danger-wash); color:var(--danger); border:1px solid rgba(192,106,74,.4);}
+.response-json{
+  font-family:var(--font-mono); font-size:.8rem; color:#dcd3ba; background:var(--bg-elevated);
+  border:1px solid var(--border); border-radius:6px; padding:12px 14px; overflow-x:auto; margin:0 0 10px;
+}
+.demo-note{font-size:.86rem; color:var(--ivory-dim); margin:0;}
+
+/* ---- HTTP annotator ---- */
+.http-block{
+  display:grid; grid-template-columns: 1fr 1fr; gap:20px;
+  border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-card);
+  padding:20px; margin:1.6em 0; max-width:var(--maxwide);
+}
+@media (max-width:760px){ .http-block{grid-template-columns:1fr;} }
+.http-lines{display:flex; flex-direction:column; gap:2px; font-family:var(--font-mono); font-size:.8rem;}
+.http-lines .grp-label{color:var(--muted); font-size:.7rem; margin:10px 0 2px; letter-spacing:.05em;}
+.http-lines .grp-label:first-child{margin-top:0;}
+button.http-line{
+  text-align:left; background:transparent; border:1px solid transparent; border-radius:4px;
+  color:var(--ivory-dim); padding:4px 8px; cursor:pointer; font-family:var(--font-mono); font-size:.8rem;
+  white-space:pre-wrap; word-break:break-word;
+}
+button.http-line:hover{background:var(--gold-wash); color:var(--ivory);}
+button.http-line.is-active{background:var(--gold-wash); border-color:var(--border-strong); color:var(--gold-bright);}
+.http-note-panel{
+  background:var(--bg-elevated); border:1px solid var(--border); border-radius:6px; padding:16px;
+  font-size:.88rem; color:var(--ivory); align-self:start; position:sticky; top:20px;
+}
+.http-note-panel .tag{font-family:var(--font-mono); font-size:.7rem; color:var(--gold); display:block; margin-bottom:6px;}
+
+/* ---- bar charts (css-only, accessible) ---- */
+.chart{margin:1.4em 0; max-width:var(--maxwide);}
+.chart figcaption{font-size:.78rem; color:var(--muted); margin-top:10px; font-family:var(--font-mono);}
+.bar-rows{display:flex; flex-direction:column; gap:11px;}
+.bar-row{display:grid; grid-template-columns:150px 1fr 86px; gap:12px; align-items:center;}
+@media (max-width:560px){ .bar-row{grid-template-columns:100px 1fr 70px; gap:8px;} }
+.bar-row .bl{font-size:.82rem; color:var(--ivory-dim); font-family:var(--font-mono);}
+.bar-track{background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:4px; height:14px; overflow:hidden;}
+.bar-fill{height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold)); border-radius:3px 0 0 3px; min-width:3px;}
+.bar-fill.alt{background:linear-gradient(90deg,#5b5140,#8a7d5c);}
+.bar-fill.danger{background:linear-gradient(90deg,#8a4a30,var(--danger));}
+.bar-row .bv{font-family:var(--font-mono); font-size:.8rem; color:var(--gold-bright); text-align:right;}
+
+.proportion-bar{display:flex; height:30px; border-radius:5px; overflow:hidden; border:1px solid var(--border); margin-bottom:10px;}
+.proportion-seg{display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:.72rem; color:#141210; font-weight:600;}
+.prop-legend{display:flex; gap:18px; flex-wrap:wrap; font-size:.8rem; color:var(--ivory-dim);}
+.prop-legend span{display:inline-flex; align-items:center; gap:6px;}
+.prop-legend i{width:10px; height:10px; border-radius:2px; display:inline-block;}
+
+/* ---- diagram (architecture) ---- */
+.arch{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:1.8em 0; max-width:var(--maxwide);
+}
+@media (max-width:760px){ .arch{grid-template-columns:1fr;} }
+.arch button.node{
+  background:var(--bg-card); border:1px solid var(--border-strong); border-radius:var(--radius);
+  padding:18px 16px; text-align:left; cursor:pointer; color:var(--ivory);
+  display:flex; flex-direction:column; gap:6px;
+}
+.arch button.node:hover{border-color:var(--gold);}
+.arch button.node.is-active{background:var(--gold-wash); border-color:var(--gold);}
+.arch button.node .tag{font-family:var(--font-mono); font-size:.68rem; color:var(--gold);}
+.arch button.node .ttl{font-family:var(--font-display); font-size:1.05rem;}
+.arch-desc{
+  border:1px solid var(--border); background:var(--bg-card); border-radius:var(--radius);
+  padding:20px 22px; max-width:var(--maxwide); font-size:.92rem; color:var(--ivory-dim);
+}
+.arch-desc p{margin-bottom:0;}
+
+/* ---- stepper ---- */
+.stepper{margin:1.8em 0; max-width:var(--maxwide);}
+.step-nav{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px;}
+.step-nav button{
+  display:flex; align-items:center; gap:8px; background:var(--bg-card); border:1px solid var(--border-strong);
+  color:var(--ivory-dim); border-radius:20px; padding:7px 14px 7px 8px; font-size:.82rem; cursor:pointer; font-family:var(--font-body);
+}
+.step-nav button .idx{
+  width:22px; height:22px; border-radius:50%; background:var(--bg-elevated); border:1px solid var(--border-strong);
+  display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:.72rem; color:var(--gold);
+}
+.step-nav button.is-active{border-color:var(--gold); color:var(--gold-bright); background:var(--gold-wash);}
+.step-nav button.is-active .idx{background:var(--gold); color:#141210;}
+.step-panel{
+  border:1px solid var(--border); background:var(--bg-card); border-radius:var(--radius); padding:22px 24px;
+}
+.step-panel h4{margin-top:0; color:var(--gold-bright);}
+
+/* ---- file tree ---- */
+.filetree{
+  font-family:var(--font-mono); font-size:.83rem; border:1px solid var(--border); border-radius:var(--radius);
+  background:var(--bg-card); padding:18px 20px; max-width:var(--maxwide); margin:1.6em 0; line-height:2;
+}
+.filetree .dir{color:var(--gold-bright);}
+.filetree .file{color:var(--ivory-dim);}
+.filetree .note{color:var(--muted); font-family:var(--font-body); font-size:.76rem;}
+.filetree .indent1{padding-left:1.4em;}
+.filetree .indent2{padding-left:2.8em;}
+
+/* ---- details / accordion ---- */
+details.acc{
+  border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-card);
+  margin:12px 0; max-width:var(--maxwide); padding:0;
+}
+details.acc summary{
+  cursor:pointer; list-style:none; padding:15px 20px; display:flex; align-items:center; justify-content:space-between;
+  font-family:var(--font-display); font-size:1rem; color:var(--ivory);
+}
+details.acc summary::-webkit-details-marker{display:none;}
+details.acc summary::after{content:'+'; font-family:var(--font-mono); color:var(--gold); font-size:1.2rem;}
+details.acc[open] summary::after{content:'–';}
+details.acc summary .code-badge{font-family:var(--font-mono); font-size:.78rem; color:var(--gold); margin-right:auto; margin-left:14px;}
+details.acc .acc-body{padding:0 20px 18px; font-size:.9rem; color:var(--ivory-dim);}
+details.acc .acc-body p:last-child{margin-bottom:0;}
+
+/* ---- footer ---- */
+footer.site-footer{
+  border-top:1px solid var(--border);
+  padding:48px 40px 60px;
+  max-width:var(--maxwide); margin:0 auto;
+}
+footer.site-footer .fname{font-family:var(--font-display); font-size:1.2rem; color:var(--gold-bright);}
+footer.site-footer p{color:var(--muted); font-size:.85rem; max-width:var(--maxprose);}
+.backtotop{
+  display:inline-block; margin-top:18px; font-family:var(--font-mono); font-size:.78rem;
+  color:var(--gold); text-decoration:none; border:1px solid var(--border-strong); padding:8px 16px; border-radius:20px;
+}
+.backtotop:hover{border-color:var(--gold);}
+
+.refs{max-width:var(--maxprose);}
+.refs h3{color:var(--gold-bright); font-size:1rem; margin-top:1.6em;}
+.refs ul{padding-left:1.2em; font-size:.88rem; color:var(--ivory-dim);}
+.refs li{margin-bottom:.7em;}
+
+.sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/mlops/">MLOps</a><span class="t">· MLOps 4 · Serving a model with FastAPI</span><span class="pn"><a href="../MLOPS-3/" title="MLOps 3 · Streamlit and Optuna">← Prev</a><a href="../MLOPS-5/" title="MLOps 5 · Experiment tracking with MLflow">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progress"></div>
+
+<div class="toc-toggle">
+  <span>ML project using FastAPI post read</span>
+  <button id="navToggleBtn" aria-expanded="false" aria-controls="siteNav">Contents</button>
+</div>
+
+<div class="layout">
+  <nav class="toc" id="siteNav" aria-label="Table of contents">
+    <div class="toc-brand">ML project using FastAPI<small>An interactive read · 13 chapters</small></div>
+    <ul class="toc-list">
+      <li><a href="#preface"><span class="n">·</span>Preface</a></li>
+      <li><a href="#ch1"><span class="n">01</span>The problem</a></li>
+      <li><a href="#ch2"><span class="n">02</span>Three programs, one artifact</a></li>
+      <li><a href="#ch3"><span class="n">03</span>What an API promises</a></li>
+      <li><a href="#ch4"><span class="n">04</span>FastAPI: annotation as interface</a></li>
+      <li><a href="#ch5"><span class="n">05</span>Training the artifact</a></li>
+      <li><a href="#ch6"><span class="n">06</span>The contract: schemas.py</a></li>
+      <li><a href="#ch7"><span class="n">07</span>The service: main.py</a></li>
+      <li><a href="#ch8"><span class="n">08</span>The console as a client</a></li>
+      <li><a href="#ch9"><span class="n">09</span>Tests: proving the seam</a></li>
+      <li><a href="#ch10"><span class="n">10</span>Five things that break quietly</a></li>
+      <li><a href="#ch11"><span class="n">11</span>Shipping decisions</a></li>
+      <li><a href="#ch12"><span class="n">12</span>What's still missing</a></li>
+      <li><a href="#ch13"><span class="n">13</span>Summary</a></li>
+      <li><a href="#refs"><span class="n">·</span>Further reading</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <!-- ================= HERO ================= -->
+    <header class="hero">
+      <div class="hero-inner">
+        <div class="kicker">An interactive read on shipping a model as a service</div>
+        <h1 class="title">ML project using FastAPI post read</h1>
+        <p class="hero-sub">A scored notebook becomes three programs that agree about one file — one that trains, one that serves over HTTP, and one that only ever asks.</p>
+        <div class="stat-strip" role="img" aria-label="Key figures: 41,188 historical calls, 20 raw features, 3 programs sharing 1 artifact, 24 tests passing">
+          <div class="stat"><span class="num">41,188</span><span class="lbl">historical calls in the dataset</span></div>
+          <div class="stat"><span class="num">20</span><span class="lbl">raw prospect features</span></div>
+          <div class="stat"><span class="num">3 → 1</span><span class="lbl">programs sharing one artifact</span></div>
+          <div class="stat"><span class="num">24 / 24</span><span class="lbl">contract tests passing</span></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ================= PREFACE ================= -->
+    <section class="chapter" id="preface">
+      <div class="chapter-eyebrow">Preface</div>
+      <h2>From a model that scores well to a project that can be called</h2>
+      <div class="prose">
+        <p>A model that runs cleanly inside a notebook is not yet a project. Nothing about it can be called by another system, run by somebody else, or explained three months from now. A repository with a history says which version of a script produced a result. A search that tunes hyperparameters finds a good configuration instead of a guess. An app that puts a model in front of a person is useful. None of those three, on their own, is a project.</p>
+        <p>This read builds one. A program that turns a raw table into a versioned artifact whenever a single command runs. A second that loads that artifact and answers over HTTP, so anything on the network can ask it a question. A third — the console — that holds no model at all and asks the service the same way everybody else does.</p>
+        <p><strong>FastAPI</strong> is the framework doing the serving, and it earns its place through one idea: a function's type annotations become the parser, the validator, and the published documentation all at once, so the contract between caller and service has nowhere to quietly go stale.</p>
+
+        <h3>What this walkthrough covers</h3>
+        <ul>
+          <li>What an API promises, how an HTTP request and response are actually shaped, and how <code>GET</code> and <code>POST</code> differ.</li>
+          <li>What <code>uvicorn</code> and ASGI each do, and what's left for application code to do.</li>
+          <li>Laying out training, serving, and the interface as three programs that share one artifact — and what that boundary buys.</li>
+          <li>Producing a training entry point that writes a versioned artifact carrying its threshold, its category vocabulary, and the commit that built it.</li>
+          <li>Reading a metadata file as a contract, and naming the fields a service could never work out on its own.</li>
+          <li>Expressing a model's input contract as a schema that keeps a raw file's quirks out of the public interface.</li>
+          <li>Measuring what a batch endpoint is worth, and what it costs to offer one.</li>
+          <li>Building a console as a client of a service rather than as a second copy of it.</li>
+          <li>Five ways a service fails silently — and how each one shows up as nothing more alarming than a 200.</li>
+          <li>Choosing between promoting a model and promoting the training code, and between a service and a dependency.</li>
+        </ul>
+        <p class="callout"><strong>Prerequisites.</strong> Comfort with Python, pandas, and enough scikit-learn to fit a classifier and read a metric. No prior web development — HTTP, APIs, and the framework are built up from first principles.</p>
+      </div>
+    </section>
+
+    <!-- ================= CHAPTER 1 ================= -->
+    <section class="chapter" id="ch1">
+      <div class="chapter-eyebrow">Chapter 01</div>
+      <h2>The problem, and what has to exist at the end</h2>
+      <p class="lede">A model that scores well and a model that can be used are not the same thing.</p>
+      <div class="prose">
+        <p>A Portuguese bank sells term deposits by phone from a call list. Historical campaign data covers 41,188 calls across 20 features, and roughly 1 call in 9 converts.</p>
+        <div class="chart">
+          <div class="bar-rows">
+            <div class="bar-row">
+              <span class="bl">No subscription</span>
+              <div class="bar-track"><div class="bar-fill" style="width:88.7%"></div></div>
+              <span class="bv">88.73%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bl">Subscribed</span>
+              <div class="bar-track"><div class="bar-fill alt" style="width:11.3%"></div></div>
+              <span class="bv">11.27%</span>
+            </div>
+          </div>
+          <figcaption>Target balance across all 41,188 historical calls.</figcaption>
+        </div>
+        <p>Predicting who is likely to subscribe is a familiar exercise. Getting those scores in front of the people who need them is the hard part. A batch process, a real-time dialler, and a campaign manager's console all need a score — and none of them can execute a notebook cell.</p>
+        <p>Take a notebook model that scores well and runs without errors, and ask three questions of it.</p>
+        <div class="card-grid cols-3">
+          <div class="card"><h4>Who can call it?</h4><p>Only the person who wrote it. It lives in a kernel or an app started by hand. The dialler can't reach it, and neither can a nightly job.</p></div>
+          <div class="card"><h4>What does it expect?</h4><p>The author knows, because they wrote it. That knowledge lives in their head and in the order of some cells — not anywhere a caller can read it.</p></div>
+          <div class="card"><h4>Which version answered?</h4><p>If a campaign goes badly in six weeks and somebody asks which model produced the list, the honest answer is usually a shrug.</p></div>
+        </div>
+        <p>None of those are modelling problems, and a better score fixes none of them. They're fixed by one move: stop treating the model as the last thing produced, and start treating it as a file other programs load.</p>
+        <div class="callout"><p>That single move decides everything that follows. A program that turns a raw table into a file whenever one command runs. A second program that loads that file and answers over HTTP, so anything on the network can ask. A third, for the campaign manager, that holds no model at all and asks the service like everybody else.</p></div>
+      </div>
+    </section>
+
+    <!-- ================= CHAPTER 2 ================= -->
+    <section class="chapter" id="ch2">
+      <div class="chapter-eyebrow">Chapter 02</div>
+      <h2>The project: three programs, one artifact</h2>
+      <p class="lede">The shape of the whole design, before any of the code.</p>
+      <div class="prose">
+        <p>Three programs and the file that passes between them make up the entire architecture. The pieces share files, not code imports — the serving application never imports the training package, and the console imports neither. Select each piece below.</p>
+      </div>
+      <div class="arch" data-switch-group>
+        <button class="node" data-switch-btn="train" data-default>
+          <span class="tag">campaign/</span><span class="ttl">Training</span>
+        </button>
+        <button class="node" data-switch-btn="artifact">
+          <span class="tag">artifacts/</span><span class="ttl">The shared file</span>
+        </button>
+        <button class="node" data-switch-btn="serve">
+          <span class="tag">app/</span><span class="ttl">Service</span>
+        </button>
+        <button class="node" data-switch-btn="console">
+          <span class="tag">dashboard/</span><span class="ttl">Console</span>
+        </button>
+        <div class="switch-panels" style="grid-column:1/-1;">
+          <div data-switch-panel="train" class="arch-desc">
+            <p>Turns the raw table into a fitted pipeline. Runs offline, on its own schedule, and never touches a network socket. Its only output is the artifact to its right.</p>
+          </div>
+          <div data-switch-panel="artifact" class="arch-desc" hidden>
+            <p><code>model.joblib</code> and <code>model_meta.json</code>: a simple pair of files that can be copied, versioned, or rolled back at any time. Every feature assumption made during training has to be written down here, in the open, for serving to read — which is the whole benefit of not sharing code imports.</p>
+          </div>
+          <div data-switch-panel="serve" class="arch-desc" hidden>
+            <p>Loads the artifact once and answers single requests over HTTP. Handles one prospect at a time, online, while an agent or a dialler waits for the answer.</p>
+          </div>
+          <div data-switch-panel="console" class="arch-desc" hidden>
+            <p>Holds no model, no threshold, and no category vocabulary. It's a client of the service, exactly like the dialler, and reads everything it displays from the service's own <code>/model</code> endpoint.</p>
+          </div>
+        </div>
+      </div>
+      <div class="prose">
+        <p>This decoupling buys three things. Programs run on independent schedules — training chews through the whole dataset offline, while serving answers one request at a time online. The artifact becomes a simple file that can be copied, versioned, or rolled back. And because there's no shared code to lean on, every assumption made during training has to be written down somewhere serving can read it — which is what actually catches bugs early.</p>
+        <h3>The repository layout</h3>
+        <p>The rest of this project runs against this structure. File order is forced by dependency: <code>campaign/data.py</code> decides what a row is, so everything else has to agree with it first.</p>
+        <div class="filetree" aria-label="Project directory structure">
+          <div><span class="dir">app/</span> <span class="note">— serves the model</span></div>
+          <div class="indent1"><span class="file">main.py</span> <span class="note">the service</span></div>
+          <div class="indent1"><span class="file">schemas.py</span> <span class="note">the request/response contract</span></div>
+          <div><span class="dir">artifacts/</span> <span class="note">— the file shared between programs</span></div>
+          <div class="indent1"><span class="file">model.joblib</span> <span class="note">696 KB, the fitted pipeline</span></div>
+          <div class="indent1"><span class="file">model_meta.json</span> <span class="note">5 KB, the contract</span></div>
+          <div class="indent1"><span class="file">market_context.json</span> <span class="note">economic values at training time</span></div>
+          <div class="indent1"><span class="file">study.db</span> <span class="note">168 KB, Optuna's search history</span></div>
+          <div><span class="dir">campaign/</span> <span class="note">— training</span></div>
+          <div class="indent1"><span class="file">data.py</span> · <span class="file">pipeline.py</span> · <span class="file">tune.py</span> · <span class="file">train.py</span></div>
+          <div><span class="dir">dashboard/</span> <span class="note">— the console, a client only</span></div>
+          <div class="indent1"><span class="file">app.py</span></div>
+          <div><span class="dir">tests/</span> <span class="note">— proves the seams hold</span></div>
+          <div class="indent1"><span class="file">test_data.py</span> · <span class="file">test_features.py</span> · <span class="file">test_contract.py</span> · <span class="file">test_api.py</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CHAPTER 3 ================= -->
+    <section class="chapter" id="ch3">
+      <div class="chapter-eyebrow">Chapter 03</div>
+      <h2>What an API promises, and how HTTP carries it</h2>
+      <p class="lede">Four ideas, and none of them belong to Python.</p>
+      <div class="prose">
+        <h3>An API is a promise about messages</h3>
+        <p>API stands for <em>application programming interface</em>, and the word doing the work is <em>interface</em> — the part of a program other programs are allowed to touch, together with a promise that it keeps behaving the way it was described. <code>pipeline.predict_proba(frame)</code> is one such promise, with no network anywhere near it: scikit-learn promised a name, an argument, and a return value, and calling code leans on that promise rather than on how the library works inside.</p>
+        <p>A web API is the same promise with a network in the middle, and the network removes everything that used to be implicit. The two programs no longer share a process, so they can't hand each other objects. They no longer share a language, so a Python dictionary means nothing on the other side. They no longer share a machine, so either one can restart mid-exchange. Four things have to be agreed in advance instead: <strong>where</strong> to send a message, <strong>what</strong> to send in a format both sides can read, <strong>what comes back</strong> and what each field in it means, and <strong>what happens when it goes wrong</strong> — a status code the caller can act on, because an exception can't cross a network.</p>
+
+        <h3>HTTP is two messages</h3>
+        <p>HTTP is plainer than its reputation. A request carries a method, a path, some headers, and sometimes a body. A response carries a status code, some headers, and usually a body. Everything else in HTTP is detail layered on those two shapes. Below is a real exchange with this project's own service, captured line by line as it actually crossed the socket — select any line for what it means.</p>
+      </div>
+
+      <div class="http-block" data-switch-group>
+        <div class="http-lines">
+          <span class="grp-label">REQUEST — sent by the client</span>
+          <button class="http-line" data-switch-btn="l1" data-default>GET /health HTTP/1.1</button>
+          <button class="http-line" data-switch-btn="l2">Host: 127.0.0.1:8000</button>
+          <button class="http-line" data-switch-btn="l3">User-Agent: curl/8.7.1</button>
+          <button class="http-line" data-switch-btn="l4">Accept: */*</button>
+          <button class="http-line" data-switch-btn="l5">(blank line)</button>
+          <span class="grp-label">RESPONSE — sent back by the service</span>
+          <button class="http-line" data-switch-btn="l6">HTTP/1.1 200 OK</button>
+          <button class="http-line" data-switch-btn="l7">content-type: application/json</button>
+          <button class="http-line" data-switch-btn="l8">content-length: 157</button>
+          <button class="http-line" data-switch-btn="l9">server: uvicorn</button>
+          <button class="http-line" data-switch-btn="l10">{"status":"ok","model_loaded":true,…}</button>
+        </div>
+        <div class="http-note-panel">
+          <span class="tag">What this line means</span>
+          <div data-switch-panel="l1"><p>The entire request line: a method, the path being asked for, and the protocol version. Nothing else about the request is on this line.</p></div>
+          <div data-switch-panel="l2" hidden><p>A header — a name/value pair describing the request rather than being the request. <code>Host</code> says which name was used to reach this machine.</p></div>
+          <div data-switch-panel="l3" hidden><p>Identifies the program that sent the request — here, the <code>curl</code> command line tool.</p></div>
+          <div data-switch-panel="l4" hidden><p>What the client is willing to receive back. <code>*/*</code> means "anything."</p></div>
+          <div data-switch-panel="l5" hidden><p>Not spacing — this blank line is the separator between headers and body. A <code>GET</code> has nothing to send, so the body is empty.</p></div>
+          <div data-switch-panel="l6" hidden><p>The status line: protocol version, then <strong>200</strong>, the number a caller actually branches its logic on.</p></div>
+          <div data-switch-panel="l7" hidden><p>Tells the client how to read the bytes that follow — the header that matters most to a program parsing the answer.</p></div>
+          <div data-switch-panel="l8" hidden><p>The size of the body in bytes, so the client knows exactly when to stop reading.</p></div>
+          <div data-switch-panel="l9" hidden><p>Names the program that wrote these bytes — the ASGI server this project runs on, introduced in the next chapter.</p></div>
+          <div data-switch-panel="l10" hidden><p>The body itself: a small JSON object reporting whether the model loaded and which commit built it.</p></div>
+        </div>
+      </div>
+
+      <div class="prose">
+        <p><strong>HTTPS is exactly this, inside an encrypted connection.</strong> The request and response don't change shape — the whole exchange simply travels inside TLS, so nobody in between can read or alter it. A service usually keeps speaking plain HTTP on a port only a proxy can reach, and the proxy holds the certificate.</p>
+
+        <h3>GET and POST</h3>
+        <p>The method is the verb of the request, and two of them cover nearly everything a model-serving project needs.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Verb</th><th>Carries</th><th>Changes the server?</th><th>Used here for</th></tr></thead>
+            <tbody>
+              <tr><td><span class="mono">GET</span></td><td>Nothing — everything needed goes in the URL</td><td>No, by convention</td><td><code>/health</code>, <code>/model</code>, <code>/docs</code></td></tr>
+              <tr><td><span class="mono">POST</span></td><td>A body</td><td>May, and callers can't assume it's safe to retry</td><td><code>/predict</code>, <code>/predict/batch</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A prediction changes nothing on the server, so by that rule it ought to be a <code>GET</code>. It's a <code>POST</code> here because of the body, not the verb — a prospect is fourteen fields, and putting fourteen fields in a URL means encoding each one, meeting length limits nobody agrees on, and watching every value land in an access log. Scoring data belongs in a body, which makes it a <code>POST</code>.</p>
+
+        <h4>Two ways a caller gets it wrong</h4>
+        <div class="tbl-wrap">
+          <table>
+            <caption>Real responses from this service</caption>
+            <thead><tr><th>Request</th><th>Result</th><th>What it means</th></tr></thead>
+            <tbody>
+              <tr><td><span class="mono">GET /predict</span> — right path, wrong verb</td><td><span class="badge bad">405</span></td><td>The path exists and refuses this method. The response names what it would accept: <span class="mono">allow: POST</span>.</td></tr>
+              <tr><td><span class="mono">POST /predictions</span> — good verb, wrong path</td><td><span class="badge bad">404</span></td><td>No such path exists, whatever verb is used.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A caller reporting the API is "down" and showing a 404 has a typo. A caller showing a 405 read something and then did something else. Neither is an outage, and telling them apart saves an afternoon of debugging.</p>
+
+        <h3>Postman, and the document that fills it in</h3>
+        <p>Most teams keep the same requests saved in Postman, a desktop app that sends HTTP and lays out what came back. Nothing about the request changes — Postman is a form over the same four things above.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>In <span class="mono">curl</span></th><th>In Postman</th></tr></thead>
+            <tbody>
+              <tr><td><span class="mono">-X POST</span></td><td>The method dropdown</td></tr>
+              <tr><td>The URL</td><td>The address bar</td></tr>
+              <tr><td><span class="mono">-H 'content-type: …'</span></td><td>The Headers tab</td></tr>
+              <tr><td><span class="mono">-d @prospect.json</span></td><td>Body → raw → JSON</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>None of it gets typed by hand, though. This service already publishes a machine-readable description of itself at <code>/openapi.json</code> — a 6&nbsp;KB document listing all 4 endpoints and pre-filling the 14 fields of a <code>POST /predict</code> body. Postman (or anything else that reads OpenAPI) imports that file and builds the entire collection from it. The interactive <code>/docs</code> page in a browser is built from the same document, so the page, the collection, and the service can never quietly drift apart from one another.</p>
+      </div>
+    </section>
+
+    <!-- ================= CHAPTER 4 ================= -->
+    <section class="chapter" id="ch4">
+      <div class="chapter-eyebrow">Chapter 04</div>
+      <h2>FastAPI: the annotation is the interface</h2>
+      <p class="lede">One idea, applied over and over.</p>
+      <div class="prose">
+        <p>A <strong>web server</strong> owns the socket — it listens on a port, accepts connections, reads bytes in, writes bytes out, and knows nothing about prospects. An <strong>application</strong> is the Python being written — handed an already-parsed request, and returning a response for somebody else to send. Between the two there has to be an agreement about how work is handed over, or every server would only work with one framework. In Python, that agreement is <strong>ASGI</strong> (the Asynchronous Server Gateway Interface). <code>uvicorn</code> is the server. A FastAPI app is the application. ASGI is the plug between them — which is why either side can be swapped without touching the other.</p>
+        <p>What FastAPI adds is one idea, applied repeatedly: <strong>the function signature is the interface.</strong> The parameters declared, and the types they're annotated with, are read at import time and turned into a parser, a validator, an error formatter, and a machine-readable description — all four derived from a signature nobody had to write twice.</p>
+
+        <h4>Why none of this needs <code>async</code></h4>
+        <p>FastAPI is built on an asynchronous framework, yet every handler in this project is a plain <code>def</code>. A handler declared <code>async def</code> runs on the event loop, sharing a thread with every other request — the right shape when a handler spends its time waiting on something else. It's the wrong shape when a handler computes: <code>predict_proba</code> calls into compiled code and never awaits, so writing it <code>async def</code> would block the loop for every other caller. Written as plain <code>def</code>, FastAPI runs it in a worker thread instead and the loop stays free. The rule: waiting on the network, <code>async def</code>; doing arithmetic, <code>def</code>.</p>
+
+        <p>Five short scripts show the mechanics in isolation. Each tab below pairs the code with real requests sent to it and the real responses that came back.</p>
+      </div>
+
+      <div class="switcher" data-switch-group>
+        <div class="switch-buttons">
+          <button data-switch-btn="s1" data-default>01 · the smallest app</button>
+          <button data-switch-btn="s2">02 · types as parser</button>
+          <button data-switch-btn="s3">03 · body as schema</button>
+          <button data-switch-btn="s4">04 · validation rules</button>
+          <button data-switch-btn="s5">05 · response contract</button>
+        </div>
+        <div class="switch-panels">
+
+          <div data-switch-panel="s1">
+            <p class="code-path">snippets/01_hello.py</p>
+            <pre class="code"><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+
+app = FastAPI()
+
+<span class="kw">@app.get</span>(<span class="st">"/ping"</span>)
+<span class="kw">def</span> ping():
+    <span class="kw">return</span> {<span class="st">"pong"</span>: <span class="kw">True</span>}</pre>
+            <p class="demo-note">One file, one function, one decorator. <span class="mono">GET /ping</span> → <code>{"pong":true}</code> [200]. Nobody wrote <code>/openapi.json</code> or <code>/docs</code> either — FastAPI generates both from this function, and both answered 200 too. The documentation page is built from the same annotations that do the parsing, so it's the one kind of API documentation that can't go out of date.</p>
+          </div>
+
+          <div data-switch-panel="s2" hidden>
+            <p class="code-path">snippets/02_types.py</p>
+            <pre class="code"><span class="kw">@app.get</span>(<span class="st">"/prospects/{prospect_id}"</span>)
+<span class="kw">def</span> get_prospect(prospect_id: <span class="kw">int</span>, verbose: <span class="kw">bool</span> = <span class="kw">False</span>):
+    ...</pre>
+            <div class="switcher" data-switch-group style="margin:1em 0 0;">
+              <div class="switch-buttons">
+                <button data-switch-btn="t1" data-default>/prospects/42</button>
+                <button data-switch-btn="t2">/prospects/42?verbose=true</button>
+                <button data-switch-btn="t3">/prospects/abc</button>
+              </div>
+              <div class="switch-panels">
+                <div data-switch-panel="t1"><span class="status-pill s2">200 OK</span><pre class="response-json">{"prospect_id":42,"type":"int"}</pre><p class="demo-note"><code>42</code> arrives as text in the URL and reaches the function as a Python <code>int</code>, because the annotation said so.</p></div>
+                <div data-switch-panel="t2" hidden><span class="status-pill s2">200 OK</span><pre class="response-json">{"prospect_id":42,"type":"int",
+ "note":"the path segment was a string
+ in the URL and an int in here"}</pre><p class="demo-note"><code>verbose=true</code> becomes Python <code>True</code> — so would <code>1</code>, <code>yes</code>, or <code>on</code>.</p></div>
+                <div data-switch-panel="t3" hidden><span class="status-pill s4">422</span><pre class="response-json">{"detail":[{"type":"int_parsing",
+ "loc":["path","prospect_id"],
+ "msg":"Input should be a valid integer,
+ unable to parse string as an integer",
+ "input":"abc"}]}</pre><p class="demo-note">Never reaches the function at all. No <code>try</code> block was written anywhere — parsing failures aren't the function's problem.</p></div>
+              </div>
+            </div>
+          </div>
+
+          <div data-switch-panel="s3" hidden>
+            <p class="code-path">snippets/03_body.py</p>
+            <pre class="code"><span class="kw">class</span> CallRequest(BaseModel):
+    prospect_id: <span class="kw">int</span>
+    attempts: <span class="kw">int</span>
+
+<span class="kw">@app.post</span>(<span class="st">"/calls"</span>)
+<span class="kw">def</span> log_call(call: CallRequest):
+    ...</pre>
+            <div class="switcher" data-switch-group style="margin:1em 0 0;">
+              <div class="switch-buttons">
+                <button data-switch-btn="u1" data-default>Valid body</button>
+                <button data-switch-btn="u2">Missing field</button>
+                <button data-switch-btn="u3">Wrong type</button>
+              </div>
+              <div class="switch-panels">
+                <div data-switch-panel="u1"><span class="status-pill s2">200 OK</span><pre class="response-json">{"prospect_id":7,"attempts":2}</pre></div>
+                <div data-switch-panel="u2" hidden><span class="status-pill s4">422</span><pre class="response-json">{"detail":[{"type":"missing",
+ "loc":["body","attempts"],
+ "msg":"Field required"}]}</pre></div>
+                <div data-switch-panel="u3" hidden><span class="status-pill s4">422</span><pre class="response-json">{"detail":[{"type":"int_parsing",
+ "loc":["body","attempts"],
+ "msg":"Input should be a valid integer,
+ unable to parse string as an integer",
+ "input":"twice"}]}</pre></div>
+              </div>
+            </div>
+            <p class="demo-note">A missing field and a field of the wrong type are the same kind of failure to FastAPI — both answered before the handler runs, naming the offending field.</p>
+          </div>
+
+          <div data-switch-panel="s4" hidden>
+            <p class="code-path">snippets/04_validation.py</p>
+            <pre class="code"><span class="kw">class</span> CallRequest(BaseModel):
+    model_config = ConfigDict(extra=<span class="st">"forbid"</span>)
+    prospect_id: <span class="kw">int</span> = Field(ge=1)
+    attempts: <span class="kw">int</span> = Field(ge=1, le=50)
+    channel: Literal[<span class="st">"cellular"</span>, <span class="st">"telephone"</span>]</pre>
+            <div class="switcher" data-switch-group style="margin:1em 0 0;">
+              <div class="switch-buttons">
+                <button data-switch-btn="v1" data-default>Valid</button>
+                <button data-switch-btn="v2">attempts = 0</button>
+                <button data-switch-btn="v3">bad channel</button>
+                <button data-switch-btn="v4">extra field</button>
+              </div>
+              <div class="switch-panels">
+                <div data-switch-panel="v1"><span class="status-pill s2">200 OK</span><pre class="response-json">{"accepted":{"prospect_id":7,
+ "attempts":2,"channel":"cellular"}}</pre></div>
+                <div data-switch-panel="v2" hidden><span class="status-pill s4">422</span><pre class="response-json">{"detail":[{"type":"greater_than_equal",
+ "loc":["body","attempts"],
+ "msg":"Input should be greater than
+ or equal to 1"}]}</pre></div>
+                <div data-switch-panel="v3" hidden><span class="status-pill s4">422</span><pre class="response-json">{"detail":[{"type":"literal_error",
+ "loc":["body","channel"],
+ "msg":"Input should be 'cellular'
+ or 'telephone'"}]}</pre></div>
+                <div data-switch-panel="v4" hidden><span class="status-pill s4">422</span><pre class="response-json">{"detail":[{"type":"extra_forbidden",
+ "loc":["body","vip"],
+ "msg":"Extra inputs are not permitted"}]}</pre><p class="demo-note">By default an unexpected key is silently dropped. For a model service that default is wrong — a caller sending <code>vip</code> meant something by it. <code>extra="forbid"</code> turns the courtesy into a 422.</p></div>
+              </div>
+            </div>
+          </div>
+
+          <div data-switch-panel="s5" hidden>
+            <p class="code-path">snippets/05_response_model.py</p>
+            <pre class="code"><span class="kw">@app.get</span>(<span class="st">"/quote"</span>, response_model=Quote)
+<span class="kw">def</span> quote():
+    <span class="kw">return</span> {<span class="st">"rate"</span>: 0.0325, <span class="st">"term_months"</span>: 12,
+            <span class="st">"internal_score"</span>: 0.83}</pre>
+            <p class="demo-note">The handler returns three keys, including an internal score. Because <code>response_model=Quote</code> only declares <code>rate</code> and <code>term_months</code>, the caller receives just <code>{"rate":0.0325,"term_months":12}</code> — and <code>/openapi.json</code> only ever publishes those same two fields. Adding a field to a handler doesn't silently add it to the public API. This is the setting the prediction endpoint uses later: a model service tends to accumulate internal numbers, and the response is the one place an internal number quietly becomes somebody else's dependency.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CHAPTER 5 ================= -->
+    <section class="chapter" id="ch5">
+      <div class="chapter-eyebrow">Chapter 05</div>
+      <h2>Training the artifact, in four files</h2>
+      <p class="lede">Everything in <span class="mono">campaign/</span> exists to produce one file.</p>
+
+      <div class="prose">
+        <h3>5.1 · data.py — where the data decisions live</h3>
+        <p>Every other file has to agree with this one about what a row is. Three decisions here are invisible in a <code>describe()</code> and decide whether this is a real project or a demo.</p>
+      </div>
+
+      <details class="acc" open>
+        <summary>Drop <span class="code-badge">duration</span></summary>
+        <div class="acc-body">
+          <p>Call duration is, by far, the strongest single predictor — mean 258.3 seconds, median 180, and a max over 4,900 seconds. It's also completely unusable: at prediction time, before the call happens, duration doesn't exist yet. A feature only belongs in a model if its value is actually available the moment a prediction is needed.</p>
+        </div>
+      </details>
+      <details class="acc">
+        <summary>Split <span class="code-badge">pdays</span> into a flag and a count</summary>
+        <div class="acc-body">
+          <div class="chart">
+            <div class="proportion-bar" role="img" aria-label="96.3% of rows carry the placeholder value 999 for pdays; 3.7% carry a real day count">
+              <div class="proportion-seg" style="width:96.3%; background:var(--gold-dim);">999 (never contacted) · 96.3%</div>
+              <div class="proportion-seg" style="width:3.7%; background:var(--gold-bright); color:#141210;">real value · 3.7%</div>
+            </div>
+          </div>
+          <p>96.3% of rows carry the sentinel value <code>999</code>, meaning "never previously contacted." Genuine values run only from 0 to 27 days. Left as-is, a model reads that sentinel as "contacted 999 days ago" for almost every row. The fix is a boolean <code>previously_contacted</code> flag plus a <code>pdays</code> column that's only meaningful when the flag is true — and the service applies the identical rule at request time.</p>
+        </div>
+      </details>
+      <details class="acc">
+        <summary>Treat five columns as <span class="code-badge">the service's job</span>, not the caller's</summary>
+        <div class="acc-body">
+          <div class="chart">
+            <div class="bar-rows">
+              <div class="bar-row"><span class="bl">euribor3m</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bv">316</span></div>
+              <div class="bar-row"><span class="bl">cons.price.idx</span><div class="bar-track"><div class="bar-fill" style="width:8.2%"></div></div><span class="bv">26</span></div>
+              <div class="bar-row"><span class="bl">cons.conf.idx</span><div class="bar-track"><div class="bar-fill" style="width:8.2%"></div></div><span class="bv">26</span></div>
+              <div class="bar-row"><span class="bl">age (for scale)</span><div class="bar-track"><div class="bar-fill alt" style="width:24.7%"></div></div><span class="bv">78</span></div>
+              <div class="bar-row"><span class="bl">nr.employed</span><div class="bar-track"><div class="bar-fill" style="width:3.5%"></div></div><span class="bv">11</span></div>
+              <div class="bar-row"><span class="bl">emp.var.rate</span><div class="bar-track"><div class="bar-fill" style="width:3.2%"></div></div><span class="bv">10</span></div>
+              <div class="bar-row"><span class="bl">job (for scale)</span><div class="bar-track"><div class="bar-fill alt" style="width:3.8%"></div></div><span class="bv">12</span></div>
+            </div>
+            <figcaption>Distinct values across all 41,188 calls. The five economic columns move with the calendar, not with the prospect.</figcaption>
+          </div>
+          <p><code>emp.var.rate</code>, <code>cons.price.idx</code>, <code>cons.conf.idx</code>, <code>euribor3m</code>, and <code>nr.employed</code> describe the Portuguese economy on the day of the call, not the prospect. A dialler knows a prospect's age or job; it has no way to know the quarterly Euribor rate. These five values have to be supplied by the serving side, not sent by the caller.</p>
+        </div>
+      </details>
+      <details class="acc">
+        <summary>Leave <span class="code-badge">"unknown"</span> categories alone</summary>
+        <div class="acc-body"><p>A missing answer carries its own predictive signal, distinct from a negative one — so the encoder gets a dedicated <code>unknown</code> column instead of an imputed guess.</p></div>
+      </details>
+
+      <div class="prose">
+        <h3>5.2 · pipeline.py — one estimator, not four steps</h3>
+        <p>A fitted <code>Pipeline</code> is the one object that carries training-time transformations along with it — which categories an encoder saw, what a scaler's medians and ranges were. None of that lives in source code. At serving time there's one prospect and no training set, so nothing can be refit; a pipeline pickles as one object and carries its learned state with it.</p>
+        <div class="card-grid cols-2">
+          <div class="card">
+            <h4>Numeric branch</h4>
+            <p>Median imputation, then standard scaling. Fills the <code>pdays</code> gaps left by the earlier split.</p>
+          </div>
+          <div class="card">
+            <h4>Categorical branch</h4>
+            <p>One-hot encoding with <code>handle_unknown="ignore"</code> — a value the encoder never saw becomes a row of zeros rather than an error.</p>
+          </div>
+        </div>
+        <p>Two arguments here look like training details and are really serving decisions. <code>handle_unknown="ignore"</code> decides what happens when a category the encoder never saw arrives; <code>remainder="drop"</code> decides what happens to a column nobody asked for. Both are sensible library defaults, and both are ways of not telling anybody something went wrong. That's exactly what the request schema in Chapter 6 exists to police instead.</p>
+
+        <h3>5.3 · tune.py — letting the search choose the model</h3>
+        <p>Optuna searches over the model family and its parameters together, because the parameter space only exists once a family is picked — no grid can express that. The search's own history is stored in a SQLite file rather than kept in memory, so a run can be interrupted, resumed by a different process, or inspected next week. This project shipped with 60 stored trials; running five more from a separate process brought the total to 65 without losing anything already found.</p>
+        <div class="tbl-wrap">
+          <table>
+            <caption>artifacts/study.db — 65 trials</caption>
+            <thead><tr><th>Family</th><th>Trials run</th><th>Best cross-validated ROC AUC</th><th></th></tr></thead>
+            <tbody>
+              <tr class="hl"><td>Gradient-boosted (hgb)</td><td class="mono">45</td><td class="mono">0.8013</td><td><span class="badge good">selected</span></td></tr>
+              <tr><td>Random forest (rf)</td><td class="mono">8</td><td class="mono">0.7959</td><td></td></tr>
+              <tr><td>Logistic regression (logreg)</td><td class="mono">7</td><td class="mono">0.7879</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The trials aren't spread evenly. A sampler that commits early to the branch that's paying off is chasing the single best model, not a fair comparison across families — the handful of trials logistic regression received isn't a serious tuning attempt for it, and that's a deliberate trade rather than an oversight.</p>
+
+        <h3>5.4 · train.py — the artifact, and what it has to carry</h3>
+        <p>Training replays the winning trial's own search logic rather than hand-translating parameter names — a trial records <code>hgb_l2</code>, but the estimator expects <code>l2_regularization</code>, and any manual mapping is a second place that translation can go wrong. The command also records <strong>git provenance</strong>: which commit built the artifact, and whether the working tree was clean at the time — the cheapest useful answer to "which code produced this."</p>
+        <div class="bignum-row">
+          <div class="bignum-item"><span class="bignum">0.8166</span><span class="lbl">held-out ROC AUC</span></div>
+          <div class="bignum-item"><span class="bignum">0.22</span><span class="lbl">chosen decision threshold</span></div>
+          <div class="bignum-item"><span class="bignum">hgb</span><span class="lbl">winning model family</span></div>
+        </div>
+        <p>The interesting output of a training run isn't the model file — it's the JSON beside it. <code>model_meta.json</code> is a contract, and it's worth reading field by field.</p>
+      </div>
+
+      <div class="switcher" data-switch-group>
+        <div class="switch-buttons">
+          <button data-switch-btn="m1" data-default>decision_threshold</button>
+          <button data-switch-btn="m2">feature_order</button>
+          <button data-switch-btn="m3">categories</button>
+          <button data-switch-btn="m4">git</button>
+          <button data-switch-btn="m5">sklearn_version</button>
+          <button data-switch-btn="m6">feature_reliance</button>
+        </div>
+        <div class="switch-panels">
+          <div data-switch-panel="m1"><pre class="response-json">"decision_threshold": 0.22</pre><p class="demo-note">A number derived from data — scikit-learn will not pickle it. Without it, the service has to guess, and the guess is 0.5.</p></div>
+          <div data-switch-panel="m2" hidden><pre class="response-json">"feature_order": [ …20 columns… ]</pre><p class="demo-note">The exact column order the pipeline was fitted with, so the service can build its frame from metadata rather than from a list somebody typed into the serving file by hand.</p></div>
+          <div data-switch-panel="m3" hidden><pre class="response-json">"categories": {
+  "poutcome": ["failure","nonexistent","success"], …
+}</pre><p class="demo-note">What the fitted encoder actually saw, column by column. The most useful — and most often omitted — field in the file, because it's exactly the vocabulary the request schema needs to enforce.</p></div>
+          <div data-switch-panel="m4" hidden><pre class="response-json">"git": {"commit": "5692338…", "dirty": true}</pre><p class="demo-note">Which code produced this artifact, and whether the tree had uncommitted changes at the time. Somebody holding only a prediction can read the model version, ask <code>/health</code> for the commit, and land on the exact source that built it.</p></div>
+          <div data-switch-panel="m5" hidden><pre class="response-json">"sklearn_version": "1.9.1"</pre><p class="demo-note">Answers whether the artifact will even unpickle correctly. <code>requirements.txt</code> pins this exactly, while everything else only sets a floor.</p></div>
+          <div data-switch-panel="m6" hidden>
+            <div class="chart">
+              <div class="bar-rows">
+                <div class="bar-row"><span class="bl">nr.employed</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bv">0.062</span></div>
+                <div class="bar-row"><span class="bl">cons.price.idx</span><div class="bar-track"><div class="bar-fill" style="width:48%"></div></div><span class="bv">0.030</span></div>
+                <div class="bar-row"><span class="bl">contact</span><div class="bar-track"><div class="bar-fill" style="width:33%"></div></div><span class="bv">0.020</span></div>
+                <div class="bar-row"><span class="bl">emp.var.rate</span><div class="bar-track"><div class="bar-fill" style="width:24%"></div></div><span class="bv">0.015</span></div>
+                <div class="bar-row"><span class="bl">euribor3m</span><div class="bar-track"><div class="bar-fill" style="width:17%"></div></div><span class="bv">0.011</span></div>
+                <div class="bar-row"><span class="bl">month</span><div class="bar-track"><div class="bar-fill" style="width:15%"></div></div><span class="bv">0.009</span></div>
+              </div>
+              <figcaption>Drop in ROC AUC when a feature is removed — the top 6 of 20. Higher means the model leans on it more.</figcaption>
+            </div>
+            <p class="demo-note">Three of the top four features the model relies on most are the economic columns the service supplies rather than the caller. That dependence matters again in Chapter 10.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="prose">
+        <h3>5.5 · The threshold is a serving decision</h3>
+        <p><code>predict()</code> calls a positive anything at or above probability 0.5 — a convention, not a result. It's the right cut only when a false positive and a false negative cost the same, and here they plainly don't: a false positive is a wasted phone call, a false negative is a customer who would have said yes. It's also the wrong cut for a rare event — with roughly 1 subscriber in 9, a rule that only calls when the model is more than half sure will hardly call anybody. The threshold is a <strong>business</strong> choice, and a <strong>serving</strong> one: it can change without retraining, which means serving code has no way to work it out for itself and it has to travel with the model.</p>
+      </div>
+
+      <div class="chart" style="max-width:920px;">
+        <div class="tbl-wrap">
+          <table>
+            <caption>Scored on the same 10,297-row holdout, 1,160 of whom actually subscribed</caption>
+            <thead><tr><th>Metric</th><th>Library default (0.50)</th><th>Stored threshold (0.22)</th></tr></thead>
+            <tbody>
+              <tr><td>People called</td><td class="mono">426</td><td class="mono">1,474</td></tr>
+              <tr><td>Subscribers reached</td><td class="mono">291 of 1,160</td><td class="mono">690 of 1,160</td></tr>
+              <tr><td>F1</td><td class="mono">0.3670</td><td class="mono">0.5239</td></tr>
+              <tr><td>Precision</td><td class="mono">0.6831</td><td class="mono">0.4681</td></tr>
+              <tr><td>Recall</td><td class="mono">0.2509</td><td class="mono">0.5948</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="prose">
+        <p>The stored threshold reaches more than twice as many subscribers as the library default, but by calling a lot more people — precision drops as recall rises. Neither number is universally correct; deciding which trade to accept needs a business view of what a call costs against what a deposit is worth, and the model alone can't make that call. What matters here is that this cutoff defines the model's behaviour just as much as its internal parameters do — and a serving layer that quietly falls back to <code>predict()</code> will miss hundreds of real subscribers without raising anything. Chapter 10 measures exactly that.</p>
+      </div>
+    </section>
+
+    <!-- ================= CHAPTER 6 ================= -->
+    <section class="chapter" id="ch6">
+      <div class="chapter-eyebrow">Chapter 06</div>
+      <h2>The contract: app/schemas.py</h2>
+      <p class="lede">A schema is the way a service says no.</p>
+      <div class="prose">
+        <p>Whatever a schema doesn't reject, it accepts — and then the model has to have an opinion about it. The real question when writing one isn't what a valid request looks like. It's <strong>what's the worst request you're willing to score.</strong></p>
+        <p>The <code>Customer</code> model uses <code>Literal</code> types wherever the encoder learned a fixed vocabulary, so a field like <code>month</code> doesn't accept a string — it accepts one of ten specific strings, the same ten the encoder saw. <code>extra="forbid"</code> turns an unrecognised field into a 422 instead of a silent drop, because a caller sending <code>day_of_the_week</code> instead of <code>day_of_week</code> has a bug worth surfacing immediately rather than three weeks later in a campaign report.</p>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <caption>app/schemas.py — Customer (14 fields the caller actually sends)</caption>
+          <thead><tr><th>Field</th><th>Type / constraint</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">age</td><td>int, 17–110</td></tr>
+            <tr><td class="mono">campaign</td><td>int, 1–100 (contacts this campaign)</td></tr>
+            <tr><td class="mono">previous</td><td>int, 0–100 (contacts before this campaign)</td></tr>
+            <tr><td class="mono">days_since_last_contact</td><td>int or null, 0–990 — null when never contacted</td></tr>
+            <tr><td class="mono">job</td><td>one of 12 literal values</td></tr>
+            <tr><td class="mono">marital</td><td>divorced / married / single / unknown</td></tr>
+            <tr><td class="mono">education</td><td>one of 8 literal values</td></tr>
+            <tr><td class="mono">default, housing, loan</td><td>yes / no / unknown</td></tr>
+            <tr><td class="mono">contact</td><td>cellular / telephone</td></tr>
+            <tr><td class="mono">month</td><td>one of 10 literal values</td></tr>
+            <tr><td class="mono">day_of_week</td><td>mon–fri</td></tr>
+            <tr><td class="mono">poutcome</td><td>failure / nonexistent / success</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="prose">
+        <p>Just as telling is what's <strong>not</strong> in the schema.</p>
+      </div>
+      <div class="card-grid cols-3">
+        <div class="card"><h4>No economic columns</h4><p>These describe a date, not a prospect. A dialler has no way to know them, so the service supplies all five.</p></div>
+        <div class="card"><h4>No <span class="mono">pdays</span></h4><p>The contract asks for <code>days_since_last_contact</code>, null when there was no previous contact — the <code>999</code> sentinel is a quirk of a 2014 CSV with no business in a public interface.</p></div>
+        <div class="card"><h4>No <span class="mono">duration</span></h4><p>The entire reason this project exists — a value that doesn't exist yet at prediction time.</p></div>
+      </div>
+      <div class="chart">
+        <div class="bar-rows">
+          <div class="bar-row"><span class="bl">Request fields</span><div class="bar-track"><div class="bar-fill" style="width:70%"></div></div><span class="bv">14</span></div>
+          <div class="bar-row"><span class="bl">Model input columns</span><div class="bar-track"><div class="bar-fill alt" style="width:100%"></div></div><span class="bv">20</span></div>
+        </div>
+        <figcaption>The gap — 2 derived (pdays, previously_contacted) + 5 supplied (economic context) — is closed entirely by the service.</figcaption>
+      </div>
+      <div class="callout good"><p>This isn't just a design claim — <code>tests/test_contract.py</code> checks it on every run, comparing the schema's <code>Literal</code> values against the encoder's actual vocabulary in <code>model_meta.json</code>. Today, mismatches: <strong>none</strong>. The schema and the encoder stay in agreement not because anybody is careful, but because a test fails the moment they diverge.</p></div>
+    </section>
+
+    <!-- ================= CHAPTER 7 ================= -->
+    <section class="chapter" id="ch7">
+      <div class="chapter-eyebrow">Chapter 07</div>
+      <h2>The service: app/main.py</h2>
+      <p class="lede">Four decisions turn a request into an answer.</p>
+      <div class="prose"><p><code>uvicorn app.main:app</code> — and the module that command names. Each decision below has a lazier version that works fine on a laptop and causes real trouble later.</p></div>
+
+      <div class="stepper" data-switch-group>
+        <div class="step-nav">
+          <button data-switch-btn="p1" data-default><span class="idx">1</span> lifespan</button>
+          <button data-switch-btn="p2"><span class="idx">2</span> to_row</button>
+          <button data-switch-btn="p3"><span class="idx">3</span> score</button>
+          <button data-switch-btn="p4"><span class="idx">4</span> the endpoint</button>
+        </div>
+        <div class="switch-panels">
+          <div data-switch-panel="p1" class="step-panel">
+            <h4>Where the model is loaded</h4>
+            <pre class="code"><span class="kw">@asynccontextmanager</span>
+<span class="kw">async def</span> lifespan(app: FastAPI):
+    <span class="kw">try</span>:
+        app.state.bundle = load_bundle()
+    <span class="kw">except</span> Exception:
+        app.state.bundle = <span class="kw">None</span>
+        <span class="kw">raise</span>
+    <span class="kw">yield</span></pre>
+            <p><code>lifespan</code> runs once, before the first request, and the loaded bundle lives on <code>app.state</code>. The lazy alternative loads inside the handler, so every single caller pays for the file read and the unpickle. Notice what happens if the artifact is missing: nothing catches the error, so the process refuses to start. That's deliberate — a service that starts <em>without</em> a model looks healthy to whatever is watching it, and returns errors to real traffic. Failing at deploy time is far cheaper than failing quietly in production.</p>
+          </div>
+          <div data-switch-panel="p2" class="step-panel" hidden>
+            <h4>Where a request becomes a row</h4>
+            <pre class="code"><span class="kw">def</span> to_row(customer: Customer, bundle) -> dict:
+    row = customer.model_dump()
+    row.update(contact_features(row.pop(<span class="st">"days_since_last_contact"</span>)))
+    row.update(bundle[<span class="st">"context"</span>])
+    <span class="kw">return</span> row</pre>
+            <p>Three sources meet in four lines: the fourteen fields the caller sent, the two contact columns derived by a shared rule, and the five economic values the service holds. <code>contact_features</code> is the single function imported across the boundary between <code>campaign/</code> and <code>app/</code> — the one exception to these programs talking only through files. The reason: anything <strong>fitted</strong> travels inside the pickled artifact; anything merely <strong>decided</strong>, like treating an uncontacted customer as having no contact date, is ordinary Python a pickle can't carry. Retyping those two lines here would have created a second copy of the same rule to keep in sync forever.</p>
+          </div>
+          <div data-switch-panel="p3" class="step-panel" hidden>
+            <h4>Where the decision comes from</h4>
+            <pre class="code"><span class="kw">def</span> score(frame, bundle) -> list[Prediction]:
+    threshold = bundle[<span class="st">"meta"</span>][<span class="st">"decision_threshold"</span>]
+    proba = bundle[<span class="st">"pipeline"</span>].predict_proba(frame)[:, 1]
+    <span class="kw">return</span> [Prediction(subscribe_probability=<span class="kw">round</span>(<span class="kw">float</span>(p), 4),
+                       call=<span class="kw">bool</span>(p >= threshold), threshold=threshold, …)
+            <span class="kw">for</span> p <span class="kw">in</span> proba]</pre>
+            <p><code>predict_proba</code>, compared against the metadata's threshold — never <code>predict()</code>, because <code>predict()</code> means 0.5, and 0.5 isn't this model's number. The caller gets back the probability, the decision, the threshold that produced it, and the model version — nothing else, because the endpoint declares <code>response_model=Prediction</code>.</p>
+          </div>
+          <div data-switch-panel="p4" class="step-panel" hidden>
+            <h4>What an endpoint actually is</h4>
+            <pre class="code"><span class="kw">@app.post</span>(<span class="st">"/predict"</span>, response_model=Prediction)
+<span class="kw">def</span> predict(customer: Customer, request: Request):
+    bundle = get_bundle(request)
+    <span class="kw">return</span> score(to_frame([customer], bundle), bundle)[0]</pre>
+            <p>Three lines, two of them the functions above. The decorator says which method and path; the annotation <code>customer: Customer</code> is what makes FastAPI parse, validate, and answer the caller itself if the body doesn't fit. Everything difficult has already happened by the time the first line of the body runs.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="prose"><p>Two real prospects, sent to the running service:</p></div>
+      <div class="card-grid cols-2">
+        <div class="card">
+          <h4>Cold prospect</h4>
+          <p class="mono" style="font-size:.8rem;">never contacted, no previous campaign</p>
+          <span class="mini-stat">2.8%</span>
+          <p><span class="badge bad">Do not call</span> · threshold 0.22 · <span class="mono">20260922-hgb-1</span></p>
+        </div>
+        <div class="card">
+          <h4>Warm prospect</h4>
+          <p class="mono" style="font-size:.8rem;">said yes before, contacted 6 days ago</p>
+          <span class="mini-stat">42.1%</span>
+          <p><span class="badge good">Call</span> · threshold 0.22 · <span class="mono">20260922-hgb-1</span></p>
+        </div>
+      </div>
+
+      <div class="prose">
+        <p><code>/health</code> reports on the model, not the web server — it names the commit that built the artifact, so somebody debugging a strange call list can read that without opening the repository. <code>/model</code> publishes the threshold, the metrics, and the full category vocabulary, so a client never has to hardcode a value that might change the next time somebody retrains.</p>
+
+        <h3>7.1 · What a batch endpoint is worth</h3>
+        <p>An overnight job doesn't want one prospect — it wants tomorrow's whole call list. There are two ways to give it one: call <code>/predict</code> in a loop, or call <code>/predict/batch</code> once.</p>
+      </div>
+      <div class="chart">
+        <div class="bar-rows">
+          <div class="bar-row"><span class="bl">200× in a loop</span><div class="bar-track"><div class="bar-fill danger" style="width:100%"></div></div><span class="bv">984 ms</span></div>
+          <div class="bar-row"><span class="bl">One batch call</span><div class="bar-track"><div class="bar-fill" style="width:2%"></div></div><span class="bv">5.2 ms</span></div>
+        </div>
+        <figcaption>Total time to score 200 prospects, one at a time versus in one call.</figcaption>
+      </div>
+      <div class="callout"><p><strong>≈191× faster.</strong> Almost none of that gap is the model. A single call spends its time on connection handling, JSON parsing, and a <code>predict_proba</code> call on a one-row frame — about as inefficient as scikit-learn gets. The batch call pays for the round trip once and hands the pipeline a 200-row frame, the shape it was written for. The trade: the batch endpoint caps at 1,000 prospects per call, and it rejects the whole batch if a single prospect is malformed — a defensible, deliberate choice rather than an accident.</p></div>
+
+      <div class="prose"><h3>7.2 · What the caller gets when things go wrong</h3></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Request</th><th>Status</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>A well-formed prospect</td><td><span class="badge good">200</span></td><td>Scored normally</td></tr>
+            <tr><td>A month the model never saw</td><td><span class="badge bad">422</span></td><td>Understood and refused — the caller fixes their payload</td></tr>
+            <tr><td>An empty batch</td><td><span class="badge bad">422</span></td><td>Same reason, guarded in three lines of handler code</td></tr>
+            <tr><td>A batch of 1,001</td><td><span class="badge bad">413</span></td><td>Too large — without a cap, one caller could take the service down for everybody</td></tr>
+            <tr><td>No model loaded <span class="mono" style="font-size:.75rem;">(never seen here)</span></td><td><span class="badge bad">503</span></td><td>Running, but not ready — the code a load balancer understands as "send traffic elsewhere"</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="prose">Nothing on that list needed a <code>try</code> block or a hand-written error body.</p>
+    </section>
+
+    <!-- ================= CHAPTER 8 ================= -->
+    <section class="chapter" id="ch8">
+      <div class="chapter-eyebrow">Chapter 08</div>
+      <h2>The console: dashboard/app.py, a client of the service</h2>
+      <p class="lede">A campaign manager wants to try a prospect and see a number.</p>
+      <div class="prose"><p>There are two ways to build the console the manager uses, and the choice is the interesting part.</p></div>
+
+      <div class="switcher" data-switch-group>
+        <div class="switch-buttons">
+          <button data-switch-btn="short" data-default>The short way</button>
+          <button data-switch-btn="long">The way this project takes</button>
+        </div>
+        <div class="switch-panels">
+          <div data-switch-panel="short">
+            <p><strong>Load <code>model.joblib</code> directly.</strong> One import, and it's what a demo app usually does. It also means the threshold gets applied in two places, the feature frame gets built in two places, and the economic context gets injected in two places — every one of those is a rule that now exists twice, which is exactly the drift this whole project exists to prevent, just moved to a new address.</p>
+          </div>
+          <div data-switch-panel="long" hidden>
+            <p><strong>Be a client, like the dialler.</strong> The console posts to <code>/predict</code> the same way any other caller does, so there's exactly one place in the entire system where a prospect becomes a probability. It's also the only version that answers the question this project started with, because software can't call a Streamlit app — the nightly job can't post to it, and neither can the dialler.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="prose">
+        <pre class="code"><span class="kw">@st.cache_data</span>(ttl=60, show_spinner=<span class="kw">False</span>)
+<span class="kw">def</span> fetch_model_card(api):
+    response = requests.get(<span class="kw">f</span><span class="st">"{api}/model"</span>, timeout=TIMEOUT)
+    <span class="kw">return</span> response.json()</pre>
+        <p>Every dropdown, the threshold, and the metrics shown come from this one cached call to <code>/model</code>. Nothing about the model is written down in the console, so a retrain that adds a category reaches the interface without anybody editing it. The cache isn't an optimisation flourish — a Streamlit script reruns top to bottom on every interaction, so without it this would be one HTTP call per keystroke.</p>
+        <p>Driven headlessly (the way its own tests would), the console holds up exactly as expected:</p>
+      </div>
+      <div class="card-grid cols-2">
+        <div class="card"><h4>Cold prospect</h4><span class="mini-stat">3.0%</span><p>"Do not call"</p></div>
+        <div class="card"><h4>Warm prospect</h4><span class="mini-stat">41.1%</span><p>"Call"</p></div>
+      </div>
+      <div class="prose">
+        <p>The batch tab reports plainly: <em>"1 of 3 clear the service's threshold of 0.22."</em> No exceptions anywhere. And because the console and the service are now genuinely dependent on each other, it has to have an opinion when the service is down — pointed at a port with nothing behind it, the console shows a plain sentence rather than a stack trace:</p>
+        <div class="callout danger"><p class="mono" style="font-style:normal;">"No answer from http://127.0.0.1:9. Start the service with <span class="mono">uvicorn app.main:app</span>."</p></div>
+        <p>A sentence and a next step, rather than a traceback — the difference between a page a campaign manager can act on and a page they forward to somebody else.</p>
+      </div>
+    </section>
+
+    <!-- ================= CHAPTER 9 ================= -->
+    <section class="chapter" id="ch9">
+      <div class="chapter-eyebrow">Chapter 09</div>
+      <h2>Tests: what proves the seam holds</h2>
+      <p class="lede">Four files that don't check whether the model is any good.</p>
+      <div class="prose">
+        <p>They check that the parts still agree with each other — because that's what breaks, and it breaks without ever moving a score.</p>
+        <div class="callout good"><p><span class="mono">........................ 24 passed in 0.75s</span></p></div>
+      </div>
+      <div class="card-grid cols-2">
+        <div class="card"><h4>test_data.py</h4><p>Pins the data decisions — including an assertion that <code>duration</code> is still in the raw file, so the day the dataset changes, the leakage lesson fails loudly instead of quietly becoming untrue.</p></div>
+        <div class="card"><h4>test_features.py</h4><p>Checks that training's frame-wide rule and serving's single-value rule for <code>pdays</code> agree on real rows — the exact setup that produces skew if the two implementations drift.</p></div>
+        <div class="card"><h4>test_contract.py</h4><p>Asserts the sentinel never leaks into the public interface: <code>pdays</code> and <code>previously_contacted</code> are absent from <code>Customer</code>; <code>days_since_last_contact</code> is present.</p></div>
+        <div class="card"><h4>test_api.py</h4><p>The skew test, and the one worth copying into any project — detailed below.</p></div>
+      </div>
+      <div class="prose">
+        <pre class="code"><span class="kw">def</span> test_the_service_agrees_with_the_pipeline_it_serves(client, prospect):
+    served = client.post(<span class="st">"/predict"</span>, json=prospect).json()
+    frame = to_frame([Customer(**prospect)], bundle)
+    direct = bundle[<span class="st">"pipeline"</span>].predict_proba(frame)[0, 1]
+    <span class="kw">assert</span> served[<span class="st">"subscribe_probability"</span>] == pytest.approx(direct, abs=5e-5)</pre>
+        <p>Score the same prospect twice: once through HTTP, with JSON parsing, schema validation, and frame-building in between; once by calling the pipeline directly, the way training does. Require the two numbers to match within 5×10⁻⁵. A serving layer that reorders a column, derives the contact features differently, or forgets the economic context passes every other test in the file — because the others only check that the response has the right shape. This six-line test is the only one that can catch training and serving quietly drifting apart.</p>
+      </div>
+    </section>
+
+    <!-- ================= CHAPTER 10 ================= -->
+    <section class="chapter" id="ch10">
+      <div class="chapter-eyebrow">Chapter 10</div>
+      <h2>Five things that break quietly</h2>
+      <p class="lede">Every one of them returns 200.</p>
+      <div class="prose"><p>A service that returns 500 gets noticed within the hour. A service that returns 200 and a slightly wrong number gets noticed when somebody audits a campaign — if ever. Silence, not severity, is the criterion below.</p></div>
+
+      <div class="switcher" data-switch-group>
+        <div class="switch-buttons">
+          <button data-switch-btn="f1" data-default>1 · Unseen category</button>
+          <button data-switch-btn="f2">2 · Forgotten threshold</button>
+          <button data-switch-btn="f3">3 · Stale context</button>
+          <button data-switch-btn="f4">4 · Reloaded artifact</button>
+          <button data-switch-btn="f5">5 · Shallow health check</button>
+        </div>
+        <div class="switch-panels">
+
+          <div data-switch-panel="f1">
+            <h4>The category the encoder never saw</h4>
+            <p>An upstream system starts capitalising its values — <code>"cellular"</code> becomes <code>"Cellular"</code>. Nobody deployed anything; a client library was upgraded elsewhere.</p>
+            <div class="chart">
+              <div class="bar-rows">
+                <div class="bar-row"><span class="bl">One column corrupted</span><div class="bar-track"><div class="bar-fill danger" style="width:22%"></div></div><span class="bv">2.2%</span></div>
+                <div class="bar-row"><span class="bl">All ten corrupted</span><div class="bar-track"><div class="bar-fill danger" style="width:41%"></div></div><span class="bv">4.1%</span></div>
+              </div>
+              <figcaption>Share of recommendations that flip, asking the raw pipeline directly. No exceptions, no warnings, either time.</figcaption>
+            </div>
+            <p>Asked directly, <code>handle_unknown="ignore"</code> turns the unrecognised value into a row of zeros — the model reads it as a prospect with no contact channel and scores it anyway, indistinguishable from a valid input. Hundreds of bad recommendations pass through silently. Routed through the API service instead, the same corrupted request is rejected outright:</p>
+            <span class="status-pill s4">422</span>
+            <pre class="response-json">{"detail":[{"type":"literal_error","loc":["body","contact"],
+ "msg":"Input should be 'cellular' or 'telephone'","input":"Cellular"}]}</pre>
+            <p class="demo-note">The caller's integration tests fail, the string gets corrected, and no bad recommendation ever reaches production. Typing the field with <code>Literal</code> is what stops the bad input before it reaches the encoder at all.</p>
+          </div>
+
+          <div data-switch-panel="f2" hidden>
+            <h4>The threshold nobody carried across</h4>
+            <p>This one needs no bad data at all — somebody writes the obvious version:</p>
+            <pre class="code"><span class="cm"># Not in this project — the version written by accident</span>
+recommendation = pipeline.predict(frame)[0]   <span class="cm"># looks right, means 0.5</span></pre>
+            <div class="chart">
+              <div class="bar-rows">
+                <div class="bar-row"><span class="bl">predict(), means 0.5</span><div class="bar-track"><div class="bar-fill danger" style="width:42%"></div></div><span class="bv">291</span></div>
+                <div class="bar-row"><span class="bl">stored threshold 0.22</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bv">690</span></div>
+              </div>
+              <figcaption>Subscribers actually reached, out of 1,160 in the holdout.</figcaption>
+            </div>
+            <div class="callout danger"><p><strong>399 subscribers — 34% of everybody who would have said yes — never called.</strong> No error, no bad input, no exception. Every request succeeds, the response shape is correct, and a dashboard stays green. The only symptom is a call list that's shorter than it should be, with nothing to compare it against.</p></div>
+          </div>
+
+          <div data-switch-panel="f3" hidden>
+            <h4>The context that went stale</h4>
+            <p>The service supplies five economic values from <code>market_context.json</code>, written once at training time. Nothing updates them — a deliberate, documented shortcut with a real cost.</p>
+            <div class="chart">
+              <div class="bar-rows">
+                <div class="bar-row"><span class="bl">Honest context</span><div class="bar-track"><div class="bar-fill" style="width:11.2%"></div></div><span class="bv">11.2%</span></div>
+                <div class="bar-row"><span class="bl">Drifted context</span><div class="bar-track"><div class="bar-fill danger" style="width:19.3%"></div></div><span class="bv">19.3%</span></div>
+              </div>
+              <figcaption>Mean predicted subscription probability, before and after a plausible drift (rates fall, employment softens over a few quarters).</figcaption>
+            </div>
+            <div class="callout danger"><p><strong>17.9% of decisions change</strong> — 1,841 of 10,297 — from a shift in two numbers nobody in the calling system has ever heard of. No error, no warning, no field anywhere saying how old the context is.</p></div>
+            <p class="demo-note">Holding the last known values is a reasonable first implementation — it beats making the dialler send them. The shortcut isn't wrong; it's <em>invisible</em>. A cheap fix — recording the date the context was captured, returning its age in the response, and marking <code>/health</code> degraded past some agreed number of days — wouldn't remove the staleness, only stop it being silent.</p>
+          </div>
+
+          <div data-switch-panel="f4" hidden>
+            <h4>The artifact reloaded on every request</h4>
+            <div class="chart">
+              <div class="bar-rows">
+                <div class="bar-row"><span class="bl">Loaded once (lifespan)</span><div class="bar-track"><div class="bar-fill" style="width:7%"></div></div><span class="bv">0.39 ms</span></div>
+                <div class="bar-row"><span class="bl">Reloaded per request</span><div class="bar-track"><div class="bar-fill danger" style="width:100%"></div></div><span class="bv">5.30 ms</span></div>
+              </div>
+              <figcaption>Mean response time over 30 requests, for a 696 KB artifact.</figcaption>
+            </div>
+            <p>The gap is the cost of the file read and the unpickle, paid once per request by the lazy version. A small logistic regression from earlier in a course might cost half a millisecond to reload — a rounding error. A larger ensemble is a different object, and nothing in the handler changes to warn anybody. There's a second cost a mean hides entirely: under concurrency, every request in flight holds its own copy of the model, so a service comfortable at one request at a time can fall over at fifty for reasons that look exactly like a memory leak.</p>
+          </div>
+
+          <div data-switch-panel="f5" hidden>
+            <h4>The health check that only proves the port is open</h4>
+            <p>The most common health endpoint in production is <code>{"status": "ok"}</code>. It answers a question nobody asked — an orchestrator wants to know whether to send this process traffic, and a process can be listening while its artifact is missing, corrupt, or unpickled under a scikit-learn that quietly renamed an attribute.</p>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th></th><th>As deployed</th><th>Simulated version drift</th></tr></thead>
+                <tbody>
+                  <tr><td>status</td><td><span class="badge good">ok</span></td><td><span class="badge bad">degraded</span></td></tr>
+                  <tr><td>model_loaded</td><td class="mono">true</td><td class="mono">true</td></tr>
+                  <tr><td>sklearn_version_matches</td><td class="mono">true</td><td class="mono">false</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="demo-note">A version mismatch is both dangerous and quiet — a pickle from one scikit-learn version often loads under another, then behaves subtly differently because an attribute the pickle doesn't contain now has a different default. That's why the trained version is written into the metadata rather than left for a deployment to get right by luck.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CHAPTER 11 ================= -->
+    <section class="chapter" id="ch11">
+      <div class="chapter-eyebrow">Chapter 11</div>
+      <h2>Ways to ship this</h2>
+      <p class="lede">Three decisions every project like this one meets.</p>
+
+      <div class="prose"><h3>11.1 · Promote the model, or promote the code</h3></div>
+      <div class="switcher" data-switch-group>
+        <div class="switch-buttons">
+          <button data-switch-btn="pm" data-default>Promote the model — used here</button>
+          <button data-switch-btn="pc">Promote the code</button>
+        </div>
+        <div class="switch-panels">
+          <div data-switch-panel="pm"><p>Train wherever's convenient, then move the artifact itself to production and let the service load it. What travels between environments is a file. Production never trains, and the model being served is byte-for-byte the one that was tested. Suits a model retrained a few times a year with somebody signing off each time — rolling back is copying the previous file back.</p></div>
+          <div data-switch-panel="pc" hidden><p>Move the training code to production and let it train there, on production data, on a schedule. What travels is a commit, not a large binary. The only option when production data legally can't leave production — ordinary in banks and hospitals — and far less work than shipping a new file every night if retraining happens nightly.</p></div>
+        </div>
+      </div>
+
+      <div class="prose">
+        <h3>11.2 · Where the artifact lives</h3>
+        <p>This project commits its artifacts to git — not the usual advice, but reasonable for a few hundred kilobytes that change only when somebody retrains: a clone can serve predictions immediately, with nothing to download. Past a few megabytes, or with a nightly retrain, that stops being true, and the artifact wants a store of its own with the repository holding only a pointer.</p>
+        <div class="card-grid cols-3">
+          <div class="card"><h4>Committed to git</h4><p>Fine at a few hundred KB, changing rarely. History bloats past a few MB.</p></div>
+          <div class="card"><h4>A dedicated store</h4><p>The repository holds a pointer; the artifact lives elsewhere. Scales to frequent retrains.</p></div>
+          <div class="card"><h4>Baked into the image</h4><p>What ships is one unit — no question which model a running process loaded. A new model means a new image.</p></div>
+        </div>
+
+        <h3>11.3 · A service, or a dependency</h3>
+        <p>The console chose to be a client rather than load the model itself — a choice with names in architecture documents.</p>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th>Model-as-Service</th><th>Model-as-Dependency</th></tr></thead>
+          <tbody>
+            <tr><td>Shape</td><td>Behind its own API, reached over HTTP</td><td>Ships as a library, loaded inside the caller</td></tr>
+            <tr><td>Costs</td><td>A network hop, a deployment to run</td><td>Nothing — no process that can be down</td></tr>
+            <tr><td>Buys</td><td>One place a prospect becomes a probability; a caller that need not be Python</td><td>Suits one application that owns its model outright</td></tr>
+            <tr><td>This project</td><td><span class="badge good">chosen</span> — the dialler is written by another team</td><td>&nbsp;</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="prose"><p>A dependency isn't the amateur option — it's right for a model inside a mobile app, where the network isn't always there. It stops being reasonable the moment a second caller needs the same answer, because the scoring logic then exists in two places. Batch scoring is a third, easy-to-forget option: if the only caller is a nightly job, a scheduled script that writes tomorrow's list into a table is simpler than a service and never wakes anybody at 3&nbsp;a.m. The question worth asking before any of the others: <em>is anything actually waiting for the answer?</em></p></div>
+
+      <div class="prose">
+        <h3>11.4 · Running it the way a deployment runs it</h3>
+        <p>Every command so far has been the development one. <code>--reload</code> watches files and restarts on change — useful while writing, with no place on a server. <code>--host 0.0.0.0</code> replaces <code>127.0.0.1</code> once other machines need to reach the port. <code>--workers N</code> starts N independent processes behind one port — the way a Python service uses more than one core, since Python runs one thread of bytecode at a time. Each worker is a separate process with its own copy of the model in memory.</p>
+      </div>
+      <div class="chart">
+        <div class="bar-rows">
+          <div class="bar-row"><span class="bl">supervisor</span><div class="bar-track"><div class="bar-fill alt" style="width:14%"></div></div><span class="bv">29 MB</span></div>
+          <div class="bar-row"><span class="bl">helper</span><div class="bar-track"><div class="bar-fill alt" style="width:9%"></div></div><span class="bv">18 MB</span></div>
+          <div class="bar-row"><span class="bl">worker 1</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bv">202 MB</span></div>
+          <div class="bar-row"><span class="bl">worker 2</span><div class="bar-track"><div class="bar-fill" style="width:99%"></div></div><span class="bv">201 MB</span></div>
+        </div>
+        <figcaption>Resident memory, one port, --workers 2. Four requests to that port came back from all workers identically — a worker holds nothing between requests, which is exactly what makes adding workers a valid answer to load.</figcaption>
+      </div>
+      <div class="callout"><p>Capacity planning for a model service is a <strong>multiplication</strong>, not a division — each worker's memory is the model plus pandas plus scikit-learn, not a share of one copy. A large artifact costs more than the disk it sits on.</p></div>
+    </section>
+
+    <!-- ================= CHAPTER 12 ================= -->
+    <section class="chapter" id="ch12">
+      <div class="chapter-eyebrow">Chapter 12</div>
+      <h2>What's still missing</h2>
+      <p class="lede">Naming it accurately is more useful than a diagram.</p>
+      <div class="card-grid cols-3">
+        <div class="card">
+          <h4>No memory of past runs</h4>
+          <p>The metadata names the commit and the ROC AUC this artifact reached, and nothing about what last month's model reached. If tomorrow's retrain is worse, there's no way to compare — only one of the two runs still exists. Tying a run to its inputs, code, and result is experiment tracking.</p>
+        </div>
+        <div class="card">
+          <h4>The environment is still yours</h4>
+          <p>The service runs because pinned requirements were installed by hand. Making the environment part of what ships is containerisation — the groundwork is already done: dependencies are pinned, entry points take no arguments, and configuration is read from files.</p>
+        </div>
+        <div class="card">
+          <h4>Nothing watches the predictions</h4>
+          <p>The holdout was scored once, the day it was split. A model can go wrong without anybody changing anything. Every response already carries a model version — the hook monitoring needs — and nothing consumes it yet.</p>
+        </div>
+      </div>
+      <div class="prose"><p>What changed is smaller than the file count suggests. Three programs now agree through files, and everything they must agree about is written in those files rather than remembered. Every silent failure in Chapter 10 was something true about the model that was never written down — a vocabulary, a threshold, an economy, a library version. The pattern isn't that FastAPI is good. It's that a boundary forces assumptions to be named, and named assumptions are the only kind that can be tested.</p></div>
+    </section>
+
+    <!-- ================= CHAPTER 13 ================= -->
+    <section class="chapter" id="ch13">
+      <div class="chapter-eyebrow">Chapter 13</div>
+      <h2>Class summary</h2>
+      <div class="prose">
+        <p><strong>A model that scores well is one file. A project is several programs that agree about that file.</strong></p>
+        <p>The split is <code>campaign/</code> producing an artifact, <code>app/</code> serving it, and <code>dashboard/</code> consuming the service — one function crosses that boundary, and the rule for what's worth keeping shared is simple: anything <strong>fitted</strong> travels inside the pickle; anything merely <strong>decided</strong> has to be shared as code, or it gets written twice and eventually differently.</p>
+        <p>Training was kept short on purpose, and it left three things behind that serving could never have worked out alone: the decision threshold, a business choice rather than a modelling result; the category vocabulary the encoder actually saw; and the commit that built the artifact, flagged for whether the tree was clean. All three live in a five-kilobyte JSON file next to the model, and each one turns up again as a failure mode the moment it's missing.</p>
+        <p>An API is a promise about messages, and HTTP is the shape those messages take — a method, a path, headers, sometimes a body going out; a status code, headers, and usually a body coming back. FastAPI earns its place through one idea: the function signature <em>is</em> the interface, so the same annotation that documents a field also parses it, validates it, and rejects what doesn't fit.</p>
+      </div>
+      <div class="card-grid cols-2" style="max-width:920px;">
+        <div class="card"><h4>The five failures, in one line each</h4>
+          <p>An unseen category changes a decision and raises nothing. A serving layer that calls <code>predict()</code> silently uses 0.5. A frozen economic context goes stale invisibly. A reloaded artifact costs latency that grows without anyone deciding it should. A health check that proves the port is open proves nothing about the model.</p>
+        </div>
+        <div class="card"><h4>The shipping decisions</h4>
+          <p>Whether the model travels or the training code does. Where the artifact lives — repository, store, or baked into an image. Whether the caller even wants a service, or would have been happy with a file written overnight.</p>
+        </div>
+      </div>
+      <div class="prose"><p>The console holds no model, no threshold, and no vocabulary — it asks the service for all three, because a client that loads the artifact itself is a second copy of the scoring logic to keep in step forever. A service isn't an alternative to a console. It's the thing a console is a view of, and the only one of the two that other software can actually call.</p></div>
+    </section>
+
+    <!-- ================= REFERENCES ================= -->
+    <section class="chapter" id="refs">
+      <div class="chapter-eyebrow">Further reading</div>
+      <h2>References</h2>
+      <div class="refs">
+        <h3>Foundational</h3>
+        <ul>
+          <li>Moro, Cortez &amp; Rita, <em>A Data-Driven Approach to Predict the Success of Bank Telemarketing</em>, Decision Support Systems, 2014 — the source of this dataset, and of the warning about <code>duration</code>.</li>
+          <li>Sculley et al., <em>Hidden Technical Debt in Machine Learning Systems</em>, NeurIPS 2015.</li>
+          <li>Breck et al., <em>The ML Test Score</em>, IEEE Big Data 2017 — the contract test and the skew test here are two items from its checklist.</li>
+          <li>Kaufman, Rosset &amp; Perlich, <em>Leakage in Data Mining</em>, KDD 2011.</li>
+        </ul>
+        <h3>Practitioner</h3>
+        <ul>
+          <li>MDN, <em>HTTP</em> — <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP" target="_blank" rel="noopener">developer.mozilla.org/en-US/docs/Web/HTTP</a></li>
+          <li>Postman documentation — <a href="https://learning.postman.com/docs/" target="_blank" rel="noopener">learning.postman.com/docs</a></li>
+          <li>FastAPI documentation — <a href="https://fastapi.tiangolo.com" target="_blank" rel="noopener">fastapi.tiangolo.com</a></li>
+          <li>Pydantic documentation — <a href="https://docs.pydantic.dev" target="_blank" rel="noopener">docs.pydantic.dev</a></li>
+          <li>Optuna documentation — <a href="https://optuna.readthedocs.io" target="_blank" rel="noopener">optuna.readthedocs.io</a></li>
+          <li>scikit-learn, <em>Pipelines and composite estimators</em> — <a href="https://scikit-learn.org/stable/modules/compose.html" target="_blank" rel="noopener">scikit-learn.org</a></li>
+          <li>scikit-learn, <em>Model persistence</em> — <a href="https://scikit-learn.org/stable/model_persistence.html" target="_blank" rel="noopener">scikit-learn.org</a></li>
+        </ul>
+        <h3>Living resources</h3>
+        <ul>
+          <li>Streamlit app testing — <a href="https://docs.streamlit.io/develop/api-reference/app-testing" target="_blank" rel="noopener">docs.streamlit.io</a></li>
+          <li>ASGI specification — <a href="https://asgi.readthedocs.io" target="_blank" rel="noopener">asgi.readthedocs.io</a></li>
+          <li>Uvicorn deployment notes — <a href="https://www.uvicorn.org/deployment/" target="_blank" rel="noopener">uvicorn.org/deployment</a></li>
+          <li>OpenAPI specification — <a href="https://spec.openapis.org/oas/latest.html" target="_blank" rel="noopener">spec.openapis.org</a></li>
+        </ul>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <div class="fname">ML project using FastAPI post read</div>
+      <p>A model that scores well is one file. A project is several programs that agree about that file — one that trains, one that serves, and one that only ever asks.</p>
+      <a class="backtotop" href="#preface">Back to top</a>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---- generic switcher (tabs / toggles / demo buttons / diagram nodes / http lines) ---- */
+  function initSwitchers(root){
+    (root || document).querySelectorAll('[data-switch-group]').forEach(function(group){
+      if(group.dataset.wired) return;
+      group.dataset.wired = "1";
+      var buttons = Array.prototype.slice.call(group.querySelectorAll('[data-switch-btn]'));
+      var panels = Array.prototype.slice.call(group.querySelectorAll('[data-switch-panel]'));
+      function activate(key){
+        buttons.forEach(function(b){
+          var on = b.getAttribute('data-switch-btn') === key;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        panels.forEach(function(p){
+          p.hidden = p.getAttribute('data-switch-panel') !== key;
+        });
+      }
+      buttons.forEach(function(b){
+        b.addEventListener('click', function(){ activate(b.getAttribute('data-switch-btn')); });
+      });
+      var def = group.querySelector('[data-switch-btn][data-default]') || buttons[0];
+      if(def) activate(def.getAttribute('data-switch-btn'));
+    });
+  }
+  initSwitchers(document);
+
+  /* ---- reading progress bar ---- */
+  var progress = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrollTop = h.scrollTop || document.body.scrollTop;
+    var height = (h.scrollHeight || document.body.scrollHeight) - h.clientHeight;
+    var pct = height > 0 ? (scrollTop / height) * 100 : 0;
+    progress.style.width = pct + '%';
+  }
+  document.addEventListener('scroll', updateProgress, {passive:true});
+  updateProgress();
+
+  /* ---- mobile nav toggle ---- */
+  var navToggleBtn = document.getElementById('navToggleBtn');
+  var siteNav = document.getElementById('siteNav');
+  if(navToggleBtn && siteNav){
+    navToggleBtn.addEventListener('click', function(){
+      var open = siteNav.classList.toggle('open');
+      navToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    siteNav.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click', function(){
+        siteNav.classList.remove('open');
+        navToggleBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
+
+  /* ---- scrollspy ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+  var navLinks = {};
+  document.querySelectorAll('.toc-list a').forEach(function(a){
+    navLinks[a.getAttribute('href').slice(1)] = a;
+  });
+  if('IntersectionObserver' in window && sections.length){
+    var observer = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        var id = entry.target.id;
+        var link = navLinks[id];
+        if(!link) return;
+        if(entry.isIntersecting){
+          Object.values(navLinks).forEach(function(l){ l.classList.remove('active'); });
+          link.classList.add('active');
+        }
+      });
+    }, {rootMargin:'-15% 0px -70% 0px', threshold:0});
+    sections.forEach(function(s){ observer.observe(s); });
+  }
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/MLOPS-4" target="_blank" rel="noopener">github.com/scaler-content/MLOPS-4</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

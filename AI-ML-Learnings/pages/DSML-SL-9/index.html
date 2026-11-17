@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Naive Bayes 1 post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500;1,9..144,600&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+  :root{
+    --green-950:#0a2318;
+    --green-900:#0f2e1f;
+    --green-800:#163f2a;
+    --green-700:#1e5236;
+    --green-600:#2a6a45;
+    --yellow-600:#c99a12;
+    --yellow-500:#eab421;
+    --yellow-400:#f3c948;
+    --yellow-200:#f9e3a0;
+    --yellow-100:#fcefc4;
+    --cream:#faf6e9;
+    --paper:#fffdf6;
+    --ink:#132018;
+    --ink-soft:#3c4a40;
+    --line:#ddd2a6;
+    --red:#a3321f;
+    --shadow: 0 1px 0 rgba(19,32,24,.06);
+    --radius: 3px;
+    --maxw: 700px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} *{animation-duration:.001ms !important; transition-duration:.001ms !important;} }
+  body{
+    margin:0; background:var(--cream); color:var(--ink);
+    font-family:"Figtree",system-ui,sans-serif;
+    font-size:17px; line-height:1.65; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{ font-family:"Fraunces",Georgia,serif; color:var(--green-950); line-height:1.15; margin:0 0 .5em; font-weight:700; }
+  h2{ font-size:1.7rem; font-weight:600; }
+  h3{ font-size:1.25rem; font-weight:600; }
+  p{ margin:0 0 1.1em; }
+  a{ color:var(--green-700); }
+  .katex-display{ margin:1.1em 0; overflow-x:auto; overflow-y:hidden; padding:.2em 0; }
+  code, .mono{ font-family:"IBM Plex Mono",monospace; }
+  img{ max-width:100%; display:block; }
+  button{ font-family:inherit; }
+
+  /* ---------- layout shell ---------- */
+  .wrap{ max-width: var(--maxw); margin:0 auto; padding:0 24px; }
+  .page{ display:grid; grid-template-columns: 56px minmax(0,1fr); gap:0 28px; max-width: calc(var(--maxw) + 56px + 28px); margin:0 auto; padding:0 24px; }
+  @media (max-width: 880px){ .page{ grid-template-columns: 1fr; } .rail{ display:none; } }
+
+  /* ---------- rail nav ---------- */
+  .rail{ position:sticky; top:28px; align-self:start; height: calc(100vh - 56px); display:flex; flex-direction:column; align-items:center; padding-top:8px; }
+  .rail-line{ width:2px; flex:1; background:var(--line); margin:6px 0; border-radius:2px; }
+  .rail-dot{ width:11px; height:11px; border-radius:50%; background:var(--paper); border:2px solid var(--green-600); cursor:pointer; flex:none; transition: background .15s, transform .15s; }
+  .rail-dot:hover{ transform:scale(1.2); }
+  .rail-dot.active{ background:var(--yellow-500); border-color:var(--yellow-600); }
+  .rail-dot:focus-visible{ outline:3px solid var(--yellow-500); outline-offset:2px; }
+
+  /* mobile top pills */
+  .pillnav{ display:none; position:sticky; top:0; z-index:20; background:var(--cream); border-bottom:1px solid var(--line); overflow-x:auto; white-space:nowrap; padding:10px 16px; gap:8px; }
+  .pillnav a{ display:inline-block; margin-right:8px; padding:6px 12px; border:1px solid var(--line); border-radius:20px; font-size:.82rem; text-decoration:none; color:var(--ink-soft); background:var(--paper); }
+  @media (max-width: 880px){ .pillnav{ display:flex; } }
+
+  /* ---------- hero ---------- */
+  .hero{ background: linear-gradient(180deg, var(--green-950), var(--green-900) 70%, var(--green-800)); color:var(--yellow-100); padding: 64px 24px 80px; position:relative; overflow:hidden; }
+  .hero::after{ content:""; position:absolute; right:-60px; top:-60px; width:260px; height:260px; border-radius:50%; background: radial-gradient(circle at 35% 35%, var(--yellow-400), transparent 70%); opacity:.35; }
+  .hero-inner{ max-width:var(--maxw); margin:0 auto; position:relative; }
+  .tag{ display:inline-flex; align-items:center; gap:8px; font-size:.82rem; color:var(--green-950); background:var(--yellow-400); padding:5px 12px 5px 10px; border-radius:20px; font-weight:600; margin-bottom:22px; }
+  .tag .dot{ width:7px; height:7px; border-radius:50%; background:var(--green-900); }
+  .hero h1{ color:var(--yellow-100); font-size:2.5rem; font-weight:700; letter-spacing:-.01em; margin-bottom:.35em; }
+  .hero .lede{ color:#cfe4d6; font-size:1.08rem; max-width:52ch; }
+  .stamp{ margin-top:34px; border:1.5px dashed var(--yellow-500); border-radius:8px; padding:18px 20px; background:rgba(234,180,33,.07); }
+  .stamp .ticket-no{ font-family:"IBM Plex Mono",monospace; font-size:.78rem; letter-spacing:.04em; color:var(--yellow-400); display:block; margin-bottom:8px; }
+  .stamp p{ color:#e8ecdf; font-style:italic; margin:0; font-size:.98rem; }
+  .stamp p::before, .stamp p::after{ content:'"'; font-style:normal; }
+  .stamp .who{ display:block; margin-top:10px; font-style:normal; color:#9fb7a6; font-size:.82rem; }
+
+  /* ---------- main content blocks ---------- */
+  main{ padding: 46px 0 40px; }
+  section{ padding: 30px 0 6px; }
+  .section-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
+  .section-num{ font-family:"IBM Plex Mono",monospace; font-size:.85rem; color:var(--yellow-600); background:var(--yellow-100); border:1px solid var(--yellow-400); padding:2px 8px; border-radius:4px; flex:none; }
+  .kicker{ font-size:.86rem; color:var(--green-700); font-weight:600; margin:0 0 4px; }
+
+  ul, ol{ padding-left:1.3em; margin:0 0 1.1em; }
+  li{ margin-bottom:.4em; }
+
+  .goals{ list-style:none; padding:0; margin:20px 0 0; display:flex; flex-direction:column; gap:10px; }
+  .goals li{ display:flex; gap:10px; align-items:flex-start; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:11px 14px; font-size:.95rem; }
+  .goals li::before{ content:"✓"; color:var(--green-700); font-weight:700; flex:none; }
+
+  blockquote{ margin:0 0 1.1em; padding:12px 18px; border-left:3px solid var(--yellow-500); background:var(--yellow-100); border-radius:0 4px 4px 0; font-style:italic; color:var(--ink-soft); }
+
+  figure{ margin: 18px 0 26px; }
+  figure img{ border:1px solid var(--line); border-radius:6px; background:var(--paper); }
+  figcaption{ font-size:.85rem; color:var(--ink-soft); margin-top:8px; text-align:center; }
+
+  .callout{ border:1px solid var(--line); background:var(--paper); border-radius:6px; padding:18px 20px; margin:20px 0; }
+  .callout.think{ border-color: var(--green-600); background: #eef5ef; }
+  .callout.think .label{ font-weight:700; color:var(--green-700); font-size:.82rem; display:block; margin-bottom:6px; }
+  .callout.warn{ border-color: var(--red); background:#fbeeea; }
+  .callout.warn .label{ color:var(--red); font-weight:700; font-size:.82rem; display:block; margin-bottom:6px;}
+
+  .reveal-btn{ margin-top:10px; background:var(--green-900); color:var(--yellow-200); border:none; padding:9px 16px; border-radius:20px; font-size:.86rem; font-weight:600; cursor:pointer; }
+  .reveal-btn:hover{ background:var(--green-800); }
+  .reveal-btn:focus-visible{ outline:3px solid var(--yellow-500); outline-offset:2px; }
+  .reveal-box{ display:none; margin-top:14px; padding-top:14px; border-top:1px dashed var(--line); }
+  .reveal-box.shown{ display:block; }
+
+  /* ---------- mail example cards ---------- */
+  .mailrow{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:18px 0; }
+  @media (max-width:560px){ .mailrow{ grid-template-columns:1fr; } }
+  .mailcard{ border-radius:6px; padding:14px 16px; font-size:.95rem; border:1px solid var(--line); background:var(--paper); }
+  .mailcard .mlabel{ font-size:.75rem; font-weight:700; letter-spacing:.02em; margin-bottom:6px; display:block; }
+  .mailcard.spam{ border-color:#d8b8a8; background:#fbefe9; }
+  .mailcard.spam .mlabel{ color:var(--red); }
+  .mailcard.ham{ border-color:#bcd6c3; background:#eef6f0; }
+  .mailcard.ham .mlabel{ color:var(--green-700); }
+
+  /* ---------- step explorer (text cleaning) ---------- */
+  .steps{ margin:22px 0; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--paper); }
+  .step-tabs{ display:flex; border-bottom:1px solid var(--line); overflow-x:auto; }
+  .step-tab{ flex:1; min-width:120px; padding:12px 10px; text-align:center; font-size:.82rem; font-weight:600; background:var(--yellow-100); color:var(--ink-soft); border:none; border-right:1px solid var(--line); cursor:pointer; }
+  .step-tab:last-child{ border-right:none; }
+  .step-tab.active{ background:var(--green-900); color:var(--yellow-200); }
+  .step-tab:focus-visible{ outline:3px solid var(--yellow-500); outline-offset:-3px; }
+  .step-body{ padding:20px; }
+  .step-pane{ display:none; }
+  .step-pane.active{ display:block; }
+  .transform{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:14px 0; }
+  .transform .before, .transform .after{ font-family:"IBM Plex Mono",monospace; font-size:.92rem; padding:10px 14px; border-radius:6px; background:var(--cream); border:1px solid var(--line); }
+  .transform .after{ background:var(--yellow-100); border-color:var(--yellow-400); }
+  .transform .arrow{ color:var(--green-600); font-size:1.2rem; }
+
+  /* ---------- venn overlap diagram ---------- */
+  .venn-wrap{ margin:20px 0; }
+  .venn-svg{ width:100%; height:auto; }
+  .venn-legend{ display:flex; gap:18px; justify-content:center; margin-top:10px; flex-wrap:wrap; font-size:.84rem; color:var(--ink-soft); }
+  .venn-legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .venn-legend i{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+
+  /* ---------- split bar ---------- */
+  .splitbar{ margin:20px 0; }
+  .splitbar-track{ display:flex; height:34px; border-radius:6px; overflow:hidden; border:1px solid var(--line); }
+  .splitbar-seg{ display:flex; align-items:center; justify-content:center; font-size:.82rem; font-weight:600; color:var(--green-950); }
+  .seg-train{ background:var(--yellow-400); }
+  .seg-test{ background:var(--green-600); color:var(--yellow-100); }
+  .splitbar-cap{ display:flex; justify-content:space-between; font-size:.8rem; color:var(--ink-soft); margin-top:6px; }
+
+  /* ---------- formula card ---------- */
+  .formula-card{ background:var(--green-950); color:var(--yellow-100); border-radius:8px; padding:20px 22px; margin:20px 0; }
+  .formula-card .katex{ color:var(--yellow-100); }
+  .formula-card .katex .mord, .formula-card .katex .mbin, .formula-card .katex .mrel{ color:var(--yellow-100); }
+  .formula-card .fc-label{ font-size:.78rem; color:var(--yellow-500); font-weight:700; margin-bottom:6px; display:block; }
+
+  /* ---------- term hover chips ---------- */
+  .chiprow{ display:flex; gap:10px; flex-wrap:wrap; margin:16px 0; }
+  .chip{ position:relative; background:var(--yellow-100); border:1px solid var(--yellow-400); border-radius:20px; padding:7px 14px; font-size:.85rem; font-family:"IBM Plex Mono",monospace; cursor:default; }
+  .chip .tip{ display:none; position:absolute; bottom:calc(100% + 8px); left:0; width:220px; background:var(--green-950); color:#eef5ef; font-family:"Figtree",sans-serif; font-size:.82rem; padding:10px 12px; border-radius:6px; z-index:5; line-height:1.4; }
+  .chip:hover .tip, .chip:focus .tip{ display:block; }
+  .chip:focus{ outline:3px solid var(--yellow-500); outline-offset:2px; }
+
+  /* ---------- calc panel (fire/smoke + complexity) ---------- */
+  .calc{ border:1px solid var(--line); background:var(--paper); border-radius:8px; padding:20px; margin:20px 0; }
+  .calc-grid{ display:grid; gap:10px; margin-bottom:14px; }
+  .calc-row{ display:flex; justify-content:space-between; font-size:.92rem; padding:7px 0; border-bottom:1px dotted var(--line); }
+  .calc-row .k{ color:var(--ink-soft); }
+  .calc-row .v{ font-family:"IBM Plex Mono",monospace; font-weight:600; }
+  .calc-result{ margin-top:12px; background:var(--yellow-100); border:1px solid var(--yellow-400); border-radius:6px; padding:14px 16px; text-align:center; font-size:1.05rem; }
+  .calc-steps{ display:none; margin-top:12px; font-size:.9rem; color:var(--ink-soft); }
+  .calc-steps.shown{ display:block; }
+
+  /* ---------- naive toggle diagram ---------- */
+  .toggle-wrap{ display:flex; align-items:center; gap:12px; margin:18px 0 10px; }
+  .toggle{ position:relative; width:52px; height:28px; background:var(--green-700); border-radius:20px; border:none; cursor:pointer; flex:none; }
+  .toggle::after{ content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; background:var(--yellow-400); border-radius:50%; transition:transform .18s; }
+  .toggle[aria-pressed="true"]::after{ transform:translateX(24px); }
+  .toggle:focus-visible{ outline:3px solid var(--yellow-500); outline-offset:3px; }
+  .toggle-label{ font-size:.92rem; font-weight:600; }
+  .nodes-svg{ width:100%; height:auto; margin-top:6px; }
+  .nodes-svg line{ transition:opacity .2s; }
+
+  /* ---------- complexity input ---------- */
+  .numfield{ display:inline-flex; align-items:center; gap:8px; margin-right:18px; margin-bottom:10px;}
+  .numfield label{ font-size:.85rem; color:var(--ink-soft); }
+  .numfield input{ width:72px; padding:6px 8px; border:1px solid var(--line); border-radius:4px; font-family:"IBM Plex Mono",monospace; font-size:.92rem; }
+
+  /* ---------- comparison table ---------- */
+  table{ width:100%; border-collapse:collapse; margin:20px 0; font-size:.92rem; }
+  th, td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
+  th{ background:var(--green-950); color:var(--yellow-200); font-weight:600; }
+  tr:nth-child(even) td{ background:rgba(234,180,33,.07); }
+
+  /* ---------- zero-prob demo ---------- */
+  .chain{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:16px 0; font-family:"IBM Plex Mono",monospace; font-size:.88rem; }
+  .factor{ background:var(--yellow-100); border:1px solid var(--yellow-400); border-radius:6px; padding:8px 11px; }
+  .factor.zero{ background:#fbeeea; border-color:var(--red); color:var(--red); font-weight:700; }
+  .chain .op{ color:var(--ink-soft); }
+  .result-pill{ margin-top:4px; display:inline-block; padding:8px 16px; border-radius:20px; font-weight:700; font-family:"IBM Plex Mono",monospace; }
+  .result-pill.zero{ background:#fbeeea; color:var(--red); border:1px solid var(--red); }
+  .result-pill.ok{ background:#eef6f0; color:var(--green-700); border:1px solid var(--green-600); }
+
+  /* ---------- slider ---------- */
+  .slider-wrap{ margin:18px 0; }
+  input[type="range"]{ width:100%; accent-color: var(--green-700); }
+  .slider-readout{ display:flex; justify-content:space-between; font-size:.82rem; color:var(--ink-soft); margin-top:4px; }
+  .prob-bar-track{ height:22px; background:var(--cream); border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-top:14px; }
+  .prob-bar-fill{ height:100%; background: linear-gradient(90deg, var(--yellow-500), var(--green-600)); transition:width .18s; }
+  .prob-readout{ margin-top:10px; font-size:1rem; }
+  .prob-readout .num{ font-family:"IBM Plex Mono",monospace; font-weight:700; color:var(--green-800); }
+  .edge-toggle{ margin-top:16px; display:flex; align-items:center; gap:10px; font-size:.85rem; }
+
+  /* ---------- quiz ---------- */
+  .quiz{ border:1.5px solid var(--green-700); border-radius:8px; background:var(--paper); margin:26px 0; overflow:hidden; }
+  .quiz-head{ background:var(--green-900); color:var(--yellow-100); padding:12px 18px; font-weight:600; font-size:.92rem; display:flex; justify-content:space-between; align-items:center; }
+  .quiz-head span.qtag{ font-family:"IBM Plex Mono",monospace; font-size:.76rem; background:var(--yellow-500); color:var(--green-950); padding:2px 8px; border-radius:4px; }
+  .quiz-body{ padding:18px 20px 20px; }
+  .quiz-q{ font-size:1rem; margin-bottom:14px; }
+  .quiz-opts{ display:flex; flex-direction:column; gap:9px; margin-bottom:6px; }
+  .quiz-opt{ display:block; width:100%; text-align:left; border:1px solid var(--line); background:var(--cream); padding:11px 14px; border-radius:6px; cursor:pointer; font-size:.92rem; color:var(--ink); }
+  .quiz-opt:hover{ border-color:var(--green-600); }
+  .quiz-opt:focus-visible{ outline:3px solid var(--yellow-500); outline-offset:2px; }
+  .quiz-opt.correct{ background:#eaf5ec; border-color:var(--green-700); font-weight:600; }
+  .quiz-opt.incorrect{ background:#fbeeea; border-color:var(--red); }
+  .quiz-opt[disabled]{ cursor:default; }
+  .quiz-feedback{ display:none; margin-top:14px; padding:13px 15px; border-radius:6px; font-size:.9rem; line-height:1.55; }
+  .quiz-feedback.shown{ display:block; }
+  .quiz-feedback.right{ background:#eaf5ec; border:1px solid var(--green-700); }
+  .quiz-feedback.wrong{ background:#fbeeea; border:1px solid var(--red); }
+  .quiz-feedback .verdict{ font-weight:700; display:block; margin-bottom:4px; }
+
+  /* ---------- wrap up ---------- */
+  .takeaways{ list-style:none; padding:0; margin:18px 0; display:flex; flex-direction:column; gap:10px; }
+  .takeaways li{ background:var(--paper); border-left:4px solid var(--yellow-500); border-radius:0 6px 6px 0; padding:12px 16px; font-size:.95rem; box-shadow:var(--shadow); }
+
+  footer{ background:var(--green-950); color:#9fb7a6; padding:34px 24px 44px; text-align:center; margin-top:40px; }
+  footer .fname{ color:var(--yellow-300); font-family:"Fraunces",serif; font-weight:600; font-size:1.05rem; }
+  footer p{ margin:6px 0 0; font-size:.82rem; }
+
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· DSML Supervised 9 · Naive Bayes for spam filtering</span><span class="pn"><a href="../DSML-SL-8/" title="DSML Supervised 8 · XGBoost, LightGBM and ensembles">← Prev</a><a href="../DSML-SL-10/" title="DSML Supervised 10 · Naive Bayes: smoothing and imbalance">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="hero">
+  <div class="hero-inner">
+    <span class="tag"><span class="dot"></span>MailNest · Trust &amp; Safety</span>
+    <h1>Naive Bayes 1 post read</h1>
+    <p class="lede">How a startup with no black-box filtering decides, word by word, whether a message is spam — using nothing but counting and Bayes' theorem.</p>
+    <div class="stamp">
+      <span class="ticket-no">TICKET #1</span>
+      <p>Every big email provider blocks spam with some giant, opaque model. We want to be different: fast, simple, and able to explain why a message got flagged, to regulators and to users. Before you reach for anything fancy, I want to understand a technique called Naive Bayes.</p>
+      <span class="who">— Head of Trust &amp; Safety</span>
+    </div>
+  </div>
+</div>
+
+<nav class="pillnav" aria-label="Section navigation">
+  <a href="#intro">Intro</a>
+  <a href="#mission1">The problem</a>
+  <a href="#mission2">Cleaning text</a>
+  <a href="#mission3">Bayes' theorem</a>
+  <a href="#mission4">The naive step</a>
+  <a href="#mission5">Speed</a>
+  <a href="#mission6">Zero-probability</a>
+  <a href="#smoothing">Smoothing</a>
+  <a href="#wrapup">Wrap-up</a>
+</nav>
+
+<div class="page">
+  <nav class="rail" aria-label="Reading progress">
+    <div class="rail-dot active" data-target="intro" tabindex="0" role="link" aria-label="Go to Intro"></div>
+    <div class="rail-line"></div>
+    <div class="rail-dot" data-target="mission1" tabindex="0" role="link" aria-label="Go to Mission 1"></div>
+    <div class="rail-line"></div>
+    <div class="rail-dot" data-target="mission2" tabindex="0" role="link" aria-label="Go to Mission 2"></div>
+    <div class="rail-line"></div>
+    <div class="rail-dot" data-target="mission3" tabindex="0" role="link" aria-label="Go to Mission 3"></div>
+    <div class="rail-line"></div>
+    <div class="rail-dot" data-target="mission4" tabindex="0" role="link" aria-label="Go to Mission 4"></div>
+    <div class="rail-line"></div>
+    <div class="rail-dot" data-target="mission5" tabindex="0" role="link" aria-label="Go to Mission 5"></div>
+    <div class="rail-line"></div>
+    <div class="rail-dot" data-target="mission6" tabindex="0" role="link" aria-label="Go to Mission 6"></div>
+    <div class="rail-line"></div>
+    <div class="rail-dot" data-target="smoothing" tabindex="0" role="link" aria-label="Go to Smoothing"></div>
+    <div class="rail-line"></div>
+    <div class="rail-dot" data-target="wrapup" tabindex="0" role="link" aria-label="Go to Wrap-up"></div>
+  </nav>
+
+  <main>
+
+  <section id="intro">
+    <p class="kicker">Why this matters</p>
+    <h2>A new chapter: MailNest</h2>
+    <p>You've joined <strong>MailNest</strong>, an independent email startup trying to earn trust the hard way: no black-box filtering, everything explainable. The first problem on the desk is spam detection — and the brief is to use something simple enough to explain to a regulator, not just a user.</p>
+    <p>By the end of this read, you'll be able to:</p>
+    <ul class="goals">
+      <li>Explain why raw text needs to be tokenized, lowercased, and cleaned before a model can use it</li>
+      <li>Explain how Bayes' theorem lets us calculate the probability a message is spam, given its words</li>
+      <li>Explain the "naive" independence assumption, and why it's called naive</li>
+      <li>Write out class priors and likelihoods, and combine them into Naive Bayes' final prediction rule</li>
+      <li>State Naive Bayes' training and prediction time complexity, and why it's so fast</li>
+      <li>Explain the zero-probability problem, and how Laplace Smoothing fixes it</li>
+    </ul>
+  </section>
+
+  <section id="mission1">
+    <div class="section-head"><span class="section-num">Mission 1</span><h2 style="margin-bottom:0">Meet the problem</h2></div>
+    <p>Which of these two messages is spam?</p>
+    <div class="mailrow">
+      <div class="mailcard spam"><span class="mlabel">Mail 1</span>"I, Nigerian prince, need your help. Send money."</div>
+      <div class="mailcard ham"><span class="mlabel">Mail 2</span>"Meeting scheduled for 5pm. Kindly revert."</div>
+    </div>
+    <p>Obviously Mail 1. How did you know? A few words gave it away instantly — "Nigerian prince," words like "lottery" or "million dollars" that show up disproportionately in spam. That instinct, judging a message by which words appear in it, is exactly the idea behind <strong>Naive Bayes</strong>.</p>
+
+    <h3>What's in the data</h3>
+    <p>Each row in MailNest's dataset has a message and a label: <code>spam</code> (class 1) or <code>ham</code> (class 0, meaning "not spam"). A message is just a sequence of words — message <span class="katex-inline">$i$</span> can be written as <span class="katex-inline">$w_1^{(i)}, w_2^{(i)}, \ldots, w_k^{(i)}$</span>, where <span class="katex-inline">$k$</span> is that message's own length. Different messages have different lengths.</p>
+    <div class="callout">
+      <strong>A notation heads-up:</strong> <span class="katex-inline">$k$</span> always refers to one specific message's own word count. Later we'll need a separate letter, <span class="katex-inline">$V$</span>, for the total number of unique words across the <em>entire</em> dataset — a fixed, much larger number. Don't let the two blur together.
+    </div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/243/587/original/img1.png?1790770600" alt="Bar chart showing far more ham messages than spam messages in the dataset" loading="lazy">
+      <figcaption>Distribution of spam vs. ham in MailNest's training data.</figcaption>
+    </figure>
+    <p>Far more ham than spam — a class imbalance. Keep it in mind: Naive Bayes has a specific vulnerability tied to how <em>little</em> data some words appear in, which shows up later in Mission 6.</p>
+  </section>
+
+  <section id="mission2">
+    <div class="section-head"><span class="section-num">Mission 2</span><h2 style="margin-bottom:0">Cleaning the text</h2></div>
+    <p>Raw text is messy. Before any model can use it, it needs cleaning, in four steps. Click through them below, following one real message as it transforms.</p>
+
+    <div class="steps" id="stepExplorer">
+      <div class="step-tabs" role="tablist" aria-label="Text cleaning steps">
+        <button class="step-tab active" role="tab" aria-selected="true" data-step="0">1 · Tokenize</button>
+        <button class="step-tab" role="tab" aria-selected="false" data-step="1">2 · Lowercase</button>
+        <button class="step-tab" role="tab" aria-selected="false" data-step="2">3 · Strip punctuation</button>
+        <button class="step-tab" role="tab" aria-selected="false" data-step="3">4 · Remove stopwords</button>
+      </div>
+      <div class="step-body">
+        <div class="step-pane active" data-pane="0">
+          <p><strong>Tokenization</strong> splits each message into individual words.</p>
+          <div class="transform"><span class="before">"Hi my name is Anthony."</span><span class="arrow">→</span><span class="after">["hi","my","name","is","anthony","."]</span></div>
+        </div>
+        <div class="step-pane" data-pane="1">
+          <p><strong>Lower-casing</strong> — "GO" and "go" should count as the same word, so every word becomes lowercase. (This example was already lowercase, so nothing visibly changes, but the step still runs on every token.)</p>
+          <div class="transform"><span class="before">["hi","my","name","is","anthony","."]</span><span class="arrow">→</span><span class="after">["hi","my","name","is","anthony","."]</span></div>
+        </div>
+        <div class="step-pane" data-pane="2">
+          <p><strong>Removing punctuation</strong> — since we only care which <em>keywords</em> appear, punctuation carries no useful signal and is stripped out.</p>
+          <div class="transform"><span class="before">["hi","my","name","is","anthony","."]</span><span class="arrow">→</span><span class="after">["hi","my","name","is","anthony"]</span></div>
+        </div>
+        <div class="step-pane" data-pane="3">
+          <p><strong>Removing stopwords</strong> — words like "a," "an," "the," "of," "is" are extremely common but carry almost no information about spam versus ham. Removing them also makes everything downstream cheaper to compute.</p>
+          <div class="transform"><span class="before">["hi","my","name","is","anthony"]</span><span class="arrow">→</span><span class="after">["hi","name","anthony"]</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="label">A caveat worth remembering</span>
+      Removing stopwords introduces grammatical errors into the text. That's fine here, since only keyword signal matters — not fluent language. Tasks like translation or question-answering, where grammar and word order genuinely matter, cannot afford to remove stopwords this way.
+    </div>
+
+    <h3>Frequent isn't the same as distinguishing</h3>
+    <div class="callout think">
+      <span class="label">Think it through</span>
+      Before looking at the charts below: do you expect spam and ham messages to share mostly the <em>same</em> frequent words, or mostly <em>different</em> ones?
+      <button class="reveal-btn" data-reveal="r1">Reveal the answer</button>
+      <div class="reveal-box" id="r1">They overlap more than you'd think. Words like "call," "u," "2," "4" and "get" are frequent in <em>both</em> — they're just common in text messages generally, spam or not. What matters isn't whether a word is frequent, it's whether its frequency <em>differs between the two classes</em>.</div>
+    </div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/243/588/original/img3.png?1790770840" alt="Bar chart of the most frequent words in ham messages" loading="lazy">
+      <figcaption>Most frequent words in ham messages.</figcaption>
+    </figure>
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/243/589/original/img4.png?1790770915" alt="Bar chart of the most frequent words in spam messages" loading="lazy">
+      <figcaption>Most frequent words in spam messages.</figcaption>
+    </figure>
+
+    <div class="venn-wrap">
+      <svg class="venn-svg" viewBox="0 0 520 260" role="img" aria-label="Overlap diagram: shared frequent words between ham and spam, and words distinctive to each class">
+        <circle cx="200" cy="130" r="115" fill="#eef6f0" stroke="#1e5236" stroke-width="2"/>
+        <circle cx="320" cy="130" r="115" fill="#fbefe9" stroke="#a3321f" stroke-width="2" fill-opacity="0.75"/>
+        <text x="110" y="70" font-family="Figtree" font-size="14" font-weight="700" fill="#1e5236">Frequent in HAM</text>
+        <text x="130" y="130" font-family="IBM Plex Mono" font-size="12" fill="#1e5236">like, go, come</text>
+        <text x="132" y="150" font-family="IBM Plex Mono" font-size="12" fill="#1e5236">ok, know, day</text>
+        <text x="370" y="70" font-family="Figtree" font-size="14" font-weight="700" fill="#a3321f">Frequent in SPAM</text>
+        <text x="320" y="130" text-anchor="end" font-family="IBM Plex Mono" font-size="12" fill="#a3321f">free, claim</text>
+        <text x="322" y="150" font-family="IBM Plex Mono" font-size="12" fill="#a3321f">prize, win</text>
+        <text x="260" y="210" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#3c4a40">call · u · 2 · 4 · get</text>
+        <text x="260" y="228" text-anchor="middle" font-family="Figtree" font-size="11" fill="#3c4a40">(shared — not distinguishing)</text>
+      </svg>
+      <div class="venn-legend">
+        <span><i style="background:#eef6f0;border:1px solid #1e5236"></i>Distinctive to ham</span>
+        <span><i style="background:#fbefe9;border:1px solid #a3321f"></i>Distinctive to spam</span>
+        <span><i style="background:#f3e9d2;border:1px solid #c99a12"></i>Overlap: common, not useful</span>
+      </div>
+    </div>
+    <p>"Call" is the single most common word in spam messages, but it's also common in ham. What Naive Bayes actually uses is the <em>rate</em> at which each word shows up in one class versus the other — not just whether it appears at all. A handful of words, like "free," "claim," and "prize," are frequent in spam and genuinely rare in ham; those are the ones doing the real work.</p>
+
+    <h3>Splitting the data</h3>
+    <p>With the text cleaned, MailNest holds out a quarter of the dataset for testing:</p>
+    <div class="splitbar">
+      <div class="splitbar-track">
+        <div class="splitbar-seg seg-train" style="width:75%">4,179 train</div>
+        <div class="splitbar-seg seg-test" style="width:25%">1,393 test</div>
+      </div>
+      <div class="splitbar-cap"><span>75% training</span><span>25% testing</span></div>
+    </div>
+  </section>
+
+  <section id="mission3">
+    <div class="section-head"><span class="section-num">Mission 3</span><h2 style="margin-bottom:0">The math — Bayes' theorem</h2></div>
+    <p>To classify a new message, we compare two probabilities and predict whichever is higher:</p>
+    <div class="katex-display-wrap">$$P(y=1 \mid \text{text}) \quad \text{vs} \quad P(y=0 \mid \text{text})$$</div>
+    <p>Since a text is just a sequence of words <span class="katex-inline">$w_1, w_2, \ldots, w_k$</span>, this is really <span class="katex-inline">$P(y=1 \mid w_1, w_2, \ldots, w_k)$</span>.</p>
+
+    <h3>Bayes' theorem</h3>
+    <p>For any two events <span class="katex-inline">$A$</span> and <span class="katex-inline">$B$</span>:</p>
+    <div class="formula-card"><span class="fc-label">Bayes' theorem</span>$$P(A \mid B) = \frac{P(B \mid A) \cdot P(A)}{P(B)}$$</div>
+
+    <p>Let <span class="katex-inline">$X$</span> be the event describing this exact message: which words are present, and which are absent. Applying Bayes' theorem, with <span class="katex-inline">$Z = P(X)$</span>:</p>
+    $$P(y=1 \mid X) = \frac{P(X \mid y=1) \cdot P(y=1)}{Z} \qquad P(y=0 \mid X) = \frac{P(X \mid y=0) \cdot P(y=0)}{Z}$$
+    <p>Since we only care which of the two is <strong>larger</strong>, and <span class="katex-inline">$Z$</span> is identical in both, we can drop it entirely and just compare:</p>
+    <div class="formula-card"><span class="fc-label">What we actually compare</span>$$P(X \mid y=1) \cdot P(y=1) \quad \text{vs} \quad P(X \mid y=0) \cdot P(y=0)$$</div>
+    <p><span class="katex-inline">$P(y=1)$</span> and <span class="katex-inline">$P(y=0)$</span> are simple to compute: just the fraction of training messages that are spam, and the fraction that are ham. These are the <strong>class priors</strong>.</p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/242/480/original/ChatGPT_Image_Sep_25__2026__02_01_36_PM.png?1790325108" alt="Illustrative image of Bayes' theorem flipping the direction of a probability" loading="lazy">
+    </figure>
+
+    <h3>Try it: fire and smoke</h3>
+    <p>Dangerous fires are rare, smoke is fairly common (mostly from barbecues), and most dangerous fires do produce smoke. Hover each value, then reveal how they combine.</p>
+    <div class="chiprow">
+      <span class="chip" tabindex="0">P(fire) = 0.01<span class="tip">The prior: how rare dangerous fires are overall.</span></span>
+      <span class="chip" tabindex="0">P(smoke) = 0.1<span class="tip">How common smoke is overall, mostly from barbecues.</span></span>
+      <span class="chip" tabindex="0">P(smoke | fire) = 0.9<span class="tip">Of all dangerous fires, 90% produce smoke.</span></span>
+    </div>
+    <div class="calc">
+      <p style="margin-bottom:10px"><strong>Question:</strong> given that you see smoke, what's the probability there's a dangerous fire — <span class="katex-inline">$P(\text{fire}\mid\text{smoke})$</span>?</p>
+      <button class="reveal-btn" data-reveal="firesmoke">Reveal the calculation</button>
+      <div class="reveal-box" id="firesmoke">
+        $$P(\text{fire}\mid\text{smoke}) = \frac{P(\text{smoke}\mid\text{fire}) \cdot P(\text{fire})}{P(\text{smoke})} = \frac{0.9 \times 0.01}{0.1} = 0.09$$
+        <p>Even though smoke is a strong signal of fire, fire is so rare to begin with that seeing smoke only raises confidence to 9%, not certainty. This same logic is what lets Naive Bayes combine rare-but-telling words with how common spam is overall.</p>
+      </div>
+    </div>
+
+    <div class="quiz" id="quiz1">
+      <div class="quiz-head"><span>Quiz 1</span><span class="qtag">Bayes' theorem</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">Using the fire/smoke numbers above, what is <span class="katex-inline">$P(\text{fire} \mid \text{smoke})$</span>?</p>
+        <div class="quiz-opts">
+          <button class="quiz-opt" data-correct="true">0.09</button>
+          <button class="quiz-opt">0.9</button>
+          <button class="quiz-opt">0.1</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="mission4">
+    <div class="section-head"><span class="section-num">Mission 4</span><h2 style="margin-bottom:0">The naive assumption</h2></div>
+    <p><span class="katex-inline">$P(X \mid y=1)$</span> means: "given that a message is spam, what's the probability it looks <em>exactly</em> like this — this specific pattern of which words are present and which are absent?"</p>
+    <h3>Why this is a problem</h3>
+    <p>To estimate this directly from data, we'd need training messages that are spam <strong>and</strong> match this exact pattern across every word in the vocabulary. For any message longer than a few words, almost no training example will match exactly — the probability collapses toward zero, and it's expensive to even search for.</p>
+
+    <h3>The fix: assume independence, given the class</h3>
+    <p>Naive Bayes makes a deliberately simplifying assumption: <strong>whether any one word appears is independent of whether any other word appears, conditioned on the class.</strong> If "Nigerian" and "prince" always appear together in spam messages, we still assume, for the sake of the math, that their presence is independent once we already know the message is spam.</p>
+
+    <div class="toggle-wrap">
+      <button class="toggle" id="naiveToggle" aria-pressed="false" aria-label="Toggle the naive independence assumption"></button>
+      <span class="toggle-label" id="naiveToggleLabel">Independence assumption: off</span>
+    </div>
+    <svg class="nodes-svg" viewBox="0 0 520 140" role="img" aria-label="Diagram of two words, Nigerian and prince, shown as connected when correlated and disconnected under the naive assumption">
+      <line id="nodeLine" x1="140" y1="70" x2="380" y2="70" stroke="#a3321f" stroke-width="2.5" opacity="1"/>
+      <circle cx="140" cy="70" r="46" fill="#fbefe9" stroke="#a3321f" stroke-width="2"/>
+      <text x="140" y="75" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#132018">"Nigerian"</text>
+      <circle cx="380" cy="70" r="46" fill="#fbefe9" stroke="#a3321f" stroke-width="2"/>
+      <text x="380" y="75" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#132018">"prince"</text>
+      <text id="nodeCaption" x="260" y="25" text-anchor="middle" font-family="Figtree" font-size="12" fill="#3c4a40">In reality: these tend to appear together</text>
+    </svg>
+
+    <h3>Being precise about what gets multiplied</h3>
+    <p>The vocabulary has <span class="katex-inline">$V$</span> unique words in total. For <strong>every one</strong> of those <span class="katex-inline">$V$</span> words, treat it as a yes/no event: does this specific word appear in the message, or not? With the independence assumption, the probability of the entire message's pattern becomes a product over <strong>all <span class="katex-inline">$V$</span> vocabulary words</strong>, not just the ones that happen to appear:</p>
+    <div class="formula-card"><span class="fc-label">Likelihood of the whole message, under independence</span>
+    $$P(X \mid y=1) = \prod_{j=1}^{V} P(w_j \mid y=1)^{[w_j \text{ present}]} \cdot \big(1 - P(w_j \mid y=1)\big)^{[w_j \text{ absent}]}$$</div>
+    <p>In words: for each vocabulary word that's <strong>present</strong>, multiply in the probability that word appears in spam; for each word that's <strong>absent</strong>, multiply in the probability it's absent. Every one of the <span class="katex-inline">$V$</span> words contributes a factor, whether it showed up in this particular message or not.</p>
+
+    <h3>Why "naive"?</h3>
+    <p>Because this assumption plainly isn't true. "Nigerian" and "prince" genuinely aren't independent — they tend to show up together. The assumption is naive precisely because it ignores that, and it works anyway, well enough to be useful.</p>
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/242/481/original/ChatGPT_Image_Sep_25__2026__02_03_11_PM.png?1790325199" alt="Illustrative image representing the naive independence assumption" loading="lazy">
+    </figure>
+    <div class="callout warn">
+      <span class="label">A common mistake</span>
+      The independence assumption is about the <strong>conditional</strong> probability — independent <em>given</em> the class — not the raw, unconditional probability of the words. The words can absolutely be correlated overall; we only assume independence once we already know whether the message is spam or ham.
+    </div>
+
+    <h3>Computing each likelihood term</h3>
+    <p><span class="katex-inline">$P(w_j \mid y=1)$</span> is simply: out of all spam messages, what fraction contain the word <span class="katex-inline">$w_j$</span>?</p>
+    $$P(w_j \mid y=1) = \frac{\text{number of spam messages containing } w_j}{\text{total number of spam messages}}$$
+
+    <h3>Putting it all together</h3>
+    <div class="formula-card"><span class="fc-label">The posterior for each class</span>
+    $$P(y=1 \mid X) \propto P(y=1) \cdot \prod_{j=1}^{V} P(w_j \mid y=1)^{[w_j \text{ present}]} \big(1-P(w_j \mid y=1)\big)^{[w_j \text{ absent}]}$$
+    $$P(y=0 \mid X) \propto P(y=0) \cdot \prod_{j=1}^{V} P(w_j \mid y=0)^{[w_j \text{ present}]} \big(1-P(w_j \mid y=0)\big)^{[w_j \text{ absent}]}$$</div>
+    <p>In practice, absent words with likelihoods close to typical background rates contribute similar factors to both classes and roughly cancel out; most of the discriminating signal comes from the words genuinely present in the message. In words: <strong>posterior probability is proportional to (class prior) × (product of likelihoods)</strong>. This combination of Bayes' theorem with the naive independence assumption is exactly where the name "Naive Bayes" comes from.</p>
+
+    <h3>Why is it still worth using?</h3>
+    <table>
+      <thead><tr><th>Trait</th><th>Naive Bayes</th><th>Transformer</th></tr></thead>
+      <tbody>
+        <tr><td>Complexity</td><td>Simple to build, debug, reason about</td><td>Much more complex</td></tr>
+        <tr><td>Speed</td><td>Fast to train and predict</td><td>Costly in comparison</td></tr>
+        <tr><td>Interpretability</td><td>Point to exactly which words drove it</td><td>Largely opaque</td></tr>
+        <tr><td>Accuracy (simple text classification)</td><td>~80–90%</td><td>~98.5%</td></tr>
+      </tbody>
+    </table>
+    <p>For MailNest's promise of explainability, that trade-off is exactly the point.</p>
+
+    <div class="quiz" id="quiz2">
+      <div class="quiz-head"><span>Quiz 2</span><span class="qtag">The assumption</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">The naive assumption states: "In a message, given the class label, words are independent of each other." Is this an accurate description of what Naive Bayes assumes?</p>
+        <div class="quiz-opts">
+          <button class="quiz-opt">False</button>
+          <button class="quiz-opt" data-correct="true">True</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+
+    <div class="quiz" id="quiz3">
+      <div class="quiz-head"><span>Quiz 3</span><span class="qtag">Fundamentals</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">Which statement is TRUE about the (Naive) Bayes classifier?</p>
+        <div class="quiz-opts">
+          <button class="quiz-opt">It is an unsupervised learning algorithm</button>
+          <button class="quiz-opt" data-correct="true">It works on Bayes' theorem of probability</button>
+          <button class="quiz-opt">It is a Reinforcement Learning algorithm</button>
+          <button class="quiz-opt">It assumes the features are independent outright, with no reference to the class label</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="mission5">
+    <div class="section-head"><span class="section-num">Mission 5</span><h2 style="margin-bottom:0">What happens at training and test time</h2></div>
+    <p>Every unique word across the dataset becomes a feature. This full set of unique words is the <strong>corpus</strong>, or vocabulary, with size <span class="katex-inline">$V$</span>. Every message, regardless of its own length <span class="katex-inline">$k$</span>, gets represented in terms of the same, shared <span class="katex-inline">$V$</span> vocabulary words.</p>
+
+    <h3>"Training," for Naive Bayes</h3>
+    <p>Unlike Logistic Regression or a Neural Network, there's no gradient descent, no iterative weight updates. "Training" simply means computing and storing:</p>
+    <ul>
+      <li><strong>2 class priors:</strong> <span class="katex-inline">$P(y=1)$</span> and <span class="katex-inline">$P(y=0)$</span></li>
+      <li><strong>2V likelihoods:</strong> <span class="katex-inline">$P(w_j \mid y=1)$</span> and <span class="katex-inline">$P(w_j \mid y=0)$</span>, for every one of the <span class="katex-inline">$V$</span> vocabulary words</li>
+    </ul>
+    <p>These stored numbers are Naive Bayes' equivalent of a model's learned weights.</p>
+
+    <div class="calc">
+      <p style="margin-bottom:6px"><strong>Explore the complexity</strong> — change the training-set size and vocabulary size below.</p>
+      <div class="numfield"><label for="nInput">Training samples (n)</label><input type="number" id="nInput" value="40" min="1"></div>
+      <div class="numfield"><label for="vInput">Vocabulary size (V)</label><input type="number" id="vInput" value="50" min="1"></div>
+      <div class="calc-grid">
+        <div class="calc-row"><span class="k">Training time — O(n · V)</span><span class="v" id="trainOut">O(2000)</span></div>
+        <div class="calc-row"><span class="k">Prediction time — O(V)</span><span class="v" id="predOut">O(50)</span></div>
+        <div class="calc-row"><span class="k">Space — O(2 + 2V) = O(V)</span><span class="v" id="spaceOut">O(50)</span></div>
+      </div>
+      <p style="font-size:.85rem;color:var(--ink-soft);margin:0">Prediction time depends only on <span class="katex-inline">$V$</span>, not on the new message's own length <span class="katex-inline">$k$</span> — every vocabulary word is checked, present or absent.</p>
+    </div>
+
+    <div class="quiz" id="quiz4">
+      <div class="quiz-head"><span>Quiz 4</span><span class="qtag">Complexity</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">With 40 training samples and 50 unique vocabulary words, what are the training and prediction time complexities?</p>
+        <div class="quiz-opts">
+          <button class="quiz-opt" data-correct="true">O(40·50) and O(50)</button>
+          <button class="quiz-opt">O(50) and O(40·50)</button>
+          <button class="quiz-opt">O(40·50) and O(40)</button>
+          <button class="quiz-opt">O(40) and O(50·40)</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="mission6">
+    <div class="section-head"><span class="section-num">Mission 6</span><h2 style="margin-bottom:0">The zero-probability problem</h2></div>
+    <p>The vocabulary <span class="katex-inline">$V$</span> is built entirely from the training data. A genuinely new word at test time, never seen in training at all, simply isn't one of the <span class="katex-inline">$V$</span> modeled features — it contributes no factor and is effectively ignored. That case, on its own, doesn't break anything.</p>
+    <p>The real danger is subtler: suppose a word <span class="katex-inline">$w'$</span> <strong>is</strong> part of the vocabulary, since it showed up in some training messages, but it happened to appear in <strong>zero</strong> spam messages, while appearing in several ham messages.</p>
+
+    <div class="callout think">
+      <span class="label">Think it through</span>
+      Given that <span class="katex-inline">$w'$</span> never occurred in any spam message during training, what do you expect <span class="katex-inline">$P(w' \mid y=1)$</span> to come out to?
+      <button class="reveal-btn" data-reveal="r2">Reveal the answer</button>
+      <div class="reveal-box" id="r2">
+        $$P(w' \mid y=1) = \frac{\text{spam messages containing } w'}{\text{total spam messages}} = \frac{0}{n_1} = 0$$
+        Exactly zero — and that's where the trouble starts.
+      </div>
+    </div>
+
+    <p>Now a new test message arrives and it <strong>contains</strong> <span class="katex-inline">$w'$</span>. The formula multiplies in <span class="katex-inline">$P(w' \mid y=1)$</span> for present words — toggle the demo below to see what one zero factor does to the whole product.</p>
+
+    <div class="calc">
+      <button class="toggle" id="zeroToggle" aria-pressed="false" aria-label="Toggle whether the word w prime is in the vocabulary with zero spam count"></button>
+      <span class="toggle-label" id="zeroToggleLabel" style="margin-left:10px">Word w′ is a brand-new word (never seen in training)</span>
+      <div class="chain" id="chainDemo" style="margin-top:16px">
+        <span class="factor">P(y=1)</span><span class="op">×</span><span class="factor">P(w₁|y=1)</span><span class="op">×</span><span class="factor">P(w₂|y=1)</span><span class="op">×</span><span class="factor" id="wprimeFactor">… (w′ skipped, not in V)</span>
+      </div>
+      <span class="result-pill ok" id="chainResult">Result: normal comparison — ham vs. spam still competes fairly</span>
+    </div>
+
+    <p>When <span class="katex-inline">$w'$</span> <strong>is</strong> in the vocabulary but has zero spam count: <span class="katex-inline">$P(y=1 \mid X) \propto P(y=1) \cdot 0 \cdot (\text{everything else}) = 0$</span>. Meanwhile <span class="katex-inline">$w'$</span> did appear in some ham messages, so the ham-side product stays nonzero. Spam scores exactly 0 no matter what any other word in the message suggests — one rare word has silently overridden everything else.</p>
+    <div class="callout">
+      <strong>Why not just add every English word to the vocabulary in advance, so this never happens?</strong> That would make <span class="katex-inline">$V$</span> enormous, and both the <span class="katex-inline">$O(n \cdot V)$</span> training time and <span class="katex-inline">$O(V)$</span> space from Mission 5 would balloon along with it. Not a sensible fix.
+    </div>
+  </section>
+
+  <section id="smoothing">
+    <div class="section-head"><span class="section-num">The fix</span><h2 style="margin-bottom:0">Laplace (additive) smoothing</h2></div>
+    <p>Add a small constant to both the numerator and denominator of every likelihood calculation, so it can never land on exactly zero:</p>
+    <div class="formula-card"><span class="fc-label">Smoothed likelihood</span>
+    $$P(w_j \mid y=1) = \frac{(\text{count of } w_j \text{ in spam}) + \alpha}{n_1 + C\alpha}$$</div>
+    <p>where <span class="katex-inline">$\alpha$</span> is a smoothing constant (commonly 1), and <span class="katex-inline">$C$</span> is the number of distinct values the word-feature can take. Since a word either appears in a message or it doesn't, <span class="katex-inline">$w_j$</span> is a Bernoulli variable with exactly 2 possible values, so <span class="katex-inline">$C = 2$</span>.</p>
+    <div class="callout warn">
+      <span class="label">Important</span>
+      This smoothing isn't applied only to brand-new words. Every single likelihood, for every word, in both training and prediction, uses this same smoothed formula.
+    </div>
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/242/482/original/ChatGPT_Image_Sep_25__2026__02_04_19_PM.png?1790325276" alt="Illustrative image representing Laplace smoothing" loading="lazy">
+    </figure>
+
+    <h3>A worked example — try different values of alpha</h3>
+    <p>A spam class has <span class="katex-inline">$n_1 = 100$</span> messages. For a brand-new word <span class="katex-inline">$w'$</span> that appeared in 0 of them, drag the slider to see how the smoothing constant <span class="katex-inline">$\alpha$</span> changes the resulting probability.</p>
+    <div class="calc">
+      <div class="slider-wrap">
+        <input type="range" id="alphaSlider" min="0" max="10" step="0.5" value="1">
+        <div class="slider-readout"><span>α = 0</span><span id="alphaVal">α = 1</span><span>α = 10</span></div>
+      </div>
+      <div class="prob-readout">P(w′ | y=1) = <span class="num" id="alphaFormula">(0 + 1) / (100 + 2×1)</span> = <span class="num" id="alphaResult">0.0098</span></div>
+      <div class="prob-bar-track"><div class="prob-bar-fill" id="alphaBar" style="width:0.98%"></div></div>
+      <div class="edge-toggle">
+        <button class="toggle" id="edgeToggle" aria-pressed="false" aria-label="Toggle the edge case of zero spam messages at all"></button>
+        <span id="edgeLabel">Edge case: what if there were zero spam messages at all (n₁ = 0)?</span>
+      </div>
+      <p id="edgeExplainer" style="display:none;margin-top:10px;font-size:.9rem;color:var(--ink-soft)">With no spam data whatsoever, P(w′|y=1) = (0+1)/(0+2) = <strong>0.5</strong> — exactly the right amount of uncertainty, since there's no reason to believe a word is more likely present than absent.</p>
+    </div>
+    <p style="font-size:.9rem;color:var(--ink-soft)">Notice the direction: as <span class="katex-inline">$\alpha$</span> grows large, the added constant dominates the real counts, and every word's smoothed probability drifts toward 0.5 — the model trusts the data less and the smoothing more.</p>
+
+    <div class="quiz" id="quiz5">
+      <div class="quiz-head"><span>Quiz 5</span><span class="qtag">True / False</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">If a word in the test message never appeared in the training data, the entire posterior probability for both classes will become exactly zero, unless smoothing is applied.</p>
+        <div class="quiz-opts">
+          <button class="quiz-opt" data-correct="true">True</button>
+          <button class="quiz-opt">False</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="wrapup">
+    <div class="section-head"><span class="section-num">Wrap-up</span><h2 style="margin-bottom:0">What we now know</h2></div>
+    <ul class="takeaways">
+      <li>Raw text needs cleaning before it's usable: tokenizing into words, lowercasing, stripping punctuation, and removing stopwords, all to isolate the keyword signal that actually distinguishes spam from ham.</li>
+      <li>Bayes' theorem lets us flip P(words | class), which we can estimate from data, into P(class | words), which is what we actually want to predict.</li>
+      <li>The naive assumption treats words as independent of each other, given the class. It's rarely true in reality — which is exactly why it's called naive — but it makes the math tractable and works well in practice.</li>
+      <li>The final rule: posterior probability is proportional to (class prior) × (product of per-word likelihoods); predict whichever class scores higher.</li>
+      <li>Naive Bayes "trains" by computing and storing class priors and per-word likelihoods — no gradient descent. Training is O(n·V); prediction is O(V); space is O(V).</li>
+      <li>A single unseen word can collapse an entire prediction to zero, since all likelihoods multiply together. Laplace Smoothing fixes this by adding small constants to every likelihood calculation, not just new words.</li>
+    </ul>
+
+    <div class="stamp" style="background:rgba(30,82,54,.06);border-color:var(--green-600)">
+      <span class="ticket-no" style="color:var(--green-700)">TICKET #1 · REPLY</span>
+      <p style="color:var(--ink-soft)">The math checks out: Naive Bayes gives us exactly the speed and interpretability you wanted, and we know how to handle its one real failure mode — words it's never seen before. Next step: actually build and test it.</p>
+    </div>
+    <p style="margin-top:18px;font-size:.92rem;color:var(--ink-soft)"><strong>Next up:</strong> implementing Naive Bayes in code, training it on MailNest's real spam data, and seeing how well "naive" actually performs.</p>
+  </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="fname">Naive Bayes 1 post read</div>
+  <p>A MailNest Trust &amp; Safety field note</p>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left:"$$", right:"$$", display:true},
+      {left:"$", right:"$", display:false}
+    ],
+    throwOnError:false
+  });
+
+  // reveal buttons
+  document.querySelectorAll('.reveal-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var box = document.getElementById(btn.dataset.reveal);
+      var showing = box.classList.toggle('shown');
+      btn.textContent = showing ? 'Hide' : 'Reveal the answer';
+      if (btn.dataset.reveal === 'firesmoke') btn.textContent = showing ? 'Hide the calculation' : 'Reveal the calculation';
+    });
+  });
+
+  // step explorer
+  var tabs = document.querySelectorAll('#stepExplorer .step-tab');
+  var panes = document.querySelectorAll('#stepExplorer .step-pane');
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      tabs.forEach(function(t){ t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+      panes.forEach(function(p){ p.classList.remove('active'); });
+      tab.classList.add('active'); tab.setAttribute('aria-selected','true');
+      document.querySelector('.step-pane[data-pane="'+tab.dataset.step+'"]').classList.add('active');
+    });
+  });
+
+  // naive assumption toggle
+  var naiveToggle = document.getElementById('naiveToggle');
+  var naiveLabel = document.getElementById('naiveToggleLabel');
+  var nodeLine = document.getElementById('nodeLine');
+  var nodeCaption = document.getElementById('nodeCaption');
+  naiveToggle.addEventListener('click', function(){
+    var on = naiveToggle.getAttribute('aria-pressed') === 'true';
+    on = !on;
+    naiveToggle.setAttribute('aria-pressed', on);
+    naiveLabel.textContent = 'Independence assumption: ' + (on ? 'on' : 'off');
+    nodeLine.style.opacity = on ? 0.08 : 1;
+    nodeCaption.textContent = on ? 'For the math: assumed independent, given the class' : 'In reality: these tend to appear together';
+  });
+
+  // complexity calculator
+  var nInput = document.getElementById('nInput');
+  var vInput = document.getElementById('vInput');
+  function updateComplexity(){
+    var n = Math.max(1, parseInt(nInput.value)||1);
+    var v = Math.max(1, parseInt(vInput.value)||1);
+    document.getElementById('trainOut').textContent = 'O(' + (n*v).toLocaleString() + ')';
+    document.getElementById('predOut').textContent = 'O(' + v.toLocaleString() + ')';
+    document.getElementById('spaceOut').textContent = 'O(' + v.toLocaleString() + ')';
+  }
+  nInput.addEventListener('input', updateComplexity);
+  vInput.addEventListener('input', updateComplexity);
+  updateComplexity();
+
+  // zero-probability demo
+  var zeroToggle = document.getElementById('zeroToggle');
+  var zeroLabel = document.getElementById('zeroToggleLabel');
+  var wprimeFactor = document.getElementById('wprimeFactor');
+  var chainResult = document.getElementById('chainResult');
+  zeroToggle.addEventListener('click', function(){
+    var inVocabZero = zeroToggle.getAttribute('aria-pressed') === 'true';
+    inVocabZero = !inVocabZero;
+    zeroToggle.setAttribute('aria-pressed', inVocabZero);
+    zeroLabel.textContent = inVocabZero
+      ? 'Word w′ IS in the vocabulary, but appeared in zero spam messages'
+      : 'Word w′ is a brand-new word (never seen in training)';
+    if (inVocabZero) {
+      wprimeFactor.textContent = 'P(w′|y=1) = 0';
+      wprimeFactor.classList.add('zero');
+      chainResult.textContent = 'Result: entire spam-side product = 0 — ham wins by default, regardless of other words';
+      chainResult.classList.remove('ok'); chainResult.classList.add('zero');
+    } else {
+      wprimeFactor.textContent = '… (w′ skipped, not in V)';
+      wprimeFactor.classList.remove('zero');
+      chainResult.textContent = 'Result: normal comparison — ham vs. spam still competes fairly';
+      chainResult.classList.remove('zero'); chainResult.classList.add('ok');
+    }
+  });
+
+  // laplace smoothing slider
+  var alphaSlider = document.getElementById('alphaSlider');
+  var alphaVal = document.getElementById('alphaVal');
+  var alphaFormula = document.getElementById('alphaFormula');
+  var alphaResult = document.getElementById('alphaResult');
+  var alphaBar = document.getElementById('alphaBar');
+  var edgeToggle = document.getElementById('edgeToggle');
+  var edgeExplainer = document.getElementById('edgeExplainer');
+  var n1 = 100, C = 2;
+  var edgeOn = false;
+  function updateAlpha(){
+    var a = parseFloat(alphaSlider.value);
+    alphaVal.textContent = 'α = ' + a;
+    var n1eff = edgeOn ? 0 : n1;
+    var num = 0 + a, den = n1eff + C*a;
+    var p = den === 0 ? 0 : num/den;
+    alphaFormula.textContent = '(0 + ' + a + ') / (' + n1eff + ' + 2×' + a + ')';
+    alphaResult.textContent = p.toFixed(4);
+    alphaBar.style.width = (p*100).toFixed(2) + '%';
+  }
+  alphaSlider.addEventListener('input', updateAlpha);
+  edgeToggle.addEventListener('click', function(){
+    edgeOn = edgeToggle.getAttribute('aria-pressed') !== 'true';
+    edgeToggle.setAttribute('aria-pressed', edgeOn);
+    edgeExplainer.style.display = edgeOn ? 'block' : 'none';
+    updateAlpha();
+  });
+  updateAlpha();
+
+  // quizzes
+  document.querySelectorAll('.quiz').forEach(function(quiz){
+    var opts = quiz.querySelectorAll('.quiz-opt');
+    var fb = quiz.querySelector('.quiz-feedback');
+    opts.forEach(function(opt){
+      opt.addEventListener('click', function(){
+        if (quiz.dataset.answered) return;
+        quiz.dataset.answered = 'true';
+        var isCorrect = opt.dataset.correct === 'true';
+        opts.forEach(function(o){
+          o.disabled = true;
+          if (o.dataset.correct === 'true') o.classList.add('correct');
+          else if (o === opt) o.classList.add('incorrect');
+        });
+        fb.classList.add('shown');
+        fb.classList.add(isCorrect ? 'right' : 'wrong');
+        fb.innerHTML = '<span class="verdict">' + (isCorrect ? 'Correct.' : 'Not quite.') + '</span>' + quizExplanations[quiz.id];
+        if (window.renderMathInElement) renderMathInElement(fb, {delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}], throwOnError:false});
+      });
+    });
+  });
+  var quizExplanations = {
+    quiz1: 'By Bayes\u2019 theorem, P(fire|smoke) = (0.9 × 0.01) / 0.1 = 0.09. Fire is rare enough that even a strong signal like smoke only raises confidence to 9%.',
+    quiz2: 'That\u2019s precisely the naive assumption: conditional independence between words, given the class. It doesn\u2019t claim the words are independent in general — only once the class label is already known.',
+    quiz3: 'Naive Bayes is built directly on Bayes\u2019 theorem, and it\u2019s a supervised algorithm (it needs labelled spam/ham examples to compute priors and likelihoods). The independence assumption is always conditioned on the class label — unconditionally, words like "Nigerian" and "prince" absolutely can be correlated.',
+    quiz4: 'Training scans all n=40 samples to compute likelihoods for all V=50 vocabulary words: O(n·V) = O(40×50). Predicting checks every one of the V=50 vocabulary words against the already-computed likelihoods: O(V) = O(50), regardless of the new message\u2019s own length.',
+    quiz5: 'One zero likelihood term collapses the entire product to zero, since Naive Bayes multiplies every word\u2019s likelihood together. Laplace smoothing is precisely what prevents this.'
+  };
+
+  // scroll-spy rail
+  var dots = document.querySelectorAll('.rail-dot');
+  var sections = Array.from(dots).map(function(d){ return document.getElementById(d.dataset.target); });
+  dots.forEach(function(dot){
+    dot.addEventListener('click', function(){ document.getElementById(dot.dataset.target).scrollIntoView({behavior:'smooth'}); });
+    dot.addEventListener('keydown', function(e){ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); document.getElementById(dot.dataset.target).scrollIntoView({behavior:'smooth'}); } });
+  });
+  function onScroll(){
+    var pos = window.scrollY + window.innerHeight*0.3;
+    var activeIdx = 0;
+    sections.forEach(function(sec, i){ if (sec && sec.offsetTop <= pos) activeIdx = i; });
+    dots.forEach(function(d,i){ d.classList.toggle('active', i===activeIdx); });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+});
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-SL-9" target="_blank" rel="noopener">github.com/scaler-content/DSML-SL-9</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

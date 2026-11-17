@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sheets 04 — Pivot Tables + Mini Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --paper:#FAFAF8;
+    --paper-dim:#F1F2ED;
+    --ink:#1B1F23;
+    --ink-soft:#5F6368;
+    --grid:#D7DBDD;
+    --grid-strong:#B8BEC2;
+    --sheet-green:#0F9D58;
+    --sheet-green-dark:#0B7A44;
+    --sheet-green-pale:#E6F4EA;
+    --formula-blue:#1A73E8;
+    --formula-blue-pale:#E8F0FE;
+    --bad-red:#D93025;
+    --bad-red-pale:#FCE8E6;
+    --amber:#E8710A;
+    --amber-pale:#FEF3E0;
+    --violet:#7C4DFF;
+    --violet-pale:#EDE7F6;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--sheet-green); color:#fff;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  .colframe{
+    position:sticky; top:0; z-index:50;
+    display:flex;
+    background:var(--paper-dim);
+    border-bottom:1px solid var(--grid);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    letter-spacing:0.04em;
+  }
+  .colframe > div{flex:1; text-align:center; padding:6px 0; border-right:1px solid var(--grid);}
+  .colframe .corner{flex:0 0 46px; background:var(--paper-dim);}
+
+  .wrap{max-width:980px; margin:0 auto; padding:0 24px;}
+
+  .hero{padding:56px 0 40px; border-bottom:1px solid var(--grid);}
+  .fbar{
+    display:flex; align-items:center;
+    border:1px solid var(--grid-strong);
+    background:#fff; border-radius:4px; overflow:hidden;
+    margin-bottom:28px; box-shadow:0 1px 2px rgba(0,0,0,0.04);
+  }
+  .fbar .cellref{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600;
+    color:var(--ink-soft); padding:9px 14px; border-right:1px solid var(--grid);
+    background:var(--paper-dim); white-space:nowrap;
+  }
+  .fbar .fx{font-style:italic; color:var(--ink-soft); padding:9px 10px; font-family:Georgia,serif; border-right:1px solid var(--grid);}
+  .fbar .formula{padding:9px 14px; font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--formula-blue); white-space:nowrap; overflow:hidden;}
+  .fbar .formula .typed::after{content:''; display:inline-block; width:2px; height:14px; background:var(--formula-blue); margin-left:2px; vertical-align:-2px; animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--sheet-green-dark);
+    background:var(--sheet-green-pale); padding:5px 10px; border-radius:3px; margin-bottom:18px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--sheet-green);}
+
+  h1.title{font-size:clamp(32px,5vw,48px); font-weight:800; letter-spacing:-0.02em; margin:0 0 14px; color:var(--ink);}
+  .subtitle{font-size:17px; color:var(--ink-soft); max-width:660px; margin:0;}
+
+  .pipeline{display:grid; grid-template-columns:1fr auto 1fr auto 1fr; align-items:center; gap:8px; margin-top:36px;}
+  .pipeline .stage{border:1px solid var(--grid); background:#fff; border-radius:6px; padding:14px 12px; text-align:center;}
+  .pipeline .stage.active{border-color:var(--sheet-green); background:var(--sheet-green-pale);}
+  .pipeline .stage .label{font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft);}
+  .pipeline .stage.active .label{color:var(--sheet-green-dark); font-weight:700;}
+  .pipeline .arrow{color:var(--grid-strong); font-size:18px;}
+
+  section{padding:52px 0; border-bottom:1px solid var(--grid);}
+  .kicker{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink-soft); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:8px;}
+  h2.h{font-size:26px; font-weight:700; letter-spacing:-0.01em; margin:0 0 10px; display:flex; align-items:baseline; gap:10px;}
+  h2.h .rowno{font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; color:#fff; background:var(--sheet-green); padding:2px 8px; border-radius:3px;}
+  h3.sub{font-size:17px; font-weight:700; color:var(--sheet-green-dark); margin:28px 0 10px;}
+  .lede{color:var(--ink-soft); font-size:15.5px; max-width:700px; margin:0 0 28px;}
+
+  table.sheet{width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:12.5px;}
+  table.sheet th{background:var(--paper-dim); text-align:left; padding:7px 10px; border:1px solid var(--grid); font-weight:600; color:var(--ink-soft); font-size:11px; text-transform:uppercase; letter-spacing:0.03em;}
+  table.sheet td{padding:7px 10px; border:1px solid var(--grid); white-space:nowrap;}
+  table.sheet td[contenteditable="true"]{background:#FFFDF5; cursor:text;}
+  table.sheet td[contenteditable="true"]:focus{outline:2px solid var(--formula-blue); outline-offset:-2px; background:#fff;}
+  .flag{font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:2px 6px; border-radius:3px; background:var(--bad-red-pale); color:var(--bad-red);}
+  .flag.ok{background:var(--sheet-green-pale); color:var(--sheet-green-dark);}
+  .flag.neutral{background:#E8EAED; color:#3C4043;}
+
+  .impact{margin-top:12px; font-size:13px; background:var(--amber-pale); border-left:3px solid var(--amber); padding:10px 12px; border-radius:0 5px 5px 0;}
+  .impact b{color:#8A4300;}
+  .impact.green{background:var(--sheet-green-pale); border-left-color:var(--sheet-green);}
+  .impact.green b{color:var(--sheet-green-dark);}
+  .impact.red{background:var(--bad-red-pale); border-left-color:var(--bad-red);}
+  .impact.red b{color:var(--bad-red);}
+
+  .card{border:1px solid var(--grid); border-radius:8px; background:#fff; padding:18px;}
+  .card + .card{margin-top:16px;}
+
+  .biz{border:1px solid var(--formula-blue); background:var(--formula-blue-pale); border-radius:8px; padding:14px 16px; margin-bottom:14px;}
+  .biz .btitle{font-weight:700; font-size:12.5px; color:var(--formula-blue); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;}
+  .biz p{margin:0; font-size:13.5px;}
+
+  .disc{border:1px solid #E0C34A; background:#FEFAE8; border-radius:8px; padding:14px 16px; margin-bottom:14px; font-size:13px;}
+  .disc .dtitle{font-weight:700; font-size:12.5px; text-transform:uppercase; letter-spacing:0.04em; color:#8A6D00; margin-bottom:6px;}
+  .disc p{margin:4px 0;}
+
+  .pg-input, .pg-select{
+    font-family:'IBM Plex Mono',monospace; font-size:14px; padding:9px 12px;
+    border:1.5px solid var(--grid-strong); border-radius:6px; color:var(--formula-blue); font-weight:600;
+  }
+  .pg-hint{font-size:12px; color:var(--ink-soft); margin:6px 0 0;}
+  .pg-hint code{background:var(--paper-dim); padding:1px 5px; border-radius:3px;}
+
+  .btnrow{display:flex; gap:8px; flex-wrap:wrap; margin:14px 0;}
+  .pill-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:600;
+    padding:8px 14px; border-radius:20px; border:1px solid var(--grid-strong);
+    background:#fff; cursor:pointer;
+  }
+  .pill-btn.active{background:var(--formula-blue-pale); border-color:var(--formula-blue); color:var(--formula-blue);}
+  .pill-btn:hover{border-color:var(--ink);}
+  .pill-btn.region-btn.active{background:var(--sheet-green-pale); border-color:var(--sheet-green); color:var(--sheet-green-dark);}
+
+  .zonegrid{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px;}
+  @media(max-width:760px){.zonegrid{grid-template-columns:repeat(2,1fr);}}
+  .zone{border:1.5px dashed var(--grid-strong); border-radius:8px; padding:10px; text-align:center; background:var(--paper-dim);}
+  .zone .zlabel{font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-soft); margin-bottom:6px;}
+  .zone .zval{font-size:13px; font-weight:700;}
+  .zone.rows{border-color:#1A73E8;} .zone.rows .zval{color:#1A73E8;}
+  .zone.columns{border-color:var(--violet);} .zone.columns .zval{color:var(--violet);}
+  .zone.values{border-color:var(--sheet-green);} .zone.values .zval{color:var(--sheet-green-dark);}
+  .zone.filters{border-color:var(--amber);} .zone.filters .zval{color:#8A4300;}
+
+  .agggrid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px;}
+  @media(max-width:700px){.agggrid{grid-template-columns:repeat(2,1fr);}}
+  .agg-cell{border:1px solid var(--grid); border-radius:6px; padding:12px; background:var(--paper-dim); text-align:center;}
+  .agg-cell .fname{display:block; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--formula-blue); font-weight:700; margin-bottom:4px;}
+  .agg-cell .fresult{font-family:'IBM Plex Mono',monospace; font-size:17px; font-weight:700;}
+
+  .syntax-card{border:1px solid var(--grid-strong); border-radius:8px; padding:14px 16px; background:var(--formula-blue-pale); margin-bottom:14px;}
+  .syntax-card .stitle{font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:13px; color:var(--formula-blue); margin-bottom:6px;}
+  .syntax-card code{font-family:'IBM Plex Mono',monospace; font-size:13px;}
+
+  .helper-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  .helper-table th{text-align:left; padding:8px 12px; background:var(--paper-dim); border:1px solid var(--grid); font-size:12px; text-transform:uppercase; color:var(--ink-soft);}
+  .helper-table td{padding:8px 12px; border:1px solid var(--grid);}
+  .helper-table code{font-family:'IBM Plex Mono',monospace; color:var(--formula-blue); font-size:12.5px;}
+
+  .report-table{width:100%; border-collapse:collapse; font-size:14px;}
+  .report-table th{text-align:left; background:var(--paper-dim); padding:10px 14px; border:1px solid var(--grid); font-size:12px; text-transform:uppercase; color:var(--ink-soft);}
+  .report-table td{padding:10px 14px; border:1px solid var(--grid);}
+  .report-table td.metric{font-weight:600;}
+  .report-table td.value{font-family:'IBM Plex Mono',monospace; font-weight:700; color:var(--sheet-green-dark); font-size:15px;}
+
+  .ai-card{border:1px dashed var(--violet); background:var(--violet-pale); border-radius:8px; padding:16px 18px; margin-top:16px;}
+  .ai-card .atitle{font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:12.5px; color:var(--violet); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;}
+  .ai-card p{margin:0 0 8px; font-size:13.5px; color:#4a3b7a;}
+  .ai-card ul{margin:0; padding-left:18px; font-size:13px; color:#4a3b7a;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr;}}
+
+  .scrollx{max-height:280px; overflow-y:auto; border-radius:6px;}
+
+  /* ---- macro checklist ---- */
+  .macro-list{list-style:none; margin:14px 0 0; padding:0; counter-reset:mstep;}
+  .macro-step{display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px dashed var(--grid); font-size:13.5px; opacity:0.4; transition:opacity .25s;}
+  .macro-step.done{opacity:1;}
+  .macro-step .chk{flex:0 0 20px; height:20px; border-radius:50%; border:2px solid var(--grid-strong); display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff;}
+  .macro-step.done .chk{background:var(--sheet-green); border-color:var(--sheet-green);}
+  .macro-step.done .chk::after{content:'✓';}
+  .play-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:700; color:#fff;
+    background:var(--formula-blue); border:none; border-radius:20px; padding:9px 18px; cursor:pointer; margin-top:14px;
+  }
+  .play-btn:disabled{opacity:0.5; cursor:default;}
+
+  /* ---- dashboard ---- */
+  .dash{border:1px solid var(--grid-strong); border-radius:10px; background:#fff; padding:22px; box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+  .dash-title{text-align:center; font-weight:800; font-size:19px; background:#FEF3C7; border:1px solid #E0C34A; border-radius:8px; padding:12px; margin-bottom:18px;}
+  .kpi-row{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;}
+  @media(max-width:700px){.kpi-row{grid-template-columns:1fr;}}
+  .kpi-tile{border:1px solid var(--grid); border-radius:8px; padding:14px; text-align:center; background:var(--paper-dim);}
+  .kpi-tile .klabel{font-size:11.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; font-family:'IBM Plex Mono',monospace;}
+  .kpi-tile .kval{font-size:26px; font-weight:800; margin-top:4px;}
+  .chart-box{border:1px solid var(--grid); border-radius:8px; padding:16px; background:#fff;}
+  .chart-box h5{margin:0 0 12px; font-size:13.5px; text-align:center; font-weight:700;}
+  .barchart{display:flex; align-items:flex-end; gap:8px; height:150px; border-bottom:1px solid var(--grid); padding-bottom:2px;}
+  .barchart .bar{flex:1; background:var(--formula-blue); border-radius:4px 4px 0 0; position:relative; min-width:6px; transition:height .3s;}
+  .barchart .bar .bv{position:absolute; top:-18px; left:0; right:0; text-align:center; font-size:10px; font-family:'IBM Plex Mono',monospace; color:var(--ink-soft);}
+  .barlabels{display:flex; gap:8px; margin-top:6px;}
+  .barlabels span{flex:1; text-align:center; font-size:10px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;}
+  .region-colors .bar:nth-child(1){background:#7C4DFF;}
+  .region-colors .bar:nth-child(2){background:#0F9D58;}
+  .region-colors .bar:nth-child(3){background:#E8710A;}
+  .region-colors .bar:nth-child(4){background:#1A73E8;}
+
+  footer{padding:40px 0 60px; text-align:center;}
+  footer .next{display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--sheet-green-dark); border:1px dashed var(--sheet-green); padding:10px 16px; border-radius:20px; background:var(--sheet-green-pale);}
+
+  /* ---- quiz ---- */
+  .quiz{border:1px solid var(--grid); border-radius:8px; background:#fff; padding:18px 20px; margin-bottom:14px;}
+  .quiz .q-head{font-weight:700; font-size:14.5px; margin-bottom:12px;}
+  .qopt{display:block; width:100%; text-align:left; border:1px solid var(--grid-strong); background:#fff; padding:10px 12px; border-radius:6px; margin-bottom:8px; cursor:pointer; font-size:13.5px; font-family:'Inter',sans-serif;}
+  .qopt:hover{border-color:var(--ink);}
+  .qopt.correct{background:var(--sheet-green-pale); border-color:var(--sheet-green); color:var(--sheet-green-dark); font-weight:600;}
+  .qopt.wrong{background:var(--bad-red-pale); border-color:var(--bad-red); color:var(--bad-red);}
+  .qexplain{font-size:13px; color:var(--ink-soft); background:var(--paper-dim); padding:10px 12px; border-radius:6px; margin-top:8px; display:none;}
+  .qexplain.show{display:block;}
+
+  .addrow-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--sheet-green-dark);
+    background:var(--sheet-green-pale); border:1px solid var(--sheet-green); border-radius:5px; padding:7px 12px; cursor:pointer; margin-top:10px;
+  }
+  .addrow-btn:hover{background:var(--sheet-green); color:#fff;}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important;}}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· Excel 4 · Pivot tables and a mini dashboard</span><span class="pn"><a href="../Excel-3-postread/" title="Excel 3 · Lookups and reporting">← Prev</a><a href="../Tableau-1-postread/" title="Tableau 1 · Viz fundamentals and KPIs">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="colframe">
+  <div class="corner"></div>
+  <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div><div>G</div><div>H</div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <div class="hero">
+    <div class="eyebrow"><span class="dot"></span> Sheets · Lecture 04 · Post-Read</div>
+    <h1 class="title">Pivot Tables + Mini Dashboard</h1>
+    <p class="subtitle">The first three lectures were work done row by row, cell by cell. This one is the turn from calculation to summarisation — from individual answers to business-level insight, ending in a live dashboard a VP could open without ever seeing a spreadsheet.</p>
+
+    <div class="fbar">
+      <div class="cellref">PIVOT 1</div>
+      <div class="fx"><i>cfg</i></div>
+      <div class="formula mono"><span id="typedFormula" class="typed"></span></div>
+    </div>
+
+    <div class="pipeline">
+      <div class="stage" id="pstage1"><div class="label">Raw Data</div></div>
+      <div class="arrow">→</div>
+      <div class="stage active" id="pstage2"><div class="label">Pivot Table</div></div>
+      <div class="arrow">→</div>
+      <div class="stage" id="pstage3"><div class="label">Live Dashboard</div></div>
+    </div>
+  </div>
+
+  <!-- ============ WHY IT MATTERS ============ -->
+  <section id="why" style="padding-bottom:0;">
+    <div class="impact">
+      <b>Why today's lecture matters:</b> Pivot Tables are the single most common GSheets skill asked in analyst interviews. Every business metric — Revenue, Orders, AOV — starts with a Pivot. Slicers turn a static table into an interactive report. A dashboard publishes your work so any stakeholder can explore it — no GSheets access required.
+    </div>
+  </section>
+
+  <!-- ============ SHARED DATASET ============ -->
+  <section id="dataset">
+    <div class="kicker">The Working Sheet</div>
+    <h2 class="h"><span class="rowno">00</span> Your live dataset — Global Superstore</h2>
+    <p class="lede">Same dataset family used across all four lectures: Order ID, Order Date, City, Region, Sales, Quantity. Every Pivot, chart, and KPI on this page reads from the 19 rows below — edit a cell and everything downstream recomputes.</p>
+    <div class="card">
+      <div class="scrollx">
+        <table class="sheet" id="liveTable">
+          <thead>
+            <tr><th>Order ID</th><th>Order Date</th><th>Region</th><th>City</th><th>Sales</th><th>Qty</th></tr>
+          </thead>
+          <tbody id="liveTableBody"></tbody>
+        </table>
+      </div>
+      <button class="addrow-btn" id="addRowBtn">+ Add row</button>
+      <p class="pg-hint">This mirrors the <code>superstore-cleaned</code> sheet from Lectures 1–3 — the same file, now summarised instead of formula'd row by row.</p>
+    </div>
+  </section>
+
+  <!-- ============ PIVOT FUNDAMENTALS ============ -->
+  <section id="fundamentals">
+    <div class="kicker">Foundations</div>
+    <h2 class="h"><span class="rowno">01</span> Pivot Tables — the four zones</h2>
+    <div class="biz"><div class="btitle">Business problem</div><p>The head of sales walks up and says: "Give me total revenue by region — I need it in 2 minutes." Writing <code class="mono">=SUMIF(Region,"West",Sales)</code> four times works until a new region appears — then it breaks. A Pivot Table groups and summarises dynamically, no formulas needed.</p></div>
+    <p class="lede">A Pivot Table takes your flat dataset — one row per transaction — and collapses it into a grouped summary. The word "Pivot" comes from the ability to rotate dimensions: swap what sits in Rows and Columns with one drag. Four zones do all the work:</p>
+
+    <div class="zonegrid">
+      <div class="zone rows"><div class="zlabel">Rows</div><div class="zval">Left-side labels — your categories</div></div>
+      <div class="zone columns"><div class="zlabel">Columns</div><div class="zval">Top-side headers — a second dimension</div></div>
+      <div class="zone values"><div class="zlabel">Values</div><div class="zval">The numbers in each cell — must be a metric</div></div>
+      <div class="zone filters"><div class="zlabel">Filters</div><div class="zval">A global filter on the entire table</div></div>
+    </div>
+
+    <div class="card">
+      <h4 style="margin:0 0 10px;">Try it: total revenue by Region</h4>
+      <p style="font-size:13px; color:var(--ink-soft); margin:0 0 12px;">This is exactly the business problem above, solved live from your dataset: drag <code class="mono">Region</code> → Rows, <code class="mono">Sales</code> → Values (SUM).</p>
+      <table class="sheet" id="regionPivotTable">
+        <thead><tr><th>Region</th><th>SUM of Sales</th></tr></thead>
+        <tbody id="regionPivotBody"></tbody>
+      </table>
+    </div>
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>Zone</th><th>Superstore example</th></tr></thead>
+      <tbody>
+        <tr><td><code>Rows</code></td><td>Drag "Region" here → East, West, South, Central appear as rows</td></tr>
+        <tr><td><code>Columns</code></td><td>Drag "City" here → each city appears as a column header</td></tr>
+        <tr><td><code>Values</code></td><td>Drag "Sales" here → shows total Sales per cell</td></tr>
+        <tr><td><code>Filters</code></td><td>Drag "Year" here → pick 2017 only, all numbers update instantly</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ AGGREGATIONS ============ -->
+  <section id="aggregations">
+    <div class="kicker">Beyond SUM</div>
+    <h2 class="h"><span class="rowno">02</span> Aggregations — SUM, COUNT, COUNTA, AVERAGE</h2>
+    <div class="biz"><div class="btitle">Business problem</div><p>The Finance team wants to know: (a) total revenue by City, (b) how many orders each City received, (c) the average sale value per City.</p></div>
+    <div class="disc"><div class="dtitle">Class discussion</div>
+      <p><b>Instructor:</b> In SQL we'd write <code class="mono">SELECT City, SUM(Sales), COUNT(*), AVG(Sales) FROM orders GROUP BY City</code>. How do we do this in a Pivot Table?</p>
+      <p><b>Learner:</b> Drag City to Rows, then drag Sales three times into Values and change the aggregation each time?</p>
+      <p><b>Instructor:</b> Exactly right. You can add the same field multiple times with different aggregations.</p>
+    </div>
+
+    <div class="card">
+      <h4 style="margin:0 0 10px;">City pivot — Revenue, Order Count, Avg Sale Value</h4>
+      <div class="btnrow" id="calcFieldToggleRow">
+        <button class="pill-btn" id="toggleCalc" data-on="false">+ Add calculated field: Revenue per Order</button>
+        <button class="pill-btn" id="togglePct" data-on="false">+ Add % of Grand Total</button>
+      </div>
+      <div class="scrollx">
+        <table class="sheet" id="cityPivotTable">
+          <thead id="cityPivotHead"></thead>
+          <tbody id="cityPivotBody"></tbody>
+          <tfoot id="cityPivotFoot"></tfoot>
+        </table>
+      </div>
+      <p class="pg-hint"><b>Why COUNTA, not COUNT?</b> COUNTA counts all non-empty cells (text + numbers). COUNT only counts numeric cells. Order IDs are text — always use COUNTA for them.</p>
+    </div>
+
+    <div class="syntax-card" style="margin-top:16px;">
+      <div class="stitle">SYNTAX</div>
+      <code>In the Values zone → click the field's dropdown → "Summarise by" → SUM · COUNT · COUNTA · AVERAGE · MAX · MIN · MEDIAN · STDEV</code>
+    </div>
+
+    <div class="card">
+      <h4 style="margin:0 0 10px;">Aggregation playground — Sales column</h4>
+      <p style="font-size:13px; color:var(--ink-soft); margin:0;">Reads live from the full 19-row dataset above.</p>
+      <div class="agggrid" id="aggOut"></div>
+    </div>
+
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>Function</th><th>Real-world use case</th></tr></thead>
+      <tbody>
+        <tr><td><code>SUM</code></td><td>Monthly revenue reports, budget tracking</td></tr>
+        <tr><td><code>COUNTA</code></td><td>Order counts, a quick data-quality audit</td></tr>
+        <tr><td><code>AVERAGE</code></td><td>Average order value, benchmarking vs. historical mean</td></tr>
+        <tr><td><code>MAX / MIN</code></td><td>Finding outlier transactions for fraud detection</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ GROUPING ============ -->
+  <section id="grouping">
+    <div class="kicker">Working with Dates</div>
+    <h2 class="h"><span class="rowno">03</span> Grouping — dates to year level</h2>
+    <div class="biz"><div class="btitle">Business problem</div><p>The VP of Sales asks: "Show me how revenue trended across years." Your Order Date column has full dates (YYYY-MM-DD) — dragging it into Rows as-is gives one row per unique date, potentially hundreds of rows.</p></div>
+    <div class="disc"><div class="dtitle">Class discussion</div>
+      <p><b>Instructor:</b> If I drag Order Date into Rows, I get one row per date. How do I group them?</p>
+      <p><b>Learner:</b> Extract the Year first using YEAR() and use that?</p>
+      <p><b>Instructor:</b> That works too — but Pivot Tables have a built-in grouping feature. Right-click the Rows field → "Group by" → Year. It's faster and cleaner.</p>
+    </div>
+    <div class="card">
+      <table class="sheet" id="yearPivotTable">
+        <thead><tr><th>Order Date — Year</th><th>SUM of Sales</th></tr></thead>
+        <tbody id="yearPivotBody"></tbody>
+      </table>
+    </div>
+    <div class="impact green"><b>Pro tip:</b> Add "Year" as a Column instead of a Row to create a side-by-side year comparison in one table.</div>
+  </section>
+
+  <!-- ============ CALCULATED FIELDS ============ -->
+  <section id="calcfields">
+    <div class="kicker">Custom Metrics</div>
+    <h2 class="h"><span class="rowno">04</span> Calculated fields</h2>
+    <div class="biz"><div class="btitle">Business problem</div><p>Your manager asks: "What is the Revenue per Order for each City?" You already have Total Revenue (SUM of Sales) and Order Count (COUNTA of Order ID) in your pivot. Can you divide them inside the pivot itself?</p></div>
+    <div class="syntax-card">
+      <div class="stitle">SYNTAX</div>
+      <code>=SUM(Sales) / COUNTA('Order ID')</code>
+    </div>
+    <p class="lede">In the Pivot Table editor → Values zone → click "Add" → "Calculated field" → name it "Revenue per Order" → enter the formula above and choose "Custom" as the summarise-by. Calculated Fields use field names, not cell references, and recalculate automatically when a Filter or Slicer changes what's visible. Toggle it on in the City pivot table above (Section 02) to see it appear as a live column.</p>
+    <table class="helper-table">
+      <thead><tr><th>Formula</th><th>Gives you</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">=Sales / Quantity</td><td>Average revenue per item</td></tr>
+        <tr><td class="mono">=Sales * 0.10</td><td>Estimated 10% tax</td></tr>
+        <tr><td class="mono">=(Sales - Cost) / Sales</td><td>Gross margin % (if Cost exists)</td></tr>
+      </tbody>
+    </table>
+    <div class="impact red"><b>Limitation:</b> Calculated Fields cannot use cell references (like B2/C2) — only column names from the source data.</div>
+  </section>
+
+  <!-- ============ % OF TOTAL ============ -->
+  <section id="pctoftotal">
+    <div class="kicker">Show As</div>
+    <h2 class="h"><span class="rowno">05</span> % of Row / Column / Grand Total</h2>
+    <div class="biz"><div class="btitle">Business problem</div><p>The Category Manager wants to know: "What percentage of our total revenue comes from each City?"</p></div>
+    <div class="disc"><div class="dtitle">Class discussion</div>
+      <p><b>Instructor:</b> We could divide each cell by the Grand Total manually. But if I change a filter, the Grand Total changes and my percentages break. Is there a better way?</p>
+      <p><b>Learner:</b> Maybe there's a built-in percentage option in the Values zone?</p>
+      <p><b>Instructor:</b> Yes — GSheets calls it "Show as". It converts any value field into a percentage automatically.</p>
+    </div>
+    <div class="card">
+      <p style="font-size:13.5px; margin:0 0 10px;">Toggle <code class="mono">togglePct</code> on the City pivot in Section 02 to see this live — a "% of Revenue" column appears next to Total Revenue, always in sync with the visible rows.</p>
+      <ul style="font-size:13.5px; margin:0; padding-left:18px; color:var(--ink-soft);">
+        <li><b>% of grand total</b> — each cell as % of the entire table total</li>
+        <li><b>% of row total</b> — each cell as % of its row's total</li>
+        <li><b>% of column total</b> — each cell as % of its column's total</li>
+      </ul>
+    </div>
+    <div class="impact"><b>% of row total</b> is most useful when Regions are Rows and Categories are Columns — it shows category mix within each region, not just overall share.</div>
+  </section>
+
+  <!-- ============ SLICERS ============ -->
+  <section id="slicers">
+    <div class="kicker">Dashboard-Ready Filtering</div>
+    <h2 class="h"><span class="rowno">06</span> Interactive slicers</h2>
+    <div class="biz"><div class="btitle">Business problem</div><p>Your pivot table showing Revenue by City is complete. Your manager says: "I want to click and see only the West region. Then switch to South without touching any formulas." How do you add that interactivity?</p></div>
+    <div class="disc"><div class="dtitle">Class discussion</div>
+      <p><b>Instructor:</b> We've used the Filter zone in our Pivot Table. Isn't that enough?</p>
+      <p><b>Learner:</b> The Filter zone requires opening the editor — not very user-friendly for non-technical people.</p>
+      <p><b>Instructor:</b> Exactly. A Slicer is a floating visual button panel that anyone can click. No editor needed. Perfect for dashboards.</p>
+    </div>
+    <p class="lede">A Slicer shows every value of a chosen column as clickable buttons. Clicking one filters the entire Pivot Table — and every chart connected to it — instantly. This filter is <b>global</b>: it drives the City pivot above, the aggregation playground, and the Mini Dashboard below all at once.</p>
+    <div class="card">
+      <div class="pg-hint" style="margin:0 0 10px;">Slicer field: <b>Region</b></div>
+      <div class="btnrow" id="regionSlicer"></div>
+    </div>
+    <div class="grid2" style="margin-top:16px;">
+      <div class="helper-table" style="border:1px solid var(--grid); border-radius:6px; padding:2px;">
+        <table class="helper-table"><thead><tr><th colspan="2">Slicer vs. Filter vs. Pivot Filter</th></tr></thead>
+        <tbody>
+          <tr><td><code>Filter</code> (Data menu)</td><td>Filters rows in the raw data. Affects the whole sheet.</td></tr>
+          <tr><td><code>Pivot Filter zone</code></td><td>Filters inside one specific pivot. Requires editor access.</td></tr>
+          <tr><td><code>Slicer</code></td><td>Visual button filter. Works on any pivot. Non-technical friendly.</td></tr>
+        </tbody></table>
+      </div>
+      <div class="impact red" style="margin-top:0;"><b>Always test every combination</b> before sharing a dashboard. Slicers that interact unexpectedly with <code class="mono">FILTER()</code> formulas can return empty results.</div>
+    </div>
+  </section>
+
+  <!-- ============ AI IN GSHEETS ============ -->
+  <section id="ai">
+    <div class="kicker">Working Faster</div>
+    <h2 class="h"><span class="rowno">07</span> AI in GSheets</h2>
+    <p class="lede">Everything built so far — the 4-column City pivot, the Revenue-per-Order calculated field, the % of total — can also be scaffolded with an AI assistant in seconds.</p>
+    <div class="ai-card">
+      <div class="atitle">Try this prompt</div>
+      <p>"I have a Google Sheets dataset with columns: Order ID, Order Date, Region, City, Sales, Quantity. I want to build a pivot table that shows Revenue, Order Count, and Average Order Value by City."</p>
+      <p style="margin-top:10px;">Or ask directly for the output: "Total revenue per region" · "Total Revenue, order count &amp; Average order value per city."</p>
+    </div>
+    <div class="impact red" style="margin-top:16px;"><b>AI does not replace understanding — it accelerates it.</b> You need to know what Rows/Columns/Values mean to judge whether AI's output is correct. Learn the concept first, then use AI to go 10x faster.</div>
+  </section>
+
+  <!-- ============ MACROS ============ -->
+  <section id="macros">
+    <div class="kicker">Automation</div>
+    <h2 class="h"><span class="rowno">08</span> Macros — record once, replay forever</h2>
+    <div class="biz"><div class="btitle">Business problem</div><p>Every Monday morning you apply the same 5 steps to a new Superstore export: remove duplicates, trim whitespace, sort by Order Date, filter for the current year, format Sales as currency. This takes 8 minutes a week. Can it become one click?</p></div>
+    <p class="lede">A Macro is a recorded sequence of actions. GSheets saves what you do as JavaScript (Google Apps Script) behind the scenes — when you run the macro, it replays every step exactly as recorded.</p>
+    <div class="card">
+      <h4 style="margin:0 0 4px;">Recording "Weekly Cleanup"</h4>
+      <p style="font-size:13px; color:var(--ink-soft); margin:0;">Extensions → Macros → Record macro, then perform these steps in order. Press play to watch the replay.</p>
+      <ol class="macro-list" id="macroList">
+        <li class="macro-step"><span class="chk"></span> Select column A (Order ID) → Data → Remove duplicates</li>
+        <li class="macro-step"><span class="chk"></span> Select all text columns → Data → Trim whitespace</li>
+        <li class="macro-step"><span class="chk"></span> Click Sales header → Format → Number → Currency</li>
+        <li class="macro-step"><span class="chk"></span> Click any cell in row 1 → Data → Sort range → by Order Date, ascending</li>
+        <li class="macro-step"><span class="chk"></span> Save → name it "Weekly Cleanup" → assign Ctrl+Alt+1</li>
+      </ol>
+      <button class="play-btn" id="macroPlay">▶ Run macro</button>
+    </div>
+    <div class="impact" style="margin-top:16px;"><b>Macro vs. Formula:</b> a Formula calculates a value that updates when data changes (<code class="mono">=SUM(Sales)</code>). A Macro performs a sequence of UI actions (click, sort, format) you'd otherwise do by hand. Rule of thumb: if you're doing the same series of clicks more than twice a week, it's a Macro candidate.</div>
+    <div class="impact red"><b>Macros record UI interactions, not formulas.</b> If a formula recalculates, the macro won't re-run it — macros automate clicks, formatting, sorting, and filtering, not dynamic calculations.</div>
+  </section>
+
+  <!-- ============ MINI DASHBOARD ============ -->
+  <section id="dashboard">
+    <div class="kicker">Visual Storytelling</div>
+    <h2 class="h"><span class="rowno">09</span> Mini dashboard — the Data Studio equivalent</h2>
+    <div class="biz"><div class="btitle">Business problem</div><p>Your VP says: "I don't want to open a spreadsheet. I want a link that shows me Revenue by Region and the Revenue trend across years — updating automatically."</p></div>
+    <p class="lede">Data Studio connects live to a Google Sheet — every chart, scorecard, and filter reads the source directly, so when the sheet updates, the dashboard updates. Below is that same idea, built from your dataset and still respecting the Region slicer from Section 06.</p>
+    <table class="helper-table" style="margin-bottom:20px;">
+      <thead><tr><th>Google Sheets</th><th>Data Studio</th></tr></thead>
+      <tbody>
+        <tr><td>For analysts who build and calculate</td><td>For stakeholders who read and explore</td></tr>
+        <tr><td>Tables, formulas, pivot tables</td><td>Charts, scorecards, interactive filters</td></tr>
+        <tr><td>Shared via file link (can edit)</td><td>Shared via dashboard link (view only)</td></tr>
+        <tr><td>Updates when you manually refresh</td><td>Refreshes automatically from the live source</td></tr>
+      </tbody>
+    </table>
+
+    <div class="dash">
+      <div class="dash-title">Superstore Sales Dashboard</div>
+      <div class="kpi-row">
+        <div class="kpi-tile"><div class="klabel">Total Revenue</div><div class="kval" id="kpiRevenue">—</div></div>
+        <div class="kpi-tile"><div class="klabel">Order Count</div><div class="kval" id="kpiOrders">—</div></div>
+        <div class="kpi-tile"><div class="klabel">AOV</div><div class="kval" id="kpiAov">—</div></div>
+      </div>
+      <div class="grid2">
+        <div class="chart-box">
+          <h5>Revenue by Region</h5>
+          <div class="barchart region-colors" id="barRegion"></div>
+          <div class="barlabels" id="barRegionLabels"></div>
+        </div>
+        <div class="chart-box">
+          <h5>Revenue by Year</h5>
+          <div class="barchart" id="barYear"></div>
+          <div class="barlabels" id="barYearLabels"></div>
+        </div>
+      </div>
+      <p class="pg-hint" style="text-align:center; margin-top:14px;">Filtered by the Region slicer above · <span id="dashFilterState">All regions</span></p>
+    </div>
+
+    <div class="impact green" style="margin-top:16px;">
+      <b>What makes a good dashboard:</b> start with KPI scorecards for the headline number · use one consistent accent colour per series · title every chart clearly ("Revenue by Region", not "Chart 1") · add at least one interactive filter · 3 great charts beat 10 confusing ones · always label your axes.
+    </div>
+    <div class="impact red"><b>Data Studio connects to the live sheet, not a snapshot.</b> If someone edits the wrong cell, the dashboard changes too — always protect the source data range (Data → Protected sheets and ranges) before sharing.</div>
+  </section>
+
+  <!-- ============ REFERENCE ============ -->
+  <section id="reference">
+    <div class="kicker">Reference</div>
+    <h2 class="h"><span class="rowno">10</span> Concept cheat sheet</h2>
+    <table class="helper-table">
+      <thead><tr><th>Concept</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>Pivot Tables</code></td><td>Rows, Columns, Values, Filters — the analyst's GROUP BY</td></tr>
+        <tr><td><code>Aggregations</code></td><td>SUM, COUNTA, AVERAGE and other ways to summarise Values</td></tr>
+        <tr><td><code>Grouping</code></td><td>Collapse dates to Year / Month instead of one row per date</td></tr>
+        <tr><td><code>Calculated Field</code></td><td>A custom metric built from field names, lives inside the pivot</td></tr>
+        <tr><td><code>Show As</code></td><td>% of grand / row / column total, instead of raw values</td></tr>
+        <tr><td><code>Slicer</code></td><td>Clickable visual filter panel, dashboard-ready</td></tr>
+        <tr><td><code>Macro</code></td><td>Record a sequence of UI actions, replay with one click</td></tr>
+        <tr><td><code>Data Studio</code></td><td>Live, shareable BI dashboard sourced from a GSheet</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section id="quiz">
+    <div class="kicker">Check Yourself</div>
+    <h2 class="h"><span class="rowno">11</span> Quick quiz</h2>
+
+    <div class="quiz" data-answer="C">
+      <div class="q-head">1. Which Pivot Table zone is responsible for showing summarised numeric values such as Total Revenue or Order Count?</div>
+      <button class="qopt" data-v="A">Rows</button>
+      <button class="qopt" data-v="B">Columns</button>
+      <button class="qopt" data-v="C">Values</button>
+      <button class="qopt" data-v="D">Filters</button>
+      <div class="qexplain">The Values zone is where numeric calculations such as SUM, COUNT, COUNTA, and AVERAGE are performed inside a Pivot Table. Example: Sales → SUM → Total Revenue; Order ID → COUNTA → Order Count.</div>
+    </div>
+
+    <div class="quiz" data-answer="A">
+      <div class="q-head">2. A recruiter asks: "Why are Pivot Tables preferred over multiple SUMIF formulas for reporting?" Which statement is MOST correct?</div>
+      <button class="qopt" data-v="A">Pivot Tables automatically group and summarize data dynamically</button>
+      <button class="qopt" data-v="B">Pivot Tables only work with numeric columns</button>
+      <button class="qopt" data-v="C">Pivot Tables permanently modify the original dataset</button>
+      <button class="qopt" data-v="D">Pivot Tables can only calculate SUM aggregations</button>
+      <div class="qexplain">Pivot Tables dynamically summarize large datasets without writing separate formulas for every category. If new categories or rows are added, the pivot can refresh automatically.</div>
+    </div>
+
+    <div class="quiz" data-answer="B">
+      <div class="q-head">3. Your Pivot Table shows one row for every individual Order Date, making the report difficult to analyze. What is the BEST solution?</div>
+      <button class="qopt" data-v="A">Delete duplicate dates</button>
+      <button class="qopt" data-v="B">Group the Order Date field by Year or Month</button>
+      <button class="qopt" data-v="C">Convert all dates to text format</button>
+      <button class="qopt" data-v="D">Use FILTER instead of Pivot Table</button>
+      <div class="qexplain">Pivot Tables allow built-in grouping for date fields. Grouping by Year or Month helps summarize trends over time instead of showing individual dates.</div>
+    </div>
+
+    <div class="quiz" data-answer="B">
+      <div class="q-head">4. Inside a Pivot Table, which feature should be used to calculate Revenue per Order = Sales ÷ Order Count?</div>
+      <button class="qopt" data-v="A">Conditional Formatting</button>
+      <button class="qopt" data-v="B">Calculated Field</button>
+      <button class="qopt" data-v="C">Data Validation</button>
+      <button class="qopt" data-v="D">Slicer</button>
+      <div class="qexplain">Calculated Fields allow you to create custom metrics directly inside the Pivot Table using source column names. Example: =Sales / COUNTA('Order ID')</div>
+    </div>
+  </section>
+
+  <!-- ============ RECAP ============ -->
+  <section id="recap" style="border-bottom:none;">
+    <div class="kicker">Lecture Recap</div>
+    <h2 class="h"><span class="rowno">12</span> What you built today</h2>
+    <table class="report-table">
+      <thead><tr><th>Concept</th><th>What we built</th></tr></thead>
+      <tbody>
+        <tr><td class="metric">Pivot Tables</td><td>Dynamic Revenue-by-Region table</td></tr>
+        <tr><td class="metric">Aggregations</td><td>Revenue, Orders, AOV in one pivot</td></tr>
+        <tr><td class="metric">% of Total</td><td>City revenue share %</td></tr>
+        <tr><td class="metric">Calculated Fields</td><td>Revenue per Order metric</td></tr>
+        <tr><td class="metric">Slicers</td><td>Region filter panel driving every chart</td></tr>
+        <tr><td class="metric">Macros</td><td>One-click Monday cleanup workflow</td></tr>
+        <tr><td class="metric">Data Studio</td><td>Revenue + Orders + Trend dashboard</td></tr>
+      </tbody>
+    </table>
+    <div class="impact green" style="margin-top:16px;"><b>Connecting today to what's next:</b> you now have the full GSheets analyst stack — Lecture 1 cleaned and structured raw data, Lecture 2 wrote logic with formulas, Lecture 3 combined data with lookups and arrays, and Lecture 4 summarised, automated, and visualised it.</div>
+  </section>
+
+  <footer>
+    <div class="next mono">Series complete → the full GSheets analyst stack, Lectures 1–4</div>
+  </footer>
+
+</div>
+
+<script>
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// =====================================================================
+// Hero typewriter
+// =====================================================================
+const formulas = ['Rows: City → Values: SUM(Sales)', 'Show As: % of Grand Total', 'Slicer: Region = West', '=Sales / COUNTA(\'Order ID\')'];
+let fIdx = 0, cIdx = 0, typingEl = document.getElementById('typedFormula');
+function typeLoop(){
+  const word = formulas[fIdx];
+  if(cIdx <= word.length){ typingEl.textContent = word.slice(0,cIdx); cIdx++; setTimeout(typeLoop,40); }
+  else { setTimeout(()=>{ cIdx=0; fIdx=(fIdx+1)%formulas.length; typeLoop(); }, 1500); }
+}
+typeLoop();
+
+// =====================================================================
+// Shared live dataset — reconstructed from the lecture's own City/Region/Year totals
+// =====================================================================
+let dataset = [
+  {id:'CA-2017-100231', date:'2017-03-12', region:'South', city:'Concord',        sales:15.55,  qty:1},
+  {id:'CA-2014-100455', date:'2014-05-02', region:'South', city:'Fort Lauderdale',sales:620.00, qty:3},
+  {id:'CA-2016-100678', date:'2016-08-19', region:'South', city:'Fort Lauderdale',sales:359.93, qty:2},
+  {id:'CA-2015-101122', date:'2015-01-22', region:'Central',city:'Fort Worth',    sales:96.77,  qty:2},
+  {id:'CA-2014-101340', date:'2014-11-11', region:'Central',city:'Fort Worth',    sales:96.76,  qty:1},
+  {id:'CA-2016-101877', date:'2016-11-08', region:'South', city:'Henderson',     sales:731.94, qty:3},
+  {id:'CA-2015-102091', date:'2015-07-04', region:'South', city:'High Point',    sales:14.34,  qty:1},
+  {id:'CA-2017-102355', date:'2017-02-14', region:'South', city:'High Point',    sales:14.34,  qty:1},
+  {id:'CA-2014-102590', date:'2014-06-09', region:'West',  city:'Los Angeles',   sales:402.50, qty:4},
+  {id:'CA-2014-102811', date:'2014-09-23', region:'West',  city:'Los Angeles',   sales:402.50, qty:5},
+  {id:'CA-2015-103044', date:'2015-02-17', region:'West',  city:'Los Angeles',   sales:402.50, qty:2},
+  {id:'CA-2015-103266', date:'2015-12-30', region:'West',  city:'Los Angeles',   sales:402.50, qty:6},
+  {id:'CA-2016-103501', date:'2016-04-05', region:'West',  city:'Los Angeles',   sales:402.49, qty:3},
+  {id:'CA-2016-103788', date:'2016-10-19', region:'West',  city:'Los Angeles',   sales:402.50, qty:1},
+  {id:'CA-2017-104012', date:'2017-01-09', region:'West',  city:'Los Angeles',   sales:402.50, qty:7},
+  {id:'CA-2014-104233', date:'2014-03-30', region:'Central',city:'Madison',      sales:615.58, qty:4},
+  {id:'CA-2015-104477', date:'2015-08-08', region:'East',  city:'New York City', sales:11.85,  qty:2},
+  {id:'CA-2016-104690', date:'2016-02-02', region:'East',  city:'New York City', sales:11.84,  qty:1},
+  {id:'CA-2017-104903', date:'2017-10-02', region:'South', city:'Unknown',       sales:2.52,   qty:1},
+];
+
+let activeRegion = null; // null = All
+let calcFieldOn = false;
+let pctOn = false;
+
+function filteredDataset(){
+  return activeRegion ? dataset.filter(r => r.region === activeRegion) : dataset;
+}
+
+// =====================================================================
+// Live editable dataset table
+// =====================================================================
+function renderLiveTable(){
+  const body = document.getElementById('liveTableBody');
+  body.innerHTML = dataset.map((row, i) => `<tr data-idx="${i}">
+      <td contenteditable="true" data-field="id">${escapeHtml(row.id)}</td>
+      <td contenteditable="true" data-field="date">${escapeHtml(row.date)}</td>
+      <td contenteditable="true" data-field="region">${escapeHtml(row.region)}</td>
+      <td contenteditable="true" data-field="city">${escapeHtml(row.city)}</td>
+      <td contenteditable="true" data-field="sales">${row.sales}</td>
+      <td contenteditable="true" data-field="qty">${row.qty}</td>
+    </tr>`).join('');
+
+  body.querySelectorAll('td[contenteditable]').forEach(td => {
+    td.addEventListener('blur', onCellEdit);
+    td.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); td.blur(); } });
+  });
+  refreshAll();
+}
+
+function onCellEdit(e){
+  const td = e.target;
+  const tr = td.closest('tr');
+  const idx = parseInt(tr.dataset.idx, 10);
+  const field = td.dataset.field;
+  let val = td.textContent.trim();
+  if(field === 'sales' || field === 'qty'){
+    const num = parseFloat(val.replace(/[^0-9.\-]/g,''));
+    val = isNaN(num) ? 0 : num;
+  }
+  dataset[idx][field] = val;
+  renderLiveTable();
+}
+
+document.getElementById('addRowBtn').addEventListener('click', () => {
+  dataset.push({id:'CA-NEW-'+(dataset.length+1), date:'2017-01-01', region:'West', city:'Los Angeles', sales:100, qty:1});
+  renderLiveTable();
+});
+
+// =====================================================================
+// Region pivot (Section 01)
+// =====================================================================
+function renderRegionPivot(){
+  const rows = filteredDataset();
+  const regions = [...new Set(dataset.map(r=>r.region))];
+  const body = document.getElementById('regionPivotBody');
+  let grand = 0;
+  let html = '';
+  regions.forEach(reg => {
+    const sum = rows.filter(r=>r.region===reg).reduce((a,r)=>a+r.sales,0);
+    grand += sum;
+    html += `<tr><td>${reg}</td><td class="mono">${sum.toFixed(2)}</td></tr>`;
+  });
+  html += `<tr style="font-weight:700; background:var(--paper-dim);"><td>Grand Total</td><td class="mono">${grand.toFixed(2)}</td></tr>`;
+  body.innerHTML = html;
+}
+
+// =====================================================================
+// City pivot (Section 02) — Revenue / Order Count / Avg + optional calc field + % toggle
+// =====================================================================
+function renderCityPivot(){
+  const rows = filteredDataset();
+  const cities = [...new Set(dataset.map(r=>r.city))];
+  let head = '<tr><th>City</th><th>Total Revenue</th><th>Order Count</th><th>Avg Sale Value</th>';
+  if(calcFieldOn) head += '<th>Revenue per Order</th>';
+  if(pctOn) head += '<th>% of Revenue</th>';
+  head += '</tr>';
+  document.getElementById('cityPivotHead').innerHTML = head;
+
+  let grandRevenue = 0, grandCount = 0;
+  const cityRows = cities.map(city => {
+    const matching = rows.filter(r=>r.city===city);
+    const revenue = matching.reduce((a,r)=>a+r.sales,0);
+    const count = matching.length;
+    grandRevenue += revenue; grandCount += count;
+    return {city, revenue, count};
+  }).filter(c => c.count > 0);
+
+  const body = document.getElementById('cityPivotBody');
+  body.innerHTML = cityRows.map(c => {
+    const avg = c.count ? c.revenue / c.count : 0;
+    let row = `<tr><td>${escapeHtml(c.city)}</td><td class="mono">${c.revenue.toFixed(2)}</td><td class="mono">${c.count}</td><td class="mono">${avg.toFixed(2)}</td>`;
+    if(calcFieldOn) row += `<td class="mono">${avg.toFixed(2)}</td>`;
+    if(pctOn) row += `<td class="mono">${grandRevenue ? (c.revenue/grandRevenue*100).toFixed(2) : '0.00'}%</td>`;
+    row += '</tr>';
+    return row;
+  }).join('');
+
+  let foot = `<tr style="font-weight:700; background:var(--paper-dim);"><td>Grand Total</td><td class="mono">${grandRevenue.toFixed(2)}</td><td class="mono">${grandCount}</td><td class="mono">${grandCount ? (grandRevenue/grandCount).toFixed(2) : '0.00'}</td>`;
+  if(calcFieldOn) foot += `<td class="mono">${grandCount ? (grandRevenue/grandCount).toFixed(2) : '0.00'}</td>`;
+  if(pctOn) foot += `<td class="mono">100.00%</td>`;
+  foot += '</tr>';
+  document.getElementById('cityPivotFoot').innerHTML = foot;
+}
+document.getElementById('toggleCalc').addEventListener('click', function(){
+  calcFieldOn = !calcFieldOn;
+  this.classList.toggle('active', calcFieldOn);
+  renderCityPivot();
+});
+document.getElementById('togglePct').addEventListener('click', function(){
+  pctOn = !pctOn;
+  this.classList.toggle('active', pctOn);
+  renderCityPivot();
+});
+
+// =====================================================================
+// Year grouping (Section 03)
+// =====================================================================
+function renderYearPivot(){
+  const rows = filteredDataset();
+  const years = [...new Set(dataset.map(r=>r.date.slice(0,4)))].sort();
+  const body = document.getElementById('yearPivotBody');
+  let grand = 0;
+  let html = '';
+  years.forEach(y => {
+    const sum = rows.filter(r=>r.date.slice(0,4)===y).reduce((a,r)=>a+r.sales,0);
+    grand += sum;
+    html += `<tr><td>${y}</td><td class="mono">${sum.toFixed(2)}</td></tr>`;
+  });
+  html += `<tr style="font-weight:700; background:var(--paper-dim);"><td>Grand Total</td><td class="mono">${grand.toFixed(2)}</td></tr>`;
+  body.innerHTML = html;
+}
+
+// =====================================================================
+// Aggregation playground (Section 02)
+// =====================================================================
+function renderAgg(){
+  const rows = filteredDataset();
+  const sales = rows.map(r => r.sales);
+  const ids = rows.map(r => r.id);
+  const sum = sales.reduce((a,b)=>a+b,0);
+  const max = sales.length ? Math.max(...sales) : 0;
+  const min = sales.length ? Math.min(...sales) : 0;
+  const avg = sales.length ? sum / sales.length : 0;
+  const out = document.getElementById('aggOut');
+  const cells = [
+    ['=SUM(Sales)', sum.toFixed(2)],
+    ['=COUNT(Sales)', sales.length],
+    ['=COUNTA(OrderID)', ids.length],
+    ['=MAX(Sales)', max.toFixed(2)],
+    ['=MIN(Sales)', min.toFixed(2)],
+    ['=AVERAGE(Sales)', avg.toFixed(2)],
+  ];
+  out.innerHTML = cells.map(([f,v]) => `<div class="agg-cell"><span class="fname">${f}</span><span class="fresult">${v}</span></div>`).join('');
+}
+
+// =====================================================================
+// Region slicer (Section 06) — global filter
+// =====================================================================
+function renderSlicer(){
+  const regions = [...new Set(dataset.map(r=>r.region))];
+  const wrap = document.getElementById('regionSlicer');
+  let html = `<button class="pill-btn region-btn ${activeRegion===null?'active':''}" data-region="">All Regions</button>`;
+  html += regions.map(r => `<button class="pill-btn region-btn ${activeRegion===r?'active':''}" data-region="${escapeHtml(r)}">${escapeHtml(r)}</button>`).join('');
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.region-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeRegion = btn.dataset.region || null;
+      refreshAll();
+    });
+  });
+}
+
+// =====================================================================
+// Mini dashboard (Section 09)
+// =====================================================================
+function renderDashboard(){
+  const rows = filteredDataset();
+  const revenue = rows.reduce((a,r)=>a+r.sales,0);
+  const count = rows.length;
+  const aov = count ? revenue / count : 0;
+  document.getElementById('kpiRevenue').textContent = '₹' + revenue.toFixed(0);
+  document.getElementById('kpiOrders').textContent = count;
+  document.getElementById('kpiAov').textContent = '₹' + aov.toFixed(2);
+  document.getElementById('dashFilterState').textContent = activeRegion ? activeRegion + ' only' : 'All regions';
+
+  // bar: revenue by region (always shows full region set, highlights filter)
+  const allRegions = [...new Set(dataset.map(r=>r.region))];
+  const regionSums = allRegions.map(reg => rows.filter(r=>r.region===reg).reduce((a,r)=>a+r.sales,0));
+  const maxRegion = Math.max(...regionSums, 1);
+  document.getElementById('barRegion').innerHTML = regionSums.map(v =>
+    `<div class="bar" style="height:${Math.max((v/maxRegion*100),2)}%"><span class="bv">${v.toFixed(0)}</span></div>`).join('');
+  document.getElementById('barRegionLabels').innerHTML = allRegions.map(r => `<span>${escapeHtml(r)}</span>`).join('');
+
+  // bar: revenue by year
+  const years = [...new Set(dataset.map(r=>r.date.slice(0,4)))].sort();
+  const yearSums = years.map(y => rows.filter(r=>r.date.slice(0,4)===y).reduce((a,r)=>a+r.sales,0));
+  const maxYear = Math.max(...yearSums, 1);
+  document.getElementById('barYear').innerHTML = yearSums.map(v =>
+    `<div class="bar" style="height:${Math.max((v/maxYear*100),2)}%; background:var(--sheet-green);"><span class="bv">${v.toFixed(0)}</span></div>`).join('');
+  document.getElementById('barYearLabels').innerHTML = years.map(y => `<span>${y}</span>`).join('');
+}
+
+// =====================================================================
+// Macro playback (Section 08)
+// =====================================================================
+document.getElementById('macroPlay').addEventListener('click', function(){
+  const btn = this;
+  btn.disabled = true;
+  const steps = document.querySelectorAll('#macroList .macro-step');
+  steps.forEach(s => s.classList.remove('done'));
+  let i = 0;
+  const tick = () => {
+    if(i < steps.length){
+      steps[i].classList.add('done');
+      i++;
+      setTimeout(tick, 450);
+    } else {
+      btn.disabled = false;
+    }
+  };
+  tick();
+});
+
+// =====================================================================
+// Master refresh
+// =====================================================================
+function refreshAll(){
+  renderSlicer();
+  renderRegionPivot();
+  renderCityPivot();
+  renderYearPivot();
+  renderAgg();
+  renderDashboard();
+}
+
+renderLiveTable();
+
+// =====================================================================
+// Quiz
+// =====================================================================
+document.querySelectorAll('.quiz').forEach(quiz=>{
+  const answer = quiz.dataset.answer;
+  const opts = quiz.querySelectorAll('.qopt');
+  const explain = quiz.querySelector('.qexplain');
+  opts.forEach(opt=>{
+    opt.addEventListener('click', ()=>{
+      if(quiz.dataset.answered) return;
+      quiz.dataset.answered = 'true';
+      opts.forEach(o=>{
+        if(o.dataset.v === answer) o.classList.add('correct');
+        else if(o === opt) o.classList.add('wrong');
+      });
+      explain.classList.add('show');
+    });
+  });
+});
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Excel-4-postread" target="_blank" rel="noopener">github.com/scaler-content/Excel-4-postread</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Trees — Lecture Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --g-deep:       #143A1A;
+    --g-mid:        #2A6830;
+    --g-soft:       #4A9050;
+    --g-pale:       #88C890;
+    --g-mist:       #C8EAC8;
+    --mint:         #F2FAF2;
+    --mint-mid:     #E0F4E0;
+    --forest:       #3A7A40;
+    --leaf:         #A8DCA8;
+    --charcoal:     #0E1A10;
+    --text-body:    #182A1A;
+    --text-muted:   #507858;
+    --white:        #FFFFFF;
+    --sidebar-w:    280px;
+    --red:          #C04040;
+    --red-dim:      #FDEEF0;
+    --red-brd:      #F0B8B8;
+    --amber:        #906820;
+    --amber-dim:    #FDF6E8;
+    --amber-brd:    #E8D098;
+    --blue:         #206090;
+    --blue-dim:     #EEF3FB;
+    --blue-brd:     #A0C0E0;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--mint);
+    color: var(--text-body);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--g-deep);
+    position: fixed; top: 0; left: 0;
+    height: 100vh; overflow-y: auto;
+    z-index: 100; display: flex; flex-direction: column;
+    transition: transform .3s ease;
+  }
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--g-soft); border-radius: 4px; }
+
+  .sidebar-header {
+    padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,.08);
+    position: sticky; top: 0; background: var(--g-deep); z-index: 1;
+  }
+  .sidebar-header .course-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--g-pale); font-weight: 600; margin-bottom: 6px; }
+  .sidebar-header h1 { font-family: 'Lora', serif; font-size: 15px; color: var(--white); font-weight: 600; line-height: 1.4; }
+
+  .progress-bar-wrap { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .progress-label { font-size: 11px; color: var(--g-pale); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .progress-track { height: 4px; background: rgba(255,255,255,.1); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--g-pale), var(--leaf)); border-radius: 2px; transition: width .4s ease; width: 0%; }
+
+  .nav-list { list-style: none; padding: 12px 0 80px; }
+  .nav-item a {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 20px; text-decoration: none;
+    color: rgba(255,255,255,.55); font-size: 12.5px; line-height: 1.4;
+    transition: all .2s; border-left: 2px solid transparent;
+  }
+  .nav-item a:hover { color: var(--white); background: rgba(255,255,255,.05); }
+  .nav-item.active a { color: var(--leaf); border-left-color: var(--forest); background: rgba(255,255,255,.07); font-weight: 500; }
+  .nav-dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; flex-shrink: 0; margin-top: 5px; transition: background .3s; }
+  .nav-item.visited .nav-dot { background: var(--leaf); border-color: var(--leaf); }
+  .nav-item .nav-type { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--g-pale); margin-top: 2px; opacity: .7; }
+
+  /* ── MAIN ────────────────────────────────────────── */
+  #main { margin-left: var(--sidebar-w); flex: 1; max-width: 860px; padding: 48px 52px 120px; }
+
+  /* ── CARDS ───────────────────────────────────────── */
+  .section-card {
+    background: var(--white); border-radius: 12px;
+    border: 1px solid var(--g-mist); margin-bottom: 34px;
+    overflow: hidden; scroll-margin-top: 32px;
+    box-shadow: 0 2px 10px rgba(20,58,26,.06); transition: box-shadow .2s;
+  }
+  .section-card:hover { box-shadow: 0 4px 22px rgba(20,58,26,.10); }
+
+  .card-header {
+    padding: 22px 28px 18px; border-bottom: 1px solid var(--mint-mid);
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .card-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--g-mist); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+  .card-meta { flex: 1; }
+  .card-type { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--g-soft); font-weight: 600; margin-bottom: 4px; }
+  .card-title { font-family: 'Lora', serif; font-size: 20px; font-weight: 700; color: var(--g-deep); line-height: 1.3; }
+  .card-duration { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+  .card-body { padding: 24px 28px 28px; }
+
+  /* ── TYPOGRAPHY ──────────────────────────────────── */
+  .card-body h2 { font-family: 'Lora', serif; font-size: 18px; color: var(--g-mid); margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1.5px solid var(--g-mist); }
+  .card-body h3 { font-family: 'Lora', serif; font-size: 15.5px; color: var(--g-deep); margin: 22px 0 10px; font-style: italic; }
+  .card-body h4 { font-family: 'Lora', serif; font-size: 14px; color: var(--g-mid); margin: 16px 0 8px; font-weight: 700; }
+  .card-body p { margin-bottom: 12px; font-size: 14.5px; }
+  .card-body ul, .card-body ol { margin: 8px 0 14px 20px; font-size: 14.5px; }
+  .card-body li { margin-bottom: 5px; }
+  .card-body strong { color: var(--g-deep); font-weight: 600; }
+  .card-body em { color: var(--g-soft); }
+
+  /* ── CALLOUTS ────────────────────────────────────── */
+  .callout-ask {
+    background: #F0FAF0; border-left: 3px solid var(--forest);
+    border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 15px 0;
+    font-size: 13.5px; color: var(--g-deep);
+  }
+  .callout-ask .callout-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--forest); margin-bottom: 4px; }
+  .callout-note {
+    background: #EAF6EA; border-left: 3px solid var(--g-soft);
+    border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 15px 0;
+    font-size: 13.5px; color: var(--g-deep);
+  }
+  .callout-note .callout-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--g-soft); margin-bottom: 4px; }
+  .callout-viz {
+    background: #F4FCF4; border: 1.5px dashed var(--g-pale);
+    border-radius: 10px; padding: 14px 18px; margin: 15px 0;
+    font-size: 13.5px; color: var(--g-deep);
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .callout-viz .viz-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .callout-viz .viz-body { flex: 1; }
+  .callout-viz .viz-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--g-soft); margin-bottom: 5px; }
+  .callout-viz a { color: var(--g-mid); font-weight: 600; word-break: break-all; }
+
+  /* ── TABLE ───────────────────────────────────────── */
+  .card-body table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 14px 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--g-mist); }
+  .card-body th { background: var(--g-mid); color: var(--white); padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12px; letter-spacing: .04em; }
+  .card-body td { padding: 9px 14px; border-top: 1px solid var(--mint-mid); font-size: 13px; }
+  .card-body tr:nth-child(even) td { background: var(--mint); }
+
+  /* ── CODE ────────────────────────────────────────── */
+  .card-body pre { background: var(--charcoal); color: #A8DCA8; border-radius: 8px; padding: 16px 18px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; overflow-x: auto; margin: 14px 0; line-height: 1.6; }
+  .card-body code { font-family: 'JetBrains Mono', monospace; background: var(--mint-mid); color: var(--g-mid); padding: 2px 6px; border-radius: 4px; font-size: 12.5px; }
+  .card-body pre code { background: none; color: inherit; padding: 0; }
+
+  .output-wrap { margin: -4px 0 14px; }
+  .output-label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--g-pale); font-weight: 600; margin-bottom: 5px; }
+  .output-block { background: #F4FCF4; border: 1px solid var(--g-mist); border-radius: 8px; padding: 12px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-body); line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+
+  /* ── EQUATION ────────────────────────────────────── */
+  .equation { background: var(--mint-mid); border: 1.5px solid var(--g-mist); border-radius: 8px; padding: 14px 20px; margin: 14px 0; text-align: center; font-family: 'Lora', serif; font-size: 16px; font-style: italic; color: var(--g-deep); letter-spacing: .02em; }
+
+  /* ── QUIZ ────────────────────────────────────────── */
+  .quiz-card .card-icon { background: #C8F0C8; }
+  .quiz-question { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; color: var(--g-deep); margin-bottom: 18px; line-height: 1.5; }
+  .quiz-options { list-style: none; margin: 0; }
+  .quiz-option { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border: 1.5px solid var(--g-mist); border-radius: 8px; margin-bottom: 9px; cursor: pointer; font-size: 14px; transition: all .2s; user-select: none; background: var(--white); }
+  .quiz-option:hover { border-color: var(--g-soft); background: var(--mint); }
+  .quiz-option.selected-correct { border-color: var(--g-soft); background: var(--mint-mid); color: var(--g-deep); }
+  .quiz-option.selected-wrong { border-color: var(--red); background: var(--red-dim); color: var(--red); }
+  .quiz-option.reveal-correct { border-color: var(--g-soft); background: var(--mint-mid); }
+  .quiz-circle { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--g-mist); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; transition: all .2s; }
+  .selected-correct .quiz-circle { border-color: var(--g-soft); background: var(--g-soft); color: #fff; }
+  .selected-wrong .quiz-circle { border-color: var(--red); background: var(--red); color: #fff; }
+  .reveal-correct .quiz-circle { border-color: var(--g-soft); background: var(--g-mist); }
+  .quiz-feedback { margin-top: 13px; padding: 11px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 500; display: none; }
+  .quiz-feedback.correct { background: var(--mint-mid); color: var(--g-deep); border: 1px solid var(--g-mist); display: block; }
+  .quiz-feedback.wrong { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-brd); display: block; }
+
+  /* ── ENTROPY / PURITY VIZ ────────────────────────── */
+  .jars-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 16px 0; }
+  .jar-card { border-radius: 9px; padding: 14px 12px; text-align: center; border: 1.5px solid var(--g-mist); }
+  .jar-card.impure { background: #FFF8E1; border-color: var(--amber-brd); }
+  .jar-card.pure-0 { background: #E8F5E9; border-color: var(--g-mist); }
+  .jar-card.pure-1 { background: #E8F5E9; border-color: var(--g-mist); }
+  .jar-card.mixed  { background: #FFF3E0; border-color: var(--amber-brd); }
+  .jar-icon { font-size: 26px; margin-bottom: 6px; }
+  .jar-label { font-family: 'Lora', serif; font-size: 13px; font-weight: 700; color: var(--g-deep); margin-bottom: 4px; }
+  .jar-entropy { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); }
+  .entropy-tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-top: 4px; }
+  .tag-max { background: #FFE0B2; color: #E65100; }
+  .tag-min { background: var(--mint-mid); color: var(--g-deep); }
+  .tag-mid { background: #FFF9C4; color: #827717; }
+
+  /* ── SPLIT COMPARISON ────────────────────────────── */
+  .split-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .split-option { border-radius: 9px; padding: 14px; border: 1.5px solid var(--g-mist); background: var(--mint); }
+  .split-option.preferred { border-color: var(--g-soft); background: var(--mint-mid); }
+  .split-option.not-preferred { border-color: var(--amber-brd); background: var(--amber-dim); }
+  .split-badge { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 5px; }
+  .badge-good { color: var(--g-soft); }
+  .badge-bad { color: var(--amber); }
+  .split-option h4 { font-family: 'Lora', serif; font-size: 13.5px; color: var(--g-deep); margin-bottom: 5px; }
+  .split-option p { font-size: 12.5px; color: var(--text-muted); margin: 0; }
+
+  /* ── IG CALCULATION FLOW ─────────────────────────── */
+  .ig-flow { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
+  .ig-step { display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; border-bottom: 1px dashed var(--g-mist); }
+  .ig-step:last-child { border-bottom: none; }
+  .ig-num { width: 30px; height: 30px; border-radius: 50%; background: var(--g-mid); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ig-content h4 { font-family: 'Lora', serif; font-size: 13.5px; font-weight: 700; color: var(--g-deep); margin-bottom: 3px; }
+  .ig-content p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  /* ── HP TABLE ────────────────────────────────────── */
+  .hp-table td:first-child { font-family: 'JetBrains Mono', monospace; color: var(--g-mid); font-weight: 600; }
+  .depth-row-over td { background: var(--red-dim) !important; }
+  .depth-row-good td { background: var(--mint-mid) !important; }
+  .depth-row-under td { background: var(--amber-dim) !important; }
+
+  /* ── INTERVIEW Q GRID ────────────────────────────── */
+  .iq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+  .iq-card { background: var(--mint); border: 1px solid var(--g-mist); border-radius: 9px; padding: 14px; transition: border-color .2s; }
+  .iq-card:hover { border-color: var(--g-soft); }
+  .iq-card .iq-q { font-family: 'Lora', serif; font-size: 13px; font-style: italic; color: var(--g-deep); margin-bottom: 6px; font-weight: 600; }
+  .iq-card .iq-a { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+  .iq-card .iq-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--g-soft); margin-bottom: 4px; }
+
+  /* ── COMPLEXITY PILLS ────────────────────────────── */
+  .complexity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
+  .cx-pill { background: var(--mint); border: 1.5px solid var(--g-mist); border-radius: 8px; padding: 12px; text-align: center; }
+  .cx-pill .cx-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; }
+  .cx-pill .cx-value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; color: var(--g-deep); }
+  .cx-pill .cx-note  { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+  /* ── SUMMARY GRID ────────────────────────────────── */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .summary-item { background: var(--mint); border: 1px solid var(--g-mist); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--g-deep); display: flex; align-items: flex-start; gap: 8px; }
+  .summary-item::before { content: '▸'; color: var(--g-soft); font-size: 11px; margin-top: 2px; flex-shrink: 0; }
+
+  /* ── HAMBURGER ───────────────────────────────────── */
+  #hamburger { display: none; position: fixed; top: 16px; left: 16px; z-index: 200; background: var(--g-deep); border: none; border-radius: 8px; padding: 8px 10px; cursor: pointer; flex-direction: column; gap: 5px; }
+  #hamburger span { display: block; width: 20px; height: 2px; background: #fff; border-radius: 1px; }
+  #overlay { display: none; }
+
+  @media (max-width: 768px) {
+    #hamburger { display: flex; }
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; padding: 24px 18px 80px; max-width: 100%; }
+    #overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; opacity: 0; pointer-events: none; transition: opacity .3s; }
+    #overlay.active { opacity: 1; pointer-events: all; }
+    .jars-grid { grid-template-columns: 1fr 1fr; }
+    .split-compare, .iq-grid, .summary-grid { grid-template-columns: 1fr; }
+    .complexity-grid { grid-template-columns: 1fr; }
+    .card-body { padding: 18px 18px 22px; }
+    .card-header { padding: 18px 18px 14px; }
+  }
+
+  /* ── BACK TO TOP ─────────────────────────────────── */
+  #back-top { position: fixed; bottom: 32px; right: 32px; background: var(--g-mid); color: #fff; border: none; border-radius: 50%; width: 44px; height: 44px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(20,58,26,.3); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 50; }
+  #back-top.visible { opacity: 1; pointer-events: all; }
+  #back-top:hover { background: var(--g-deep); }
+
+  .card-body a { color: var(--g-soft); text-decoration: underline; text-underline-offset: 3px; }
+  .card-body a:hover { color: var(--g-deep); }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations 9 · Decision trees</span><span class="pn"><a href="../naive-bayes/" title="Naive Bayes · Spam detection from word counts">← Prev</a><a href="../Ensembles/" title="ML Foundations · Ensemble learning">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><button id="hamburger" aria-label="Open menu" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</button>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="course-label">ML Foundations · Lecture 9</div>
+    <h1>Decision Trees</h1>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-label"><span>Progress</span><span id="progress-pct">0%</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item" data-target="s-recap"><a href="#s-recap"><span class="nav-dot"></span><span><div>Recap</div><div class="nav-type">Review</div></span></a></li>
+    <li class="nav-item" data-target="s-usecase"><a href="#s-usecase"><span class="nav-dot"></span><span><div>Use Case: Employee Attrition</div><div class="nav-type">Business Context</div></span></a></li>
+    <li class="nav-item" data-target="s-dataset"><a href="#s-dataset"><span class="nav-dot"></span><span><div>Dataset</div><div class="nav-type">Data</div></span></a></li>
+    <li class="nav-item" data-target="s-intuition"><a href="#s-intuition"><span class="nav-dot"></span><span><div>DT Intuition & Splits</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-purity"><a href="#s-purity"><span class="nav-dot"></span><span><div>Node Purity & Splits</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-entropy"><a href="#s-entropy"><span class="nav-dot"></span><span><div>Entropy</div><div class="nav-type">Math</div></span></a></li>
+    <li class="nav-item" data-target="q1"><a href="#q1"><span class="nav-dot"></span><span><div>Quiz 1 — Min Entropy</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="q2"><a href="#q2"><span class="nav-dot"></span><span><div>Quiz 2 — Entropy & Purity</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="q3"><a href="#q3"><span class="nav-dot"></span><span><div>Quiz 3 — Max Entropy</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-ig"><a href="#s-ig"><span class="nav-dot"></span><span><div>Information Gain</div><div class="nav-type">Math</div></span></a></li>
+    <li class="nav-item" data-target="q4"><a href="#q4"><span class="nav-dot"></span><span><div>Quiz 4 — Information Gain</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-numerical"><a href="#s-numerical"><span class="nav-dot"></span><span><div>Splitting Numerical Features</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-gini"><a href="#s-gini"><span class="nav-dot"></span><span><div>Gini Impurity</div><div class="nav-type">Math</div></span></a></li>
+    <li class="nav-item" data-target="s-sklearn"><a href="#s-sklearn"><span class="nav-dot"></span><span><div>Sklearn Implementation</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-overfit"><a href="#s-overfit"><span class="nav-dot"></span><span><div>Overfit vs Underfit</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="q5"><a href="#q5"><span class="nav-dot"></span><span><div>Quiz 5 — Overfitting</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="q6"><a href="#q6"><span class="nav-dot"></span><span><div>Quiz 6 — Pruning</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-hyperparams"><a href="#s-hyperparams"><span class="nav-dot"></span><span><div>Hyperparameter Tuning</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-featimp"><a href="#s-featimp"><span class="nav-dot"></span><span><div>Feature Importance</div><div class="nav-type">Interpretation</div></span></a></li>
+    <li class="nav-item" data-target="s-interview"><a href="#s-interview"><span class="nav-dot"></span><span><div>Interview Questions</div><div class="nav-type">Reference</div></span></a></li>
+    <li class="nav-item" data-target="q7"><a href="#q7"><span class="nav-dot"></span><span><div>Quiz 7 — DT Regression</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-wrap"><a href="#s-wrap"><span class="nav-dot"></span><span><div>Wrap Up</div><div class="nav-type">Summary</div></span></a></li>
+  </ul>
+</nav>
+
+<main id="main">
+
+  <!-- RECAP -->
+  <section class="section-card" id="s-recap">
+    <div class="card-header">
+      <div class="card-icon">🔁</div>
+      <div class="card-meta">
+        <div class="card-type">Review</div>
+        <div class="card-title">Recap from Lecture 8</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Last session we extended KNN and tackled imbalanced data:</p>
+      <ul>
+        <li>KNN for multiclass — same majority vote, no modifications needed</li>
+        <li>Outliers and KNN: larger K is more robust, small K memorizes noise</li>
+        <li>KNN-based imputation: find K similar rows, average their missing-column values</li>
+        <li>Imbalanced data — Weighted Loss, Undersampling, Oversampling, SMOTE</li>
+        <li>Decision Tree intuition: axis-parallel splits → interpretable if/else rules</li>
+      </ul>
+      <div class="callout-note">
+        <div class="callout-label">📌 Why Move Beyond KNN?</div>
+        KNN requires comparing every new point against the entire training set at inference time — O(n·d). For large-scale production systems, that's prohibitively slow. Decision Trees <em>learn</em> the split rules during training and apply them in O(depth) at prediction time.
+      </div>
+    </div>
+  </section>
+
+  <!-- USE CASE -->
+  <section class="section-card" id="s-usecase">
+    <div class="card-header">
+      <div class="card-icon">🏢</div>
+      <div class="card-meta">
+        <div class="card-type">Business Context</div>
+        <div class="card-title">Use Case: Employee Attrition at Jio</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>You are a Data Scientist at Jio. The company is losing employees at an alarming rate — employee <strong>attrition</strong> is costing significant resources:</p>
+      <ul>
+        <li>New hires demand higher salaries</li>
+        <li>Training new employees takes time and money</li>
+        <li>Searching for and evaluating candidates is expensive</li>
+      </ul>
+      <h3>Two Business Goals</h3>
+      <ol>
+        <li><strong>Predict</strong> which employees are likely to leave, so targeted retention efforts can be applied before they decide</li>
+        <li><strong>Identify key factors</strong> driving attrition — overtime? salary? manager relationships? — so the company can take structural action</li>
+      </ol>
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Why Not Rely on Assumptions?</div>
+        We might <em>assume</em> employees leave due to mandatory office days or toxic culture. But assumptions can be wrong. Data analysts rely on data — not intuition. Let's find the real drivers from the dataset.
+      </div>
+    </div>
+  </section>
+
+  <!-- DATASET -->
+  <section class="section-card" id="s-dataset">
+    <div class="card-header">
+      <div class="card-icon">📋</div>
+      <div class="card-meta">
+        <div class="card-type">Data</div>
+        <div class="card-title">HR Employee Attrition Dataset</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>1,470 employees × 35 features. Target variable: <code>Attrition</code> (Yes/No). No missing values.</p>
+      <table>
+        <tr><th>Feature</th><th>Type</th><th>Description</th></tr>
+        <tr><td>Age</td><td>Numerical</td><td>Employee age</td></tr>
+        <tr><td><strong>Attrition</strong></td><td>Categorical</td><td>🎯 Target — did the employee leave?</td></tr>
+        <tr><td>OverTime</td><td>Categorical</td><td>Works overtime (Yes/No)</td></tr>
+        <tr><td>MonthlyIncome</td><td>Numerical</td><td>Monthly pay</td></tr>
+        <tr><td>JobSatisfaction</td><td>Categorical</td><td>Rating 1–4</td></tr>
+        <tr><td>WorkLifeBalance</td><td>Categorical</td><td>Rating 1–4</td></tr>
+        <tr><td>YearsAtCompany</td><td>Numerical</td><td>Tenure in years</td></tr>
+        <tr><td>MaritalStatus</td><td>Categorical</td><td>Single / Married / Divorced</td></tr>
+        <tr><td>DistanceFromHome</td><td>Numerical</td><td>Distance to office (miles)</td></tr>
+      </table>
+      <p>After EDA and preprocessing (encoding, SMOTE for imbalance), the training set has 1,848 rows × 33 features and test set has 368 rows.</p>
+      <pre><code>import joblib
+X_train = joblib.load('preprocessed_X_sm.joblib')
+X_test  = joblib.load('X_test.joblib')
+y_train = joblib.load('y_sm.joblib')
+y_test  = joblib.load('y_test.joblib')
+
+print(X_train.shape)  # (1848, 33)
+print(X_test.shape)   # (368, 33)</code></pre>
+    </div>
+  </section>
+
+  <!-- INTUITION -->
+  <section class="section-card" id="s-intuition">
+    <div class="card-header">
+      <div class="card-icon">🌳</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Decision Tree Intuition & Axis-Parallel Splits</div>
+        <div class="card-duration">⏱ 6 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Consider attrition data plotted on two axes: <strong>Age</strong> and <strong>OverTime</strong>. The data is non-linearly separable — Logistic Regression can't handle it. KNN can, but can't be productionized at scale.</p>
+      <p>Instead, we ask a sequence of simple yes/no questions that slice the feature space with <strong>axis-parallel hyperplanes</strong>:</p>
+      <ul>
+        <li><em>Is Age &lt; 29?</em> → Left branch</li>
+        <li><em>Does the employee work Overtime ≥ 2.5 hrs?</em> → Further split</li>
+      </ul>
+      <p>Each split creates two <strong>homogeneous subregions</strong>, each containing mostly one class. These regions are then converted into if/else rules — the decision tree.</p>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🔗</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualization</div>
+          See DT splits form live on a scatter plot:<br>
+          <a href="https://mlu-explain.github.io/decision-tree/" target="_blank">MLU-Explain: Decision Tree →</a>
+        </div>
+      </div>
+
+      <h3>Why Decision Trees Are Interpretable</h3>
+      <p>Each path from root to leaf is a plain-English rule. Example conclusion from the attrition tree:</p>
+      <blockquote style="border-left:3px solid var(--g-soft); padding:10px 16px; margin:12px 0; background:var(--mint-mid); border-radius:0 8px 8px 0; font-family:'Lora',serif; font-style:italic; color:var(--g-deep); font-size:14px;">
+        "Employees younger than 29 who work overtime ≥ 2.5 hours are more likely to churn."
+      </blockquote>
+      <p>The HR team can directly act on this: incentivise overtime for young employees or reduce their workload.</p>
+
+      <h3>What Does the Tree Learn?</h3>
+      <p>Training a DT means <strong>automatically learning the best split conditions</strong> from data. To do this, we need a way to measure how good any given split is. That requires quantifying <em>node purity</em>.</p>
+    </div>
+  </section>
+
+  <!-- PURITY -->
+  <section class="section-card" id="s-purity">
+    <div class="card-header">
+      <div class="card-icon">💎</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Node Purity — Why It Matters</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>When a new data point reaches a leaf node, the Decision Tree predicts the <strong>majority class</strong> of that node. So prediction confidence equals the majority class fraction.</p>
+      <ul>
+        <li>Node with 90 negative, 10 positive → predicts Negative with 90% confidence</li>
+        <li>Node with 50 negative, 50 positive → predicts Negative with only 50% confidence (pure guessing)</li>
+      </ul>
+
+      <h3>Choosing the Better Split</h3>
+      <div class="split-compare">
+        <div class="split-option preferred">
+          <div class="split-badge badge-good">✅ Preferred</div>
+          <h4>Option 1 — More Homogeneous</h4>
+          <p>Each child node is dominated by a single class. The model predicts with high confidence.</p>
+        </div>
+        <div class="split-option not-preferred">
+          <div class="split-badge badge-bad">⚠️ Avoid</div>
+          <h4>Option 2 — Mixed Nodes</h4>
+          <p>Child nodes still have 60/40 splits. Model is only 60% confident — barely better than guessing.</p>
+        </div>
+      </div>
+      <p><strong>Objective:</strong> Always choose the split that creates the <em>purest</em> child nodes. We measure purity using <strong>Entropy</strong>.</p>
+    </div>
+  </section>
+
+  <!-- ENTROPY -->
+  <section class="section-card" id="s-entropy">
+    <div class="card-header">
+      <div class="card-icon">🌡️</div>
+      <div class="card-meta">
+        <div class="card-type">Math</div>
+        <div class="card-title">Entropy — Measuring Node Impurity</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p><strong>Entropy</strong> (borrowed from Information Theory) quantifies how <em>uncertain</em> or <em>heterogeneous</em> a node is. High entropy = mixed classes = low prediction confidence.</p>
+
+      <h3>Formula — Binary Classification</h3>
+      <div class="equation">H(Y) = −p · log₂(p) − (1−p) · log₂(1−p)</div>
+      <p>where p = P(Y = 1) = fraction of positive class samples in the node.</p>
+
+      <h3>The Jar Analogy</h3>
+      <p>Imagine 4 jars of red and blue balls. You must pick a ball and predict its colour:</p>
+      <div class="jars-grid">
+        <div class="jar-card impure">
+          <div class="jar-icon">🫙</div>
+          <div class="jar-label">Jar 1</div>
+          <div class="jar-entropy">50 red, 50 blue</div>
+          <span class="entropy-tag tag-max">Entropy = 1 (max)</span>
+        </div>
+        <div class="jar-card mixed">
+          <div class="jar-icon">🫙</div>
+          <div class="jar-label">Jar 2</div>
+          <div class="jar-entropy">70 red, 30 blue</div>
+          <span class="entropy-tag tag-mid">Entropy ≈ 0.88</span>
+        </div>
+        <div class="jar-card pure-0">
+          <div class="jar-icon">🫙</div>
+          <div class="jar-label">Jar 3</div>
+          <div class="jar-entropy">0 red, 100 blue</div>
+          <span class="entropy-tag tag-min">Entropy = 0 (min)</span>
+        </div>
+        <div class="jar-card pure-1">
+          <div class="jar-icon">🫙</div>
+          <div class="jar-label">Jar 4</div>
+          <div class="jar-entropy">100 red, 0 blue</div>
+          <span class="entropy-tag tag-min">Entropy = 0 (min)</span>
+        </div>
+      </div>
+      <p>Jars 3 and 4 are <em>pure</em> — you're 100% certain what you'll pick. Jar 1 is maximally uncertain. A DT tries to create nodes like Jars 3 and 4.</p>
+
+      <h3>Key Properties</h3>
+      <table>
+        <tr><th>When</th><th>Entropy Value</th><th>Meaning</th></tr>
+        <tr><td>p = 0 or p = 1 (pure node)</td><td><strong>0</strong></td><td>Perfectly homogeneous — maximum confidence</td></tr>
+        <tr><td>p = 0.5 (equal classes)</td><td><strong>1</strong></td><td>Maximum uncertainty — worst case for prediction</td></tr>
+        <tr><td>0 &lt; p &lt; 1</td><td>Between 0 and 1</td><td>Partial purity</td></tr>
+      </table>
+
+      <div class="callout-viz">
+        <div class="viz-icon">📈</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Entropy Plot</div>
+          Watch entropy change as the class ratio shifts:<br>
+          <a href="https://www.desmos.com/calculator/avaplvktso" target="_blank">Entropy Curve — Desmos →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 1 -->
+  <section class="section-card quiz-card" id="q1">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 1</div>
+        <div class="card-title">When Is Entropy Minimum?</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">In which of the following cases will the <strong>entropy be minimum</strong>?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>A node with all datapoints belonging to one class only.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>A node with datapoints belonging to both classes equally.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>A node with 100 datapoints where only one belongs to the positive class.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Entropy is independent of the proportion of datapoints.</li>
+      </ul>
+      <div class="quiz-feedback" id="q1-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        Entropy = 0 only when p = 0 or p = 1 — i.e., all points belong to a single class (pure node). Even one point from the other class raises entropy above 0.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 2 -->
+  <section class="section-card quiz-card" id="q2">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 2</div>
+        <div class="card-title">Entropy and Node Homogeneity</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Which of the following statements is <strong>true</strong>?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>More the entropy, more pure the node is.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Less the entropy, more impure the node is.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>More the entropy, more homogeneous the node is.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>Less the entropy, more homogeneous the node is.</li>
+      </ul>
+      <div class="quiz-feedback" id="q2-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        Entropy measures <em>impurity</em>. Lower entropy = less uncertainty = purer node = more homogeneous. A DT always tries to minimize entropy through its splits.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 3 -->
+  <section class="section-card quiz-card" id="q3">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 3</div>
+        <div class="card-title">Maximum Entropy for Binary Classification</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">At what probability value is the <strong>entropy maximum</strong> for a binary classification problem?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>0</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>0.5</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>0.33</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>1</li>
+      </ul>
+      <div class="quiz-feedback" id="q3-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        When p = 0.5, the two classes are perfectly balanced — maximum uncertainty about which class a new point belongs to. Entropy = 1 at this point. This is the hardest node to make a confident prediction from.
+      </div>
+    </div>
+  </section>
+
+  <!-- INFORMATION GAIN -->
+  <section class="section-card" id="s-ig">
+    <div class="card-header">
+      <div class="card-icon">📊</div>
+      <div class="card-meta">
+        <div class="card-type">Math</div>
+        <div class="card-title">Information Gain — Choosing the Best Split</div>
+        <div class="card-duration">⏱ 10 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>With 100 datapoints and 2 features (Gender, Age&lt;35), the root node has high entropy (≈ 0.97). We need to decide which feature to split on first.</p>
+
+      <h3>The Algorithm</h3>
+      <div class="ig-flow">
+        <div class="ig-step">
+          <div class="ig-num">1</div>
+          <div class="ig-content"><h4>Calculate parent entropy</h4><p>H(parent) — the current node's impurity before any split</p></div>
+        </div>
+        <div class="ig-step">
+          <div class="ig-num">2</div>
+          <div class="ig-content"><h4>Try splitting on each feature</h4><p>For each candidate feature, compute the resulting child nodes</p></div>
+        </div>
+        <div class="ig-step">
+          <div class="ig-num">3</div>
+          <div class="ig-content"><h4>Compute weighted child entropy</h4><p>Weight each child's entropy by the proportion of points it contains (not a simple average — larger children should count more)</p></div>
+        </div>
+        <div class="ig-step">
+          <div class="ig-num">4</div>
+          <div class="ig-content"><h4>Calculate Information Gain</h4><p>IG = H(parent) − Weighted H(children). Higher IG = better split.</p></div>
+        </div>
+        <div class="ig-step">
+          <div class="ig-num">5</div>
+          <div class="ig-content"><h4>Pick the feature with maximum IG</h4><p>This becomes the split criterion for the current node</p></div>
+        </div>
+      </div>
+
+      <div class="equation">IG = H(parent) − Σⱼ (nⱼ/n) × H(childⱼ)</div>
+
+      <h3>Worked Example</h3>
+      <table>
+        <tr><th>Feature</th><th>Parent Entropy</th><th>Weighted Child Entropy</th><th>Information Gain</th></tr>
+        <tr><td>Gender</td><td>0.97</td><td>0.88</td><td><strong>0.091</strong></td></tr>
+        <tr style="background:var(--mint-mid)"><td><strong>Age &lt; 35</strong></td><td>0.97</td><td>0.71</td><td><strong>0.257 ← pick this</strong></td></tr>
+      </table>
+      <p>Age&lt;35 has higher IG → it becomes the root split. The tree then recursively repeats this process on each child node until leaves are sufficiently pure (or stopping criteria are met).</p>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          Watch Information Gain calculated step-by-step:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/information-gain-calculation-step-by-step/" target="_blank">Information Gain — Step-by-Step Calculator →</a>
+        </div>
+      </div>
+
+      <h3>Handling More Than 2 Categories</h3>
+      <p>If a categorical feature has 3+ categories (e.g., MaritalStatus: Single, Married, Divorced), the DT simply creates one child node per category — no special treatment needed.</p>
+    </div>
+  </section>
+
+  <!-- QUIZ 4 -->
+  <section class="section-card quiz-card" id="q4">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 4</div>
+        <div class="card-title">Information Gain — Which Statement Is False?</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Which of the following statements about <strong>Information Gain</strong> is <strong>false</strong>?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Information Gain is defined as the reduction in entropy.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>We want to maximize Information Gain.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>It is calculated by subtracting the weighted child entropy from the parent entropy.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>It is calculated by subtracting the parent entropy from the weighted child entropy.</li>
+      </ul>
+      <div class="quiz-feedback" id="q4-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        IG = Parent entropy − Weighted child entropy (not the other way around). This gives a positive number when splitting reduces entropy, which we want to maximize.
+      </div>
+    </div>
+  </section>
+
+  <!-- NUMERICAL FEATURES -->
+  <section class="section-card" id="s-numerical">
+    <div class="card-header">
+      <div class="card-icon">🔢</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Splitting on Numerical Features</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>For categorical features, the DT splits on each distinct category. For numerical features (like Age, MonthlyIncome), it uses a <strong>threshold-based approach</strong>:</p>
+      <ol>
+        <li>Sort the feature values in ascending order: n₁ ≤ n₂ ≤ … ≤ nₙ</li>
+        <li>Try each value as a threshold: <code>f &lt; nᵢ</code> vs <code>f ≥ nᵢ</code></li>
+        <li>Compute IG for each possible threshold</li>
+        <li>Pick the threshold that maximizes IG</li>
+      </ol>
+      <div class="callout-ask">
+        <div class="callout-label">⚠️ Time Complexity Problem</div>
+        For a feature with 1,000 unique values, this requires computing 1,000 different IGs at every node — very expensive. Solution: <strong>bin the values first</strong> (e.g., Age → [20,30), [30,40), [40,50), [50,60]) to reduce the number of thresholds to evaluate.
+      </div>
+    </div>
+  </section>
+
+  <!-- GINI -->
+  <section class="section-card" id="s-gini">
+    <div class="card-header">
+      <div class="card-icon">⚡</div>
+      <div class="card-meta">
+        <div class="card-type">Math</div>
+        <div class="card-title">Gini Impurity — A Faster Alternative</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Entropy requires computing <code>log</code> at every node for every feature — computationally expensive. <strong>Gini Impurity</strong> is a faster approximation:</p>
+      <div class="equation">Gini(Y) = 1 − Σ p(yᵢ)²</div>
+      <p>For binary classification: <code>Gini = 1 − p² − (1−p)²</code></p>
+      <h3>IG Using Gini</h3>
+      <div class="equation">IG = Gini(parent) − Σⱼ (nⱼ/n) × Gini(childⱼ)</div>
+      <table>
+        <tr><th>Property</th><th>Entropy</th><th>Gini Impurity</th></tr>
+        <tr><td>Range</td><td>[0, 1]</td><td>[0, 0.5]</td></tr>
+        <tr><td>Computation</td><td>Requires log — slower</td><td>No log — faster</td></tr>
+        <tr><td>Sklearn default</td><td>Opt-in (criterion='entropy')</td><td>✅ Default (criterion='gini')</td></tr>
+        <tr><td>Results</td><td colspan="2">Usually very similar in practice</td></tr>
+      </table>
+      <div class="callout-viz">
+        <div class="viz-icon">📈</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Plot</div>
+          Compare Gini vs Entropy curves as p varies:<br>
+          <a href="https://www.desmos.com/calculator/yhcwubphxs" target="_blank">Gini Impurity Curve — Desmos →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SKLEARN -->
+  <section class="section-card" id="s-sklearn">
+    <div class="card-header">
+      <div class="card-icon">💻</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Sklearn Implementation</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Train a Default DT (No Depth Limit)</h3>
+      <pre><code>from sklearn.tree import DecisionTreeClassifier
+
+model = DecisionTreeClassifier(criterion='entropy')
+model.fit(X_train, y_train)
+
+print("Test accuracy: ", model.score(X_test, y_test))
+print("Train accuracy:", model.score(X_train, y_train))</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Test accuracy:  0.7527
+Train accuracy: 1.0000</div>
+      </div>
+      <div class="callout-ask">
+        <div class="callout-label">🚨 Classic Overfitting Signal</div>
+        Train accuracy = 100%, Test accuracy = 75%. The model has memorized every single training point. It needs regularization via depth control.
+      </div>
+
+      <h3>Visualize the Tree</h3>
+      <pre><code>from sklearn.tree import plot_tree
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(14, 14))
+plot_tree(model, filled=True)
+plt.show()</code></pre>
+      <p>An unconstrained tree with entropy criterion can grow very deep — sometimes 20+ levels — creating a highly complex structure that overfits the training data.</p>
+    </div>
+  </section>
+
+  <!-- OVERFIT / UNDERFIT -->
+  <section class="section-card" id="s-overfit">
+    <div class="card-header">
+      <div class="card-icon">⚖️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Overfit vs Underfit in Decision Trees</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Why Does Deep = Overfit?</h3>
+      <p>As the tree grows deeper, each leaf receives fewer data points. Eventually, leaves may contain only 1–2 points — which could be <em>outliers or noise</em>. The tree memorizes them as genuine patterns.</p>
+      <ul>
+        <li><strong>Deep tree:</strong> pure leaves → 100% train accuracy → memorizes noise → high variance → <em>overfits</em></li>
+        <li><strong>Shallow tree (Decision Stump, depth=1):</strong> one split → too few boundaries → high bias → <em>underfits</em></li>
+        <li><strong>Right depth:</strong> balanced bias-variance → generalizes well</li>
+      </ul>
+
+      <table>
+        <tr><th>Tree Type</th><th>Train Accuracy</th><th>Test Accuracy</th><th>Bias</th><th>Variance</th></tr>
+        <tr class="depth-row-over"><td>Deep (unconstrained)</td><td>100%</td><td>75%</td><td>Low</td><td>High</td></tr>
+        <tr class="depth-row-good"><td>Tuned depth</td><td>~85%</td><td>~83%</td><td>Medium</td><td>Medium ✓</td></tr>
+        <tr class="depth-row-under"><td>Shallow (depth=1)</td><td>~60%</td><td>~58%</td><td>High</td><td>Low</td></tr>
+      </table>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          Drag the depth slider and watch the decision boundary and bias-variance change:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/tree-depth-vs-bias-variance-tradeoff/" target="_blank">Tree Depth vs Bias-Variance Tradeoff →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 5 -->
+  <section class="section-card quiz-card" id="q5">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 5</div>
+        <div class="card-title">Overfitting in Decision Trees</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Which of the following statements is <strong>true</strong> about <strong>overfitting in Decision Trees</strong>?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>It leads to high bias and high variance.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>It leads to low bias and high variance.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>It leads to high bias and low variance.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>It leads to low bias and low variance.</li>
+      </ul>
+      <div class="quiz-feedback" id="q5-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        An overfit model fits the training data too closely (low bias on training) but fails on new data because it's too sensitive to noise (high variance). Reducing depth increases bias but reduces variance.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 6 -->
+  <section class="section-card quiz-card" id="q6">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 6</div>
+        <div class="card-title">What Is Pruning?</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">What is <strong>pruning</strong> in Decision Trees?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>The process of removing outliers.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>The process of handling missing values.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>The process of removing unnecessary branches.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>The process of transforming categorical variables.</li>
+      </ul>
+      <div class="quiz-feedback" id="q6-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        Pruning removes branches that add little predictive power, reducing overfitting. This can be done pre-growth (limiting depth via hyperparameters) or post-growth (cutting back branches that don't improve validation performance).
+      </div>
+    </div>
+  </section>
+
+  <!-- HYPERPARAMETERS -->
+  <section class="section-card" id="s-hyperparams">
+    <div class="card-header">
+      <div class="card-icon">🔧</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Hyperparameter Tuning</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Key DT Hyperparameters</h3>
+      <table class="hp-table">
+        <tr><th>Hyperparameter</th><th>Default</th><th>Effect</th></tr>
+        <tr><td>criterion</td><td>gini</td><td>Impurity measure: 'gini' or 'entropy'</td></tr>
+        <tr><td>max_depth</td><td>None</td><td>Max levels the tree can grow. None = grow until pure.</td></tr>
+        <tr><td>min_samples_split</td><td>2</td><td>Min samples needed to split a node. Higher = shallower tree.</td></tr>
+        <tr><td>min_samples_leaf</td><td>1</td><td>Min samples required in a leaf. Higher = smoother boundaries.</td></tr>
+        <tr><td>max_leaf_nodes</td><td>None</td><td>Max number of leaf nodes across the entire tree.</td></tr>
+        <tr><td>max_features</td><td>None (all)</td><td>Number of features to consider for each split.</td></tr>
+        <tr><td>class_weight</td><td>None</td><td>Handle imbalanced classes — same idea as weighted loss.</td></tr>
+      </table>
+
+      <h3>Finding Best max_depth via 10-Fold CV</h3>
+      <pre><code>from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import KFold, cross_validate
+
+kfold = KFold(n_splits=10)
+depths = [3, 4, 5, 9, 11, 13, 15]
+
+for depth in depths:
+    clf = DecisionTreeClassifier(random_state=7, max_depth=depth)
+    cv = cross_validate(clf, X_train, y_train, cv=kfold,
+                        scoring='accuracy', return_train_score=True)
+    print(f"depth={depth}  Train: {cv['train_score'].mean()*100:.1f}%  Val: {cv['test_score'].mean()*100:.1f}%")</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output (abbreviated)</div>
+        <div class="output-block">depth=3   Train: 78.3%  Val: 75.1%
+depth=4   Train: 82.1%  Val: 76.2%
+depth=5   Train: 85.9%  Val: 79.6%
+depth=9   Train: 97.1%  Val: 82.8%  ← val plateaus
+depth=11  Train: 98.9%  Val: 82.8%
+depth=13  Train: 99.8%  Val: 82.5%
+depth=15  Train: 100%   Val: 82.9%</div>
+      </div>
+      <p>Validation accuracy plateaus around depth=9. Train accuracy keeps climbing toward 100% — a sign of overfitting without meaningful generalization gain. Best choice: <strong>max_depth=4</strong> (good balance, lower variance, not overfit).</p>
+
+      <h3>AI-Assisted Diagnosis</h3>
+      <div class="callout-note">
+        <div class="callout-label">💡 Practical Tip</div>
+        When a model shows Train=100%, Val=76%, you can ask an LLM: <em>"My DT achieved Training Accuracy 100%, Validation 76%. What does this indicate and which hyperparameter should I tune first?"</em> — it will correctly identify overfitting and suggest reducing max_depth first.
+      </div>
+
+      <h3>Train with Best Parameters</h3>
+      <pre><code>tree_clf = DecisionTreeClassifier(random_state=7, max_depth=4)
+tree_clf.fit(X_train, y_train)
+pred = tree_clf.predict(X_test)</code></pre>
+    </div>
+  </section>
+
+  <!-- FEATURE IMPORTANCE -->
+  <section class="section-card" id="s-featimp">
+    <div class="card-header">
+      <div class="card-icon">📊</div>
+      <div class="card-meta">
+        <div class="card-type">Interpretation</div>
+        <div class="card-title">Feature Importance</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Recall our second business goal: identify <em>which factors actually drive attrition</em>. Decision Trees give us this directly through <strong>Feature Importance</strong>.</p>
+
+      <h3>How It's Calculated — Normalized Information Gain</h3>
+      <p>If feature fᵢ is used at two splits in the tree:</p>
+      <ul>
+        <li>Split 1: n₁ = 5,000 points, IG₁ = 0.3</li>
+        <li>Split 2: n₂ = 500 points, IG₂ = 0.5</li>
+      </ul>
+      <div class="equation">Importance(fᵢ) = (n₁ × IG₁ + n₂ × IG₂) / total_n</div>
+      <p>This <strong>normalized IG</strong> weights each split's contribution by how many samples it affected. Features used early (on more data) and with higher IG are naturally scored higher.</p>
+
+      <pre><code>import numpy as np
+
+importances = tree_clf.feature_importances_
+indices = np.argsort(importances)[::-1]
+names   = [X_train.columns[i] for i in indices]
+
+plt.figure(figsize=(15, 7))
+plt.title("Feature Importance")
+plt.bar(range(X_train.shape[1]), importances[indices])
+plt.xticks(range(X_train.shape[1]), names, rotation=90)
+plt.tight_layout()
+plt.show()</code></pre>
+      <div class="callout-note">
+        <div class="callout-label">📌 Business Value</div>
+        The feature importance bar chart directly answers our second business goal — it tells HR which attributes (OverTime? Age? MonthlyIncome?) are the strongest predictors of attrition, guiding concrete retention policies.
+      </div>
+    </div>
+  </section>
+
+  <!-- INTERVIEW QUESTIONS -->
+  <section class="section-card" id="s-interview">
+    <div class="card-header">
+      <div class="card-icon">🎤</div>
+      <div class="card-meta">
+        <div class="card-type">Reference</div>
+        <div class="card-title">Interview Questions on Decision Trees</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="iq-grid">
+        <div class="iq-card">
+          <div class="iq-tag">Terminology</div>
+          <div class="iq-q">What are Deep Tree, Shallow Tree, and Decision Stump?</div>
+          <div class="iq-a"><strong>Deep Tree:</strong> many levels → pure leaves → overfits. <strong>Shallow Tree:</strong> few splits → few boundaries → underfits. <strong>Decision Stump:</strong> depth=1 (one split only).</div>
+        </div>
+        <div class="iq-card">
+          <div class="iq-tag">Outliers</div>
+          <div class="iq-q">Where do outliers have more impact — deep or shallow trees?</div>
+          <div class="iq-a">Deep trees — a deep leaf may contain only the outlier itself, causing the tree to memorize it as a real pattern. Shallow trees have many points per leaf, diluting the outlier's impact.</div>
+        </div>
+        <div class="iq-card">
+          <div class="iq-tag">Imbalanced Data</div>
+          <div class="iq-q">Is DT affected by class imbalance?</div>
+          <div class="iq-a">Yes — it will bias splits toward the majority class. Fix: use <code>class_weight</code> in sklearn DT, or apply Oversampling/SMOTE before training.</div>
+        </div>
+        <div class="iq-card">
+          <div class="iq-tag">Standardization</div>
+          <div class="iq-q">Does DT require feature scaling?</div>
+          <div class="iq-a">No. DT splits based on thresholds (relative ordering of values). Standardizing a feature doesn't change which points are above/below any threshold — so entropy and IG are unaffected.</div>
+        </div>
+        <div class="iq-card">
+          <div class="iq-tag">Multiclass</div>
+          <div class="iq-q">Can DT handle multiclass problems?</div>
+          <div class="iq-a">Yes — naturally. At a leaf with y1=300, y2=20, y3=10, it predicts y1 (majority class). No OvR strategy needed — entropy generalizes to K classes.</div>
+        </div>
+        <div class="iq-card">
+          <div class="iq-tag">Same Column Twice</div>
+          <div class="iq-q">Can the same feature be used for multiple splits?</div>
+          <div class="iq-a">Yes. Age&lt;35 might split at the root, and Age&lt;29 might appear again deeper in the tree (a different threshold). This is valid and happens when the feature is highly informative at multiple scales.</div>
+        </div>
+      </div>
+
+      <h3>Space & Time Complexity</h3>
+      <div class="complexity-grid">
+        <div class="cx-pill">
+          <div class="cx-label">Space</div>
+          <div class="cx-value">O(m)</div>
+          <div class="cx-note">m = number of nodes stored in memory</div>
+        </div>
+        <div class="cx-pill">
+          <div class="cx-label">Prediction Time</div>
+          <div class="cx-value">O(d)</div>
+          <div class="cx-note">d = depth — follow one root-to-leaf path</div>
+        </div>
+        <div class="cx-pill">
+          <div class="cx-label">Build Time</div>
+          <div class="cx-value">O(n·log(n)·f)</div>
+          <div class="cx-note">n = samples, f = features — sort each feature at each node</div>
+        </div>
+      </div>
+
+      <h3>Decision Trees for Regression</h3>
+      <p>For continuous targets (e.g., predicting student marks), DT uses <strong>MSE</strong> instead of Entropy/Gini as the impurity measure. The predicted value at each node is the <strong>mean of all target values</strong> in that node. Splitting still maximizes the reduction in MSE (weighted average of children's MSE).</p>
+    </div>
+  </section>
+
+  <!-- QUIZ 7 -->
+  <section class="section-card quiz-card" id="q7">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 7</div>
+        <div class="card-title">Decision Tree for Regression</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">What approach does a <strong>Decision Tree</strong> use to calculate the <strong>predicted value</strong> for a regression problem?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Majority vote of target values at the node.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>Take the mean of all target values at the given node.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Select a random value from the target values at the node.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Take the first target value at the node as the prediction.</li>
+      </ul>
+      <div class="quiz-feedback" id="q7-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        For regression, each leaf predicts the <strong>mean</strong> of its training samples' target values. Splitting minimizes MSE — the weighted average of children's MSE after the split.
+      </div>
+    </div>
+  </section>
+
+  <!-- WRAP UP -->
+  <section class="section-card" id="s-wrap">
+    <div class="card-header">
+      <div class="card-icon">✅</div>
+      <div class="card-meta">
+        <div class="card-type">Summary</div>
+        <div class="card-title">Wrapping Up</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="summary-grid">
+        <div class="summary-item">DTs split feature space into homogeneous regions via axis-parallel hyperplanes</div>
+        <div class="summary-item">Interpretable: each root-to-leaf path is a plain-English rule</div>
+        <div class="summary-item">Node purity = how dominated by a single class</div>
+        <div class="summary-item">Entropy: 0 (pure) to 1 (maximally impure at p=0.5)</div>
+        <div class="summary-item">IG = Parent entropy − Weighted child entropy</div>
+        <div class="summary-item">Always pick the split that maximizes IG</div>
+        <div class="summary-item">Weighted child entropy (not simple average) accounts for node sizes</div>
+        <div class="summary-item">Gini Impurity: no log, faster — default in sklearn</div>
+        <div class="summary-item">Numerical features: try every threshold, pick max IG</div>
+        <div class="summary-item">Deep → overfit (low bias, high variance)</div>
+        <div class="summary-item">Shallow → underfit (high bias, low variance)</div>
+        <div class="summary-item">Tune max_depth via cross-validation on validation set</div>
+        <div class="summary-item">DTs don't need feature scaling — threshold splits are scale-invariant</div>
+        <div class="summary-item">Feature importance = normalized weighted IG across all splits</div>
+        <div class="summary-item">Regression DT: MSE as impurity, mean as prediction</div>
+        <div class="summary-item">Prediction time: O(depth) — production-friendly</div>
+      </div>
+      <blockquote style="border-left:3px solid var(--g-soft); padding:10px 16px; margin:20px 0 0; background:var(--mint-mid); border-radius:0 8px 8px 0; font-family:'Lora',serif; font-style:italic; color:var(--g-deep); font-size:14.5px;">
+        Decision Trees are powerful and interpretable — but prone to overfitting. Next lecture: <strong>Random Forests</strong> combine many trees to produce models that are more robust, more accurate, and less prone to overfitting than any single tree.
+      </blockquote>
+    </div>
+  </section>
+
+</main>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script>
+  document.querySelectorAll('.quiz-options').forEach(list => {
+    list.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const card = list.closest('.section-card');
+        if (card.dataset.answered) return;
+        card.dataset.answered = '1';
+        const isCorrect = opt.dataset.correct === 'true';
+        const feedback = list.closest('.card-body').querySelector('.quiz-feedback');
+        list.querySelectorAll('.quiz-option').forEach(o => { o.style.cursor = 'default'; });
+        if (isCorrect) {
+          opt.classList.add('selected-correct');
+          opt.querySelector('.quiz-circle').textContent = '✓';
+          feedback.textContent = '✅ Correct!';
+          feedback.className = 'quiz-feedback correct';
+        } else {
+          opt.classList.add('selected-wrong');
+          opt.querySelector('.quiz-circle').textContent = '✗';
+          feedback.textContent = '❌ Not quite — check the explanation below.';
+          feedback.className = 'quiz-feedback wrong';
+          list.querySelectorAll('.quiz-option[data-correct="true"]').forEach(o => {
+            o.classList.add('reveal-correct');
+            o.querySelector('.quiz-circle').textContent = '✓';
+          });
+        }
+      });
+    });
+  });
+
+  const sections    = document.querySelectorAll('.section-card');
+  const navItems    = document.querySelectorAll('.nav-item');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct  = document.getElementById('progress-pct');
+  const visited = new Set();
+
+  function onScroll() {
+    let current = '';
+    sections.forEach(sec => {
+      if (sec.getBoundingClientRect().top <= 120) { current = sec.id; visited.add(sec.id); }
+    });
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.target === current);
+      if (visited.has(item.dataset.target)) item.classList.add('visited');
+    });
+    const pct = Math.round((visited.size / sections.length) * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent  = pct + '%';
+    document.getElementById('back-top').classList.toggle('visible', window.scrollY > 400);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('active');
+  }
+  document.querySelectorAll('.nav-item a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth <= 768) toggleSidebar(); });
+  });
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Decision-trees" target="_blank" rel="noopener">github.com/scaler-content/Decision-trees</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

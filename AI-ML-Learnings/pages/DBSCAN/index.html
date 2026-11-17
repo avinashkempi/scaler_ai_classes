@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DBSCAN post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --pink-50:#FFF8FA;
+  --pink-100:#FDEAF1;
+  --pink-150:#FBDEEA;
+  --pink-200:#F6CBDF;
+  --pink-300:#EFAECB;
+  --pink-400:#E38DB0;
+  --rose-500:#CE6C90;
+  --rose-600:#AE4E71;
+  --plum-700:#7C3155;
+  --plum-800:#5C2440;
+  --plum-900:#391A2C;
+  --ink:#3A2432;
+  --ink-soft:#79576A;
+  --ink-faint:#AD8AA0;
+  --surface:#FFFFFF;
+  --surface-alt:#FFF1F6;
+  --surface-deep:#FCE3ED;
+  --line:rgba(124,49,85,0.16);
+  --line-strong:rgba(124,49,85,0.30);
+  --core-color:#7C3155;
+  --border-color:#DE9CBC;
+  --noise-color:#4A3540;
+  --good:#3F7D5C;
+  --good-bg:#E7F2EC;
+  --bad:#B23A3A;
+  --bad-bg:#FBEAEA;
+  --shadow-sm: 0 1px 2px rgba(90,30,60,0.06), 0 1px 1px rgba(90,30,60,0.04);
+  --shadow-md: 0 8px 24px rgba(124,49,85,0.10), 0 2px 6px rgba(124,49,85,0.06);
+  --shadow-lg: 0 20px 48px rgba(124,49,85,0.16), 0 6px 16px rgba(124,49,85,0.08);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Newsreader', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --measure: 42rem;
+}
+
+*,*::before,*::after{ box-sizing: border-box; }
+html{ scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  *,*::before,*::after{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; scroll-behavior:auto !important; }
+}
+
+body{
+  margin:0;
+  background:var(--pink-50);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:1.06rem;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+
+img{ max-width:100%; display:block; }
+
+a{ color:var(--rose-600); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover{ color:var(--plum-700); }
+
+:focus-visible{
+  outline: 3px solid var(--rose-600);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+h1,h2,h3,h4{
+  font-family:var(--font-display);
+  color:var(--plum-900);
+  line-height:1.15;
+  margin:0 0 .5em;
+  font-weight:600;
+  letter-spacing:-0.01em;
+}
+
+p{ margin:0 0 1.1em; }
+ul,ol{ padding-left:1.3em; margin:0 0 1.1em; }
+li{ margin-bottom:.45em; }
+strong{ color:var(--plum-800); font-weight:600; }
+code{ font-family:var(--font-mono); font-size:0.86em; background:var(--surface-deep); padding:.12em .38em; border-radius:5px; color:var(--plum-800); }
+
+/* ============================================================
+   PROGRESS BAR
+   ============================================================ */
+.progress-track{
+  position:fixed; top:0; left:0; right:0; height:3px; background:transparent; z-index:200;
+}
+.progress-fill{
+  height:100%; width:0%; background:linear-gradient(90deg,var(--rose-500),var(--core-color));
+  transition:width .08s linear;
+}
+
+/* ============================================================
+   NAV / TOC
+   ============================================================ */
+.nav-toggle{
+  position:fixed; top:14px; right:14px; z-index:210;
+  display:none;
+  align-items:center; gap:.5em;
+  background:var(--plum-900); color:var(--pink-50);
+  border:none; border-radius:999px;
+  padding:.6em 1.1em;
+  font-family:var(--font-mono); font-size:.78rem; letter-spacing:.06em; text-transform:uppercase;
+  cursor:pointer;
+  box-shadow:var(--shadow-md);
+}
+.nav-toggle:hover{ background:var(--plum-800); }
+
+.toc{
+  position:fixed; top:0; left:0; height:100vh; width:264px;
+  background:var(--surface); border-right:1px solid var(--line);
+  padding:28px 22px; overflow-y:auto; z-index:190;
+}
+.toc-brand{
+  font-family:var(--font-mono); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink-faint); margin-bottom:22px; display:block;
+}
+.toc-list{ list-style:none; margin:0; padding:0; }
+.toc-list li{ margin:0; }
+.toc-list a{
+  display:flex; gap:.6em; align-items:baseline;
+  padding:.55em .5em; border-radius:8px;
+  color:var(--ink-soft); text-decoration:none; font-size:.88rem;
+  border-left:2px solid transparent;
+  transition:background .15s ease, color .15s ease, border-color .15s ease;
+}
+.toc-list a .num{ font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); flex-shrink:0; }
+.toc-list a:hover{ background:var(--surface-alt); color:var(--plum-800); }
+.toc-list a.active{ color:var(--plum-900); font-weight:600; border-left-color:var(--rose-500); background:var(--surface-alt); }
+.toc-list a.active .num{ color:var(--rose-600); }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.page{ margin-left:264px; }
+main{ max-width:var(--measure); margin:0 auto; padding: 10px 28px 40px; }
+section{ padding:64px 0; border-top:1px solid var(--line); }
+section:first-of-type{ border-top:none; }
+
+.eyebrow{
+  font-family:var(--font-mono); font-size:.76rem; letter-spacing:.10em; text-transform:uppercase;
+  color:var(--rose-600); display:flex; align-items:center; gap:.6em; margin-bottom:.9em;
+}
+.eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:var(--rose-500); display:inline-block; }
+
+h2.section-title{ font-size:clamp(1.6rem, 1.2rem + 1.6vw, 2.15rem); margin-bottom:.55em; }
+h3.sub-title{ font-family:var(--font-display); font-size:1.3rem; color:var(--plum-800); margin-top:1.6em; }
+
+.lede{ font-size:1.18rem; color:var(--ink-soft); font-style:italic; }
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{
+  padding:78px 28px 40px;
+  max-width: 900px;
+  margin:0 auto;
+}
+.hero-kicker{
+  font-family:var(--font-mono); font-size:.8rem; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--rose-600); margin-bottom:1.1em; display:block;
+}
+.hero h1{
+  font-size:clamp(2.3rem, 1.7rem + 3vw, 3.6rem);
+  font-weight:600;
+  margin-bottom:.35em;
+}
+.hero .hero-sub{
+  font-family:var(--font-display); font-style:italic; font-weight:500;
+  color:var(--rose-600); font-size:1.3rem; margin-bottom:.9em;
+}
+.hero .hero-dek{
+  font-size:1.15rem; color:var(--ink-soft); max-width:38rem; line-height:1.7;
+}
+.hero .hero-dek strong{ color:var(--plum-800); }
+
+/* Signature interactive playground */
+.playground{
+  margin-top:44px;
+  background:linear-gradient(165deg, var(--surface) 0%, var(--pink-100) 120%);
+  border:1px solid var(--line-strong);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-lg);
+  overflow:hidden;
+}
+.playground-head{
+  padding:22px 26px 0;
+}
+.playground-head h2{ font-size:1.15rem; margin-bottom:.25em; }
+.playground-head p{ color:var(--ink-soft); font-size:.95rem; margin-bottom:0; }
+.playground-body{
+  display:grid; grid-template-columns: 1fr 260px; gap:0;
+  padding: 10px 10px 10px 10px;
+}
+.playground-canvas-wrap{
+  padding:6px 6px 16px 16px;
+}
+.playground-canvas-wrap svg{ width:100%; height:auto; display:block; }
+.playground-controls{
+  padding:20px 22px 22px; border-left:1px dashed var(--line-strong);
+  display:flex; flex-direction:column; gap:18px;
+}
+.ctrl-group label{
+  display:flex; justify-content:space-between; font-family:var(--font-mono);
+  font-size:.74rem; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5em;
+}
+.ctrl-group label .val{ color:var(--plum-800); font-weight:600; }
+input[type=range]{
+  width:100%; accent-color:var(--rose-600); cursor:pointer;
+}
+.stat-readout{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  margin-top:4px;
+}
+.stat-pill{
+  background:var(--surface); border:1px solid var(--line); border-radius:10px;
+  padding:.55em .6em; text-align:center;
+}
+.stat-pill .n{ font-family:var(--font-display); font-size:1.3rem; font-weight:600; color:var(--plum-900); display:block; }
+.stat-pill .l{ font-family:var(--font-mono); font-size:.62rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); }
+.playground-legend{
+  display:flex; flex-wrap:wrap; gap:.9em; padding:0 26px 22px; font-size:.82rem; color:var(--ink-soft);
+}
+.playground-legend span{ display:inline-flex; align-items:center; gap:.4em; }
+.swatch{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+.playground-hint{
+  padding: 0 26px 20px; font-size:.85rem; color:var(--ink-faint); font-style:italic;
+}
+.reset-btn{
+  align-self:flex-start;
+  background:transparent; border:1px solid var(--line-strong); color:var(--rose-600);
+  font-family:var(--font-mono); font-size:.72rem; letter-spacing:.05em; text-transform:uppercase;
+  padding:.5em .9em; border-radius:999px; cursor:pointer;
+}
+.reset-btn:hover{ background:var(--surface-deep); }
+
+/* ============================================================
+   PROSE ELEMENTS
+   ============================================================ */
+.story-recap{
+  background:var(--surface-alt); border-left:3px solid var(--rose-500);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding:1.1em 1.3em; margin: 0 0 1.6em;
+  font-size:1rem;
+}
+.story-recap .label{ font-family:var(--font-mono); font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--rose-600); display:block; margin-bottom:.5em; }
+
+.two-col{
+  display:grid; grid-template-columns:1fr 1fr; gap:20px;
+  margin: 1.6em 0;
+}
+.problem-card{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md);
+  padding:1.3em 1.3em 1em; box-shadow:var(--shadow-sm);
+}
+.problem-card .tag{
+  display:inline-block; font-family:var(--font-mono); font-size:.68rem; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--rose-600); background:var(--pink-150); padding:.25em .6em; border-radius:999px; margin-bottom:.7em;
+}
+.problem-card h4{ font-size:1.05rem; margin-bottom:.4em; }
+.problem-card p{ font-size:.95rem; color:var(--ink-soft); margin-bottom: .8em;}
+
+figure{ margin: 1.6em 0; }
+figure img{
+  border-radius:var(--radius-md); border:1px solid var(--line);
+  box-shadow:var(--shadow-sm);
+}
+figcaption{
+  font-family:var(--font-mono); font-size:.78rem; color:var(--ink-faint);
+  margin-top:.6em; line-height:1.5;
+}
+
+.pull-block{
+  margin:1.8em 0; padding:1.1em 1.4em;
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+}
+.pull-block p{ font-family:var(--font-display); font-style:italic; font-size:1.15rem; color:var(--plum-800); margin-bottom:.5em;}
+
+.reframe{
+  background:var(--plum-900); color:var(--pink-100); border-radius:var(--radius-md);
+  padding:1.6em 1.7em; margin:1.8em 0;
+  font-family:var(--font-display);
+}
+.reframe .old-q{ color:var(--pink-300); font-style:italic; font-size:1.05rem; }
+.reframe .new-q{ font-size:1.35rem; font-weight:500; margin-top:.5em; }
+
+/* ============================================================
+   ANALOGY / DEFINITION CARDS
+   ============================================================ */
+.analogy-card{
+  display:grid; grid-template-columns: 74px 1fr; gap:1.1em; align-items:flex-start;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md);
+  padding:1.3em 1.4em; margin:1.5em 0; box-shadow:var(--shadow-sm);
+}
+.analogy-card .icon{
+  width:56px; height:56px; border-radius:50%; background:var(--surface-deep);
+  display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:1.4rem; color:var(--plum-800); font-weight:600;
+}
+.analogy-card h4{ margin-bottom:.3em; }
+.analogy-card .analogy-line{
+  font-family:var(--font-display); font-style:italic; color:var(--rose-600); margin: .5em 0; font-size:1.02rem;
+}
+
+.point-types{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:1.6em 0;
+}
+.point-card{
+  border-radius:var(--radius-md); padding:1.1em 1.1em 1.2em; cursor:pointer;
+  border:1px solid var(--line); background:var(--surface);
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.point-card:hover{ transform:translateY(-3px); box-shadow:var(--shadow-md); }
+.point-card .dot-icon{ width:30px; height:30px; border-radius:50%; margin-bottom:.7em; }
+.point-card.core .dot-icon{ background:var(--core-color); box-shadow:0 0 0 6px rgba(124,49,85,0.12); }
+.point-card.border .dot-icon{ background:var(--border-color); box-shadow:0 0 0 6px rgba(222,156,188,0.25); }
+.point-card.noise .dot-icon{ background:transparent; border:3px solid var(--noise-color); position:relative; }
+.point-card h4{ font-size:1rem; margin-bottom:.4em; }
+.point-card p{ font-size:.88rem; color:var(--ink-soft); margin-bottom:.6em; }
+.point-card .more{
+  font-family:var(--font-mono); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--rose-600);
+  display:flex; align-items:center; gap:.3em;
+}
+.point-card .extra{
+  font-size:.87rem; color:var(--ink-soft); max-height:0; overflow:hidden; transition:max-height .25s ease, margin-top .25s ease;
+}
+.point-card.open .extra{ max-height:220px; margin-top:.6em; }
+.point-card .more .chev{ transition:transform .2s ease; }
+.point-card.open .more .chev{ transform:rotate(180deg); }
+
+/* ============================================================
+   NUMBERED STEP LIST
+   ============================================================ */
+.steps{ counter-reset:step; list-style:none; padding:0; margin:1.6em 0; }
+.steps li{
+  position:relative; padding:0 0 1.3em 3em; margin:0;
+}
+.steps li::before{
+  counter-increment:step; content:counter(step);
+  position:absolute; left:0; top:-1px;
+  width:2.1em; height:2.1em; border-radius:50%;
+  background:var(--surface); border:1.5px solid var(--rose-500); color:var(--rose-600);
+  font-family:var(--font-mono); font-weight:600; font-size:.85rem;
+  display:flex; align-items:center; justify-content:center;
+}
+.steps li::after{
+  content:''; position:absolute; left:1.05em; top:2.1em; bottom:0; width:1px;
+  background:var(--line-strong);
+}
+.steps li:last-child::after{ display:none; }
+.steps li strong{ display:block; color:var(--plum-800); margin-bottom:.2em; }
+
+/* ============================================================
+   IFRAME / EXTERNAL VISUALIZER
+   ============================================================ */
+.viz-embed{
+  margin:2em 0; border-radius:var(--radius-lg); overflow:hidden;
+  border:1px solid var(--line-strong); box-shadow:var(--shadow-md);
+  background:var(--surface);
+}
+.viz-embed-head{
+  display:flex; justify-content:space-between; align-items:center; gap:1em; flex-wrap:wrap;
+  padding:1.1em 1.3em; background:linear-gradient(120deg,var(--plum-900),var(--plum-700));
+  color:var(--pink-100);
+}
+.viz-embed-head .t{ font-family:var(--font-mono); font-size:.7rem; letter-spacing:.09em; text-transform:uppercase; color:var(--pink-300); display:block; margin-bottom:.3em; }
+.viz-embed-head h4{ color:#fff; margin:0; font-size:1.08rem; }
+.viz-open-link{
+  flex-shrink:0; font-family:var(--font-mono); font-size:.72rem; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--pink-50); border:1px solid rgba(255,255,255,0.4); border-radius:999px; padding:.55em 1em;
+  text-decoration:none; white-space:nowrap;
+}
+.viz-open-link:hover{ background:rgba(255,255,255,0.12); color:#fff; }
+.viz-embed .frame-wrap{ position:relative; width:100%; aspect-ratio: 16/10; background:var(--pink-100); }
+.viz-embed iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+.viz-fallback-note{ padding:.85em 1.3em; font-size:.82rem; color:var(--ink-faint); border-top:1px solid var(--line); }
+
+/* ============================================================
+   CODE REVEAL
+   ============================================================ */
+.code-reveal{
+  margin:1.2em 0 1.6em; border:1px solid var(--line); border-radius:var(--radius-md); overflow:hidden;
+  background:var(--surface);
+}
+.code-reveal summary{
+  cursor:pointer; list-style:none; padding:.85em 1.1em;
+  font-family:var(--font-mono); font-size:.78rem; letter-spacing:.03em;
+  color:var(--rose-600); background:var(--surface-alt);
+  display:flex; align-items:center; gap:.6em; user-select:none;
+}
+.code-reveal summary::-webkit-details-marker{ display:none; }
+.code-reveal summary::before{ content:'▸'; transition:transform .15s ease; }
+.code-reveal[open] summary::before{ transform:rotate(90deg); }
+.code-reveal summary .fname{ color:var(--ink-soft); font-weight:normal; }
+.code-reveal pre{
+  margin:0; padding:1.1em 1.2em; overflow-x:auto; background:var(--plum-900);
+}
+.code-reveal code{
+  background:transparent; color:#F4D9E6; padding:0; font-size:.82rem; line-height:1.65;
+}
+.output-block{
+  margin:0; border-top:1px solid rgba(255,255,255,0.08);
+  background:#2E1524; padding:1em 1.2em;
+}
+.output-block .lbl{ font-family:var(--font-mono); font-size:.65rem; letter-spacing:.08em; text-transform:uppercase; color:var(--pink-300); display:block; margin-bottom:.5em; }
+.output-block pre{ margin:0; padding:0; background:transparent; }
+.output-block code{ color:#EFC8DC; font-size:.8rem; }
+
+/* ============================================================
+   THINK-IT-THROUGH REVEAL
+   ============================================================ */
+.think-box{
+  background:var(--surface); border:1px dashed var(--line-strong); border-radius:var(--radius-md);
+  padding:1.2em 1.3em; margin:1.8em 0;
+}
+.think-box .q{ font-family:var(--font-display); font-style:italic; color:var(--plum-800); font-size:1.05rem; margin-bottom:.7em; }
+.think-box summary{ cursor:pointer; font-family:var(--font-mono); font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--rose-600); list-style:none; }
+.think-box summary::-webkit-details-marker{ display:none; }
+.think-box summary::before{ content:'＋ '; }
+.think-box[open] summary::before{ content:'－ '; }
+.think-box .a{ margin-top:.8em; font-size:.94rem; color:var(--ink-soft); padding-top:.8em; border-top:1px solid var(--line); }
+
+/* ============================================================
+   QUIZ CARD
+   ============================================================ */
+.quiz-card{
+  background:var(--surface); border:1px solid var(--line-strong); border-radius:var(--radius-lg);
+  padding:1.6em 1.7em; margin:2em 0; box-shadow:var(--shadow-md);
+}
+.quiz-card .qk{ font-family:var(--font-mono); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--rose-600); display:block; margin-bottom:.6em; }
+.quiz-card .question{ font-family:var(--font-display); font-size:1.15rem; color:var(--plum-900); margin-bottom:1.1em; }
+.quiz-options{ display:flex; flex-direction:column; gap:.6em; margin-bottom:0; }
+.quiz-option{
+  text-align:left; width:100%; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:10px;
+  padding:.75em 1em; font-family:var(--font-body); font-size:.96rem; color:var(--ink); cursor:pointer;
+  display:flex; align-items:center; gap:.7em; transition:background .15s ease, border-color .15s ease;
+}
+.quiz-option:hover:not(:disabled){ background:var(--surface-alt); border-color:var(--rose-500); }
+.quiz-option .mark{ width:1.4em; height:1.4em; border-radius:50%; border:1.5px solid var(--line-strong); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-family:var(--font-mono); }
+.quiz-option:disabled{ cursor:default; }
+.quiz-option.correct{ background:var(--good-bg); border-color:var(--good); color:#215E3F; }
+.quiz-option.correct .mark{ background:var(--good); border-color:var(--good); color:#fff; }
+.quiz-option.incorrect{ background:var(--bad-bg); border-color:var(--bad); color:#7A2323; }
+.quiz-option.incorrect .mark{ background:var(--bad); border-color:var(--bad); color:#fff; }
+.quiz-option.dim{ opacity:.55; }
+.quiz-explain{
+  margin-top:1.1em; padding-top:1em; border-top:1px solid var(--line);
+  font-size:.92rem; color:var(--ink-soft); display:none;
+}
+.quiz-explain.show{ display:block; }
+.quiz-explain .lbl{ font-family:var(--font-mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--rose-600); display:block; margin-bottom:.4em; }
+
+/* ============================================================
+   ASK-AI CALLOUT
+   ============================================================ */
+.askai{
+  border-radius:var(--radius-lg); overflow:hidden; margin:2em 0;
+  border:1px solid var(--line-strong);
+}
+.askai-head{
+  background:var(--surface-deep); padding:1em 1.3em;
+  display:flex; align-items:center; gap:.7em;
+}
+.askai-head .badge{
+  width:30px; height:30px; border-radius:50%; background:var(--plum-900); color:var(--pink-100);
+  display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:.7rem; flex-shrink:0;
+}
+.askai-head .q{ font-family:var(--font-display); font-style:italic; color:var(--plum-800); font-size:1rem; }
+.askai-body{ background:var(--surface); padding:1.2em 1.3em; font-size:.94rem; color:var(--ink-soft); }
+.askai-body ol,.askai-body ul{ margin-bottom:.6em; }
+.askai-source{ font-family:var(--font-mono); font-size:.68rem; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint); padding:.8em 1.3em; background:var(--surface-alt); }
+
+/* ============================================================
+   STAT CARDS
+   ============================================================ */
+.stat-grid{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; margin:1.8em 0;
+}
+.stat-card{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md);
+  padding:1.1em 1em; text-align:center; box-shadow:var(--shadow-sm);
+}
+.stat-card .n{ font-family:var(--font-display); font-weight:700; font-size:1.9rem; color:var(--plum-900); display:block; }
+.stat-card .l{ font-family:var(--font-mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin-top:.3em; display:block; }
+.stat-card.accent{ background:var(--plum-900); border-color:var(--plum-900); }
+.stat-card.accent .n{ color:#fff; }
+.stat-card.accent .l{ color:var(--pink-300); }
+
+/* ============================================================
+   GALLERY
+   ============================================================ */
+.gallery{
+  margin:1.8em 0; border:1px solid var(--line); border-radius:var(--radius-lg); overflow:hidden; background:var(--surface); box-shadow:var(--shadow-sm);
+}
+.gallery-view{ position:relative; background:var(--pink-100); }
+.gallery-view img{ display:none; width:100%; border-radius:0; border:none; box-shadow:none; }
+.gallery-view img.active{ display:block; }
+.gallery-nav{
+  display:flex; align-items:center; justify-content:space-between; gap:1em;
+  padding:.85em 1.2em; border-top:1px solid var(--line);
+}
+.gallery-nav button{
+  background:var(--surface-alt); border:1px solid var(--line-strong); color:var(--plum-800);
+  border-radius:999px; width:2.1em; height:2.1em; cursor:pointer; font-family:var(--font-mono);
+}
+.gallery-nav button:hover{ background:var(--surface-deep); }
+.gallery-dots{ display:flex; gap:.5em; }
+.gallery-dots span{ width:7px; height:7px; border-radius:50%; background:var(--line-strong); cursor:pointer; }
+.gallery-dots span.active{ background:var(--rose-600); }
+.gallery-caption{ font-family:var(--font-mono); font-size:.75rem; color:var(--ink-faint); text-align:center; }
+
+/* ============================================================
+   COMPARISON TABLE
+   ============================================================ */
+.table-wrap{ overflow-x:auto; margin:1.8em 0; border-radius:var(--radius-md); border:1px solid var(--line); }
+table.compare{ width:100%; border-collapse:collapse; background:var(--surface); font-size:.92rem; min-width:520px; }
+table.compare th, table.compare td{ padding:.85em 1em; text-align:left; border-bottom:1px solid var(--line); }
+table.compare thead th{ background:var(--plum-900); color:var(--pink-100); font-family:var(--font-mono); font-size:.72rem; letter-spacing:.05em; text-transform:uppercase; font-weight:500; }
+table.compare tbody tr:hover{ background:var(--surface-alt); }
+table.compare tbody th{ font-family:var(--font-display); color:var(--plum-800); font-weight:600; }
+table.compare td .yes{ color:var(--good); font-weight:600; }
+table.compare td .no{ color:var(--bad); font-weight:600; }
+table.compare tr.highlight-row td, table.compare tr.highlight-row th{ background:var(--surface-deep); }
+
+/* ============================================================
+   ADV/LIM LIST
+   ============================================================ */
+.adv-lim{ display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:1.6em 0; }
+.adv-lim .box{ border-radius:var(--radius-md); padding:1.2em 1.3em; }
+.adv-lim .adv{ background:var(--good-bg); border:1px solid rgba(63,125,92,0.28); }
+.adv-lim .lim{ background:var(--bad-bg); border:1px solid rgba(178,58,58,0.22); }
+.adv-lim h4{ font-size:.95rem; margin-bottom:.6em; }
+.adv-lim .adv h4{ color:#215E3F; }
+.adv-lim .lim h4{ color:#7A2323; }
+.adv-lim ul{ margin-bottom:0; padding-left:1.1em; }
+.adv-lim li{ font-size:.9rem; color:var(--ink-soft); margin-bottom:.5em; }
+
+/* ============================================================
+   WRAP UP
+   ============================================================ */
+.wrapup-box{
+  background:linear-gradient(160deg,var(--plum-900),var(--plum-700));
+  color:var(--pink-100); border-radius:var(--radius-lg); padding:2em 2.2em; margin-top:1.5em;
+}
+.wrapup-box h3{ color:#fff; }
+.wrapup-box li{ color:var(--pink-200); }
+.wrapup-box strong{ color:#fff; }
+
+footer{
+  text-align:center; padding:44px 24px 64px; color:var(--ink-faint);
+  font-family:var(--font-mono); font-size:.78rem; letter-spacing:.03em;
+}
+footer .fname{ color:var(--rose-600); font-weight:600; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 980px){
+  .toc{ transform:translateX(-100%); transition:transform .25s ease; box-shadow:var(--shadow-lg); }
+  .toc.open{ transform:translateX(0); }
+  .page{ margin-left:0; }
+  .nav-toggle{ display:inline-flex; }
+  .playground-body{ grid-template-columns:1fr; }
+  .playground-controls{ border-left:none; border-top:1px dashed var(--line-strong); flex-direction:row; flex-wrap:wrap; }
+  .ctrl-group{ flex:1 1 200px; }
+}
+@media (max-width: 720px){
+  main{ padding:0 18px 40px; }
+  .hero{ padding:90px 18px 20px; }
+  .two-col{ grid-template-columns:1fr; }
+  .point-types{ grid-template-columns:1fr; }
+  .adv-lim{ grid-template-columns:1fr; }
+  section{ padding:44px 0; }
+  .playground-controls{ flex-direction:column; }
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Clustering · DBSCAN density-based clustering</span><span class="pn"><a href="../Hierarchical-Clustering/" title="Clustering · Hierarchical clustering and dendrograms">← Prev</a><a href="../Gaussian-Mixture-Models-/" title="Clustering · Gaussian mixture models with EM">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+<button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteNav">☰ Contents</button>
+
+<nav class="toc" id="siteNav" aria-label="Table of contents">
+  <span class="toc-brand">Veloura Analytics · Session 2</span>
+  <ul class="toc-list">
+    <li><a href="#recap"><span class="num">00</span>Where GMM left off</a></li>
+    <li><a href="#density-idea"><span class="num">01</span>Thinking in density</a></li>
+    <li><a href="#building-blocks"><span class="num">02</span>eps, MinPts &amp; point types</a></li>
+    <li><a href="#algorithm"><span class="num">03</span>The algorithm</a></li>
+    <li><a href="#tuning"><span class="num">04</span>Tuning eps &amp; MinPts</a></li>
+    <li><a href="#veloura-code"><span class="num">05</span>Flagging Veloura's customers</a></li>
+    <li><a href="#tradeoffs"><span class="num">06</span>Strengths, limits &amp; choice</a></li>
+    <li><a href="#wrapup"><span class="num">07</span>Wrap-up</a></li>
+  </ul>
+</nav>
+
+<div class="page">
+
+<header class="hero">
+  <span class="hero-kicker">Veloura Analytics — Session 2</span>
+  <h1>DBSCAN post read</h1>
+  <p class="hero-sub">From "which segment?" to "does this even belong to a segment?"</p>
+  <p class="hero-dek">
+    Last session, Veloura's Growth team needed to segment roughly 40,000 customers instead of sending one discount
+    email to everyone. Hierarchical clustering broke at scale, so the team moved to soft clustering with a
+    <strong>Gaussian Mixture Model</strong>. It worked — until it quietly stuffed a handful of clearly abnormal
+    customers into "normal" segments, because a GMM has no way to say <em>this point doesn't belong anywhere</em>.
+    This post picks up the story with the algorithm built to say exactly that: <strong>DBSCAN</strong>.
+  </p>
+
+  <div class="playground" id="playground">
+    <div class="playground-head">
+      <h2>Try it: density, not distance</h2>
+      <p>Drag the two dials DBSCAN actually uses. Every point on the canvas is re-classified live — core, border, or noise — the same way the algorithm does it.</p>
+    </div>
+    <div class="playground-body">
+      <div class="playground-canvas-wrap">
+        <svg id="playSvg" viewBox="0 0 560 380" role="img" aria-label="Interactive scatterplot demonstrating DBSCAN core, border, and noise point classification"></svg>
+      </div>
+      <div class="playground-controls">
+        <div class="ctrl-group">
+          <label for="epsSlider">eps (ε) <span class="val" id="epsVal">32</span></label>
+          <input type="range" id="epsSlider" min="14" max="80" value="32" step="1">
+        </div>
+        <div class="ctrl-group">
+          <label for="minPtsSlider">MinPts <span class="val" id="minPtsVal">4</span></label>
+          <input type="range" id="minPtsSlider" min="2" max="10" value="4" step="1">
+        </div>
+        <div class="stat-readout">
+          <div class="stat-pill"><span class="n" id="statCore">–</span><span class="l">Core</span></div>
+          <div class="stat-pill"><span class="n" id="statBorder">–</span><span class="l">Border</span></div>
+          <div class="stat-pill"><span class="n" id="statNoise">–</span><span class="l">Noise</span></div>
+          <div class="stat-pill"><span class="n" id="statClusters">–</span><span class="l">Clusters</span></div>
+        </div>
+        <button class="reset-btn" id="playReset" type="button">Shuffle points</button>
+      </div>
+    </div>
+    <div class="playground-legend">
+      <span><span class="swatch" style="background:var(--core-color)"></span>Core point</span>
+      <span><span class="swatch" style="background:var(--border-color)"></span>Border point</span>
+      <span><span class="swatch" style="border:2px solid var(--noise-color); background:transparent;"></span>Noise</span>
+    </div>
+    <p class="playground-hint">Click any point to see its own ε-neighborhood traced out.</p>
+  </div>
+</header>
+
+<main>
+
+<!-- ================================================================
+     SECTION 0 — RECAP
+     ================================================================ -->
+<section id="recap">
+  <span class="eyebrow"><span class="dot"></span>The story so far</span>
+  <h2 class="section-title">Where GMM left off</h2>
+
+  <p>Back at Veloura, the previous session fit a Gaussian Mixture Model on customer behavior data — spend, order
+  frequency, recency, and related features — and came away with soft, probabilistic segments: a real upgrade over
+  hierarchical clustering's rigid, hard boundaries. Expectation–Maximization got there by alternating between two steps:</p>
+
+  <ul>
+    <li><strong>Expectation</strong> — computing each customer's likelihood under every Gaussian component.</li>
+    <li><strong>Maximization</strong> — updating each Gaussian's mean and variance as a likelihood-weighted average of customers.</li>
+  </ul>
+
+  <p>But there was a crack in the story — two of them, in fact, both real and both still unsolved.</p>
+
+  <div class="two-col">
+    <div class="problem-card">
+      <span class="tag">Problem 1</span>
+      <h4>The forced-fit problem</h4>
+      <p>A handful of Veloura customers — near-zero spend but a huge order count, classic reseller or bulk-buyer
+      behavior — got confidently assigned to some segment anyway. A GMM always picks the Gaussian with the highest
+      likelihood, even when that likelihood is low for every single one. It has no concept of "doesn't belong anywhere."</p>
+      <details class="code-reveal">
+        <summary><span>▸</span> View the code <span class="fname">— fitting a GMM over planted anomalies</span></summary>
+        <pre><code># Core libraries
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import time
+
+from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
+from scipy.stats import norm, multivariate_normal
+from sklearn.cluster import AgglomerativeClustering, KMeans
+from sklearn.mixture import GaussianMixture
+from sklearn.preprocessing import StandardScaler
+from sklearn.datasets import make_blobs
+
+np.random.seed(42)
+segment_a = np.random.normal(loc=[70, 8], scale=[12, 2], size=(540, 2))
+segment_b = np.random.normal(loc=[220, 3], scale=[30, 1], size=(420, 2))
+segment_c = np.random.normal(loc=[150, 14], scale=[18, 2.5], size=(180, 2))
+anomalies = np.column_stack([
+    np.random.uniform(5, 20, 12),
+    np.random.uniform(40, 60, 12)
+])
+raw = np.vstack([segment_a, segment_b, segment_c, anomalies])
+is_anomaly = np.array([0]*len(segment_a) + [0]*len(segment_b) + [0]*len(segment_c) + [1]*len(anomalies))
+
+gmm = GaussianMixture(n_components=3, random_state=42).fit(raw)
+gmm_labels = gmm.predict(raw)</code></pre>
+        <div class="output-block">
+          <span class="lbl">Checking a few planted anomalies</span>
+          <pre><code>Customer 1140: assigned segment 2, probabilities = [0. 0. 1.]
+Customer 1141: assigned segment 2, probabilities = [0. 0. 1.]
+Customer 1142: assigned segment 2, probabilities = [0. 0. 1.]
+Customer 1143: assigned segment 2, probabilities = [0. 0. 1.]
+Customer 1144: assigned segment 2, probabilities = [0. 0. 1.]</code></pre>
+        </div>
+      </details>
+      <figure>
+        <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/247/original/Screenshot_2026-08-13_101917.png?1786596568" alt="Scatterplot of GMM segments with planted anomaly customers circled; every anomaly is still assigned to a segment.">
+        <figcaption>GMM forces every point into a segment — even the reseller-shaped ones circled here, each assigned with 100% confidence.</figcaption>
+      </figure>
+    </div>
+
+    <div class="problem-card">
+      <span class="tag">Problem 2</span>
+      <h4>The shape problem</h4>
+      <p>A GMM assumes every segment is elliptical. Some of Veloura's real behavior clusters — think clickstream or
+      browsing-pattern segments — are elongated or crescent-shaped, and a GMM misfits them for the same reason
+      KMeans did back in the first session.</p>
+      <details class="code-reveal">
+        <summary><span>▸</span> View the code <span class="fname">— fitting a GMM on crescent-shaped data</span></summary>
+        <pre><code>from sklearn.datasets import make_moons
+moon_pts, _ = make_moons(n_samples=600, noise=0.06, random_state=42)
+gmm_moons = GaussianMixture(n_components=2, random_state=42).fit(moon_pts)
+moon_gmm_labels = gmm_moons.predict(moon_pts)
+
+xx, yy = np.meshgrid(
+    np.linspace(moon_pts[:,0].min()-0.5, moon_pts[:,0].max()+0.5, 300),
+    np.linspace(moon_pts[:,1].min()-0.5, moon_pts[:,1].max()+0.5, 300))
+zz = -gmm_moons.score_samples(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)</code></pre>
+      </details>
+      <figure>
+        <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/248/original/Screenshot_2026-08-13_102007.png?1786596618" alt="GMM fit on two crescent-shaped clusters; elliptical Gaussian boundaries cut through the natural crescent groups.">
+        <figcaption>Elliptical Gaussians cutting straight through a naturally connected, crescent-shaped group.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <h3 class="sub-title">What just happened?</h3>
+  <p>Both examples expose the same underlying weakness in two different ways. In the Veloura customer data, the
+  unusual reseller-shaped customers are clearly far away from every normal segment — yet the GMM still assigns
+  each one to a cluster, because it has no "none of the above" option. Every point must belong somewhere, even if
+  the fit is terrible.</p>
+  <p>In the crescent-shaped browsing data, the problem isn't unusual customers — it's the shape of the clusters
+  themselves. The two moon-shaped groups are visually obvious to a person, but a GMM can only draw smooth,
+  elliptical regions, so it slices through a group that is naturally connected.</p>
+
+  <div class="pull-block">
+    <p>How can we naturally identify customers that don't belong to any cluster, instead of forcing an assignment?</p>
+    <p>How can we discover clusters that aren't circular or elliptical at all?</p>
+  </div>
+
+  <p>Both questions point to the same realization: maybe we shouldn't start by assuming what a cluster looks like.</p>
+
+  <div class="reframe">
+    <div class="old-q">Instead of asking — "Which Gaussian generated this point?"</div>
+    <div class="new-q">What if we asked: "Is this point surrounded by lots of nearby neighbors, or is it sitting alone?"</div>
+  </div>
+
+  <p>That simple change in perspective leads to an entirely different way of thinking about clustering — one that
+  looks only at how crowded each point's neighborhood is, instead of modeling probability distributions at all.</p>
+</section>
+
+<!-- ================================================================
+     SECTION 1 — DENSITY INTUITION
+     ================================================================ -->
+<section id="density-idea">
+  <span class="eyebrow"><span class="dot"></span>Section 1</span>
+  <h2 class="section-title">Thinking in density</h2>
+
+  <p>A GMM's whole question was: <em>which distribution best explains this point?</em> DBSCAN throws that question
+  out and asks something much simpler:</p>
+
+  <div class="pull-block"><p>Is this point sitting in a crowded neighborhood, or an empty one?</p></div>
+
+  <p>That's it. No Gaussians, no distribution-shape assumption at all — just: look around this point, and count who's nearby.</p>
+
+  <details class="code-reveal">
+    <summary><span>▸</span> View the code <span class="fname">— a quick synthetic warm-up</span></summary>
+    <pre><code>import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# One crowded blob of "typical" customers, plus a few scattered "loner"
+# points -- same flavor as the reseller-shaped customers the GMM buried
+# into a segment last session.
+crowd = np.random.normal(loc=[0, 0], scale=0.6, size=(200, 2))
+loners = np.array([[4, 4], [4.3, 3.6], [-3.5, 3.8], [3.9, -4.2], [-4.5, -3.9]])
+warmup = np.vstack([crowd, loners])</code></pre>
+  </details>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/249/original/Screenshot_2026-08-13_102058.png?1786596671" alt="Scatterplot showing one dense blob of points and five scattered isolated points marked with X.">
+    <figcaption>Eyeball check: which points look like the core of a cluster, and which look like loners?</figcaption>
+  </figure>
+
+  <p>Name the algorithm in full: <strong>DBSCAN</strong> = <strong>D</strong>ensity-<strong>B</strong>ased
+  <strong>S</strong>patial <strong>C</strong>lustering of <strong>A</strong>pplications with <strong>N</strong>oise.</p>
+
+  <p>That last word — <em>Noise</em> — is the whole point. DBSCAN is the one algorithm in the toolkit explicitly
+  built to output "noise" as a real label, instead of forcing every point into a cluster, however bad the fit.</p>
+
+  <div class="quiz-card" data-quiz>
+    <span class="qk">Knowledge check · 1 of 5</span>
+    <p class="question">What is the fundamental question DBSCAN asks about each point, unlike GMM or K-Means?</p>
+    <div class="quiz-options">
+      <button class="quiz-option" data-correct="false">Which centroid is nearest?</button>
+      <button class="quiz-option" data-correct="false">Which Gaussian gives the highest likelihood?</button>
+      <button class="quiz-option" data-correct="true">Is this point in a dense neighborhood or an isolated one?</button>
+      <button class="quiz-option" data-correct="false">What is this point's distance from the origin?</button>
+    </div>
+    <div class="quiz-explain"><span class="lbl">Why</span>DBSCAN's entire mechanism is built on local neighborhood density rather than distance-to-center or distribution likelihood.</div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SECTION 2 — BUILDING BLOCKS
+     ================================================================ -->
+<section id="building-blocks">
+  <span class="eyebrow"><span class="dot"></span>Section 2</span>
+  <h2 class="section-title">eps, MinPts, and three kinds of points</h2>
+  <p>The outlier customers a GMM couldn't explain are the running example for this whole section — building up,
+  piece by piece, exactly the vocabulary DBSCAN needs to catch them.</p>
+
+  <div class="analogy-card">
+    <div class="icon">ε</div>
+    <div>
+      <h4>eps (ε) — the neighborhood radius</h4>
+      <p>For any customer, eps is basically: <em>how far should I look around this customer to see who's nearby?</em>
+      Think of it as an invisible circle drawn around every point. A small eps only considers very close customers;
+      a large eps considers customers farther away.</p>
+      <p class="analogy-line">"eps is the size of the area you look around in — 1 meter in a crowded room might show you 10 people, 5 meters might show you 50."</p>
+      <p>A reasonable eps is tied to the distance to a point's k-th nearest neighbor — in other words, asking:
+      how far do I need to look before I find a normal-sized local neighborhood? (Formalized in Section 4.)</p>
+    </div>
+  </div>
+
+  <div class="viz-embed">
+    <div class="viz-embed-head">
+      <div>
+        <span class="t">Interactive</span>
+        <h4>Epsilon Neighborhood Radius Explorer</h4>
+      </div>
+      <a class="viz-open-link" href="https://aiml-vizs-new.vercel.app/un-supervised-learning/eps-neighborhood-radius-explorer/" target="_blank" rel="noopener">Open ↗</a>
+    </div>
+    <div class="frame-wrap">
+      <iframe src="https://aiml-vizs-new.vercel.app/un-supervised-learning/eps-neighborhood-radius-explorer/" title="Epsilon neighborhood radius explorer" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="viz-fallback-note">If the panel above doesn't load in this view, use "Open ↗" to launch the explorer directly.</p>
+  </div>
+
+  <div class="analogy-card">
+    <div class="icon">n</div>
+    <div>
+      <h4>MinPts — the density threshold</h4>
+      <p>MinPts answers a different question: <em>how many points need to be inside my neighborhood for this area
+      to count as crowded?</em></p>
+      <p class="analogy-line">"eps is how far you look. MinPts is how many people you expect to find."</p>
+      <p>For example: eps = 2&nbsp;km means look within 2&nbsp;km around the customer; MinPts = 5 means at least 5
+      points must be in that neighborhood for it to be considered dense. Together, the two knobs define what
+      DBSCAN considers a dense region.</p>
+    </div>
+  </div>
+
+  <h3 class="sub-title">Core, border, and noise points</h3>
+  <p>With those two knobs, every point in the dataset falls into exactly one of three buckets. This is exactly
+  what makes DBSCAN useful for the outlier customers: instead of forcing an assignment, it can say <em>"this
+  customer isn't part of any dense region — mark it as noise."</em> That label is what a GMM couldn't naturally
+  give Veloura's forced-fit customers.</p>
+
+  <div class="point-types">
+    <div class="point-card core" tabindex="0" role="button" aria-expanded="false">
+      <div class="dot-icon"></div>
+      <h4>Core point</h4>
+      <p>Its eps-neighborhood contains ≥ MinPts points.</p>
+      <span class="more">Read more <span class="chev">⌄</span></span>
+      <div class="extra">A point sitting comfortably inside a crowded region — dense enough, by itself, to start or extend a cluster.</div>
+    </div>
+    <div class="point-card border" tabindex="0" role="button" aria-expanded="false">
+      <div class="dot-icon"></div>
+      <h4>Border point</h4>
+      <p>Not dense enough alone, but inside a core point's neighborhood.</p>
+      <span class="more">Read more <span class="chev">⌄</span></span>
+      <div class="extra">Relevant by association, not by its own density — it rides along with whichever cluster its core-point neighbor belongs to.</div>
+    </div>
+    <div class="point-card noise" tabindex="0" role="button" aria-expanded="false">
+      <div class="dot-icon"></div>
+      <h4>Noise point</h4>
+      <p>Neither core nor border.</p>
+      <span class="more">Read more <span class="chev">⌄</span></span>
+      <div class="extra">Genuinely isolated from every dense region — the label a GMM simply doesn't have.</div>
+    </div>
+  </div>
+
+  <details class="code-reveal">
+    <summary><span>▸</span> View the code <span class="fname">— labeling core, border, and noise customers</span></summary>
+    <pre><code>from matplotlib.patches import Circle
+
+np.random.seed(7)
+core_cluster = np.random.normal(loc=[0, 0], scale=0.5, size=(15, 2))
+border_pt = np.array([[1.55, 0.2]])          # just inside a core point's reach
+noise_pt = np.array([[3.2, 3.0]])            # genuinely far from everyone
+
+pts = np.vstack([core_cluster, border_pt, noise_pt])
+eps = 0.8
+
+fig, ax = plt.subplots(figsize=(6.5, 6))
+ax.scatter(core_cluster[:, 0], core_cluster[:, 1], color="steelblue", label="dense region (core candidates)")
+ax.scatter(border_pt[:, 0], border_pt[:, 1], color="orange", s=80, label="border point")
+ax.scatter(noise_pt[:, 0], noise_pt[:, 1], color="crimson", marker="x", s=90, label="noise point")
+
+anchor = core_cluster[0]
+ax.add_patch(Circle(anchor, eps, fill=False, linestyle="--", color="steelblue"))
+ax.set_aspect("equal")
+plt.tight_layout()
+plt.show()</code></pre>
+  </details>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/250/original/Screenshot_2026-08-13_102223.png?1786596754" alt="Scatterplot showing a dense blob of core-candidate points, one orange border point, one crimson noise point marked with an X, and a dashed circle showing the eps neighborhood around one core point.">
+    <figcaption>Core candidates, one border point, one noise point — with the eps neighborhood traced around a representative core point.</figcaption>
+  </figure>
+
+  <p>Walking the expansion process — exactly what the full algorithm does in the next section:</p>
+  <ol class="steps">
+    <li><strong>Pick an unvisited customer.</strong></li>
+    <li><strong>Count neighbors within eps.</strong> Is it a core point (≥ MinPts)?</li>
+    <li><strong>If yes</strong> — absorb every point in its neighborhood into the cluster (they become border points, or core points themselves if they also clear MinPts), and keep expanding outward through connected core points.</li>
+    <li><strong>If no</strong>, and it isn't inside any core point's neighborhood either — label it noise.</li>
+    <li><strong>Move to the next unvisited point.</strong> Repeat until everyone is classified.</li>
+  </ol>
+
+  <details class="think-box">
+    <summary>Think it through — a point has only 3 neighbors within eps, and MinPts = 5. Core, border, or noise?</summary>
+    <div class="a"><span class="q" style="display:block;margin-bottom:.4em;">What do you need to know before deciding?</span>
+    It can't be core on its own — 3 is fewer than MinPts = 5. Whether it's border or noise depends entirely on one
+    more fact: is it inside the eps-neighborhood of some <em>other</em> point that <em>is</em> core? If yes, it's a
+    border point. If not, it's noise.</div>
+  </details>
+
+  <div class="quiz-card" data-quiz>
+    <span class="qk">Knowledge check · 2 of 5</span>
+    <p class="question">A point has only 2 neighbors within its eps radius (MinPts = 5), but one of those neighbors is a core point. What is this point classified as?</p>
+    <div class="quiz-options">
+      <button class="quiz-option" data-correct="false">Core point</button>
+      <button class="quiz-option" data-correct="true">Border point</button>
+      <button class="quiz-option" data-correct="false">Noise point</button>
+      <button class="quiz-option" data-correct="false">It cannot be classified</button>
+    </div>
+    <div class="quiz-explain"><span class="lbl">Why</span>It fails the core-point density test on its own, but because a core point's neighborhood includes it, it's "reachable" from a cluster and classified as a border point rather than noise.</div>
+  </div>
+
+  <div class="askai">
+    <div class="askai-head"><span class="badge">AI</span><span class="q">Why does DBSCAN need two separate parameters instead of just one density threshold?</span></div>
+    <div class="askai-body">
+      <p><strong>eps</strong> controls spatial proximity — which points count as neighbors at all — while
+      <strong>MinPts</strong> controls density — how many of those neighbors are required before a region counts
+      as crowded. A single threshold can't disentangle the two: a sparse region with points close together and a
+      dense region with points spread slightly farther apart could look identical to one combined number. Keeping
+      them separate lets DBSCAN recognize clusters of different densities and shapes without confusing "close" with "crowded."</p>
+    </div>
+    <div class="askai-source">Concept deep-dive, generated on request during the session</div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SECTION 3 — ALGORITHM
+     ================================================================ -->
+<section id="algorithm">
+  <span class="eyebrow"><span class="dot"></span>Section 3</span>
+  <h2 class="section-title">The algorithm, step by step</h2>
+  <p>Putting the density intuition and the eps / MinPts vocabulary together into one clean loop:</p>
+
+  <ol class="steps">
+    <li><strong>Pick an unvisited point.</strong></li>
+    <li><strong>Test it.</strong> If it's a core point (≥ MinPts neighbors within eps), start a new cluster and expand: pull in every point density-reachable from it, directly or through a chain of other core points.</li>
+    <li><strong>Classify absorbed points.</strong> Any point pulled in this way that isn't itself core becomes a border point of that cluster.</li>
+    <li><strong>Otherwise, label it noise</strong> — if the starting point isn't core, and isn't reachable from any core point.</li>
+    <li><strong>Repeat</strong> until every point has a label: a cluster ID, or noise.</li>
+  </ol>
+
+  <p>Two points are <strong>density-connected</strong> when they're linked through a chain of core points — not
+  necessarily direct neighbors of each other. That chaining is exactly what lets DBSCAN trace out long, curved,
+  irregular shapes, instead of only ever drawing neat blobs.</p>
+
+  <div class="viz-embed">
+    <div class="viz-embed-head">
+      <div>
+        <span class="t">Interactive</span>
+        <h4>Cluster Expansion via Density Chaining</h4>
+      </div>
+      <a class="viz-open-link" href="https://aiml-vizs-new.vercel.app/un-supervised-learning/cluster-expansion-via-density-chaining/" target="_blank" rel="noopener">Open ↗</a>
+    </div>
+    <div class="frame-wrap">
+      <iframe src="https://aiml-vizs-new.vercel.app/un-supervised-learning/cluster-expansion-via-density-chaining/" title="Cluster expansion via density chaining visualizer" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="viz-fallback-note">If the panel above doesn't load in this view, use "Open ↗" to launch the visualizer directly.</p>
+  </div>
+
+  <details class="code-reveal">
+    <summary><span>▸</span> View the code <span class="fname">— building the six-panel mechanism figure</span></summary>
+    <pre><code>from sklearn.datasets import make_blobs
+from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
+from matplotlib.patches import Circle
+
+np.random.seed(42)
+X, _ = make_blobs(n_samples=180, centers=[[0, 0], [5, 5], [0, 5]],
+                   cluster_std=0.6, random_state=42)
+noise = np.random.uniform(low=-3, high=8, size=(20, 2))
+X = np.vstack([X, noise])
+
+eps = 0.8
+min_pts = 5
+
+nbrs = NearestNeighbors(radius=eps).fit(X)
+neighbor_counts = np.array([len(idx) for idx in nbrs.radius_neighbors(X, return_distance=False)])
+is_core = neighbor_counts >= min_pts
+
+db = DBSCAN(eps=eps, min_samples=min_pts).fit(X)
+labels = db.labels_
+
+# Six panels, in order:
+# (1) what is eps -- radius around one point
+# (2) a core point and its neighbors
+# (3) a border point next to a core point
+# (4) noise points, unreachable from any core point
+# (5) cluster expansion -- chaining core points outward
+# (6) final DBSCAN output -- all clusters + noise, color coded</code></pre>
+  </details>
+
+  <div class="gallery" id="mechanismGallery">
+    <div class="gallery-view">
+      <img class="active" src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/251/original/Screenshot_2026-08-13_102347.png?1786596837" alt="Panels 1 and 2 of the DBSCAN mechanism figure: the epsilon radius around a point, and a core point with its neighbors highlighted.">
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/252/original/Screenshot_2026-08-13_102443.png?1786596893" alt="Panels 3 and 4 of the DBSCAN mechanism figure: a border point next to a core point, and noise points unreachable from any core point.">
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/253/original/Screenshot_2026-08-13_102521.png?1786596934" alt="Panels 5 and 6 of the DBSCAN mechanism figure: cluster expansion chaining core points outward, and the final DBSCAN output with all clusters and noise color coded.">
+    </div>
+    <div class="gallery-nav">
+      <button type="button" aria-label="Previous panel" data-dir="-1">‹</button>
+      <div class="gallery-caption" id="galleryCaption">1 / 3 — ① What is ε? · ② Core point &amp; its neighbors</div>
+      <button type="button" aria-label="Next panel" data-dir="1">›</button>
+    </div>
+  </div>
+
+  <div class="quiz-card" data-quiz>
+    <span class="qk">Knowledge check · 3 of 5</span>
+    <p class="question">Two points are density-connected in DBSCAN when:</p>
+    <div class="quiz-options">
+      <button class="quiz-option" data-correct="false">They are within eps of each other, regardless of density.</button>
+      <button class="quiz-option" data-correct="false">They are both labeled noise.</button>
+      <button class="quiz-option" data-correct="true">They are both core points linked by a chain of density-reachable core points.</button>
+      <button class="quiz-option" data-correct="false">They belong to the same Gaussian.</button>
+    </div>
+    <div class="quiz-explain"><span class="lbl">Why</span>Density-connectivity is what lets DBSCAN form a single cluster out of an irregular, chained-together shape — two points don't need to be direct neighbors, just connected through a path of core points.</div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SECTION 4 — TUNING
+     ================================================================ -->
+<section id="tuning">
+  <span class="eyebrow"><span class="dot"></span>Section 4</span>
+  <h2 class="section-title">Tuning eps and MinPts</h2>
+  <p>Neither knob is guesswork — both follow principled rules.</p>
+
+  <h3 class="sub-title">MinPts rule of thumb</h3>
+  <p><strong>≥ d + 1</strong>, and in practice often <strong>2 × d</strong>, where d is the number of features.
+  Why scale it with dimensionality? In higher dimensions, points naturally spread out more — the curse of
+  dimensionality — so a fixed, small MinPts would call almost any region "dense enough." Scaling MinPts with d
+  keeps the density test meaningful as Veloura adds more behavioral features.</p>
+
+  <h3 class="sub-title">eps tuning — the k-distance elbow method</h3>
+  <ol class="steps">
+    <li><strong>Compute k-distance.</strong> For every point, compute the distance to its k-th nearest neighbor (set k = MinPts).</li>
+    <li><strong>Sort and plot.</strong> Sort those distances and plot them.</li>
+    <li><strong>Find the elbow.</strong> Where distances suddenly start climbing is a natural eps choice.</li>
+  </ol>
+  <p>Why does this work? It identifies exactly the point where customers transition from densely packed to
+  sparse — which is precisely what eps is supposed to capture.</p>
+
+  <details class="code-reveal">
+    <summary><span>▸</span> View the code <span class="fname">— the k-distance elbow plot</span></summary>
+    <pre><code>from sklearn.neighbors import NearestNeighbors
+
+k = 5  # will match MinPts once it's set on the real dataset
+nn = NearestNeighbors(n_neighbors=k).fit(warmup)
+distances, _ = nn.kneighbors(warmup)
+k_distances = np.sort(distances[:, -1])
+
+plt.figure(figsize=(6.5, 4.5))
+plt.plot(k_distances, marker="o", markersize=3)
+plt.xlabel("Points, sorted by k-distance")
+plt.ylabel(f"Distance to {k}th nearest neighbor")
+plt.title("k-distance elbow plot -- the 'knee' is a natural eps")
+plt.show()</code></pre>
+  </details>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/254/original/Screenshot_2026-08-13_102610.png?1786596981" alt="Line chart of sorted 5th-nearest-neighbor distances, rising slowly then sharply upward near the right edge, marking the elbow.">
+    <figcaption>The knee marks the transition from dense neighborhoods to sparse ones.</figcaption>
+  </figure>
+
+  <p>Each point on this graph is the distance from one customer to its 5th nearest neighbor (k = 5), sorted from
+  smallest to largest. For most customers, that distance grows slowly and smoothly — they lie in naturally dense
+  regions. Near the end of the curve, the distances jump sharply: those points are much farther from their 5th
+  nearest neighbor, meaning they sit in sparse regions or are potential outliers. Points before the knee are
+  likely to become part of clusters; points after it are more likely to be treated as noise. That gives a
+  data-driven starting point for choosing eps instead of picking it arbitrarily.</p>
+
+  <div class="quiz-card" data-quiz>
+    <span class="qk">Knowledge check · 4 of 5</span>
+    <p class="question">Why is the MinPts rule of thumb "≥ d + 1" or "≈ 2 × d" rather than a fixed number like 5 for every dataset?</p>
+    <div class="quiz-options">
+      <button class="quiz-option" data-correct="false">It's an arbitrary convention with no reasoning behind it.</button>
+      <button class="quiz-option" data-correct="true">Higher-dimensional data needs more neighbors to distinguish genuinely dense regions from sparse ones by chance.</button>
+      <button class="quiz-option" data-correct="false">d has no relationship to density.</button>
+      <button class="quiz-option" data-correct="false">MinPts must always equal the number of clusters.</button>
+    </div>
+    <div class="quiz-explain"><span class="lbl">Why</span>As dimensionality grows, points become naturally more spread out (curse of dimensionality), so a fixed low MinPts would call almost everything "dense." Scaling MinPts with d keeps the density test meaningful.</div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SECTION 5 — VELOURA CODE WALKTHROUGH
+     ================================================================ -->
+<section id="veloura-code">
+  <span class="eyebrow"><span class="dot"></span>Section 5</span>
+  <h2 class="section-title">Putting DBSCAN to work on Veloura's data</h2>
+  <p>This reuses the same standardized behavioral feature set as the GMM notebook — same customers, same pipeline —
+  so the walkthrough visibly continues where the last session left off. Two views of the data, both grounded in
+  the story:</p>
+  <ul>
+    <li><strong>The core segmentation view</strong> — the same spend / frequency / recency features the GMM segmented last time, with a handful of reseller-shaped customers mixed in on purpose so DBSCAN can be watched flagging them.</li>
+    <li><strong>A browsing-pattern view</strong> — two crescent-shaped clickstream behavior clusters, the non-Gaussian shape a GMM couldn't fit cleanly.</li>
+  </ul>
+
+  <details class="code-reveal">
+    <summary><span>▸</span> View the code <span class="fname">— building both feature sets</span></summary>
+    <pre><code>from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import DBSCAN, KMeans
+from sklearn.datasets import make_moons
+
+np.random.seed(42)
+n_customers = 1200
+
+segment_a = np.random.normal(loc=[70, 8], scale=[12, 2], size=(int(n_customers*0.45), 2))   # everyday shoppers
+segment_b = np.random.normal(loc=[220, 3], scale=[30, 1], size=(int(n_customers*0.35), 2))  # deal-hunters
+segment_c = np.random.normal(loc=[150, 14], scale=[18, 2.5], size=(int(n_customers*0.15), 2)) # VIP frequent buyers
+
+# Planted anomalies: near-zero spend, huge order count -- the reseller /
+# bulk-buyer shape the GMM quietly absorbed into a segment last session.
+anomalies = np.column_stack([
+    np.random.uniform(5, 20, 12),     # avg_order_value ~ almost nothing
+    np.random.uniform(40, 60, 12)     # purchase_frequency ~ absurdly high
+])
+
+raw = np.vstack([segment_a, segment_b, segment_c, anomalies])
+veloura_core = pd.DataFrame(raw, columns=["avg_order_value", "purchase_frequency"])
+veloura_core["is_planted_anomaly"] = [0]*len(segment_a) + [0]*len(segment_b) + [0]*len(segment_c) + [1]*len(anomalies)
+
+scaler = StandardScaler()
+core_scaled = scaler.fit_transform(veloura_core[["avg_order_value", "purchase_frequency"]])
+
+# Browsing-pattern features (odd, non-elliptical shape)
+moon_a, moon_labels = make_moons(n_samples=600, noise=0.06, random_state=42)
+browsing = pd.DataFrame(moon_a, columns=["session_duration_z", "click_to_purchase_ratio_z"])</code></pre>
+  </details>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/255/original/Screenshot_2026-08-13_102658.png?1786597032" alt="Preview of the veloura_core dataframe with avg_order_value, purchase_frequency, and is_planted_anomaly columns.">
+    <figcaption>A first look at the standardized core segmentation feature set.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/256/original/Screenshot_2026-08-13_102754.png?1786597085" alt="Two side-by-side scatterplots: core segments with planted anomalies highlighted in red on the left, and two teal crescent-shaped browsing pattern clusters on the right.">
+    <figcaption>Left — the forced-fit problem: red anomaly points sit far from every legitimate segment. Right — the shape problem: two crescents that any elliptical method will misread.</figcaption>
+  </figure>
+
+  <p>The left plot is the forced-fit problem: those red anomaly points sit far from every legitimate segment, yet
+  a GMM fit here would still confidently assign each one to whichever Gaussian happens to be closest. The right
+  plot is the shape problem: two crescents that any elliptical-cluster method — KMeans, GMM — will try to carve
+  with straight-ish or oval boundaries and get wrong.</p>
+
+  <h3 class="sub-title">Tuning and fitting on the core segments</h3>
+  <details class="code-reveal">
+    <summary><span>▸</span> View the code <span class="fname">— k-distance elbow, then DBSCAN.fit_predict</span></summary>
+    <pre><code>d = core_scaled.shape[1]
+min_pts_core = 6  # nudged up slightly from the 2xd floor of 4, for stability
+
+nn = NearestNeighbors(n_neighbors=min_pts_core).fit(core_scaled)
+dist, _ = nn.kneighbors(core_scaled)
+k_dist_sorted = np.sort(dist[:, -1])
+# ... plot the elbow ...
+
+# Reading the elbow (roughly 0.2-0.25 in standardized units) -- pick eps just past the knee
+eps_core = 0.28
+
+dbscan_core = DBSCAN(eps=eps_core, min_samples=min_pts_core)
+core_labels = dbscan_core.fit_predict(core_scaled)
+veloura_core["dbscan_label"] = core_labels
+
+n_noise = (core_labels == -1).sum()
+n_clusters = len(set(core_labels)) - (1 if -1 in core_labels else 0)</code></pre>
+  </details>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/257/original/Screenshot_2026-08-13_102829.png?1786597119" alt="k-distance elbow plot for the core Veloura segmentation features, showing a knee around 0.2 to 0.25 in standardized units.">
+    <figcaption>k-distance elbow on the core segmentation features — eps chosen just past the knee, around 0.28.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/258/original/Screenshot_2026-08-13_102917.png?1786597167" alt="Scatterplot of DBSCAN results on core Veloura segments, with flagged noise points ringed in black.">
+    <figcaption>DBSCAN on the core segments — flagged noise points ringed in black.</figcaption>
+  </figure>
+
+  <p>Those ringed points are exactly the reseller / bulk-buyer customers a GMM buried inside a legitimate segment
+  last session. DBSCAN doesn't force them anywhere — it labels them <code>-1</code> and hands the list straight to
+  Veloura's fraud and ops team.</p>
+
+  <div class="stat-grid">
+    <div class="stat-card accent"><span class="n">12 / 12</span><span class="l">Planted anomalies caught as noise</span></div>
+    <div class="stat-card"><span class="n">18</span><span class="l">Total customers flagged noise</span></div>
+    <div class="stat-card"><span class="n">6</span><span class="l">Additional customers flagged</span></div>
+  </div>
+
+  <h3 class="sub-title">Did DBSCAN find the anomalies?</h3>
+  <p>Yes — and without ever being told where they were. DBSCAN correctly identified all 12 planted reseller-shaped
+  customers as noise, demonstrating one of its biggest advantages over algorithms like K-Means and GMM: points
+  that don't belong to any dense region don't have to be forced into a cluster.</p>
+  <p>It also flagged 6 additional customers as noise. These weren't planted anomalies — they're simply customers
+  whose behavior is unusually isolated compared to the rest of the dataset. Whether they represent genuinely
+  unusual customers, data errors, or interesting edge cases would require further business investigation. This
+  points to an important distinction: <strong>DBSCAN detects points in low-density regions — not "fraud"
+  directly.</strong> Every flagged point is a candidate anomaly; interpreting why it's unusual still requires
+  domain knowledge.</p>
+
+  <h3 class="sub-title">Now the shape problem — browsing-pattern crescents</h3>
+  <details class="code-reveal">
+    <summary><span>▸</span> View the code <span class="fname">— DBSCAN vs. KMeans on the crescents</span></summary>
+    <pre><code>min_pts_browse = 6
+nn_b = NearestNeighbors(n_neighbors=min_pts_browse).fit(browsing.values)
+dist_b, _ = nn_b.kneighbors(browsing.values)
+k_dist_b_sorted = np.sort(dist_b[:, -1])
+# ... elbow lands around eps ~ 0.13 ...
+
+eps_browse = 0.13
+dbscan_browse = DBSCAN(eps=eps_browse, min_samples=min_pts_browse)
+browse_labels = dbscan_browse.fit_predict(browsing.values)
+
+kmeans_browse = KMeans(n_clusters=2, n_init=10, random_state=42).fit_predict(browsing.values)</code></pre>
+  </details>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/259/original/Screenshot_2026-08-13_103001.png?1786597223" alt="k-distance elbow plot for the browsing-pattern features.">
+    <figcaption>k-distance elbow on the browsing-pattern features.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/260/original/Screenshot_2026-08-13_103045.png?1786597255" alt="Two side-by-side scatterplots comparing KMeans and DBSCAN on the crescent-shaped browsing data; KMeans forces a straight split, DBSCAN follows the crescent shape.">
+    <figcaption>KMeans forces a straight-ish split through the crescents (left); DBSCAN follows the actual shape (right).</figcaption>
+  </figure>
+
+  <p>That's the second crack closed: DBSCAN doesn't assume clusters are elliptical, so the two natural
+  browsing-pattern groups come out intact instead of being cut down the middle.</p>
+
+  <h3 class="sub-title">Quantitative sanity check</h3>
+  <p>Since noise points aren't really "in" any cluster, cluster quality is scored on the core points only,
+  excluding noise, and runtime is compared against the previous session's methods.</p>
+
+  <details class="code-reveal">
+    <summary><span>▸</span> View the code <span class="fname">— silhouette score and fit time</span></summary>
+    <pre><code>from sklearn.metrics import silhouette_score
+import time
+
+core_mask = core_labels != -1
+sil = silhouette_score(core_scaled[core_mask], core_labels[core_mask])
+
+start = time.time()
+DBSCAN(eps=eps_core, min_samples=min_pts_core).fit(core_scaled)
+fit_time = time.time() - start</code></pre>
+    <div class="output-block">
+      <span class="lbl">Output</span>
+      <pre><code>Silhouette score (core clusters only): 0.708
+DBSCAN fit time on 1152 customers: 0.0355s</code></pre>
+    </div>
+  </details>
+
+  <div class="stat-grid">
+    <div class="stat-card"><span class="n">0.708</span><span class="l">Silhouette score (core clusters)</span></div>
+    <div class="stat-card"><span class="n">0.036s</span><span class="l">Fit time on 1,152 customers</span></div>
+  </div>
+
+  <p>Ignoring the points labeled noise, the remaining clusters are well separated and internally compact: a
+  silhouette score of 0.708 indicates customers are, on average, much closer to their own cluster than to
+  neighboring ones. DBSCAN also completed in well under a tenth of a second on this dataset — fast enough for many
+  real-world customer segmentation tasks at this scale. Taken together, DBSCAN has addressed both limitations
+  observed with GMM: outliers can remain unclustered instead of being forced into a segment, and clusters can take
+  arbitrary shapes without assuming an elliptical distribution.</p>
+</section>
+
+<!-- ================================================================
+     SECTION 6 — TRADEOFFS
+     ================================================================ -->
+<section id="tradeoffs">
+  <span class="eyebrow"><span class="dot"></span>Section 6</span>
+  <h2 class="section-title">Strengths, limits, and choosing the right algorithm</h2>
+
+  <div class="adv-lim">
+    <div class="box adv">
+      <h4>✓ Advantages</h4>
+      <ul>
+        <li>Noise-resistant — explicitly labels outliers instead of forcing them in</li>
+        <li>Handles arbitrary cluster shapes</li>
+        <li>No need to pre-specify k</li>
+      </ul>
+    </div>
+    <div class="box lim">
+      <h4>✕ Limitations</h4>
+      <ul>
+        <li>Sensitive to the eps / MinPts choice</li>
+        <li>Struggles with genuinely varying density — a dense VIP segment and a sparse casual-browser segment can trip up a single global eps</li>
+      </ul>
+    </div>
+  </div>
+  <p>That varying-density blind spot is DBSCAN's own honest caveat — the same way a GMM was upfront about its
+  elliptical-shape assumption.</p>
+
+  <h3 class="sub-title">The full toolkit, side by side</h3>
+  <div class="table-wrap">
+    <table class="compare">
+      <thead>
+        <tr><th>Algorithm</th><th>Shape assumption</th><th>Handles noise?</th><th>Needs k upfront?</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">K-Means</th><td>Spherical</td><td><span class="no">✕</span></td><td><span class="yes">✓</span></td></tr>
+        <tr><th scope="row">Hierarchical</th><td>Any (via dendrogram cut)</td><td><span class="no">✕</span></td><td><span class="yes">✓</span> (still needs a cut height)</td></tr>
+        <tr><th scope="row">GMM</th><td>Elliptical</td><td><span class="no">✕</span></td><td><span class="yes">✓</span></td></tr>
+        <tr class="highlight-row"><th scope="row">DBSCAN</th><td>Arbitrary</td><td><span class="yes">✓</span></td><td><span class="no">✕</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="quiz-card" data-quiz>
+    <span class="qk">Knowledge check · 5 of 5</span>
+    <p class="question">Veloura wants to flag potentially fraudulent transactions in real time, where fraud patterns are rare, irregular in shape, and shouldn't be forced into a "normal" segment. Which algorithm from this two-part series fits best?</p>
+    <div class="quiz-options">
+      <button class="quiz-option" data-correct="false">Hierarchical Clustering</button>
+      <button class="quiz-option" data-correct="false">K-Means</button>
+      <button class="quiz-option" data-correct="false">Gaussian Mixture Model</button>
+      <button class="quiz-option" data-correct="true">DBSCAN</button>
+    </div>
+    <div class="quiz-explain"><span class="lbl">Why</span>This is precisely DBSCAN's design goal: no forced assignment, native noise / outlier labeling, and no assumption of elliptical or globular cluster shape.</div>
+  </div>
+
+  <div class="askai">
+    <div class="askai-head"><span class="badge">AI</span><span class="q">If Veloura's VIP segment is much denser than its casual-browser segment, why is a single global eps risky, and what would you try instead?</span></div>
+    <div class="askai-body">
+      <p>A single global eps assumes one neighborhood size describes "dense" everywhere. When the VIP segment is
+      naturally tight and the casual-browser segment is naturally spread out, an eps tuned for one will
+      misclassify the other — either merging the sparse segment into noise, or swallowing both segments into one
+      cluster. A few directions worth exploring instead:</p>
+      <ul>
+        <li>Density-aware algorithms such as OPTICS or HDBSCAN, built specifically to handle varying density within one dataset.</li>
+        <li>A two-stage approach — cluster the dense and sparse populations separately, then combine the results.</li>
+        <li>Feature transforms (log-scaling, normalization) that reduce the gap in density between segments before running DBSCAN.</li>
+      </ul>
+    </div>
+    <div class="askai-source">Concept deep-dive, generated on request during the session</div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SECTION 7 — WRAP UP
+     ================================================================ -->
+<section id="wrapup">
+  <span class="eyebrow"><span class="dot"></span>Wrap-up</span>
+  <h2 class="section-title">The complete toolkit</h2>
+
+  <div class="wrapup-box">
+    <h3>Recap</h3>
+    <ul>
+      <li><strong>Density</strong>, not distribution shape or distance-to-centroid, is DBSCAN's core idea.</li>
+      <li><strong>eps + MinPts</strong> define core, border, and noise points.</li>
+      <li>The algorithm expands clusters from core points and explicitly labels true outliers as <strong>noise</strong>.</li>
+      <li>Tuning follows principled rules — the k-distance elbow for eps, the d-based rule for MinPts — not guesswork.</li>
+      <li>DBSCAN closes both gaps GMM left open: it can say "this doesn't belong anywhere," and it isn't limited to elliptical clusters.</li>
+    </ul>
+    <p>With DBSCAN in place, Veloura now has segment-level insight for Marketing from the GMM, and an
+    outlier / fraud-flagging layer for Ops from DBSCAN — plus the complete four-algorithm toolkit (K-Means,
+    Hierarchical, GMM, DBSCAN) to choose from depending on which business question comes in next.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <span class="fname">DBSCAN post read</span> · Veloura Analytics, Session 2
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------------------------------------------------------
+     Reading progress bar
+     --------------------------------------------------------------- */
+  var progressFill = document.getElementById('progressFill');
+  function updateProgress(){
+    var doc = document.documentElement;
+    var scrollTop = window.pageYOffset || doc.scrollTop || 0;
+    var scrollable = (doc.scrollHeight - doc.clientHeight);
+    var pct = scrollable > 0 ? (scrollTop / scrollable) * 100 : 0;
+    if (progressFill) progressFill.style.width = pct + '%';
+  }
+  window.addEventListener('scroll', updateProgress, { passive: true });
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---------------------------------------------------------------
+     Mobile nav toggle
+     --------------------------------------------------------------- */
+  var navToggle = document.getElementById('navToggle');
+  var siteNav = document.getElementById('siteNav');
+  if (navToggle && siteNav) {
+    navToggle.addEventListener('click', function(){
+      var isOpen = siteNav.classList.toggle('open');
+      navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+    siteNav.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click', function(){
+        siteNav.classList.remove('open');
+        navToggle.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
+
+  /* ---------------------------------------------------------------
+     Scrollspy
+     --------------------------------------------------------------- */
+  var sections = document.querySelectorAll('main section[id]');
+  var navLinks = document.querySelectorAll('.toc-list a');
+  if ('IntersectionObserver' in window && sections.length) {
+    var spy = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting) {
+          navLinks.forEach(function(l){ l.classList.remove('active'); });
+          var link = document.querySelector('.toc-list a[href="#' + entry.target.id + '"]');
+          if (link) link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-15% 0px -70% 0px', threshold: 0 });
+    sections.forEach(function(s){ spy.observe(s); });
+  }
+
+  /* ---------------------------------------------------------------
+     Core / border / noise definition cards (expand on click)
+     --------------------------------------------------------------- */
+  document.querySelectorAll('.point-card').forEach(function(card){
+    function toggle(){
+      var open = card.classList.toggle('open');
+      card.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    card.addEventListener('click', toggle);
+    card.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+  });
+
+  /* ---------------------------------------------------------------
+     "Think it through" boxes -- track single-open <details> nicely
+     (native <details> handles this; nothing extra required)
+     --------------------------------------------------------------- */
+
+  /* ---------------------------------------------------------------
+     Quiz cards
+     --------------------------------------------------------------- */
+  document.querySelectorAll('[data-quiz]').forEach(function(card){
+    var options = card.querySelectorAll('.quiz-option');
+    var explain = card.querySelector('.quiz-explain');
+    options.forEach(function(opt){
+      var mark = document.createElement('span');
+      mark.className = 'mark';
+      opt.insertBefore(mark, opt.firstChild);
+    });
+    options.forEach(function(opt){
+      opt.addEventListener('click', function(){
+        if (card.getAttribute('data-answered') === 'true') return;
+        card.setAttribute('data-answered', 'true');
+        options.forEach(function(o){
+          o.disabled = true;
+          var isCorrect = o.getAttribute('data-correct') === 'true';
+          var mk = o.querySelector('.mark');
+          if (o === opt) {
+            o.classList.add(isCorrect ? 'correct' : 'incorrect');
+            mk.textContent = isCorrect ? '✓' : '✕';
+          } else if (isCorrect) {
+            o.classList.add('correct');
+            mk.textContent = '✓';
+          } else {
+            o.classList.add('dim');
+          }
+        });
+        if (explain) explain.classList.add('show');
+      });
+    });
+  });
+
+  /* ---------------------------------------------------------------
+     Mechanism gallery (6-panel figure, shown as 3 slides)
+     --------------------------------------------------------------- */
+  var gallery = document.getElementById('mechanismGallery');
+  if (gallery) {
+    var gImgs = gallery.querySelectorAll('.gallery-view img');
+    var gCaption = document.getElementById('galleryCaption');
+    var gCaptions = [
+      '1 / 3 — \u2460 What is \u03b5? \u00b7 \u2461 Core point & its neighbors',
+      '2 / 3 — \u2462 Border point \u00b7 \u2463 Noise points',
+      '3 / 3 — \u2464 Cluster expansion \u00b7 \u2465 Final DBSCAN output'
+    ];
+    var gCurrent = 0;
+    function showSlide(i){
+      gCurrent = (i + gImgs.length) % gImgs.length;
+      gImgs.forEach(function(img, idx){ img.classList.toggle('active', idx === gCurrent); });
+      if (gCaption) gCaption.textContent = gCaptions[gCurrent];
+    }
+    gallery.querySelectorAll('.gallery-nav button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        showSlide(gCurrent + parseInt(btn.getAttribute('data-dir'), 10));
+      });
+    });
+    showSlide(0);
+  }
+
+  /* ---------------------------------------------------------------
+     Signature interactive: the density playground
+     --------------------------------------------------------------- */
+  var svg = document.getElementById('playSvg');
+  if (svg) {
+    var epsSlider = document.getElementById('epsSlider');
+    var minPtsSlider = document.getElementById('minPtsSlider');
+    var epsVal = document.getElementById('epsVal');
+    var minPtsVal = document.getElementById('minPtsVal');
+    var statCore = document.getElementById('statCore');
+    var statBorder = document.getElementById('statBorder');
+    var statNoise = document.getElementById('statNoise');
+    var statClusters = document.getElementById('statClusters');
+    var resetBtn = document.getElementById('playReset');
+
+    var VB_W = 560, VB_H = 380, MARGIN = 24;
+    var selected = null;
+    var points = [];
+
+    function mulberry32(seed){
+      return function(){
+        seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+        var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    function gaussian(rand, mean, sd){
+      var u = 0, v = 0;
+      while (u === 0) u = rand();
+      while (v === 0) v = rand();
+      var z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      return mean + z * sd;
+    }
+    function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+    function generatePoints(seed){
+      var rand = mulberry32(seed);
+      var pts = [];
+      var clusters = [
+        { cx: 150, cy: 130, sd: 30, n: 19 },
+        { cx: 400, cy: 110, sd: 24, n: 15 },
+        { cx: 260, cy: 290, sd: 22, n: 13 }
+      ];
+      clusters.forEach(function(c){
+        for (var i = 0; i < c.n; i++) {
+          var x = clamp(gaussian(rand, c.cx, c.sd), MARGIN, VB_W - MARGIN);
+          var y = clamp(gaussian(rand, c.cy, c.sd), MARGIN, VB_H - MARGIN);
+          pts.push({ x: x, y: y });
+        }
+      });
+      var noiseCount = 9;
+      for (var j = 0; j < noiseCount; j++) {
+        pts.push({
+          x: MARGIN + rand() * (VB_W - 2 * MARGIN),
+          y: MARGIN + rand() * (VB_H - 2 * MARGIN)
+        });
+      }
+      return pts;
+    }
+
+    function dist(a, b){
+      var dx = a.x - b.x, dy = a.y - b.y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function classify(pts, eps, minPts){
+      var n = pts.length;
+      var neighborsList = [];
+      for (var i = 0; i < n; i++) {
+        var nb = [];
+        for (var j = 0; j < n; j++) {
+          if (dist(pts[i], pts[j]) <= eps) nb.push(j);
+        }
+        neighborsList.push(nb);
+      }
+      var isCore = neighborsList.map(function(nb){ return nb.length >= minPts; });
+      var labels = new Array(n).fill(-1);
+      var visited = new Array(n).fill(false);
+      var clusterId = 0;
+
+      for (var k = 0; k < n; k++) {
+        if (visited[k]) continue;
+        visited[k] = true;
+        if (!isCore[k]) continue;
+        clusterId++;
+        labels[k] = clusterId;
+        var queue = neighborsList[k].slice();
+        var qi = 0;
+        while (qi < queue.length) {
+          var m = queue[qi++];
+          if (!visited[m]) {
+            visited[m] = true;
+            if (isCore[m]) {
+              neighborsList[m].forEach(function(cand){
+                if (queue.indexOf(cand) === -1) queue.push(cand);
+              });
+            }
+          }
+          if (labels[m] === -1) labels[m] = clusterId;
+        }
+      }
+      return { isCore: isCore, labels: labels, clusterCount: clusterId };
+    }
+
+    function draw(){
+      var eps = parseInt(epsSlider.value, 10);
+      var minPts = parseInt(minPtsSlider.value, 10);
+      epsVal.textContent = eps;
+      minPtsVal.textContent = minPts;
+
+      var result = classify(points, eps, minPts);
+      var core = 0, border = 0, noise = 0;
+      var parts = [];
+
+      if (selected !== null) {
+        var sp = points[selected];
+        parts.push(
+          '<circle cx="' + sp.x + '" cy="' + sp.y + '" r="' + eps +
+          '" fill="rgba(124,49,85,0.08)" stroke="#AE4E71" stroke-width="1.5" stroke-dasharray="4 3"></circle>'
+        );
+      }
+
+      points.forEach(function(p, i){
+        var cat;
+        if (result.isCore[i]) { cat = 'core'; core++; }
+        else if (result.labels[i] !== -1) { cat = 'border'; border++; }
+        else { cat = 'noise'; noise++; }
+
+        if (cat === 'noise') {
+          parts.push(
+            '<g class="pt" data-i="' + i + '" tabindex="0" role="button" aria-label="Noise point" style="cursor:pointer;">' +
+              '<line x1="' + (p.x - 5) + '" y1="' + (p.y - 5) + '" x2="' + (p.x + 5) + '" y2="' + (p.y + 5) + '" stroke="#4A3540" stroke-width="2.2" stroke-linecap="round"></line>' +
+              '<line x1="' + (p.x - 5) + '" y1="' + (p.y + 5) + '" x2="' + (p.x + 5) + '" y2="' + (p.y - 5) + '" stroke="#4A3540" stroke-width="2.2" stroke-linecap="round"></line>' +
+              '<circle cx="' + p.x + '" cy="' + p.y + '" r="10" fill="transparent"></circle>' +
+            '</g>'
+          );
+        } else {
+          var fill = cat === 'core' ? '#7C3155' : '#DE9CBC';
+          var r = cat === 'core' ? 6.4 : 5.2;
+          parts.push(
+            '<circle class="pt" data-i="' + i + '" tabindex="0" role="button" aria-label="' + cat + ' point" style="cursor:pointer;" cx="' +
+            p.x + '" cy="' + p.y + '" r="' + r + '" fill="' + fill + '" stroke="#fff" stroke-width="1"></circle>'
+          );
+        }
+      });
+
+      svg.innerHTML = parts.join('');
+      statCore.textContent = core;
+      statBorder.textContent = border;
+      statNoise.textContent = noise;
+      statClusters.textContent = result.clusterCount;
+
+      svg.querySelectorAll('.pt').forEach(function(el){
+        el.addEventListener('click', function(){
+          var idx = parseInt(el.getAttribute('data-i'), 10);
+          selected = (selected === idx) ? null : idx;
+          draw();
+        });
+        el.addEventListener('keydown', function(e){
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.dispatchEvent(new Event('click')); }
+        });
+      });
+    }
+
+    points = generatePoints(20260813);
+    draw();
+
+    epsSlider.addEventListener('input', draw);
+    minPtsSlider.addEventListener('input', draw);
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function(){
+        selected = null;
+        points = generatePoints(Date.now() % 2147483647);
+        draw();
+      });
+    }
+  }
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DBSCAN" target="_blank" rel="noopener">github.com/scaler-content/DBSCAN</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

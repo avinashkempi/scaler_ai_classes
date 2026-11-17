@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear regression 4 post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+
+/* ============ TOKENS ============ */
+:root{
+  --bg:#FBF7EC;
+  --bg-card:#FFFEFA;
+  --ink:#2A2113;
+  --ink-soft:#5C5138;
+  --ink-faint:#8B7F63;
+  --mustard:#C99A2E;
+  --mustard-deep:#8C6A17;
+  --mustard-bright:#E7B93A;
+  --mustard-wash: rgba(201,154,46,0.10);
+  --mustard-wash-strong: rgba(201,154,46,0.18);
+  --line:#E3D6AE;
+  --line-soft:#EDE3C4;
+  --rust:#9C4221;
+  --rust-wash:#F5E5DA;
+  --sage:#4B6B4F;
+  --sage-wash:#E4EADF;
+  --paper-shadow: 0 1px 0 rgba(42,33,19,0.05);
+  --radius-s:3px;
+  --radius-m:6px;
+  --serif:'Fraunces', Georgia, serif;
+  --sans:'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono:'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1C170D;
+    --bg-card:#241E12;
+    --ink:#F3EBD8;
+    --ink-soft:#CBBE9C;
+    --ink-faint:#8F8567;
+    --mustard:#E3B54A;
+    --mustard-deep:#F0C767;
+    --mustard-bright:#E3B54A;
+    --mustard-wash: rgba(227,181,74,0.10);
+    --mustard-wash-strong: rgba(227,181,74,0.16);
+    --line:#3A311D;
+    --line-soft:#302A19;
+    --rust:#D98B6A;
+    --rust-wash:#332217;
+    --sage:#8FB593;
+    --sage-wash:#1D271E;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1C170D;
+  --bg-card:#241E12;
+  --ink:#F3EBD8;
+  --ink-soft:#CBBE9C;
+  --ink-faint:#8F8567;
+  --mustard:#E3B54A;
+  --mustard-deep:#F0C767;
+  --mustard-bright:#E3B54A;
+  --mustard-wash: rgba(227,181,74,0.10);
+  --mustard-wash-strong: rgba(227,181,74,0.16);
+  --line:#3A311D;
+  --line-soft:#302A19;
+  --rust:#D98B6A;
+  --rust-wash:#332217;
+  --sage:#8FB593;
+  --sage-wash:#1D271E;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{ background:var(--mustard-wash-strong); }
+a{ color:var(--mustard-deep); }
+a:focus-visible, button:focus-visible, summary:focus-visible, .navlink:focus-visible{
+  outline:2px solid var(--mustard-deep);
+  outline-offset:2px;
+  border-radius:2px;
+}
+
+/* ============ LAYOUT SHELL ============ */
+.shell{
+  display:grid;
+  grid-template-columns: 252px minmax(0,1fr);
+  max-width:1180px;
+  margin:0 auto;
+}
+@media (max-width: 900px){
+  .shell{ grid-template-columns: 1fr; }
+}
+
+/* ============ HEADER ============ */
+header.masthead{
+  border-bottom:1px solid var(--line);
+  background:
+    linear-gradient(180deg, var(--mustard-wash), transparent 60%);
+}
+.masthead-inner{
+  max-width:1180px;
+  margin:0 auto;
+  padding:52px 32px 40px;
+}
+.eyebrow-mark{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  font-family:var(--mono);
+  font-size:12.5px;
+  letter-spacing:0.01em;
+  color:var(--mustard-deep);
+  margin-bottom:18px;
+}
+.eyebrow-mark svg{ width:16px; height:16px; }
+h1.title{
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:clamp(2rem, 4.4vw, 3.1rem);
+  line-height:1.08;
+  margin:0 0 14px;
+  color:var(--ink);
+  max-width:16ch;
+}
+.masthead p.lede{
+  font-size:1.08rem;
+  color:var(--ink-soft);
+  max-width:62ch;
+  margin:0 0 22px;
+}
+.masthead-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:22px;
+  font-size:0.88rem;
+  color:var(--ink-faint);
+  font-family:var(--mono);
+}
+.masthead-meta strong{ color:var(--ink-soft); font-weight:600; }
+
+/* ============ NAV RAIL ============ */
+nav.rail{
+  padding:36px 20px 60px;
+  border-right:1px solid var(--line);
+}
+@media (max-width:900px){
+  nav.rail{
+    border-right:none;
+    border-bottom:1px solid var(--line);
+    padding:0;
+    position:sticky; top:0; z-index:30;
+    background:var(--bg);
+  }
+}
+.rail-inner{ position:sticky; top:28px; }
+@media (max-width:900px){ .rail-inner{ position:static; } }
+
+.rail-toggle{
+  display:none;
+  width:100%;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--bg-card);
+  border:none;
+  border-bottom:1px solid var(--line);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-weight:600;
+  font-size:0.95rem;
+  padding:14px 20px;
+  cursor:pointer;
+}
+@media (max-width:900px){ .rail-toggle{ display:flex; } }
+.rail-toggle .chev{ transition:transform .2s ease; color:var(--mustard-deep); }
+.rail-toggle[aria-expanded="true"] .chev{ transform:rotate(180deg); }
+
+.rail-list{
+  list-style:none; margin:0; padding:0;
+}
+@media (max-width:900px){
+  .rail-list{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .25s ease;
+    background:var(--bg-card);
+  }
+  .rail-list.open{ max-height:70vh; overflow-y:auto; }
+}
+.rail-list li{ border-bottom:1px dotted var(--line-soft); }
+@media (min-width:901px){ .rail-list li{ border-bottom:none; } }
+
+.navlink{
+  display:flex;
+  gap:10px;
+  align-items:baseline;
+  padding:8px 20px;
+  text-decoration:none;
+  color:var(--ink-soft);
+  font-size:0.87rem;
+  border-left:2px solid transparent;
+  transition:color .15s ease, border-color .15s ease, background .15s ease;
+}
+.navlink .n{
+  font-family:var(--mono);
+  color:var(--ink-faint);
+  font-size:0.78rem;
+  min-width:1.6em;
+}
+.navlink:hover{ color:var(--ink); background:var(--mustard-wash); }
+.navlink.active{
+  color:var(--mustard-deep);
+  border-left-color:var(--mustard);
+  font-weight:600;
+  background:var(--mustard-wash);
+}
+.rail-divider{
+  margin:14px 20px 10px;
+  font-family:var(--mono);
+  font-size:0.72rem;
+  color:var(--ink-faint);
+  text-transform:lowercase;
+}
+@media (max-width:900px){ .rail-divider{ margin:14px 20px 6px; } }
+
+/* ============ MAIN CONTENT ============ */
+main{
+  padding:44px 40px 100px;
+  max-width:760px;
+}
+@media (max-width:900px){ main{ padding:34px 22px 80px; } }
+
+section.intro{ margin-bottom:56px; }
+section.intro p{ color:var(--ink-soft); font-size:1.03rem; }
+section.intro p.story-open{
+  font-family:var(--serif);
+  font-size:1.22rem;
+  line-height:1.6;
+  color:var(--ink);
+  border-left:3px solid var(--mustard);
+  padding-left:20px;
+  margin:24px 0;
+}
+
+/* topic map */
+.topicmap{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin:28px 0 8px;
+}
+@media (max-width:640px){ .topicmap{ grid-template-columns:repeat(2,1fr); } }
+.topicmap a{
+  display:block;
+  text-decoration:none;
+  padding:14px 14px 13px;
+  border:1px solid var(--line);
+  border-radius:var(--radius-m);
+  background:var(--bg-card);
+  transition:border-color .15s ease, transform .12s ease, box-shadow .15s ease;
+}
+.topicmap a:hover{
+  border-color:var(--mustard);
+  transform:translateY(-1px);
+  box-shadow:0 3px 10px rgba(140,106,23,0.12);
+}
+.topicmap .tm-n{
+  font-family:var(--mono);
+  font-size:0.72rem;
+  color:var(--mustard-deep);
+  display:block;
+  margin-bottom:5px;
+}
+.topicmap .tm-title{
+  display:block;
+  font-weight:600;
+  font-size:0.87rem;
+  color:var(--ink);
+  margin-bottom:4px;
+  line-height:1.3;
+}
+.topicmap .tm-topic{
+  display:block;
+  font-size:0.76rem;
+  color:var(--ink-faint);
+  line-height:1.4;
+}
+
+/* ============ QUESTION BLOCKS ============ */
+article.qblock{
+  margin:0 0 72px;
+  padding-top:6px;
+  scroll-margin-top:24px;
+}
+.qhead{
+  display:flex;
+  align-items:baseline;
+  gap:14px;
+  margin-bottom:6px;
+}
+.qhead .qnum{
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:1.5rem;
+  color:var(--mustard);
+  min-width:1.4em;
+}
+.qhead h2{
+  font-family:var(--serif);
+  font-weight:600;
+  font-size:1.5rem;
+  margin:0;
+  color:var(--ink);
+  line-height:1.25;
+}
+.qtopics{
+  font-family:var(--mono);
+  font-size:0.78rem;
+  color:var(--ink-faint);
+  margin:0 0 22px;
+  padding-left:calc(1.4em + 14px);
+}
+
+.storybox{
+  font-family:var(--serif);
+  font-size:1.08rem;
+  line-height:1.7;
+  color:var(--ink);
+  background:var(--mustard-wash);
+  border-left:3px solid var(--mustard);
+  border-radius:0 var(--radius-m) var(--radius-m) 0;
+  padding:18px 22px;
+  margin:0 0 22px;
+}
+.storybox p{ margin:0 0 10px; }
+.storybox p:last-child{ margin-bottom:0; }
+.storybox strong{ color:var(--mustard-deep); }
+
+.qparts{
+  margin:0 0 20px;
+  padding:0;
+  list-style:none;
+}
+.qparts li{
+  display:grid;
+  grid-template-columns:2em 1fr;
+  gap:4px;
+  padding:9px 0;
+  border-bottom:1px dotted var(--line-soft);
+  font-size:0.98rem;
+  color:var(--ink);
+}
+.qparts li:last-child{ border-bottom:none; }
+.qparts .plab{
+  font-family:var(--mono);
+  color:var(--mustard-deep);
+  font-weight:600;
+}
+.qparts table, .datatable{
+  width:100%;
+  border-collapse:collapse;
+  font-size:0.9rem;
+  margin:6px 0 4px;
+}
+.datatable{ margin:16px 0 24px; }
+.qparts table th, .qparts table td, .datatable th, .datatable td{
+  border:1px solid var(--line);
+  padding:7px 10px;
+  text-align:left;
+}
+.datatable th{
+  background:var(--mustard-wash);
+  font-family:var(--mono);
+  font-weight:600;
+  font-size:0.8rem;
+  color:var(--ink-soft);
+}
+.datatable td.num{ font-family:var(--mono); }
+
+/* reveal solution control */
+.reveal-wrap{ margin:6px 0 4px; }
+.reveal-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:9px;
+  background:var(--ink);
+  color:var(--bg);
+  border:none;
+  border-radius:999px;
+  padding:10px 20px 10px 18px;
+  font-family:var(--sans);
+  font-weight:600;
+  font-size:0.88rem;
+  cursor:pointer;
+  transition:background .15s ease, transform .1s ease;
+}
+.reveal-btn:hover{ background:var(--mustard-deep); }
+.reveal-btn:active{ transform:scale(0.98); }
+.reveal-btn .ic{ transition:transform .2s ease; }
+.reveal-btn[aria-expanded="true"] .ic{ transform:rotate(45deg); }
+
+.solution{
+  max-height:0;
+  overflow:hidden;
+  transition:max-height .35s ease;
+}
+.solution.open{ max-height:none; overflow:visible; }
+.solution-inner{
+  margin-top:20px;
+  padding:24px 26px;
+  background:var(--bg-card);
+  border:1px solid var(--line);
+  border-top:3px solid var(--mustard);
+  border-radius:0 0 var(--radius-m) var(--radius-m);
+}
+.solution-inner h4{
+  font-family:var(--sans);
+  font-size:0.8rem;
+  text-transform:none;
+  color:var(--mustard-deep);
+  font-weight:700;
+  margin:22px 0 8px;
+}
+.solution-inner h4:first-child{ margin-top:0; }
+.solution-inner p{ margin:0 0 12px; color:var(--ink); font-size:0.97rem; }
+.solution-inner p:last-child{ margin-bottom:0; }
+.solution-inner ul, .solution-inner ol{ margin:0 0 14px; padding-left:22px; }
+.solution-inner li{ margin-bottom:7px; }
+.solution-inner strong{ color:var(--ink); }
+.katex-display{ margin:14px 0 !important; overflow-x:auto; overflow-y:hidden; }
+
+.callout{
+  border-radius:var(--radius-m);
+  padding:14px 18px;
+  margin:14px 0;
+  font-size:0.93rem;
+}
+.callout.warn{ background:var(--rust-wash); border-left:3px solid var(--rust); color:var(--ink); }
+.callout.good{ background:var(--sage-wash); border-left:3px solid var(--sage); color:var(--ink); }
+.callout strong{ display:block; font-family:var(--sans); font-size:0.78rem; text-transform:none; margin-bottom:4px; }
+.callout.warn strong{ color:var(--rust); }
+.callout.good strong{ color:var(--sage); }
+
+.xref{
+  font-size:0.85em;
+  color:var(--mustard-deep);
+  text-decoration:none;
+  border-bottom:1px dashed var(--mustard-deep);
+}
+.xref:hover{ color:var(--ink); border-color:var(--ink); }
+
+/* ============ DIAGRAM CARDS ============ */
+.diagram-card{
+  border:1px solid var(--line);
+  background:var(--bg-card);
+  border-radius:var(--radius-m);
+  padding:20px 22px 22px;
+  margin:20px 0 26px;
+}
+.diagram-card .dc-title{
+  font-family:var(--sans);
+  font-weight:600;
+  font-size:0.85rem;
+  color:var(--ink-soft);
+  margin:0 0 14px;
+}
+.diagram-card svg{ width:100%; height:auto; display:block; }
+.toggle-row{
+  display:flex;
+  gap:8px;
+  margin-bottom:16px;
+  flex-wrap:wrap;
+}
+.toggle-pill{
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--ink-soft);
+  font-family:var(--sans);
+  font-size:0.82rem;
+  font-weight:600;
+  padding:7px 14px;
+  border-radius:999px;
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.toggle-pill[aria-pressed="true"]{
+  background:var(--ink);
+  color:var(--bg);
+  border-color:var(--ink);
+}
+.diagram-caption{
+  font-size:0.83rem;
+  color:var(--ink-faint);
+  margin-top:12px;
+  line-height:1.55;
+}
+
+/* VIF calculator */
+.calc-card{
+  border:1px solid var(--line);
+  background:var(--bg-card);
+  border-radius:var(--radius-m);
+  padding:22px 24px;
+  margin:20px 0 26px;
+}
+.calc-card .dc-title{ font-family:var(--sans); font-weight:600; font-size:0.85rem; color:var(--ink-soft); margin:0 0 16px; }
+.calc-row{ display:flex; align-items:center; gap:16px; margin-bottom:8px; flex-wrap:wrap; }
+.calc-row label{ font-family:var(--mono); font-size:0.85rem; color:var(--ink-soft); min-width:150px; }
+.calc-row input[type=range]{ flex:1; min-width:140px; accent-color: var(--mustard-deep); }
+.calc-readout{
+  font-family:var(--mono);
+  font-size:1.7rem;
+  color:var(--mustard-deep);
+  font-weight:600;
+  margin:14px 0 2px;
+}
+.calc-readout small{ font-size:0.9rem; color:var(--ink-faint); font-weight:400; }
+.calc-note{ font-size:0.85rem; color:var(--ink-faint); margin-top:10px; }
+.calc-flag{
+  display:inline-block;
+  margin-top:10px;
+  font-family:var(--sans);
+  font-weight:600;
+  font-size:0.8rem;
+  padding:4px 10px;
+  border-radius:999px;
+}
+.calc-flag.ok{ background:var(--sage-wash); color:var(--sage); }
+.calc-flag.bad{ background:var(--rust-wash); color:var(--rust); }
+
+/* bar chart */
+.bar-legend{ display:flex; gap:18px; font-size:0.8rem; color:var(--ink-soft); margin-bottom:14px; flex-wrap:wrap; }
+.bar-legend span{ display:inline-flex; align-items:center; gap:6px; }
+.bar-legend i{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+
+/* wrap up */
+section.wrapup{
+  margin-top:20px;
+  padding-top:36px;
+  border-top:1px solid var(--line);
+}
+section.wrapup h2{
+  font-family:var(--serif);
+  font-size:1.6rem;
+  margin:0 0 18px;
+}
+.takeaway{
+  background:var(--mustard-wash);
+  border-radius:var(--radius-m);
+  padding:22px 24px;
+  margin:20px 0;
+}
+.takeaway p{ margin:0; font-family:var(--serif); font-size:1.1rem; line-height:1.65; color:var(--ink); }
+.reflect-list{ margin:18px 0; padding-left:22px; }
+.reflect-list li{ margin-bottom:12px; color:var(--ink-soft); }
+.reflect-list strong{ color:var(--ink); }
+
+footer.pagefoot{
+  border-top:1px solid var(--line);
+  padding:26px 40px 40px;
+  max-width:760px;
+  font-family:var(--mono);
+  font-size:0.78rem;
+  color:var(--ink-faint);
+}
+@media (max-width:900px){ footer.pagefoot{ padding:24px 22px 40px; } }
+
+.skip-link{
+  position:absolute; left:-999px; top:0;
+  background:var(--ink); color:var(--bg);
+  padding:10px 16px; z-index:100;
+}
+.skip-link:focus{ left:10px; top:10px; }
+
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  *{ transition-duration:0.01ms !important; animation-duration:0.01ms !important; }
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML with AI 5 · Regression diagnostics practice</span><span class="pn"><a href="../ML-with-AI-workflows-4/" title="ML with AI 4 · Trusting a regression model">← Prev</a><a href="../ML-with-AI-workflows-6/" title="ML with AI 6 · Polynomial regression and overfitting">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip-link" href="#maincontent">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <span class="eyebrow-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+      Linear Regression — In-Depth Practice Set
+    </span>
+    <h1 class="title">Linear regression 4 post read</h1>
+    <p class="lede">Nine worked problems that move from the everyday decisions of shipping a regression model — encoding, leakage, scaling — through to the diagnostics that tell you whether a model's coefficients can actually be trusted: multicollinearity, heteroskedasticity, autocorrelation, and linearity.</p>
+    <div class="masthead-meta">
+      <span><strong>9</strong> worked questions</span>
+      <span><strong>1</strong> running scenario — Wheelio, an online used-car marketplace</span>
+      <span><strong>Format</strong> story → question → worked solution</span>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="rail" aria-label="Section navigation">
+    <div class="rail-inner">
+      <button class="rail-toggle" id="railToggle" aria-expanded="false" aria-controls="railList">
+        <span>Jump to a question</span>
+        <span class="chev">▾</span>
+      </button>
+      <ul class="rail-list" id="railList">
+        <li><a class="navlink" href="#intro" data-nav><span class="n">·</span><span>Intro</span></a></li>
+        <li><a class="navlink" href="#q1" data-nav><span class="n">01</span><span>Used-Car Marketplace</span></a></li>
+        <li><a class="navlink" href="#q2" data-nav><span class="n">02</span><span>Hospital Readmission</span></a></li>
+        <li><a class="navlink" href="#q3" data-nav><span class="n">03</span><span>Two Models, One Winner</span></a></li>
+        <li><a class="navlink" href="#q4" data-nav><span class="n">04</span><span>Reading the Coefficients</span></a></li>
+        <li><a class="navlink" href="#q5" data-nav><span class="n">05</span><span>One Step at a Time</span></a></li>
+        <li><a class="navlink" href="#q6" data-nav><span class="n">06</span><span>Scaling &amp; Gradient Descent</span></a></li>
+        <li><a class="navlink" href="#q7" data-nav><span class="n">07</span><span>Suspiciously Confident Model</span></a></li>
+        <li><a class="navlink" href="#q8" data-nav><span class="n">08</span><span>The Widening Cone</span></a></li>
+        <li><a class="navlink" href="#q9" data-nav><span class="n">09</span><span>The Curve Nobody Modeled</span></a></li>
+        <li><a class="navlink" href="#wrapup" data-nav><span class="n">·</span><span>Takeaways</span></a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main id="maincontent">
+
+    <section class="intro" id="intro">
+      <p class="story-open">You've just joined the data science team at <strong>Wheelio</strong>, an online platform where people list their used cars for resale. The product team wants a feature that shows sellers a suggested price the moment they finish filling out the listing form.</p>
+      <p>The form captures <code>brand</code>, <code>fuel_type</code> (Petrol / Diesel / CNG / Electric), <code>transmission</code> (Manual / Automatic), <code>km_driven</code>, <code>age_years</code>, and <code>number_of_previous_owners</code> — and, once a car actually sells, <code>days_to_sell</code> and <code>final_selling_price</code>. Nine questions grow out of this and eight other scenarios, each pairing a real decision with a worked solution.</p>
+
+      <div class="topicmap">
+        <a href="#q1"><span class="tm-n">01</span><span class="tm-title">The Used-Car Marketplace</span><span class="tm-topic">Regression vs. classification, encoding, scaling, leakage</span></a>
+        <a href="#q2"><span class="tm-n">02</span><span class="tm-title">The Hospital Readmission Model</span><span class="tm-topic">Train/test splits, time-based leakage</span></a>
+        <a href="#q3"><span class="tm-n">03</span><span class="tm-title">Two Models, One Winner?</span><span class="tm-topic">MSE, MAE, R², Adjusted R²</span></a>
+        <a href="#q4"><span class="tm-n">04</span><span class="tm-title">Reading the Coefficients</span><span class="tm-topic">Interpretability, scaling's effect on coefficients</span></a>
+        <a href="#q5"><span class="tm-n">05</span><span class="tm-title">One Step at a Time</span><span class="tm-topic">Weight updates, learning rate, convergence</span></a>
+        <a href="#q6"><span class="tm-n">06</span><span class="tm-title">Scaling &amp; Gradient Descent</span><span class="tm-topic">Geometric intuition, contour ellipses</span></a>
+        <a href="#q7"><span class="tm-n">07</span><span class="tm-title">The Suspiciously Confident Model</span><span class="tm-topic">VIF, multicollinearity</span></a>
+        <a href="#q8"><span class="tm-n">08</span><span class="tm-title">The Widening Cone</span><span class="tm-topic">Heteroskedasticity, Durbin-Watson</span></a>
+        <a href="#q9"><span class="tm-n">09</span><span class="tm-title">The Curve Nobody Modeled</span><span class="tm-topic">Linearity, residual diagnostics</span></a>
+      </div>
+    </section>
+
+    <!-- ======================= QUESTION 1 ======================= -->
+    <article class="qblock" id="q1">
+      <div class="qhead"><span class="qnum">01</span><h2>The Used-Car Marketplace</h2></div>
+      <p class="qtopics">Regression vs. classification · encoding · scaling · data leakage</p>
+
+      <div class="storybox">
+        <p>Your manager looks at the Wheelio pricing feature and says: <em>"This is obviously a regression problem — just throw everything into a Linear Regression model and ship it."</em></p>
+      </div>
+
+      <ol class="qparts">
+        <li><span class="plab">a</span><span>Why is predicting <code>final_selling_price</code> a regression task rather than a classification task? Give one scenario where the same target column could instead be framed as classification.</span></li>
+        <li><span class="plab">b</span><span><code>fuel_type</code> and <code>transmission</code> are categorical. How should each be encoded for a Linear Regression model, and why does one-hot encoding a variable with <em>k</em> categories need only <em>k−1</em> columns when an intercept term is present?</span></li>
+        <li><span class="plab">c</span><span><code>km_driven</code> ranges from 0 to ~200,000 while <code>age_years</code> ranges from 0 to 15. Does an ordinary Linear Regression fit via the normal equation strictly require feature scaling to produce correct coefficients? Does it matter if the same model is trained with gradient descent instead?</span></li>
+        <li><span class="plab">d</span><span>Your manager wants to add <code>days_to_sell</code> as a feature to help predict <code>final_selling_price</code>. What's wrong with this, in the correct terminology?</span></li>
+      </ol>
+
+      <div class="reveal-wrap">
+        <button class="reveal-btn" data-target="sol1" aria-expanded="false"><span class="ic">＋</span> Reveal solution</button>
+      </div>
+      <div class="solution" id="sol1">
+        <div class="solution-inner">
+          <h4>a — Regression vs. classification</h4>
+          <p><code>final_selling_price</code> is a continuous numeric quantity, and what matters is <em>how much</em> it is, not just which bucket it falls into — so this is regression. The same underlying data becomes a classification problem the moment the target is bucketed: for example, predicting whether a car lands in a "Premium" (&gt;₹8L) or "Budget" (≤₹8L) price band.</p>
+
+          <h4>b — Encoding the categoricals</h4>
+          <p><code>fuel_type</code> (4 categories) and <code>transmission</code> (2 categories) are both nominal, with no natural order, so one-hot encoding is the right approach. Label encoding would be wrong here — assigning Petrol=0, Diesel=1, CNG=2, Electric=3 would tell the model "Electric" is three times "more" of something than Petrol, which is meaningless.</p>
+          <p>If a variable has <em>k</em> categories and you create <em>k</em> one-hot columns while also keeping the intercept, those <em>k</em> columns always sum to exactly 1 for every row — one column becomes an exact linear combination of the others plus the intercept. This is the <strong>dummy variable trap</strong>: a case of perfect multicollinearity. The design matrix becomes singular, so \((X^\top X)^{-1}\) doesn't exist and the normal equation has no unique solution. Dropping one category — which becomes the reference category, absorbed into the intercept — removes the redundancy. So <code>transmission</code> needs only one column (e.g. <code>is_automatic</code>), and <code>fuel_type</code> needs three columns for its four categories.</p>
+
+          <div class="diagram-card">
+            <p class="dc-title">Why k columns break the model, and k−1 fixes it</p>
+            <div id="dummyVarDiagram"></div>
+            <p class="diagram-caption" id="dummyVarCaption">Four fuel-type columns always sum to 1 for every row — an exact linear combination of the intercept. Drop one category and the redundancy disappears.</p>
+          </div>
+
+          <h4>c — Does scaling matter?</h4>
+          <p><strong>Normal equation:</strong> no — scaling isn't required for correctness. \(\beta = (X^\top X)^{-1}X^\top y\) finds the exact minimizer of the squared-error cost regardless of each feature's scale; the coefficients simply come out in different units to compensate (a tiny coefficient for <code>km_driven</code>, a large one for <code>age_years</code>). Predictions and R² are identical either way. In practice, extreme scale differences can cause numerical instability while computing the matrix inverse — but that's a floating-point precision issue, not a correctness issue.</p>
+          <p><strong>Gradient descent:</strong> yes — scaling matters a great deal, though it still doesn't change what the correct answer is, only how easily you get there. Features on very different scales stretch the cost surface into a long, narrow elliptical bowl rather than a circular one, which makes gradient descent zig-zag and converge slowly. This geometry is explored in full under <a class="xref" href="#q6">Scaling &amp; Gradient Descent</a>. Scaling is about optimization efficiency, not about changing the theoretically correct coefficients.</p>
+
+          <h4>d — The leakage problem</h4>
+          <p><code>days_to_sell</code> is only known <em>after</em> a car has already sold — it's generated by the same process being predicted. In real deployment, at the moment a listing is created, this feature simply doesn't exist yet. Using it during training is a textbook case of <strong>data leakage</strong>: the model learns a relationship that depends on future information relative to when the prediction actually needs to be made. It would look unrealistically strong during training and testing, then fail in production, where <code>days_to_sell</code> is unknown at prediction time.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- ======================= QUESTION 2 ======================= -->
+    <article class="qblock" id="q2">
+      <div class="qhead"><span class="qnum">02</span><h2>The Hospital Readmission Model</h2></div>
+      <p class="qtopics">Train/test splits · time-based leakage · group leakage</p>
+
+      <div class="storybox">
+        <p>A hospital chain wants to predict <code>length_of_stay</code> (in days) for incoming patients, to help with bed allocation. A junior analyst builds a dataset from three years of patient records and runs a standard 80/20 random split. The model scores an impressive <strong>R² = 0.91</strong> on the test set. Deployed on new patients at admission time, however, its errors are almost twice as large as expected — no better than a much simpler model using only <code>age</code> and <code>admitting_diagnosis</code>.</p>
+        <p>The full feature list: <code>age</code>, <code>admitting_diagnosis</code>, <code>number_of_lab_tests_ordered</code>, <code>discharge_summary_word_count</code>, <code>total_medication_doses_administered</code>, <code>attending_physician_id</code>.</p>
+      </div>
+
+      <ol class="qparts">
+        <li><span class="plab">a</span><span>Which feature(s) are almost certainly causing data leakage? Explain the mechanism — why does the model perform "too well" in testing but fail at deployment?</span></li>
+        <li><span class="plab">b</span><span>The dataset spans 3 years, and patient volume/case-mix has shifted noticeably. Why might a random split still give an overly optimistic estimate of real-world performance here, and what kind of split would be more appropriate?</span></li>
+        <li><span class="plab">c</span><span>Suppose the same patient appears multiple times in the dataset across separate visits. What new problem does this introduce for a random split, and how would you fix it?</span></li>
+      </ol>
+
+      <div class="reveal-wrap"><button class="reveal-btn" data-target="sol2" aria-expanded="false"><span class="ic">＋</span> Reveal solution</button></div>
+      <div class="solution" id="sol2">
+        <div class="solution-inner">
+          <h4>a — The leaking features</h4>
+          <p><code>discharge_summary_word_count</code> and <code>total_medication_doses_administered</code> are both generated during or after the hospital stay — you can't know either until the stay is essentially over, which is exactly the quantity being predicted. They're highly correlated with <code>length_of_stay</code> because they're downstream consequences of it, not signals available at admission time.</p>
+          <p><strong>Mechanism:</strong> during training and testing these columns exist for every historical patient, so the model learns a strong but non-deployable relationship — longer stays produce more doses administered, so the model "predicts" length of stay by essentially reading a proxy for the answer. This inflates R² because the leakage is baked into every row, train and test alike. At deployment, made at admission, none of this future information exists yet, so the model's apparent skill evaporates.</p>
+
+          <h4>b — Random splits over a shifting population</h4>
+          <p>A random 80/20 split scatters all three years of data into both train and test. The model is often evaluated on patients from periods it has effectively already seen similar patients from — a form of <strong>temporal leakage</strong>. It inflates the test score because the "unseen" test set is statistically similar to the training distribution in a way that genuinely future patients won't be.</p>
+          <p><strong>Better approach:</strong> a time-based (out-of-time) split — train on years 1–2, test on year 3 — mimics real deployment: trained on the past, evaluated on a genuinely future period, including any distribution shifts that occurred later.</p>
+
+          <h4>c — Patient-level (group) leakage</h4>
+          <p>If a patient's three visits are scattered across train and test by a purely random row-level split, the model can partially memorize patient-specific traits from that patient's other visits, then get an unfair advantage predicting their test-set visit. The "unseen" test row isn't really independent of the training data.</p>
+          <p><strong>Fix:</strong> a group-based split (e.g. scikit-learn's <code>GroupShuffleSplit</code> or <code>GroupKFold</code>, grouped by <code>patient_id</code>) so all of a given patient's visits land entirely in train or entirely in test. Combined with part b, the most rigorous approach is a <strong>grouped, time-based split</strong>.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- ======================= QUESTION 3 ======================= -->
+    <article class="qblock" id="q3">
+      <div class="qhead"><span class="qnum">03</span><h2>Two Models, One Winner?</h2></div>
+      <p class="qtopics">MSE · MAE · R² · Adjusted R² · outlier sensitivity</p>
+
+      <div class="storybox">
+        <p>At Zipline Express, the ops team has trained two models to predict delivery time from a real dataset of 200 deliveries. <strong>Model A</strong> uses 5 features (distance, packages, traffic index, time-of-day, weather). <strong>Model B</strong> uses 12 — Model A's five plus seven more, including driver experience and restaurant prep time.</p>
+      </div>
+
+      <table class="datatable">
+        <thead><tr><th>Metric</th><th>Model A (5 features)</th><th>Model B (12 features)</th></tr></thead>
+        <tbody>
+          <tr><td>R²</td><td class="num">0.820</td><td class="num">0.840</td></tr>
+          <tr><td>MSE (min²)</td><td class="num">45.0</td><td class="num">40.0</td></tr>
+          <tr><td>MAE (min)</td><td class="num">5.2</td><td class="num">4.9</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--ink-soft); font-size:0.93rem; margin-top:-10px;">The ops lead's read: "Model B wins on every metric, ship Model B." The data scientist on the team is hesitant.</p>
+
+      <ol class="qparts">
+        <li><span class="plab">a</span><span>Compute the Adjusted R² for both models by hand (<em>n</em> = 200 for both; <em>k</em> = 5 for Model A, <em>k</em> = 12 for Model B).</span></li>
+        <li><span class="plab">b</span><span>Using your answer to (a), why is the data scientist hesitant even though Model B's raw R² is higher? What general property of R² does this illustrate?</span></li>
+        <li><span class="plab">c</span><span>In plain English, what do an MSE of 40&nbsp;min² and an MAE of 4.9&nbsp;min actually mean about real-world prediction error? Why can't 45&nbsp;min² be compared directly to 5.2&nbsp;min?</span></li>
+        <li><span class="plab">d</span><span>Three deliveries in the test set turn out to be extreme outliers. Which metric would be more affected, and why? What does that imply about choosing MSE vs. MAE as a primary evaluation metric?</span></li>
+      </ol>
+
+      <div class="reveal-wrap"><button class="reveal-btn" data-target="sol3" aria-expanded="false"><span class="ic">＋</span> Reveal solution</button></div>
+      <div class="solution" id="sol3">
+        <div class="solution-inner">
+          <h4>a — Adjusted R² by hand</h4>
+          <p>\[ R^2_{adj} = 1 - (1-R^2)\cdot\frac{n-1}{n-k-1} \]</p>
+          <p><strong>Model A</strong> (n=200, k=5): \(1 - (1-0.82)\cdot\frac{199}{194} = 1 - 0.18\times1.0258 = \boxed{0.8154}\)</p>
+          <p><strong>Model B</strong> (n=200, k=12): \(1 - (1-0.84)\cdot\frac{199}{187} = 1 - 0.16\times1.0642 = \boxed{0.8297}\)</p>
+
+          <div class="diagram-card">
+            <p class="dc-title">Raw R² vs. Adjusted R²</p>
+            <div class="bar-legend">
+              <span><i style="background:var(--mustard-bright)"></i>Raw R²</span>
+              <span><i style="background:var(--ink)"></i>Adjusted R²</span>
+            </div>
+            <div id="r2Chart"></div>
+            <p class="diagram-caption">Model B still leads on Adjusted R², but its lead over Model A shrinks once each model is penalized for its feature count — the more features, the harder the penalty.</p>
+          </div>
+
+          <h4>b — Why the hesitation</h4>
+          <p>Plain R² always increases, or at worst stays the same, when features are added — even pure-noise ones — because OLS can always use extra degrees of freedom to explain a little more in-sample variance. The 0.82 → 0.84 jump doesn't by itself prove the seven extra features are genuinely useful.</p>
+          <p>Adjusted R² penalizes for the number of predictors. Model A's R² drops only slightly (0.820 → 0.815), while Model B's drops more (0.840 → 0.830) — more than twice as hard, matching its larger feature count. Model B's adjusted R² is still higher, so the added complexity appears to earn its keep here — but by a smaller margin than the raw numbers suggested. This is why a data scientist reaches for adjusted R² (and ideally per-feature significance or cross-validation) rather than treating "more features, higher raw R²" as proof of a better model.</p>
+
+          <h4>c — Explaining the numbers plainly</h4>
+          <p><strong>MAE = 4.9 minutes</strong> is the most directly interpretable figure: on average, a prediction is off by about 4.9 minutes, in either direction. <strong>MSE = 40 min²</strong> isn't directly interpretable in minutes, because each error is squared before averaging — its units are "minutes squared." Taking the square root gives RMSE = √40 ≈ 6.3 minutes, notably higher than the MAE of 4.9 — a gap that is itself informative (see part d).</p>
+
+          <h4>d — MSE vs. MAE under outliers</h4>
+          <p><strong>MSE is far more sensitive.</strong> Squaring the error before averaging means a delivery off by 120 minutes contributes \(120^2=14{,}400\) to the sum, dwarfing dozens of "normal" deliveries off by a few minutes each. MAE counts that same error as simply 120, proportional to how much it actually happened — which is exactly why RMSE (6.3 min) sat noticeably above MAE (4.9 min).</p>
+          <div class="callout good"><strong>Business call</strong>If typical accuracy matters most and rare extreme delays are acceptable noise, MAE is the more appropriate primary metric. If occasional very-late deliveries are especially costly — refunds, churn — MSE/RMSE's outlier sensitivity becomes a feature, not a bug, pushing the model to avoid large misses. There's no universally correct choice; it depends on which kind of error the business cares about more.</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ======================= QUESTION 4 ======================= -->
+    <article class="qblock" id="q4">
+      <div class="qhead"><span class="qnum">04</span><h2>Reading the Coefficients</h2></div>
+      <p class="qtopics">Interpretability · standardized coefficients · multicollinearity</p>
+
+      <div class="storybox">
+        <p>The CMO at BrightCart, a D2C skincare brand, has a monthly dataset of ad spend (₹ thousands) across TV, Instagram, and Google Search, and the resulting sales (thousand units). A Linear Regression on the raw, unscaled data gives:</p>
+        <p style="text-align:center; font-family:var(--mono); font-size:0.95rem; color:var(--ink);">\[ \widehat{sales} = 4.2 + 0.045\cdot TV + 0.19\cdot Instagram + 0.003\cdot GoogleSearch \]</p>
+        <p>The CMO's read: <em>"Instagram's coefficient (0.19) is way bigger than TV's (0.045) — it's clearly our most powerful channel. Let's shift the whole budget there."</em> A colleague re-trains the same model after standardizing every feature (z-score) first:</p>
+        <p style="text-align:center; font-family:var(--mono); font-size:0.95rem; color:var(--ink);">\[ \widehat{sales} = \overline{sales} + 28.4\cdot TV_{scaled} + 11.7\cdot Instagram_{scaled} + 0.6\cdot GoogleSearch_{scaled} \]</p>
+      </div>
+
+      <ol class="qparts">
+        <li><span class="plab">a</span><span>What does the coefficient 0.19 for Instagram mean in the first (unscaled) model — precise about units and the "holding other variables constant" interpretation?</span></li>
+        <li><span class="plab">b</span><span>Is "bigger raw coefficient = more powerful channel" valid? What's wrong with comparing 0.045 and 0.19 directly, given what you know about TV and Instagram's spend ranges?</span></li>
+        <li><span class="plab">c</span><span>In the standardized model, TV's coefficient (28.4) is now much larger than Instagram's (11.7) — the ranking flips. Why does standardizing do this, and what does a standardized coefficient like 28.4 actually mean?</span></li>
+        <li><span class="plab">d</span><span>Even standardized coefficients can mislead if the channels are correlated with each other. Name the phenomenon, and one way to check for it.</span></li>
+      </ol>
+
+      <div class="reveal-wrap"><button class="reveal-btn" data-target="sol4" aria-expanded="false"><span class="ic">＋</span> Reveal solution</button></div>
+      <div class="solution" id="sol4">
+        <div class="solution-inner">
+          <h4>a — Interpreting the raw coefficient</h4>
+          <p>Holding TV and Google Search spend fixed, a ₹1,000 increase in Instagram spend is associated with an average increase of 0.19 thousand units — 190 units — in sales. This is a correlational, model-internal reading: it doesn't by itself prove that spending ₹1,000 more on Instagram <em>causes</em> 190 more units to sell, but it's what the number represents within this linear model.</p>
+
+          <h4>b — Why raw coefficients aren't comparable</h4>
+          <p>Unscaled coefficients are entangled with each feature's typical scale. If TV spend typically runs in the ₹100,000s while Instagram runs in the ₹10,000s, a "1 unit" (₹1,000) change represents a much smaller relative shift for TV's budget than for Instagram's. A small coefficient on a large-scale variable can correspond to a bigger overall effect than a large coefficient on a small-scale one — you can't tell from the raw numbers alone. The CMO is comparing a ₹-per-thousand effect on a huge budget line to the same effect on a small one.</p>
+
+          <h4>c — Why standardizing flips the ranking</h4>
+          <p>Z-scoring converts each feature into "standard deviations from its own mean," putting every channel on the same scale — one standardized unit now means "one typical amount of variation," regardless of ₹ units. A standardized coefficient of 28.4 for TV means a one-standard-deviation increase in TV spend, holding the other channels fixed, is associated with a 28.4-thousand-unit increase in sales.</p>
+          <p>The flip happens because TV likely varies less month to month (smaller standard deviation — steady campaigns) than Instagram, whose spend swings more. A ₹1,000 change in TV "does less" in raw terms, but a <em>typical</em> change in TV (one full standard deviation, potentially a large ₹ amount on a big steady budget) moves sales far more than a typical Instagram change does. Standardized coefficients better reflect how much a channel matters given how it actually varies in practice.</p>
+
+          <h4>d — The multicollinearity caveat</h4>
+          <p>If TV and Instagram spend move together — campaigns often launch on both at once — the model struggles to cleanly attribute the sales lift to one channel over the other. Standardized coefficients can become unstable, inflated, or even flip sign with small data changes, because credit is being split between two correlated predictors. This is <strong>multicollinearity</strong>, explored in depth under <a class="xref" href="#q7">The Suspiciously Confident Model</a>. A simple check: the pairwise correlation matrix between channels; more rigorously, the <strong>Variance Inflation Factor (VIF)</strong> for each feature. A VIF well above ~5–10 is a red flag that a coefficient shouldn't be trusted as a clean importance measure.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- ======================= QUESTION 5 ======================= -->
+    <article class="qblock" id="q5">
+      <div class="qhead"><span class="qnum">05</span><h2>One Step at a Time</h2></div>
+      <p class="qtopics">Weight-update rule · learning rate · convergence vs. divergence</p>
+
+      <div class="storybox">
+        <p>A student, Ananya, tests her from-scratch gradient descent on a toy dataset she knows the exact answer to ahead of time — every point lies perfectly on \(y = 2x+1\):</p>
+        <table class="datatable" style="max-width:220px;">
+          <thead><tr><th>x</th><th>y</th></tr></thead>
+          <tbody><tr><td>1</td><td>3</td></tr><tr><td>2</td><td>5</td></tr><tr><td>3</td><td>7</td></tr></tbody>
+        </table>
+        <p>She initializes \(w=0,\ b=0\), with learning rate \(\alpha = 0.1\).</p>
+      </div>
+
+      <ol class="qparts">
+        <li><span class="plab">a</span><span>Compute \(\partial J/\partial w\) and \(\partial J/\partial b\) at the very first step (\(w=0, b=0\)).</span></li>
+        <li><span class="plab">b</span><span>Using those gradients, compute the updated \(w_1\) and \(b_1\) after one iteration.</span></li>
+        <li><span class="plab">c</span><span>After many iterations, \(w\) and \(b\) do converge toward 2 and 1. What would happen instead with \(\alpha = 10\)? With \(\alpha = 0.0000001\)? Reason through the mechanism of both failure modes.</span></li>
+      </ol>
+
+      <div class="reveal-wrap"><button class="reveal-btn" data-target="sol5" aria-expanded="false"><span class="ic">＋</span> Reveal solution</button></div>
+      <div class="solution" id="sol5">
+        <div class="solution-inner">
+          <h4>a — The gradients at the first step</h4>
+          <p>With \(w=0,b=0\), every prediction is \(\hat y_i = 0\), so the errors are \(e_i = \hat y_i - y_i = -y_i\): \(e_1=-3,\ e_2=-5,\ e_3=-7\).</p>
+          <p>\[ \frac{\partial J}{\partial w} = \frac{1}{m}\sum e_i x_i = \frac{1}{3}\big[(-3)(1)+(-5)(2)+(-7)(3)\big] = \frac{-34}{3} \approx -11.33 \]</p>
+          <p>\[ \frac{\partial J}{\partial b} = \frac{1}{m}\sum e_i = \frac{1}{3}\big[-3-5-7\big] = -5 \]</p>
+
+          <h4>b — The first update</h4>
+          <p>\[ w_1 = 0 - 0.1\times(-11.33) = \boxed{1.133} \qquad b_1 = 0 - 0.1\times(-5) = \boxed{0.5} \]</p>
+          <p>After a single step, \((w,b)\) has already moved from \((0,0)\) toward the true answer \((2,1)\) — in the right direction, though many more iterations are needed to close the gap.</p>
+
+          <h4>c — Learning rate too large vs. too small</h4>
+          <div class="diagram-card">
+            <p class="dc-title">Three learning rates, three outcomes</p>
+            <div class="toggle-row" role="tablist" aria-label="Learning rate scenario">
+              <button class="toggle-pill" data-lr="good" aria-pressed="true">α = 0.1 (tuned)</button>
+              <button class="toggle-pill" data-lr="big" aria-pressed="false">α = 10 (too large)</button>
+              <button class="toggle-pill" data-lr="small" aria-pressed="false">α = 0.0000001 (too small)</button>
+            </div>
+            <div id="lrDiagram"></div>
+            <p class="diagram-caption" id="lrCaption"></p>
+          </div>
+          <p><strong>\(\alpha=10\), too large:</strong> \(J(w,b)\) is a convex bowl, and gradient descent is meant to step down its slope. Step size is proportional to \(\alpha\), so a gradient of roughly \(-11\) produces a step of about \(10\times11=110\) — wildly overshooting the minimum and landing on the opposite side of the bowl, at a <em>higher</em> cost than before, with an even steeper gradient. Each step overshoots by more than the last: \(w\) and \(b\) oscillate with ever-increasing magnitude. This is <strong>divergence</strong> — in practice, the cost increases every iteration, often blowing up to <code>inf</code>/<code>NaN</code> within a handful of steps.</p>
+          <p><strong>\(\alpha=0.0000001\), too small:</strong> the opposite problem — each step is minuscule (roughly \(0.0000001\times11.33\approx0.0000011\) per iteration for \(w\)). The algorithm moves in the correct direction every time and is mathematically guaranteed to converge eventually, but would need an impractically large number of iterations. With a fixed iteration budget, this looks like the cost barely decreasing at all — easy to mistake for a stalled or broken model when the learning rate is simply too conservative.</p>
+          <p style="color:var(--ink-soft);">The learning rate trades off the risk of overshoot (too large) against unacceptably slow convergence (too small) — there's no universally correct value; it typically needs tuning for a given problem and its feature scales, which is exactly why feature scaling (see <a class="xref" href="#q6">Scaling &amp; Gradient Descent</a>) matters so much for making one learning rate work well across all features at once.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- ======================= QUESTION 6 ======================= -->
+    <article class="qblock" id="q6">
+      <div class="qhead"><span class="qnum">06</span><h2>Why Scaling Matters for Gradient Descent</h2></div>
+      <p class="qtopics">Contour geometry · zig-zagging · standardization</p>
+
+      <div class="storybox">
+        <p>A student is training a from-scratch Linear Regression to predict house prices from <code>area_sqft</code> (roughly 500–5000) and <code>age_years</code> (roughly 0–50), using gradient descent with a single learning rate applied to both weights. Whatever single \(\alpha\) he tries, something goes wrong: large enough for <code>age_years</code> to converge reasonably, and <code>area_sqft</code> explodes and diverges. Small enough to keep <code>area_sqft</code> stable, and <code>age_years</code> barely moves after thousands of iterations.</p>
+      </div>
+
+      <ol class="qparts">
+        <li><span class="plab">a</span><span>In terms of the cost function's contour plot, why does pairing a large-scale feature with a small-scale one in unscaled gradient descent create this exact problem?</span></li>
+        <li><span class="plab">b</span><span>Concretely, why does a single learning rate, applied identically to both weight updates, end up simultaneously too big for one weight and too small for the other?</span></li>
+        <li><span class="plab">c</span><span>Write the standardization formula the student should apply, and explain precisely why it fixes the problem. State one rule about which mean and standard deviation to use when scaling test data, and why.</span></li>
+      </ol>
+
+      <div class="diagram-card">
+        <p class="dc-title">The cost surface, before and after scaling</p>
+        <div class="toggle-row">
+          <button class="toggle-pill" data-contour="unscaled" aria-pressed="true">Unscaled — elongated bowl</button>
+          <button class="toggle-pill" data-contour="scaled" aria-pressed="false">Scaled — circular bowl</button>
+        </div>
+        <div id="contourDiagram"></div>
+        <p class="diagram-caption" id="contourCaption"></p>
+      </div>
+
+      <div class="reveal-wrap"><button class="reveal-btn" data-target="sol6" aria-expanded="false"><span class="ic">＋</span> Reveal solution</button></div>
+      <div class="solution" id="sol6">
+        <div class="solution-inner">
+          <h4>a — The elongated bowl</h4>
+          <p>\(J(w_{area}, w_{age})\) is a convex quadratic bowl in 2D weight-space, whose equal-cost contour lines are ellipses. Because <code>area_sqft</code> values are numerically much larger than <code>age_years</code> values, a small change in \(w_{area}\) moves the prediction — and the cost — much more than the same-sized change in \(w_{age}\). The cost surface is steep in the \(w_{area}\) direction and comparatively flat in the \(w_{age}\) direction, producing elongated, cigar-shaped contours instead of circular ones.</p>
+          <p>Gradient descent's update direction is perpendicular to the local contour line, not necessarily pointed at the center of an elongated ellipse — so instead of a straight line to the minimum, the path zig-zags across the ellipse's narrow axis, making slow net progress along its long axis. That's exactly what the student is seeing.</p>
+
+          <h4>b — One learning rate, two conflicting requirements</h4>
+          <p>The two weights have gradients of very different natural magnitude because of the scale mismatch: steep for \(w_{area}\), shallow for \(w_{age}\). Since both updates use the same \(\alpha\), no single value is simultaneously small enough to avoid overshooting the steep direction and large enough to make progress along the shallow one — a mechanical consequence of the elongated bowl in part a.</p>
+
+          <h4>c — The fix: standardization</h4>
+          <p>\[ x_{scaled} = \frac{x-\mu}{\sigma} \]</p>
+          <p>with \(\mu\) and \(\sigma\) computed on the <strong>training set</strong>. After this, both features sit on the same scale (mean 0, standard deviation 1), so a one-unit change in either represents a "typical" amount of variation for that feature. The contours become far more circular, the gradient direction points much more directly at the minimum, and a single well-chosen learning rate works reasonably well for both weights — convergence becomes dramatically faster and more stable.</p>
+          <div class="callout warn"><strong>Train-only statistics</strong>The \(\mu\) and \(\sigma\) used to scale must be computed only from the training set, then that same \(\mu,\sigma\) — not freshly recomputed values — applied to the test set and any new incoming data. Recomputing on the test set (or train+test combined) leaks information about the test distribution into the modeling process, and risks an inconsistent transformation: a model trained on one "scale" of numbers must always see inputs on that same scale to produce meaningful predictions.</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ======================= QUESTION 7 ======================= -->
+    <article class="qblock" id="q7">
+      <div class="qhead"><span class="qnum">07</span><h2>The Suspiciously Confident Model</h2></div>
+      <p class="qtopics">F-statistic vs. t-statistics · multicollinearity · VIF</p>
+
+      <div class="storybox">
+        <p>An HR analytics team predicts <code>monthly_salary</code> from several features, including — by an unfortunate oversight — both <code>experience_years</code> and <code>experience_months</code> (≈ years × 12, computed from the same join date). The <code>statsmodels</code> OLS summary:</p>
+      </div>
+
+      <table class="datatable">
+        <thead><tr><th></th><th>coef</th><th>std err</th><th>t</th><th>P&gt;|t|</th></tr></thead>
+        <tbody>
+          <tr><td>const</td><td class="num">18500.0</td><td class="num">850.0</td><td class="num">21.76</td><td class="num">0.000</td></tr>
+          <tr><td>experience_years</td><td class="num">5200.0</td><td class="num">3100.0</td><td class="num">1.68</td><td class="num">0.095</td></tr>
+          <tr><td>experience_months</td><td class="num">−280.0</td><td class="num">190.0</td><td class="num">−1.47</td><td class="num">0.143</td></tr>
+          <tr><td>education_level</td><td class="num">3400.0</td><td class="num">420.0</td><td class="num">8.10</td><td class="num">0.000</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--ink-soft); font-size:0.9rem; margin-top:-10px; font-family:var(--mono);">R² 0.812 · Adj. R² 0.806 · F-statistic 138.4 · Prob(F) 2.1e-42</p>
+      <p style="color:var(--ink-soft); font-size:0.93rem;">A teammate: <em>"The overall model looks great — high R², tiny F p-value — but experience_years and experience_months both come back insignificant, and months even has a negative coefficient. Something's broken."</em></p>
+
+      <ol class="qparts">
+        <li><span class="plab">a</span><span>What do the F-statistic and its p-value tell you, versus what the individual t-statistics tell you? Why can the overall model be highly significant while individual coefficients aren't?</span></li>
+        <li><span class="plab">b</span><span>Diagnose the specific problem. What's it called, and why does it produce exactly these symptoms?</span></li>
+        <li><span class="plab">c</span><span>The VIF for <code>experience_years</code> comes back as 45. Using \(VIF_j = 1/(1-R_j^2)\), what must \(R_j^2\) be, and what does that number mean?</span></li>
+        <li><span class="plab">d</span><span>What's the standard rule-of-thumb VIF threshold, and what should the team actually do to fix the model?</span></li>
+      </ol>
+
+      <div class="reveal-wrap"><button class="reveal-btn" data-target="sol7" aria-expanded="false"><span class="ic">＋</span> Reveal solution</button></div>
+      <div class="solution" id="sol7">
+        <div class="solution-inner">
+          <h4>a — F-statistic vs. individual t-statistics</h4>
+          <p>The F-statistic tests a joint hypothesis: are <em>all</em> coefficients simultaneously zero — does the model, as a whole, explain significantly more variance than an intercept-only model? A tiny F p-value (2.1e-42) says yes, overwhelmingly, something in this set of predictors is genuinely related to salary.</p>
+          <p>Each t-statistic tests a narrower question: holding all other predictors fixed, is <em>this one</em> coefficient different from zero? A model can jointly explain a lot of variance while no single predictor's isolated contribution can be pinned down with confidence — exactly what happens when predictors are too tangled up with each other for OLS to cleanly assign credit to any one of them.</p>
+
+          <h4>b — Diagnosis: multicollinearity</h4>
+          <p><code>experience_years</code> and <code>experience_months</code> are near-perfectly linearly related — a textbook case of <strong>multicollinearity</strong>, two predictors carrying almost the same information. When predictors are highly correlated, OLS struggles to determine how much of the outcome to attribute to one versus the other; the \((X^\top X)^{-1}\) matrix entries blow up for these two columns, inflating their <strong>standard errors</strong> (visible here — <code>experience_years</code>'s std err of 3100 is more than half its own coefficient). Large standard errors mechanically produce small t-statistics (\(t=\text{coef}/\text{std err}\)) and therefore large, insignificant p-values, even though the combined effect of "years of experience" is real and drives the model's high R².</p>
+          <p>The nonsensical negative sign on <code>experience_months</code> is a classic multicollinearity artifact: with two near-duplicate columns, OLS can arbitrarily assign an inflated positive coefficient to one and a compensating negative to the other, as long as their combined net effect on predictions stays reasonable. Individually the coefficients are unstable; only their combined contribution is meaningful.</p>
+
+          <h4>c — Computing R²ⱼ from VIF = 45</h4>
+          <p>\[ VIF_j=\frac{1}{1-R_j^2}=45 \ \Rightarrow\ 1-R_j^2=\frac{1}{45}\approx0.0222 \ \Rightarrow\ R_j^2\approx \boxed{0.978} \]</p>
+          <p>97.8% of the variation in <code>experience_years</code> can itself be explained just from the other predictors — overwhelmingly, from <code>experience_months</code> — so it carries almost no independent information once <code>experience_months</code> is already known, which is exactly why the model can't give either a stable, individually significant coefficient.</p>
+
+          <div class="calc-card">
+            <p class="dc-title">Try the VIF formula yourself</p>
+            <div class="calc-row">
+              <label for="vifSlider">R²ⱼ (shared variance)</label>
+              <input type="range" id="vifSlider" min="0" max="99" value="80" step="1">
+              <span id="vifRjOut" style="font-family:var(--mono); color:var(--ink-soft);">0.80</span>
+            </div>
+            <div class="calc-readout">VIF<sub>j</sub> = <span id="vifOut">5.00</span> <small>= 1 / (1 − R²ⱼ)</small></div>
+            <span class="calc-flag" id="vifFlag">ok</span>
+            <p class="calc-note">Drag the slider to see how VIF accelerates as a predictor becomes more redundant with the others. At R²ⱼ = 0.978 (this question's case) VIF ≈ 45.</p>
+          </div>
+
+          <h4>d — Threshold and fix</h4>
+          <p>A common rule of thumb: <strong>VIF &gt; 10</strong> signals problematic multicollinearity (some practitioners use a stricter cutoff of 5); VIF = 45 is far beyond it — severe multicollinearity.</p>
+          <p><strong>Recommendation:</strong> the cleanest fix is dropping one of the two redundant columns — keep <code>experience_years</code>, remove <code>experience_months</code>, since they encode essentially the same information. More generally, options for correlated features include dropping the redundant one, combining them into a single feature, or using a regularized technique like Ridge regression, which handles correlated predictors more gracefully than plain OLS — though for a case this clear-cut, removing the duplicate is the right first step.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- ======================= QUESTION 8 ======================= -->
+    <article class="qblock" id="q8">
+      <div class="qhead"><span class="qnum">08</span><h2>The Widening Cone</h2></div>
+      <p class="qtopics">Heteroskedasticity · Durbin-Watson · autocorrelation</p>
+
+      <div class="storybox">
+        <p><strong>Case A.</strong> A utility company predicts <code>monthly_electricity_bill</code> from household size, home area, and AC usage. Plotting residuals against fitted values: for small predicted bills (₹500–1000) residuals cluster tightly near zero (±100); for large predicted bills (₹8000–10,000) they scatter as far as ±3000 — a cone opening left to right.</p>
+        <p><strong>Case B.</strong> A separate team predicts daily stock trading volume from lagged price features. A standard diagnostic check returns a <strong>Durbin-Watson statistic of 0.65</strong>.</p>
+      </div>
+
+      <ol class="qparts">
+        <li><span class="plab">a</span><span>Which assumption is violated in Case A? Why is the cone/megaphone shape the tell-tale sign, as opposed to some other violation?</span></li>
+        <li><span class="plab">b</span><span>OLS coefficients stay unbiased even under this violation. So what, precisely, becomes unreliable? Name at least two concrete downstream consequences.</span></li>
+        <li><span class="plab">c</span><span>Suggest two practical remedies for Case A.</span></li>
+        <li><span class="plab">d</span><span>DW ranges 0–4; near 2 means no autocorrelation, notably below 2 means positive autocorrelation. Interpret DW = 0.65 for Case B. Why is this unsurprising for time-ordered financial data? Name one remedy.</span></li>
+      </ol>
+
+      <div class="diagram-card">
+        <p class="dc-title">Residual spread: constant vs. widening</p>
+        <div class="toggle-row">
+          <button class="toggle-pill" data-cone="healthy" aria-pressed="true">Homoskedastic (healthy)</button>
+          <button class="toggle-pill" data-cone="cone" aria-pressed="false">Case A — the cone</button>
+        </div>
+        <div id="coneDiagram"></div>
+        <p class="diagram-caption" id="coneCaption"></p>
+      </div>
+
+      <div class="reveal-wrap"><button class="reveal-btn" data-target="sol8" aria-expanded="false"><span class="ic">＋</span> Reveal solution</button></div>
+      <div class="solution" id="sol8">
+        <div class="solution-inner">
+          <h4>a — Case A: heteroskedasticity</h4>
+          <p>This violates the <strong>homoskedasticity assumption</strong> — that residuals have constant variance across all fitted values. Here the spread is clearly not constant: small for low predicted bills, large for high ones, growing systematically with the fitted value. This "cone opening outward" shape is the classic diagnostic signature of heteroskedasticity — likely because households with larger predicted bills (bigger homes, heavier AC use) also carry more variable unmodeled factors (appliance count, occupancy, tariff slabs) that scale up with bill size. It's distinct from a curved, U-shaped residual pattern, which signals a <a class="xref" href="#q9">linearity</a> violation instead, or residuals correlated across sequential rows, which signals autocorrelation, as in Case B.</p>
+
+          <h4>b — What actually breaks</h4>
+          <p>OLS coefficient point estimates stay unbiased on average — they aren't systematically wrong. What breaks is everything depending on the coefficients' <strong>standard errors</strong>, since the standard OLS formula assumes constant error variance.</p>
+          <ol>
+            <li><strong>Standard errors become incorrect</strong> (typically underestimated), so reported confidence intervals are too narrow — a false sense of precision.</li>
+            <li><strong>Hypothesis tests become unreliable</strong> — with wrong standard errors, t-statistics and p-values are miscalculated, so a predictor might look significant when it isn't, or vice versa.</li>
+            <li><strong>Prediction intervals become poorly calibrated</strong> — true confidence is understated for low-bill households and overstated for high-bill ones, since the model assumes uniform uncertainty everywhere.</li>
+          </ol>
+
+          <h4>c — Remedies for Case A</h4>
+          <p><strong>Transform the target</strong> — predict \(\log(\text{monthly\_electricity\_bill})\) instead of the raw bill. Log transforms often stabilize variance because they compress large values proportionally more than small ones, directly counteracting a "spread grows with the value" pattern.</p>
+          <p><strong>Use heteroskedasticity-robust standard errors</strong> (HC-robust, available in <code>statsmodels</code>), which recompute valid standard errors and p-values without assuming constant variance — this doesn't fix the underlying non-constant spread, but it does fix the unreliable inference from part b. Weighted Least Squares, down-weighting high-variance observations, is another acceptable option.</p>
+
+          <h4>d — Case B: interpreting DW = 0.65</h4>
+          <p>0.65 sits far below the "no autocorrelation" benchmark of 2, indicating strong <strong>positive autocorrelation</strong>: an unusually high residual on one day tends to be followed by another unusually high one the next day, rather than errors being independent across time steps.</p>
+          <p>This is unsurprising for time-ordered financial data, because trading volume has momentum and clustering effects — a day of unusually high volume, driven by news or volatility, tends to be followed by more high-volume days, not because the model's lagged-price features capture this, but because the un-modeled dynamics behind volume (sentiment, ongoing news, volatility clustering) persist across consecutive days. A plain Linear Regression using only lagged price levels isn't built to capture this temporal dependency, so it leaks into the residuals as autocorrelation.</p>
+          <p><strong>Remedy:</strong> incorporate the time-dependent structure directly — add lagged values of the target itself (an autoregressive term) — or move to models built for time series (ARIMA), or use Newey-West/HAC standard errors, which correct the inference for autocorrelation the same way robust standard errors do for heteroskedasticity, without necessarily fixing the model's underlying specification.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- ======================= QUESTION 9 ======================= -->
+    <article class="qblock" id="q9">
+      <div class="qhead"><span class="qnum">09</span><h2>The Curve Nobody Modeled</h2></div>
+      <p class="qtopics">Linearity assumption · residual diagnostics</p>
+
+      <div class="storybox">
+        <p>A physiotherapy chain builds a Linear Regression to predict <code>recovery_time_days</code> for knee-surgery patients from a single feature, <code>patient_age</code>. The model fits reasonably well overall (R² = 0.61), but plotting residuals against <code>patient_age</code> reveals a pattern: positive residuals (under-prediction) for very young patients, negative (over-prediction) for middle-aged patients, and positive again for elderly patients — a smooth U-shaped curve.</p>
+      </div>
+
+      <ol class="qparts">
+        <li><span class="plab">a</span><span>Which of the five Linear Regression assumptions is violated? How does a U-shaped residual-vs-feature plot reveal this, as opposed to a random scatter?</span></li>
+        <li><span class="plab">b</span><span>Propose two different concrete modeling fixes, and briefly explain each mechanism.</span></li>
+        <li><span class="plab">c</span><span>Suppose a different model's residual-vs-fitted plot instead showed a perfectly random, structureless cloud, evenly spread above and below zero with roughly constant spread. What would you conclude, and which two assumptions does this reassure you about?</span></li>
+      </ol>
+
+      <div class="diagram-card">
+        <p class="dc-title">Residual pattern: structured vs. structureless</p>
+        <div class="toggle-row">
+          <button class="toggle-pill" data-resid="u" aria-pressed="true">U-shaped (linearity violated)</button>
+          <button class="toggle-pill" data-resid="clean" aria-pressed="false">Structureless (assumptions hold)</button>
+        </div>
+        <div id="residDiagram"></div>
+        <p class="diagram-caption" id="residCaption"></p>
+      </div>
+
+      <div class="reveal-wrap"><button class="reveal-btn" data-target="sol9" aria-expanded="false"><span class="ic">＋</span> Reveal solution</button></div>
+      <div class="solution" id="sol9">
+        <div class="solution-inner">
+          <h4>a — The violated assumption: linearity</h4>
+          <p>This violates the <strong>linearity assumption</strong> — that the true relationship between predictor(s) and target is approximately a straight line. If the true relationship between age and recovery time is genuinely curved — both very young patients (more active or riskier rehab behavior) and elderly patients (typically slower overall healing) taking longer than middle-aged patients, forming a U- or J-shape — forcing a single straight line through that curve will systematically overshoot in the middle (predicting recovery times too long for middle-aged patients, hence negative residuals there) and undershoot at both ends (too-short predictions for the very young and very old, hence positive residuals at both extremes).</p>
+          <p>That's precisely why a U-shaped, systematic residual pattern signals a linearity violation: the model's errors still contain a predictable, structured relationship with the feature that a straight line failed to capture. A linearity-satisfying model would instead show no systematic pattern — just random scatter around zero, because a straight line was the right shape and any remaining error is unpredictable noise.</p>
+
+          <h4>b — Two concrete fixes</h4>
+          <ol>
+            <li><strong>Add a polynomial (quadratic) term:</strong> include <code>patient_age²</code> as an extra feature, fitting \(\hat y = \beta_0+\beta_1\cdot age+\beta_2\cdot age^2\). This is still technically linear regression — linear in the parameters \(\beta\), even though the relationship with the raw feature is now curved — and can directly capture a U-shaped or inverted-U relationship, since a quadratic curve is exactly the right shape for one "bend."</li>
+            <li><strong>Transform the feature or move to a non-linear model:</strong> bucket <code>patient_age</code> into bands (child / young-adult / middle-aged / senior) and one-hot encode them, letting the model learn a separate effect per group rather than one continuous slope; or use a model class that naturally captures non-linearity — decision trees, or a spline/GAM-based regression — if the U-shape turns out more complex than a clean quadratic.</li>
+          </ol>
+
+          <h4>c — Interpreting a clean, structureless plot</h4>
+          <p>A random, evenly scattered residual cloud with no visible pattern and roughly constant spread is exactly what you want to see, and it reassures you about <strong>two</strong> of the five assumptions at once:</p>
+          <ol>
+            <li><strong>Linearity</strong> — no systematic curve or trend in the residuals means the straight-line form was appropriate; there's no leftover structure the model failed to capture.</li>
+            <li><strong>Homoskedasticity</strong> — spread staying roughly the same width across the full range of fitted values, rather than fanning into a cone as in <a class="xref" href="#q8">The Widening Cone</a>, means the constant-variance assumption is reasonably satisfied.</li>
+          </ol>
+          <p style="color:var(--ink-faint); font-size:0.9rem;">This particular plot doesn't, by itself, say anything about the other three assumptions — no multicollinearity, normally-distributed errors, or no autocorrelation — since those need different diagnostics: VIF values, a Q-Q plot or residual histogram, and a time-ordered residual plot or Durbin-Watson statistic, respectively.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- ======================= WRAP-UP ======================= -->
+    <section class="wrapup" id="wrapup">
+      <h2>The throughline</h2>
+      <div class="takeaway">
+        <p>Every diagnostic covered here — Adjusted R², VIF, residual plots, Durbin-Watson — exists for the same reason. A model can look deceptively good on a single headline metric like R² while quietly violating an assumption that makes its coefficients or its inference untrustworthy. A high R² is a starting point for investigation, never the end of it.</p>
+      </div>
+      <ul class="reflect-list">
+        <li><strong>Before your next model,</strong> look for one plausible leakage risk in your own dataset, in the spirit of the Wheelio and hospital-readmission cases.</li>
+        <li><strong>And one plausible multicollinearity risk,</strong> in the spirit of the HR salary model — two near-duplicate columns are easy to miss until VIF surfaces them.</li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<footer class="pagefoot">Linear regression 4 post read</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- KaTeX auto-render ---------- */
+  window.addEventListener('load', function(){
+    if (window.renderMathInElement) {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left:"\\[", right:"\\]", display:true},
+          {left:"\\(", right:"\\)", display:false}
+        ],
+        throwOnError:false
+      });
+    }
+  });
+
+  /* ---------- mobile nav toggle ---------- */
+  var railToggle = document.getElementById('railToggle');
+  var railList = document.getElementById('railList');
+  if(railToggle){
+    railToggle.addEventListener('click', function(){
+      var open = railList.classList.toggle('open');
+      railToggle.setAttribute('aria-expanded', open ? 'true':'false');
+    });
+  }
+
+  /* ---------- scrollspy ---------- */
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.navlink'));
+  var sections = navLinks.map(function(l){
+    var id = l.getAttribute('href').slice(1);
+    return document.getElementById(id);
+  }).filter(Boolean);
+
+  function onScroll(){
+    var pos = window.scrollY + 120;
+    var current = sections[0];
+    sections.forEach(function(s){ if(s.offsetTop <= pos) current = s; });
+    navLinks.forEach(function(l){
+      var match = l.getAttribute('href') === '#' + current.id;
+      l.classList.toggle('active', match);
+    });
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  navLinks.forEach(function(l){
+    l.addEventListener('click', function(){
+      if(window.innerWidth <= 900 && railList){
+        railList.classList.remove('open');
+        if(railToggle) railToggle.setAttribute('aria-expanded','false');
+      }
+    });
+  });
+
+  /* ---------- reveal solution toggles ---------- */
+  document.querySelectorAll('.reveal-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var target = document.getElementById(btn.getAttribute('data-target'));
+      var open = !target.classList.contains('open');
+      target.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', open ? 'true':'false');
+      btn.innerHTML = open
+        ? '<span class="ic">＋</span> Hide solution'
+        : '<span class="ic">＋</span> Reveal solution';
+    });
+  });
+
+  /* ================= SVG helper ================= */
+  function svgEl(tag, attrs){
+    var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for(var k in attrs){ el.setAttribute(k, attrs[k]); }
+    return el;
+  }
+  var CSS_VAR = function(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  };
+
+  /* ================= Dummy variable trap diagram (Q1) ================= */
+  (function(){
+    var host = document.getElementById('dummyVarDiagram');
+    if(!host) return;
+    var W=640,H=210;
+    var svg = svgEl('svg', {viewBox:'0 0 '+W+' '+H});
+    var cats = ['Petrol','Diesel','CNG','Electric'];
+    var colW = 120, x0 = 40, rowH=34, y0=30;
+    // headers
+    cats.forEach(function(c,i){
+      var t = svgEl('text', {x:x0+i*colW+colW/2, y:y0-10, 'text-anchor':'middle', fill:CSS_VAR('--ink-soft'), 'font-family':'IBM Plex Mono', 'font-size':'11'});
+      t.textContent = c; svg.appendChild(t);
+    });
+    var rows = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]];
+    rows.forEach(function(r,ri){
+      r.forEach(function(v,ci){
+        var rect = svgEl('rect',{x:x0+ci*colW+4,y:y0+ri*rowH,width:colW-8,height:rowH-6,rx:3,
+          fill: v? CSS_VAR('--mustard-bright'): 'none', stroke:CSS_VAR('--line')});
+        svg.appendChild(rect);
+        var t = svgEl('text',{x:x0+ci*colW+colW/2,y:y0+ri*rowH+rowH/2+4,'text-anchor':'middle','font-family':'IBM Plex Mono','font-size':'12',
+          fill: v? CSS_VAR('--ink') : CSS_VAR('--ink-faint')});
+        t.textContent = v; svg.appendChild(t);
+      });
+      var sumT = svgEl('text',{x:x0+4*colW+16,y:y0+ri*rowH+rowH/2+4,'font-family':'IBM Plex Mono','font-size':'12',fill:CSS_VAR('--rust'),'font-weight':'600'});
+      sumT.textContent = '= 1'; svg.appendChild(sumT);
+    });
+    var lbl = svgEl('text',{x:x0,y:y0+4*rowH+22,'font-family':'IBM Plex Sans','font-size':'12',fill:CSS_VAR('--ink-soft')});
+    lbl.textContent = 'Every row sums to 1 → exact linear combination of the intercept (the dummy variable trap).';
+    svg.appendChild(lbl);
+    host.appendChild(svg);
+  })();
+
+  /* ================= R2 bar chart (Q3) ================= */
+  (function(){
+    var host = document.getElementById('r2Chart');
+    if(!host) return;
+    var W=640,H=210, base=170;
+    var svg = svgEl('svg',{viewBox:'0 0 '+W+' '+H});
+    var data = [
+      {label:'Model A', raw:0.820, adj:0.8154},
+      {label:'Model B', raw:0.840, adj:0.8297}
+    ];
+    var scaleY = function(v){ return base - (v-0.75)*(base-20)/0.25; };
+    // axis baseline
+    svg.appendChild(svgEl('line',{x1:30,y1:base,x2:W-20,y2:base,stroke:CSS_VAR('--line')}));
+    [0.75,0.80,0.85,0.90].forEach(function(g){
+      var y = scaleY(g);
+      svg.appendChild(svgEl('line',{x1:30,y1:y,x2:W-20,y2:y,stroke:CSS_VAR('--line-soft')}));
+      var t = svgEl('text',{x:24,y:y+4,'text-anchor':'end','font-family':'IBM Plex Mono','font-size':'10',fill:CSS_VAR('--ink-faint')});
+      t.textContent = g.toFixed(2); svg.appendChild(t);
+    });
+    var groupW = 220, barW=44;
+    data.forEach(function(d,i){
+      var gx = 90 + i*groupW;
+      var rawY = scaleY(d.raw), adjY = scaleY(d.adj);
+      svg.appendChild(svgEl('rect',{x:gx,y:rawY,width:barW,height:base-rawY,fill:CSS_VAR('--mustard-bright'),rx:2}));
+      svg.appendChild(svgEl('rect',{x:gx+barW+10,y:adjY,width:barW,height:base-adjY,fill:CSS_VAR('--ink'),rx:2}));
+      var t1 = svgEl('text',{x:gx+barW/2,y:rawY-8,'text-anchor':'middle','font-family':'IBM Plex Mono','font-size':'11',fill:CSS_VAR('--ink-soft')});
+      t1.textContent = d.raw.toFixed(3); svg.appendChild(t1);
+      var t2 = svgEl('text',{x:gx+barW+10+barW/2,y:adjY-8,'text-anchor':'middle','font-family':'IBM Plex Mono','font-size':'11',fill:CSS_VAR('--ink-soft')});
+      t2.textContent = d.adj.toFixed(4); svg.appendChild(t2);
+      var lab = svgEl('text',{x:gx+barW+5,y:base+20,'text-anchor':'middle','font-family':'IBM Plex Sans','font-size':'12',fill:CSS_VAR('--ink')});
+      lab.textContent = d.label; svg.appendChild(lab);
+    });
+    host.appendChild(svg);
+  })();
+
+  /* ================= Learning-rate diagram (Q5) ================= */
+  (function(){
+    var host = document.getElementById('lrDiagram');
+    var caption = document.getElementById('lrCaption');
+    if(!host) return;
+    var W=640,H=220;
+    var captions = {
+      good: "α = 0.1 — steady, monotonic descent toward the minimum in a practical number of steps.",
+      big:  "α = 10 — each step overshoots further than the last; cost increases and the path diverges outward.",
+      small:"α = 0.0000001 — steps in the right direction, but each one is microscopic; cost barely moves within any realistic iteration budget."
+    };
+    function draw(mode){
+      host.innerHTML = '';
+      var svg = svgEl('svg',{viewBox:'0 0 '+W+' '+H});
+      var cx=W/2, cy=H/2, path='';
+      var pts = [];
+      if(mode==='good'){
+        var r = 90;
+        for(var i=0;i<=7;i++){ var f=Math.pow(0.45,i); pts.push([cx - r*f*Math.cos(i*0.9), cy - r*f*Math.sin(i*0.9)]); }
+      } else if(mode==='big'){
+        var r2=20;
+        for(var j=0;j<=6;j++){ r2 = r2*1.7; var ang=j*2.4; pts.push([cx + r2*Math.cos(ang), cy + r2*Math.sin(ang)*0.55]); }
+      } else {
+        for(var k=0;k<=7;k++){ pts.push([cx-95 + k*2, cy+40 - k*0.6]); }
+      }
+      // bowl contours (concentric ellipses) as backdrop
+      [1,0.75,0.5,0.28,0.1].forEach(function(f){
+        svg.appendChild(svgEl('ellipse',{cx:cx,cy:cy,rx:120*f,ry:70*f,fill:'none',stroke:CSS_VAR('--line'),'stroke-width':1}));
+      });
+      svg.appendChild(svgEl('circle',{cx:cx,cy:cy,r:3,fill:CSS_VAR('--sage')}));
+      var d = 'M ' + pts.map(function(p){return p[0]+','+p[1];}).join(' L ');
+      var color = mode==='big'? CSS_VAR('--rust') : (mode==='small'? CSS_VAR('--ink-faint') : CSS_VAR('--mustard-deep'));
+      var pathEl = svgEl('path',{d:d, fill:'none', stroke:color, 'stroke-width':2});
+      svg.appendChild(pathEl);
+      pts.forEach(function(p,idx){
+        var inBounds = p[0]>-40 && p[0]<W+40 && p[1]>-40 && p[1]<H+40;
+        if(inBounds){
+          svg.appendChild(svgEl('circle',{cx:p[0],cy:p[1],r:3.5,fill:color}));
+        }
+      });
+      // clip to viewbox visually by using overflow hidden container; simplest: constrain viewBox bigger
+      host.appendChild(svg);
+      if(caption) caption.textContent = captions[mode];
+    }
+    draw('good');
+    document.querySelectorAll('[data-lr]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('[data-lr]').forEach(function(b){ b.setAttribute('aria-pressed', b===btn ? 'true':'false'); });
+        draw(btn.getAttribute('data-lr'));
+      });
+    });
+  })();
+
+  /* ================= Contour diagram (Q6) — signature diagram ================= */
+  (function(){
+    var host = document.getElementById('contourDiagram');
+    var caption = document.getElementById('contourCaption');
+    if(!host) return;
+    var W=640,H=280,cx=W/2,cy=H/2;
+    var captions = {
+      unscaled: "km_driven vs. age_years, unscaled: the cost surface stretches into a narrow, elongated ellipse. Gradient descent's steps run perpendicular to each contour, so the path zig-zags across the short axis while creeping along the long one.",
+      scaled: "Both features standardized to mean 0, std-dev 1: the contours pull in toward circles. The gradient now points almost straight at the minimum, so a single learning rate serves both weights well."
+    };
+    function draw(mode){
+      host.innerHTML='';
+      var svg = svgEl('svg',{viewBox:'0 0 '+W+' '+H});
+      var rxBase = mode==='unscaled'? 170 : 95;
+      var ryBase = mode==='unscaled'? 45 : 95;
+      [1,0.78,0.56,0.36,0.18].forEach(function(f){
+        svg.appendChild(svgEl('ellipse',{cx:cx,cy:cy,rx:rxBase*f,ry:ryBase*f,fill:'none',stroke:CSS_VAR('--mustard'),'stroke-width':1.2,opacity:0.55}));
+      });
+      svg.appendChild(svgEl('circle',{cx:cx,cy:cy,r:4,fill:CSS_VAR('--sage')}));
+      var lblMin = svgEl('text',{x:cx,y:cy-12,'text-anchor':'middle','font-family':'IBM Plex Mono','font-size':'10',fill:CSS_VAR('--sage')});
+      lblMin.textContent='minimum'; svg.appendChild(lblMin);
+
+      // zig-zag path
+      var start = mode==='unscaled' ? [cx-150, cy+30] : [cx-80, cy+70];
+      var pts=[start];
+      var p = start.slice();
+      var steps = mode==='unscaled'? 9 : 5;
+      for(var i=0;i<steps;i++){
+        var toward = [cx-p[0], cy-p[1]];
+        var perpish = mode==='unscaled' ? (i%2===0? 0.9 : -0.7) : (i%2===0? 0.25: -0.2);
+        var nx = p[0] + toward[0]*0.55 + (-toward[1])*0.12*perpish;
+        var ny = p[1] + toward[1]*0.55 + (toward[0])*0.12*perpish;
+        p = [nx,ny];
+        pts.push(p.slice());
+      }
+      var d = 'M ' + pts.map(function(pt){return pt[0].toFixed(1)+','+pt[1].toFixed(1);}).join(' L ');
+      svg.appendChild(svgEl('path',{d:d, fill:'none', stroke:CSS_VAR('--rust'), 'stroke-width':2}));
+      pts.forEach(function(pt){ svg.appendChild(svgEl('circle',{cx:pt[0],cy:pt[1],r:3,fill:CSS_VAR('--rust')})); });
+
+      var axLabelX = svgEl('text',{x:W-16,y:cy+ryBase+ (mode==='unscaled'?20:16),'text-anchor':'end','font-family':'IBM Plex Sans','font-size':'11',fill:CSS_VAR('--ink-faint')});
+      axLabelX.textContent = mode==='unscaled' ? 'w(km_driven) — wide, shallow axis' : 'w(km_driven, scaled)';
+      svg.appendChild(axLabelX);
+      var axLabelY = svgEl('text',{x:16,y:24,'font-family':'IBM Plex Sans','font-size':'11',fill:CSS_VAR('--ink-faint')});
+      axLabelY.textContent = mode==='unscaled' ? 'w(age_years) — narrow, steep axis' : 'w(age_years, scaled)';
+      svg.appendChild(axLabelY);
+
+      host.appendChild(svg);
+      if(caption) caption.textContent = captions[mode];
+    }
+    draw('unscaled');
+    document.querySelectorAll('[data-contour]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('[data-contour]').forEach(function(b){ b.setAttribute('aria-pressed', b===btn?'true':'false'); });
+        draw(btn.getAttribute('data-contour'));
+      });
+    });
+  })();
+
+  /* ================= VIF calculator (Q7) ================= */
+  (function(){
+    var slider = document.getElementById('vifSlider');
+    if(!slider) return;
+    var rjOut = document.getElementById('vifRjOut');
+    var vifOut = document.getElementById('vifOut');
+    var flag = document.getElementById('vifFlag');
+    function update(){
+      var rj = slider.value/100;
+      var vif = 1/(1-rj);
+      rjOut.textContent = rj.toFixed(2);
+      vifOut.textContent = vif.toFixed(2);
+      if(vif > 10){ flag.textContent='problematic (VIF > 10)'; flag.className='calc-flag bad'; }
+      else if(vif > 5){ flag.textContent='caution (VIF > 5)'; flag.className='calc-flag bad'; }
+      else { flag.textContent='comfortable'; flag.className='calc-flag ok'; }
+    }
+    slider.addEventListener('input', update);
+    update();
+  })();
+
+  /* ================= Cone diagram (Q8) ================= */
+  (function(){
+    var host = document.getElementById('coneDiagram');
+    var caption = document.getElementById('coneCaption');
+    if(!host) return;
+    var W=640,H=230, x0=40, x1=600, midY=115;
+    var captions = {
+      healthy: "Residual spread stays roughly constant across the full range of fitted values — the assumption of homoskedasticity holds.",
+      cone: "Residual spread widens sharply as fitted bill size increases — the megaphone shape that signals heteroskedasticity."
+    };
+    function draw(mode){
+      host.innerHTML='';
+      var svg = svgEl('svg',{viewBox:'0 0 '+W+' '+H});
+      svg.appendChild(svgEl('line',{x1:x0,y1:midY,x2:x1,y2:midY,stroke:CSS_VAR('--line')}));
+      var seed = 12345;
+      function rand(){ seed = (seed*9301+49297)%233280; return seed/233280; }
+      for(var i=0;i<70;i++){
+        var t = i/69;
+        var x = x0 + t*(x1-x0);
+        var spread = mode==='cone' ? (6 + t*70) : 22;
+        var y = midY + (rand()-0.5)*2*spread;
+        svg.appendChild(svgEl('circle',{cx:x,cy:y,r:2.6,fill:CSS_VAR('--mustard-deep'),opacity:0.75}));
+      }
+      // envelope lines
+      if(mode==='cone'){
+        svg.appendChild(svgEl('path',{d:'M '+x0+' '+(midY-6)+' L '+x1+' '+(midY-76),fill:'none',stroke:CSS_VAR('--rust'),'stroke-width':1.4,'stroke-dasharray':'4 4'}));
+        svg.appendChild(svgEl('path',{d:'M '+x0+' '+(midY+6)+' L '+x1+' '+(midY+76),fill:'none',stroke:CSS_VAR('--rust'),'stroke-width':1.4,'stroke-dasharray':'4 4'}));
+      } else {
+        svg.appendChild(svgEl('path',{d:'M '+x0+' '+(midY-24)+' L '+x1+' '+(midY-24),fill:'none',stroke:CSS_VAR('--sage'),'stroke-width':1.4,'stroke-dasharray':'4 4'}));
+        svg.appendChild(svgEl('path',{d:'M '+x0+' '+(midY+24)+' L '+x1+' '+(midY+24),fill:'none',stroke:CSS_VAR('--sage'),'stroke-width':1.4,'stroke-dasharray':'4 4'}));
+      }
+      var lx = svgEl('text',{x:x1,y:midY+100,'text-anchor':'end','font-family':'IBM Plex Sans','font-size':'11',fill:CSS_VAR('--ink-faint')});
+      lx.textContent='fitted (predicted) monthly bill →'; svg.appendChild(lx);
+      var ly = svgEl('text',{x:x0,y:20,'font-family':'IBM Plex Sans','font-size':'11',fill:CSS_VAR('--ink-faint')});
+      ly.textContent='residual (actual − predicted)'; svg.appendChild(ly);
+      host.appendChild(svg);
+      if(caption) caption.textContent = captions[mode];
+    }
+    draw('healthy');
+    document.querySelectorAll('[data-cone]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('[data-cone]').forEach(function(b){ b.setAttribute('aria-pressed', b===btn?'true':'false'); });
+        draw(btn.getAttribute('data-cone'));
+      });
+    });
+  })();
+
+  /* ================= Residual pattern diagram (Q9) ================= */
+  (function(){
+    var host = document.getElementById('residDiagram');
+    var caption = document.getElementById('residCaption');
+    if(!host) return;
+    var W=640,H=230, x0=40, x1=600, midY=115;
+    var captions = {
+      u: "Residuals trace a smooth U across patient_age: positive for the very young, negative in the middle, positive again for the elderly — a straight line was the wrong shape.",
+      clean: "Residuals scatter randomly above and below zero with constant spread throughout — no leftover structure, reassuring on both linearity and homoskedasticity."
+    };
+    function draw(mode){
+      host.innerHTML='';
+      var svg = svgEl('svg',{viewBox:'0 0 '+W+' '+H});
+      svg.appendChild(svgEl('line',{x1:x0,y1:midY,x2:x1,y2:midY,stroke:CSS_VAR('--line')}));
+      var seed = 777;
+      function rand(){ seed = (seed*9301+49297)%233280; return seed/233280; }
+      var curvePts = [];
+      for(var i=0;i<80;i++){
+        var t = i/79;
+        var x = x0 + t*(x1-x0);
+        var noise = (rand()-0.5)*22;
+        var y;
+        if(mode==='u'){
+          var u = (t-0.5)*2;
+          y = midY - (1-u*u)*55 + noise*0.5;
+        } else {
+          y = midY + (rand()-0.5)*50;
+        }
+        svg.appendChild(svgEl('circle',{cx:x,cy:y,r:2.6,fill:CSS_VAR('--mustard-deep'),opacity:0.75}));
+        if(mode==='u') curvePts.push([x, midY-(1-((t-0.5)*2)*((t-0.5)*2))*55]);
+      }
+      if(mode==='u'){
+        var d = 'M ' + curvePts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' L ');
+        svg.appendChild(svgEl('path',{d:d, fill:'none', stroke:CSS_VAR('--rust'), 'stroke-width':1.6, opacity:0.7}));
+      }
+      var lx = svgEl('text',{x:x1,y:midY+100,'text-anchor':'end','font-family':'IBM Plex Sans','font-size':'11',fill:CSS_VAR('--ink-faint')});
+      lx.textContent = mode==='u' ? 'patient_age →' : 'fitted values →';
+      svg.appendChild(lx);
+      var ly = svgEl('text',{x:x0,y:20,'font-family':'IBM Plex Sans','font-size':'11',fill:CSS_VAR('--ink-faint')});
+      ly.textContent='residual'; svg.appendChild(ly);
+      host.appendChild(svg);
+      if(caption) caption.textContent = captions[mode];
+    }
+    draw('u');
+    document.querySelectorAll('[data-resid]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('[data-resid]').forEach(function(b){ b.setAttribute('aria-pressed', b===btn?'true':'false'); });
+        draw(btn.getAttribute('data-resid'));
+      });
+    });
+  })();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/ML-with-AI-workflows-5" target="_blank" rel="noopener">github.com/scaler-content/ML-with-AI-workflows-5</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 5 · Retrieval-Augmented Generation — Post-Read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Manrope:wght@300..800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#faf6ef;--bg2:#f3ecdf;--card:#ffffff;--card2:#f7f1e6;--line:#e4d9c5;--line2:#d8c9ac66;--ink:#2c241b;--ink2:#6b5f4f;--ink3:#7d7060;--orange:#9a3412;--orange2:#c2410c;--orange-dim:#9a341214;--teal:#0f766e;--teal-dim:#0f766e1a;--violet:#6d28d9;--violet-dim:#6d28d91a;--gold:#a16207;--rose:#be123c;--green:#15803d;--red:#b91c1c;--mono:'JetBrains Mono',monospace;--serif:'Fraunces',serif;--sans:'Manrope',sans-serif;--r:16px;}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+::selection{background:var(--orange);color:#fdf3e8}
+.wrap{max-width:1020px;margin:0 auto;padding:0 26px}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:600;line-height:1.22}
+a{color:var(--orange2)}
+strong{color:var(--ink)}
+em{color:var(--orange2);font-style:normal}
+p{color:var(--ink2)}
+p strong{color:var(--ink)}
+#progressBar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--orange),var(--gold));width:0;z-index:999;transition:width .1s linear}
+.topnav{position:sticky;top:0;background:#faf6efe8;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);z-index:900}
+.topnav .wrap{display:flex;align-items:center;gap:14px;padding-top:12px;padding-bottom:12px;overflow-x:auto;scrollbar-width:none}
+.topnav .wrap::-webkit-scrollbar{display:none}
+.brand{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--orange);white-space:nowrap}
+.topnav a.nl{font-size:12.5px;font-weight:600;color:var(--ink3);text-decoration:none;white-space:nowrap;padding:5px 10px;border-radius:20px;transition:.2s}
+.topnav a.nl:hover{color:var(--orange);background:var(--orange-dim)}
+.hero{position:relative;padding:88px 0 70px;overflow:hidden;background:radial-gradient(1100px 480px at 78% -12%,#ff8a2a14,transparent 60%),radial-gradient(800px 400px at 8% 110%,#3dd6c30e,transparent 60%)}
+.hero .eyebrow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:26px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.06em;padding:6px 13px;border-radius:100px;border:1px solid var(--line);color:var(--ink2);background:var(--card)}
+.chip.hot{border-color:#ff8a2a55;color:var(--orange2);background:var(--orange-dim)}
+.chip.cool{border-color:#3dd6c355;color:var(--teal);background:var(--teal-dim)}
+.hero h1{font-size:clamp(38px,6vw,64px);font-weight:640;letter-spacing:-.01em;margin-bottom:8px}
+.hero h1 .amp{color:var(--orange);font-style:italic;font-weight:500}
+.hero .sub{font-size:clamp(17px,2.2vw,21px);color:var(--ink2);max-width:740px;margin-top:16px}
+.hero .sub b{color:var(--ink)}
+.heroStats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:44px}
+.hstat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.hstat .n{font-family:var(--serif);font-size:30px;font-weight:640;color:var(--orange)}
+.hstat .l{font-size:12px;color:var(--ink3);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+@media(max-width:760px){.heroStats{grid-template-columns:repeat(2,1fr)}}
+.agenda{margin-top:50px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px 28px}
+.agenda h3{font-size:14px;font-family:var(--sans);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:18px}
+.agRow{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px dashed var(--line)}
+.agRow:last-child{border-bottom:none}
+.agRow .t{font-family:var(--mono);font-size:12px;color:var(--orange);min-width:86px;font-weight:500}
+.agRow .name{font-weight:600;font-size:15px;color:var(--ink)}
+.agRow .tag{margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--ink3);border:1px solid var(--line);padding:3px 10px;border-radius:100px;white-space:nowrap}
+.agRow .tag.sim{color:var(--teal);border-color:#3dd6c344}
+.agRow .tag.quiz{color:var(--violet);border-color:#a48bff44}
+section.blk{padding:74px 0 30px}
+.secHead{display:flex;align-items:baseline;gap:18px;margin-bottom:8px}
+.secNum{font-family:var(--mono);font-size:13px;color:var(--orange);border:1px solid #ff8a2a55;background:var(--orange-dim);padding:5px 13px;border-radius:100px;font-weight:500;white-space:nowrap}
+.secHead h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.01em}
+.secTime{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-left:auto;white-space:nowrap}
+.secLede{font-size:18px;color:var(--ink2);max-width:800px;margin:12px 0 34px}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:44px 0 0}
+.say{position:relative;background:linear-gradient(180deg,#1a1410,#161b24);border:1px solid #ff8a2a33;border-left:3px solid var(--orange);border-radius:14px;padding:20px 24px 20px 26px;margin:22px 0}
+.say .who{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange);font-weight:700;margin-bottom:10px}
+.say p{color:#e8dccb;font-size:15.5px;margin-bottom:10px}
+.say p:last-child{margin-bottom:0}
+.say.ask{border-left-color:var(--teal);border-color:#3dd6c333;background:linear-gradient(180deg,#101a19,#161b24)}
+.say.ask .who{color:var(--teal)}
+.say.do{border-left-color:var(--violet);border-color:#a48bff33;background:linear-gradient(180deg,#141021,#161b24)}
+.say.do .who{color:var(--violet)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;margin:20px 0}
+.card h3{font-size:21px;margin-bottom:10px}
+.card h4{font-size:17px;margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:820px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+.defBox{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin:20px 0;position:relative}
+.defBox::before{content:'DEFINITION';position:absolute;top:-10px;left:20px;font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--gold);background:var(--bg);padding:2px 10px;border:1px solid #ffd16644;border-radius:100px}
+.defBox .term{font-family:var(--serif);font-size:19px;color:var(--gold);font-weight:600}
+.defBox p{margin-top:6px;font-size:15.5px}
+.useCase{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;transition:.25s;position:relative;overflow:hidden}
+.useCase:hover{border-color:#ff8a2a66;transform:translateY(-3px)}
+.useCase .ico{font-size:26px;margin-bottom:8px}
+.useCase .co{font-family:var(--mono);font-size:11px;color:var(--orange);letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.useCase h4{font-size:16px;margin:4px 0 6px;font-family:var(--sans);font-weight:700}
+.useCase p{font-size:13.5px;color:var(--ink2);line-height:1.55}
+.analogy{display:flex;gap:16px;background:linear-gradient(135deg,#f3ecfa,#ffffff);border:1px solid #6d28d933;border-radius:14px;padding:20px 24px;margin:20px 0}
+.analogy .ic{font-size:30px;line-height:1}
+.analogy .tt{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--violet);font-weight:700;margin-bottom:6px}
+.analogy p{font-size:15px;color:var(--ink2)}
+.analogy p b{color:var(--ink)}
+.note{border-radius:12px;padding:14px 18px;margin:16px 0;font-size:14.5px;border:1px solid var(--line);background:var(--card2);color:var(--ink2)}
+.note b{color:var(--ink)}
+.note.beg{border-color:#5fe08a44}.note.beg b{color:var(--green)}
+.note.adv{border-color:#ff6b8b44}.note.adv b{color:var(--rose)}
+.note.pro{border-color:#ffd16644}.note.pro b{color:var(--gold)}
+table.tbl{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px}
+table.tbl th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--orange);text-align:left;padding:10px 14px;border-bottom:1px solid #ff8a2a44;font-weight:500}
+table.tbl td{padding:11px 14px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top}
+table.tbl tr:hover td{background:#ffffff05}
+table.tbl td:first-child{color:var(--ink);font-weight:600}
+code.k{font-family:var(--mono);font-size:.86em;background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--orange2)}
+pre.code{font-family:var(--mono);font-size:13px;line-height:1.7;background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px 22px;overflow-x:auto;margin:16px 0;color:#c7d2e0}
+pre.code .cm{color:#5b6b7f}
+pre.code .st{color:#8fd8a0}
+pre.code .fn{color:#7cc4ff}
+pre.code .kw{color:#ffb066}
+.sim{background:linear-gradient(180deg,#f2fbf9,#ffffff);border:1px solid #0f766e44;border-radius:20px;padding:26px 28px;margin:30px 0;position:relative}
+.sim::before{content:'\26A1 INTERACTIVE SIMULATOR';position:absolute;top:-12px;left:22px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--teal);background:var(--bg);padding:3px 12px;border:1px solid #3dd6c355;border-radius:100px;font-weight:700}
+.sim h3{font-size:20px;margin-bottom:4px}
+.sim .simSub{font-size:14px;color:var(--ink3);margin-bottom:18px}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--sans);font-weight:700;font-size:13.5px;color:#fdf3e8;background:linear-gradient(180deg,var(--orange2),var(--orange));border:none;border-radius:100px;padding:10px 20px;cursor:pointer;transition:.2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px #ff8a2a44}
+.btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--orange);color:var(--orange);box-shadow:none}
+.btn.sm{padding:7px 15px;font-size:12.5px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.quiz{background:linear-gradient(180deg,#faf5ff,#ffffff);border:1px solid #6d28d944;border-radius:20px;padding:26px 28px;margin:34px 0;position:relative}
+.quiz::before{content:'\2726 CHECKPOINT QUIZ';position:absolute;top:-12px;left:22px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--violet);background:var(--bg);padding:3px 12px;border:1px solid #a48bff55;border-radius:100px;font-weight:700}
+.quiz .q{font-family:var(--serif);font-size:19px;font-weight:600;margin:6px 0 18px;color:var(--ink)}
+.opt{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 17px;margin:9px 0;cursor:pointer;transition:.2s;font-size:14.5px;color:var(--ink2)}
+.opt:hover{border-color:var(--violet)}
+.opt .ab{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--violet);border:1px solid #a48bff55;border-radius:8px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.opt.correct{border-color:var(--green);background:#5fe08a12;color:var(--ink)}
+.opt.correct .ab{color:var(--green);border-color:var(--green)}
+.opt.wrong{border-color:var(--red);background:#ff616112;opacity:.75}
+.opt.wrong .ab{color:var(--red);border-color:var(--red)}
+.opt.locked{pointer-events:none}
+.quizWhy{display:none;margin-top:16px;border-top:1px dashed #a48bff44;padding-top:16px;font-size:14.5px;color:var(--ink2)}
+.quizWhy.show{display:block;animation:fadeUp .4s ease}
+.quizWhy b{color:var(--violet)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+.svgWrap{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin:24px 0;overflow-x:auto}
+.svgWrap svg,.svgWrap img{display:block;margin:0 auto;max-width:100%;height:auto;border-radius:10px}
+.svgCap{text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-top:14px;letter-spacing:.04em}
+.bigQuote{font-family:var(--serif);font-size:clamp(21px,3vw,28px);font-weight:500;font-style:italic;color:var(--ink);text-align:center;max-width:780px;margin:50px auto;line-height:1.5}
+.bigQuote em{color:var(--orange);font-style:italic}
+.footer{border-top:1px solid var(--line);margin-top:80px;padding:44px 0 60px;text-align:center}
+.footer p{font-size:13px;color:var(--ink3)}
+.counter{font-family:var(--serif);font-size:44px;color:var(--orange);font-weight:640;line-height:1}
+.slackDrop{background:linear-gradient(120deg,#12201e,#0f1720);border:1px solid #3dd6c355;border-radius:14px;padding:16px 20px;margin:18px 0;display:flex;gap:14px;align-items:flex-start}
+.slackDrop .av{font-size:26px}
+.slackDrop .nm{font-weight:700;color:var(--teal);font-size:14px}
+.slackDrop .tm{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-left:8px}
+.slackDrop p{font-size:14px;color:var(--ink2);margin-top:4px}
+.toggleRow{display:inline-flex;flex-wrap:wrap;background:#f7f1e6;border:1px solid var(--line);border-radius:100px;padding:4px;margin-bottom:18px}
+.toggleRow button{font-family:var(--sans);font-weight:700;font-size:13px;border:none;background:transparent;color:var(--ink3);padding:8px 20px;border-radius:100px;cursor:pointer;transition:.2s}
+.toggleRow button.on{background:linear-gradient(180deg,var(--orange2),var(--orange));color:#fdf3e8}
+.abGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.abGrid{grid-template-columns:1fr}}
+.promptBox{background:#0a0d12;border:1px solid var(--line);border-radius:14px;padding:16px 18px;font-family:var(--mono);font-size:12px;color:#c7d2e0;line-height:1.7;white-space:pre-wrap;max-height:340px;overflow-y:auto}
+.promptBox .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:#ff8a2a;display:block;margin-bottom:8px}
+.outBox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 20px;font-size:13.5px;color:var(--ink2);line-height:1.6;max-height:340px;overflow-y:auto}
+.outBox .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--green);display:block;margin-bottom:8px}
+.outBox h5{font-family:var(--serif);color:var(--ink);font-size:15px;margin:10px 0 4px}
+.outBox .sec{font-weight:700;color:var(--orange2);margin-top:10px;font-size:13px}
+.outBox ul{padding-left:18px;margin-top:6px}
+.outBox li{margin:3px 0}
+.gapCallout{background:#fdf1e0;border:1px solid #ffd16655;border-radius:12px;padding:14px 18px;margin-top:16px;font-size:14px;color:var(--ink2)}
+.gapCallout b{color:var(--gold)}
+.pollBtns{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.pollBtn{font-family:var(--sans);font-weight:700;font-size:13px;background:var(--card2);color:var(--ink2);border:1px solid var(--line);border-radius:100px;padding:9px 18px;cursor:pointer;transition:.2s;text-align:left}
+.pollBtn:hover{border-color:var(--orange);color:var(--orange)}
+.pollBtn.sel{background:var(--orange-dim);border-color:var(--orange);color:var(--orange2)}
+.roundHead{display:flex;align-items:center;gap:14px;margin:14px 0}
+.roundBadge{font-family:var(--serif);font-size:28px;color:var(--orange);font-weight:640}
+.roundLabel{font-weight:700;color:var(--ink);font-size:16px}
+.chalCard{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:18px 0;overflow:hidden;transition:.25s}
+.chalCard.open{border-color:#3dd6c366}
+.chalHead{display:flex;align-items:center;gap:14px;padding:18px 22px;cursor:pointer}
+.chalHead .cn{font-family:var(--mono);font-size:12px;color:var(--teal);border:1px solid #3dd6c355;border-radius:8px;padding:4px 10px;font-weight:700}
+.chalHead h4{font-family:var(--serif);font-size:19px;flex:1}
+.chalHead .chev{font-family:var(--mono);color:var(--ink3);transition:.3s}
+.chalCard.open .chev{transform:rotate(90deg);color:var(--teal)}
+.chalBody{display:none;padding:0 22px 22px}
+.chalCard.open .chalBody{display:block;animation:fadeUp .4s ease}
+.chalBody .cLabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin:16px 0 6px}
+.chalBody .mission{color:var(--ink2);font-size:14.5px}
+.matchScenario{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:16px 20px;font-size:15px;color:#eef2f7;margin-bottom:14px;min-height:56px}
+.matchScenario span{color:#6d7a8c;font-family:var(--mono);font-size:11px;display:block;margin-bottom:6px;letter-spacing:.1em}
+.matchBtns{display:flex;flex-wrap:wrap;gap:10px}
+.matchBtn{font-family:var(--sans);font-weight:700;font-size:13px;border:1px solid var(--line);background:#f7f1e6;color:var(--ink2);border-radius:10px;padding:10px 16px;cursor:pointer;transition:.2s}
+.matchBtn:hover{border-color:var(--orange)}
+.matchBtn.right{border-color:var(--green);background:#e6f6ec;color:var(--green)}
+.matchBtn.wrong{border-color:var(--red);background:#fbe4e4;color:var(--rose)}
+.matchWhy{margin-top:14px;font-size:14px;color:var(--ink2);min-height:24px}
+.matchWhy b{color:var(--teal)}
+.matchScore{font-family:var(--mono);font-size:12px;color:var(--gold);border:1px solid #ffd16655;background:#ffd16611;border-radius:100px;padding:6px 14px;display:inline-block;margin-top:6px}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/rag/">RAG &amp; retrieval</a><span class="t">· AI Beginners 5 · Retrieval-augmented generation</span><span class="p"><a href="../AI-beginners-class5/">Class</a><b>Post-read</b></span><span class="pn"><a href="../Academy-AI-class-5/" title="AI Academy 5 · RAG: how a machine finds the right page">← Prev</a><a href="../../../Learnings/Class-3-4-AI-infusion/" title="AI Engineering 3 · RAG: give your AI its own library">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progressBar"></div>
+<nav class="topnav"><div class="wrap">
+<span class="brand">AIML · Class 5 · Post-Read</span>
+<a class="nl" href="#why">Why This Matters</a>
+<a class="nl" href="#steps">Three Steps of RAG</a>
+<a class="nl" href="#notebook">Gemini Notebook</a>
+<a class="nl" href="#perplexity">Perplexity + NoteGPT</a>
+<a class="nl" href="#exercise">Grounded vs Ungrounded</a>
+<a class="nl" href="#build">Mini Build</a>
+<a class="nl" href="#wrap">Wrap-Up</a>
+</div></nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero"><div class="wrap">
+  <div class="eyebrow">
+    <span class="chip hot">CLASS 05 / POST-READ</span>
+    <span class="chip">⏱ ~105 MINUTES</span>
+    <span class="chip cool">RETRIEVAL-AUGMENTED GENERATION</span>
+    <span class="chip">HANDS-ON</span>
+  </div>
+  <h1>Retrieval-Augmented <span class="amp">Generation</span></h1>
+  <p class="sub">Class 4 ended on a Friday morning: Selection Committee Ops — the Claude Project — was live, and Karan and Neha were both querying Scout Assist without re-briefing it once. The amnesia problem was solved. It's now three weeks later, and the committee has kept uploading — more shortlists, more scouting reports, more workload data. Remember Class 4's <b>Project Danger</b> card — "more files isn't more context, it's bloat"? That was the first hint of something we didn't have time to open: <b>how does Scout Assist actually decide which of those forty files to search</b> when a selector asks a question? That mechanism is called <b>RAG</b>. Today, we open that hood.</p>
+
+  <div class="slackDrop" style="margin-top:32px">
+    <div class="av">💬</div>
+    <div><span class="nm">Neha → Committee channel</span><span class="tm">9:52 PM · three weeks after Class 4</span>
+    <p>"Just asked Scout Assist about Arjun Rathi's workload trend across the last 6 reports. It confidently gave me numbers from ONE old report from August and ignored the four newer ones that are literally sitting right there in the Project. Nearly sent this straight to the coach before I double-checked."</p></div>
+  </div>
+  <p style="font-family:var(--mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--orange2);margin-top:14px">🔍 Selection meeting Wednesday morning. Neha has 4 days to rebuild trust in the retrieval pipeline — or the committee reverts to spreadsheets. Today: we solve it.</p>
+
+  <div class="heroStats">
+    <div class="hstat"><div class="n" data-count="3">0</div><div class="l">Tools Covered</div></div>
+    <div class="hstat"><div class="n" data-count="8">0</div><div class="l">Live Simulators</div></div>
+    <div class="hstat"><div class="n" data-count="4">0</div><div class="l">Checkpoint Quizzes</div></div>
+    <div class="hstat"><div class="n" data-count="1">0</div><div class="l">Notebook You Ship & Share</div></div>
+  </div>
+
+</div></header>
+
+<!-- ============ SECTION: WHY ============ -->
+<section class="blk" id="why"><div class="wrap">
+  <div class="secHead"><span class="secNum">SETUP</span><h2>Why This Matters — Memory Isn't Enough</h2><span class="secTime">⏱ 10 min</span></div>
+  <p class="secLede">Open the Selection Committee Ops Project and type Neha's exact question: "What's Arjun Rathi's workload trend over his last 6 reports?" Look at what comes back — one report, one date, confidently presented as "the trend." Four newer reports sit in the same Project, completely untouched. This is Neha's exact bug, live. Try it yourself in the simulator below.</p>
+
+  <p class="secLede" style="margin-top:28px">Class 3: we built Scout Assist and hardened it — it won't invent a player, won't leak a fitness detail, won't follow a hijacked instruction. Class 4: we gave it memory — a Gemini Gem, a Claude Project, an AI Studio playground — so nobody has to re-brief it every conversation. So what went wrong for Neha? She didn't lose the rules. Scout Assist still cited a source, still flagged workload the way it's supposed to. The problem is it cited the <i>wrong</i> source — an old report — while four newer, more relevant ones sat untouched in the same Project.</p>
+
+  <div class="card" style="border-color:#ff8a2a44">
+    <h4 style="color:var(--orange2)">Meet The Retrieval Problem</h4>
+    <p style="font-size:14.5px">That's not the amnesia problem. That's a <b style="color:var(--ink)">retrieval</b> problem — and it's been hiding in plain sight since the moment the committee uploaded its first file back in Class 4. Picture the same brilliant analyst from Class 4, memory intact this time — they remember their job perfectly. But hand them a filing cabinet with forty folders, and ask a question that spans five of them, and there's no guarantee they open the right five. They might grab the first folder their hand lands on and call it a day. <b style="color:var(--ink)">Confidently cited, still wrong</b> — arguably more dangerous than an honest guess, because it looks verified.</p>
+  </div>
+
+  <div class="svgWrap">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/191/355/original/1.png?1776506348" alt="Raw LLMs invent confident nonsense when they lack context">
+    <div class="svgCap">THE PROBLEM IN ONE DIAGRAM</div>
+  </div>
+
+  <p>This diagram is still true, but it's not the whole picture anymore. The left side — no context — is Lab 6.1 from Class 3: the AI confidently describing a "Silent Seam" app setting that doesn't exist, a "ProStrike Vortex X9" bat that was never made, an ICC "Golden Arm" award nobody ever won. Zero grounding, maximum confidence, completely wrong. The right side — with context — is what we thought we'd solved in Class 4. But Neha's bug shows there's a version of "with context" that's <i>still</i> wrong: the file existed, it just wasn't the file that got pulled forward.</p>
+
+  <div class="sim">
+    <h3>🔍 SIM 1 · The Retrieval Bug, Live</h3>
+    <p class="simSub">Same question from Neha. Toggle between what actually got retrieved three weeks ago, and what correct retrieval looks like on the exact same Project.</p>
+    <div class="toggleRow" id="bugToggle">
+      <button class="on" data-b="bad">📄 One Stale Report</button>
+      <button data-b="good">📚 All Five Reports</button>
+    </div>
+    <div class="abGrid">
+      <div class="promptBox" id="bugCtx"></div>
+      <div class="outBox" id="bugOut"></div>
+    </div>
+    <div class="gapCallout" id="bugGap"></div>
+  </div>
+
+  <p>This exact bug — a grounded AI retrieving the wrong document — is why every enterprise "chat with your Confluence" deployment tends to fail by week two, and it's the same mechanism behind Air Canada's tribunal loss from Class 3. Neha's Slack message is what this problem looks like at kitchen-table scale; the mechanism doesn't change as the pile of documents grows into the thousands.</p>
+
+  <div class="card">
+    <h4 style="color:var(--orange)">Why this matters for you — 2026 reality check</h4>
+    <ul style="padding-left:18px;margin-top:8px;color:var(--ink2);font-size:14.5px;line-height:1.9">
+      <li>Every IDE AI assistant you use — Cursor, Copilot, Claude Code — is doing RAG over your repo, and hits this exact same "which chunk gets pulled" problem at scale.</li>
+      <li>Every "Chat with your PDF" product on the market lives or dies on retrieval quality, not just on having the file uploaded.</li>
+      <li>Every enterprise chatbot answering from Confluence or Notion hits Neha's bug the moment the wiki grows past a few dozen pages.</li>
+      <li><b style="color:var(--ink)">Amazon Q (2024)</b> — Amazon's own internal AI assistant hallucinated AWS security policies and leaked internal documents, a real retrieval-grounding failure at enterprise scale.</li>
+      <li><b style="color:var(--ink)">NYC's MyCity chatbot (2024)</b> — a RAG chatbot built to answer NYC business-regulation questions told business owners it was legal to fire workers for reporting sexual harassment.</li>
+      <li>If you're shipping an AI feature, knowing how retrieval actually works is the difference between "it worked in the demo" and "it worked at scale."</li>
+    </ul>
+  </div>
+
+  <p>When Cursor answers a question about your codebase, it isn't reading every file in your repo into one giant prompt — it's retrieving the handful of files most relevant to your question. Same mechanism, same failure mode if it grabs the wrong file. By the end of today you'll understand exactly why, and exactly what to do about it.</p>
+  <div class="divider"></div>
+</div></section>
+
+<!-- ============ SECTION: THREE STEPS ============ -->
+<section class="blk" id="steps"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 1</span><h2>The Three Steps of RAG</h2><span class="secTime">⏱ 10 min</span></div>
+  <p class="secLede">Here's the fix for Neha's bug, and it's simpler than it sounds. Give the AI the right notes before it answers — and make sure they're the <em>right</em> notes, not just any notes that happen to be in the folder.</p>
+
+  <div class="svgWrap">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/191/356/original/2.png?1776506467" alt="The three steps of RAG: Retrieve, Augment, Generate">
+    <div class="svgCap">RETRIEVE → AUGMENT → GENERATE</div>
+  </div>
+
+  <div class="sim">
+    <h3>🧩 SIM 2 · Retrieve → Augment → Generate</h3>
+    <p class="simSub">Walk through what should have happened to Neha's question, one step at a time.</p>
+    <div class="roundHead">
+      <span class="roundBadge" id="stepBadge">1</span>
+      <span class="roundLabel" id="stepLabel">Retrieve</span>
+    </div>
+    <p id="stepText" style="font-size:15.5px;color:var(--ink2);margin-top:4px"></p>
+    <button class="btn sm" id="stepNext" style="margin-top:16px">Next step →</button>
+    <button class="btn sm ghost" id="stepReset" style="margin-top:16px">↻ Reset</button>
+  </div>
+
+  <div class="sim">
+    <h3>📝 SIM 3 · The Shape of a RAG Prompt</h3>
+    <p class="simSub">Same question, same model. Toggle between what Neha actually got, and what correct retrieval hands the model instead.</p>
+    <div class="toggleRow" id="shapeToggle">
+      <button class="on" data-s="bad">What Neha Got</button>
+      <button data-s="good">What Should Happen</button>
+    </div>
+    <div class="promptBox" id="shapeOut"></div>
+  </div>
+
+  <h3 style="font-size:22px;margin:30px 0 6px">One-line analogies for the three tools we'll use today</h3>
+  <div class="grid3">
+    <div class="defBox" style="margin:0"><span class="term">Gemini Notebook</span><p>A specialist analyst who only reads from the committee's own filing cabinet.</p></div>
+    <div class="defBox" style="margin:0"><span class="term">Perplexity</span><p>A scout permanently plugged into today's news wire.</p></div>
+    <div class="defBox" style="margin:0"><span class="term">NoteGPT</span><p>Someone who sits through the full 90-minute press conference so the committee doesn't have to.</p></div>
+  </div>
+
+  <div class="note beg"><b>Beginner Note:</b> All three are no-code — you upload or paste, then type questions. No programming required today.</div>
+  <div class="note pro"><b>Intermediate Note:</b> None of these three tools show you the actual retrieval settings — chunk size, how many passages get pulled per question. That's deliberate; they're built to just work. If you ever build RAG yourself with an LLM API, those hidden settings are exactly what you'd configure by hand.</div>
+
+  <div class="quiz">
+    <p class="q">Quiz 1 · Neha's Scout Assist query pulled one stale workload report instead of all five relevant ones. Which step of RAG failed?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span>Generate — the model wrote a poorly-worded answer</div>
+    <div class="opt" data-r="c"><span class="ab">B</span>Retrieve — the system searched the knowledge base and returned an incomplete set of relevant chunks</div>
+    <div class="opt" data-r="w"><span class="ab">C</span>Augment — the retrieved chunks were formatted incorrectly before being added to the prompt</div>
+    <div class="opt" data-r="w"><span class="ab">D</span>The system prompt from Class 3 was missing a citation rule</div>
+    <div class="quizWhy"><b>Why B?</b> This is Retrieve failing, not Generate. The model did exactly what it was asked — answer from the given context, cite the source. The problem happened one step earlier: the search step handed it the wrong, incomplete context to begin with. Option D is a trap — Scout Assist's citation rule from Class 3 worked perfectly; it correctly cited the one report it was given. The rule didn't fail. The search that fed it did.</div>
+  </div>
+  <div class="divider"></div>
+</div></section>
+
+<!-- ============ SECTION: GEMINI NOTEBOOK ============ -->
+<section class="blk" id="notebook"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 2</span><h2>Tool Demo — Gemini Notebook</h2><span class="secTime">⏱ 20 min</span></div>
+  <p class="secLede">Here's the direct fix for Neha's bug: a tool purpose-built for exactly the scale problem the committee just hit.</p>
+
+  <div class="defBox"><span class="term">What Is Gemini Notebook?</span><p>Google's grounding tool. You upload sources — PDFs, Google Docs, websites, YouTube URLs, even raw pasted text — and it builds a private AI assistant that answers <b style="color:var(--ink)">only</b> from those sources, with citations back to the exact passage. Unlike a Claude Project or a raw chat, it has no access to the open web or its general training data when answering. If the answer isn't in your sources, it says so. <b style="color:var(--ink)">It's completely free</b> with a Google account. It's intentionally limited — unlike dumping forty files into a Project, it's actually designed to search that pile properly.</p></div>
+
+  <table class="tbl"><thead><tr><th>Use Gemini Notebook when...</th><th>Just ask Scout Assist (Class 4's Project) when...</th></tr></thead><tbody>
+    <tr><td>You have a large, specific pile of documents you want answers from</td><td>The Project's small, curated knowledge base is enough</td></tr>
+    <tr><td>You need citations you can verify before it reaches the coach</td><td>You're brainstorming or drafting</td></tr>
+    <tr><td>The topic is domain-specific (a player's history, a workload archive)</td><td>The topic is broad committee doctrine already in the Project instructions</td></tr>
+    <tr><td>Answers must not be made up, ever</td><td>Approximate is okay</td></tr>
+  </tbody></table>
+
+  <div class="card">
+    <h4 style="color:var(--orange2)">Step-by-step demo</h4>
+    <p style="font-size:14.5px"><b>Step 1 — Open Gemini Notebook.</b> Go to notebooklm.google.com and sign in with any Google account. Click <b>"+ Create new."</b></p>
+    <p style="font-size:14.5px"><b>Step 2 — Name it.</b> Call it <code class="k">Scouting Intelligence Notebook</code>. It immediately prompts for sources — no question box until you add at least one.</p>
+    <p style="font-size:14.5px"><b>Step 3 — Add sources.</b> A PDF (the WACA Cricket Scoring Guide), a website (Sportsmith's fast-bowler workload article), and a YouTube video (Brett Lee's Fast Bowling Masterclass). Wait ~30 seconds per source.</p>
+    <p style="font-size:14.5px"><b>Step 4 — Ask the first question.</b> <i>"Based on my sources, what's one framework recommended for limiting a young fast bowler's weekly overs?"</i></p>
+  </div>
+
+  <p>While these process, something important is happening: Gemini Notebook is reading each source, breaking it into chunks, and indexing them so it can retrieve the right one later, not just the first one it finds. This is the "Retrieve" step of RAG happening automatically — the exact step that failed Neha three weeks ago.</p>
+
+  <div class="sim">
+    <h3>📚 SIM 4 · Gemini Notebook Console</h3>
+    <p class="simSub">Click a sample question and watch how the notebook answers — including the one question it should refuse.</p>
+    <div class="pollBtns" id="nbBtns"></div>
+    <div class="outBox" id="nbOut" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card">
+    <h4 style="color:var(--orange2)">Step 5 — Check the citations</h4>
+    <p style="font-size:14.5px">Every answer comes with numbered citations like <code class="k">[1]</code>. Click one — Gemini Notebook jumps to the exact sentence in the exact source. Neha would have caught her bug in one click if the tool she'd used surfaced citations this precisely.</p>
+    <h4 style="color:var(--orange2);margin-top:18px">Step 6 — Test the refusal behaviour</h4>
+    <p style="font-size:14.5px">Ask something not in your sources — <i>"Who won the Ranji Trophy final in 2019?"</i> — and watch it decline instead of guessing. A grounded tool that refuses is worth more than a clever one that lies.</p>
+    <h4 style="color:var(--orange2);margin-top:18px">Step 7 — The power features</h4>
+    <p style="font-size:14.5px">📘 Study guide · 📋 Briefing doc (the committee's actual briefing pack, auto-generated) · ❓ FAQ · 🎧 Audio Overview — two AI hosts discuss your sources, podcast-style.</p>
+    <h4 style="color:var(--orange2);margin-top:18px">Step 8 — Share it with the whole committee</h4>
+    <p style="font-size:14.5px">Click <b style="color:var(--ink)">Share</b> — Gemini Notebook shares exactly like a Google Doc: invite Karan, Vikram, and the coach by email, or generate a link. Viewers can ask questions themselves; they just can't add or remove sources.</p>
+  </div>
+
+  <p>This is the answer to "how does the whole committee use this, not just Neha" — and it's built into the free tool you already have open, no new platform, nothing that can break mid-demo. One notebook, correctly grounded, one Share button, and Karan and Vikram are asking questions against the exact same sources Neha uploaded, without her being in the loop. That's Class 4's amnesia fix and Class 5's retrieval fix, stacked.</p>
+
+  <div class="note beg"><b>Beginner Note:</b> Don't overthink the sources — a scoring guide PDF and two URLs is plenty to start.</div>
+  <div class="note pro"><b>Intermediate Note:</b> Find a second workload article that recommends slightly different numbers, upload it alongside the first, then ask a disagreement question. Watch how Gemini Notebook handles the conflict.</div>
+  <div class="note adv"><b>Advanced Note:</b> Gemini Notebook caps at 50 sources per notebook. Upload 15–20, then ask a synthesis question spanning 5+ sources. Notice retrieval quality start to degrade — that's the same trade-off that broke Neha's Project, now visible on purpose.</div>
+
+  <div class="card" style="border-color:#ff6b8b44">
+    <h4 style="color:var(--rose)">Gemini Notebook Danger — More Sources Isn't More Context</h4>
+    <p style="font-size:14.5px">Uploading 50 unrelated sources doesn't make the notebook smarter — it <b style="color:var(--ink)">dilutes retrieval quality</b>. 5–10 focused sources beat 50 random ones. If a Notebook stops citing correctly, prune the source pile first, before blaming the tool.</p>
+  </div>
+
+  <div class="quiz">
+    <p class="q">Quiz 2 · You upload the verified shortlist and three workload reports to Gemini Notebook, then ask: "What did the coach say about Rathi in last week's team meeting?" — a meeting that was never uploaded. What's the most likely and most desirable response?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span>It searches the internet for the coach's public comments</div>
+    <div class="opt" data-r="w"><span class="ab">B</span>It generates a plausible answer based on the workload reports and the coach's likely views</div>
+    <div class="opt" data-r="c"><span class="ab">C</span>It tells you the sources don't contain information about that topic, and declines to answer</div>
+    <div class="opt" data-r="w"><span class="ab">D</span>It crashes because the question is out of scope</div>
+    <div class="quizWhy"><b>Why C?</b> Gemini Notebook doesn't access the internet and doesn't speculate. When the answer isn't there, it says so — exactly the discipline that would have caught Neha's bug immediately, instead of three weeks later in production. Option B is the hallucination trap: a confident answer sounding right while being completely invented.</div>
+  </div>
+  <div class="divider"></div>
+</div></section>
+
+<!-- ============ SECTION: PERPLEXITY + NOTEGPT ============ -->
+<section class="blk" id="perplexity"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 3</span><h2>Tool Demo — Perplexity + NoteGPT</h2><span class="secTime">⏱ 18 min</span></div>
+  <p class="secLede">Gemini Notebook is RAG over the committee's own filing cabinet. But Karan's job sometimes needs what's happening in the cricket world <em>right now</em> — Gemini Notebook falls short there. Perplexity steps in.</p>
+
+  <div class="svgWrap">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/191/361/original/6.jpg?1776508211" alt="Perplexity AI: RAG for the live internet and time-sensitive queries">
+    <div class="svgCap">PERPLEXITY · RAG FOR THE LIVE WEB</div>
+  </div>
+
+  <div class="sim">
+    <h3>🌐 SIM 5 · ChatGPT vs Perplexity, Live</h3>
+    <p class="simSub">Same question, side by side — "What happened in this week's international cricket news?"</p>
+    <div class="toggleRow" id="perpToggle">
+      <button class="on" data-p="raw">🤖 ChatGPT (web search OFF)</button>
+      <button data-p="grounded">🌐 Perplexity</button>
+    </div>
+    <div class="outBox" id="perpOut"></div>
+    <div class="gapCallout" id="perpGap"></div>
+  </div>
+
+  <div class="card">
+    <h4 style="color:var(--orange2)">Demo walkthrough</h4>
+    <p style="font-size:14.5px"><b>Step 1 —</b> Open perplexity.ai. No login required for the free tier.</p>
+    <p style="font-size:14.5px"><b>Step 2 —</b> Ask something time-sensitive: <i>"What are the biggest storylines from this month's domestic cricket season?"</i> Watch the inline <code class="k">[1]</code> <code class="k">[2]</code> <code class="k">[3]</code> citations — hover to preview, click to open.</p>
+    <p style="font-size:14.5px"><b>Step 4 —</b> Toggle on <b>Deep Research</b> and ask a bigger question: <i>"Compare how different national teams are handling bowler workload management in 2026."</i> Perplexity runs ~20–30 searches and produces a cited report in 2–3 minutes.</p>
+    <p style="font-size:14.5px"><b>Step 5 —</b> Click <b>Spaces → Create a Space.</b> Add custom instructions (e.g. "always cite sources, always flag disagreements") and every thread inside follows those rules automatically — the same "set the rules once" idea as a Gemini Gem or Claude Project from Class 4, except grounded in the live web and shareable with up to 10 collaborators.</p>
+  </div>
+
+  <div class="sim">
+    <h3>🔬 SIM 6 · Focus Mode Switcher</h3>
+    <p class="simSub">Same question — "What's the recommended weekly over limit for a young fast bowler?" — three different Focus modes, three different shelves of sources.</p>
+    <div class="toggleRow" id="focusTabs">
+      <button class="on" data-f="web">🌐 Web</button>
+      <button data-f="academic">🎓 Academic</button>
+      <button data-f="reddit">💬 Reddit</button>
+    </div>
+    <div class="outBox" id="focusOut"></div>
+  </div>
+
+  <p>Watch the sources change completely between modes. Web gives you news and coaching blogs. Academic gives you peer-reviewed sports-science papers. Reddit gives you practitioner discussions — what club-level coaches actually do. Each Focus mode is the exact same Retrieve step, just pointed at a different shelf.</p>
+
+  <div class="card" style="border-color:#ff6b8b44">
+    <h4 style="color:var(--rose)">Perplexity Danger — Citation ≠ Credibility</h4>
+    <p style="font-size:14.5px">Perplexity cites — but not every cited source is credible. It sometimes retrieves opinion pieces, low-quality SEO farms, or Reddit threads presented alongside peer-reviewed research. <b style="color:var(--ink)">Citation ≠ credibility.</b> Always check the source domain before trusting.</p>
+  </div>
+
+  <h3 style="font-size:22px;margin:34px 0 6px">Part B: NoteGPT — RAG for a Single Long Video</h3>
+  <p>Vikram has a full-length documentary on a legendary player's career he wants mined for scouting insight. Nobody has two hours to sit through it. NoteGPT does: paste a YouTube URL → transcribes the video → generates a timestamped summary and chapter notes → a chat box answers questions from the transcript, with a timestamp citation. It can also generate flashcards, a mind map, or a short quiz from the transcript.</p>
+
+  <div class="analogy"><div class="ic">🎬</div><div><div class="tt">Analogy · The Chunked Transcript</div>
+    <p>Ask NoteGPT <i>"At what timestamp does the documentary discuss [a career turning point]?"</i> and it answers with a clickable timestamp. That's the RAG pattern again — transcript chunked by time, relevant chunk retrieved, timestamp returned. A feature-length documentary becomes a 2-minute query.</p></div>
+  </div>
+
+  <div class="note adv"><b>Advanced Note:</b> Chain NoteGPT → Gemini Notebook — copy the generated notes and paste them as a text source into a Gemini Notebook notebook, so the documentary becomes searchable alongside the scoring guide and the workload article. Same "preprocess then ground" pattern real production RAG pipelines use.</div>
+
+  <div class="card" style="border-color:#ff6b8b44">
+    <h4 style="color:var(--rose)">NoteGPT Danger — Garbage Transcript In, Garbage Summary Out</h4>
+    <p style="font-size:14.5px">NoteGPT works from the auto-generated transcript, which can mis-hear words — especially names and technical terms. A summary based on a bad transcript inherits the errors. <b style="color:var(--ink)">Spot-check timestamps for critical claims.</b></p>
+  </div>
+
+  <div class="quiz">
+    <p class="q">Quiz 3 · The committee has 10 internal workload/scouting documents, 2 PDF match reports, and a 60-minute recording of the coach's tactical review on YouTube. Vikram wants to ask questions across all of it, with citations. Which combination is most appropriate?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span>Paste everything into one giant Scout Assist chat message</div>
+    <div class="opt" data-r="w"><span class="ab">B</span>Use Perplexity — it can search the internet for similar tactical patterns</div>
+    <div class="opt" data-r="c"><span class="ab">C</span>Use NoteGPT to generate notes from the video, then load everything into Gemini Notebook</div>
+    <div class="opt" data-r="w"><span class="ab">D</span>Use Gemini Notebook alone — it can't process YouTube, so skip the video</div>
+    <div class="quizWhy"><b>Why C?</b> This is the tool-chaining pattern we just covered. NoteGPT structures the video content; Gemini Notebook then holds everything — video notes, workload docs, match reports — in one queryable, cited knowledge base. Option D undersells Gemini Notebook, which does support YouTube directly, but chaining through NoteGPT for long recordings often produces better structured notes. Option A hits context-window limits and gives zero citations. Option B is the wrong retrieval source entirely.</div>
+  </div>
+  <div class="divider"></div>
+</div></section>
+
+<!-- ============ SECTION: GUIDED EXERCISE ============ -->
+<section class="blk" id="exercise"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 4</span><h2>Guided Exercise — Grounded vs Ungrounded</h2><span class="secTime">⏱ 15 min</span></div>
+  <p class="secLede">Time to feel this in your own hands, not just watch it happen to Neha. Ask the same question to three tools and compare what grounding actually changes.</p>
+
+  <div class="card">
+    <h4 style="color:var(--orange2)">Setup — three tabs open</h4>
+    <p style="font-size:14.5px">🤖 ChatGPT (web search turned OFF) · 🌐 Perplexity · 📚 Your Gemini Notebook Scouting Intelligence Notebook from Section 2</p>
+  </div>
+
+  <h3 style="font-size:22px;margin:30px 0 6px">Exercise 4.1 — The Same Question, Three Tools</h3>
+  <p>Pick <b style="color:var(--ink)">one</b> question and ask it verbatim in all three tabs:</p>
+  <ul style="padding-left:20px;margin-top:8px;color:var(--ink2);font-size:14.5px;line-height:1.9">
+    <li><b style="color:var(--ink)">Time-sensitive:</b> "What are the three biggest storylines in cricket in the last month?"</li>
+    <li><b style="color:var(--ink)">Niche/specific:</b> "What are the most common causes of bowler workload injuries and how are teams monitoring for them?"</li>
+    <li><b style="color:var(--ink)">Your-source-specific (only Gemini Notebook can answer):</b> "Based on my uploaded sources, what are the three key takeaways the committee should act on this week?"</li>
+  </ul>
+
+  <h3 style="font-size:22px;margin:34px 0 6px">Exercise 4.2 — The False Premise Test</h3>
+  <p>This is what AI teams call the false premise test. We deliberately ask something WRONG and see which tools catch it.</p>
+
+  <div class="sim">
+    <h3>⚖️ SIM 7 · Grounded vs Ungrounded — Three Tools</h3>
+    <p class="simSub">Same false-premise question to all three: "Why is a bowler allowed to bowl two overs in a row from the same end in ODI cricket?" (This is false — overs must alternate between bowlers.)</p>
+    <div class="toggleRow" id="groundTabs">
+      <button class="on" data-g="chatgpt">🤖 ChatGPT</button>
+      <button data-g="perplexity">🌐 Perplexity</button>
+      <button data-g="notebook">📚 Gemini Notebook</button>
+    </div>
+    <div class="outBox" id="groundOut"></div>
+  </div>
+
+  <p>A tool that plays along is dangerous in exactly the way Neha's bug was dangerous — confidently wrong, and it takes real verification work to catch. A grounded tool hits a real source and course-corrects. That's why citations aren't optional — they're the safety net.</p>
+
+  <div class="note beg"><b>Beginner Note:</b> Don't worry if you didn't know the exact rule — the point is watching how the tools handle a wrong assumption, not testing your cricket knowledge.</div>
+
+  <div class="quiz">
+    <p class="q">Quiz 4 · During Exercise 4.2, Perplexity corrected the false premise about bowling consecutive overs, but ChatGPT (web search off) confidently explained a rule that doesn't exist. Which best explains why a grounded tool is less likely to agree with a false premise?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span>Grounded tools have larger models trained on more cricket data</div>
+    <div class="opt" data-r="c"><span class="ab">B</span>The retrieval step surfaces real sources that contradict the false premise, anchoring the model to accurate information before it generates a response</div>
+    <div class="opt" data-r="w"><span class="ab">C</span>Perplexity is specifically programmed to detect cricket questions</div>
+    <div class="opt" data-r="w"><span class="ab">D</span>Grounded tools avoid answering rules-related questions</div>
+    <div class="quizWhy"><b>Why B?</b> Perplexity retrieves real sources on cricket's laws before generating anything. Those sources say overs must alternate between bowlers. That retrieved content becomes the context the model generates from — contradicting the false premise before generation even starts. This is the same retrieval-first principle behind every fix we've made today, including Neha's.</div>
+  </div>
+  <div class="divider"></div>
+</div></section>
+
+<!-- ============ SECTION: MINI BUILD ============ -->
+<section class="blk" id="build"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 5</span><h2>Mini Build — Ship It For The Committee</h2><span class="secTime">⏱ 18 min</span></div>
+  <p class="secLede">This is the main event. Two challenges — pick the one that matches what you'd actually use, or design your own. Your own files, and you want the whole committee to use it → build it in Gemini Notebook, then share it. Something live and time-sensitive that you'll need again next week → Perplexity, saved as a Space.</p>
+
+  <div class="chalCard open" id="chalA">
+    <div class="chalHead"><span class="cn">GEMINI NOTEBOOK</span><h4>Challenge A · "Neha's Report Room"</h4><span class="chev">›</span></div>
+    <div class="chalBody">
+      <p class="mission"><b style="color:var(--ink)">Scenario:</b> Neha is done getting burned by stale reports. She wants a personal grounded notebook that holds every workload report, the verified shortlist, and a nets-session video — with citations she can check before anything goes to the coach.</p>
+      <p class="cLabel">Mission</p>
+      <p class="mission">Build a Gemini Notebook notebook called <b style="color:var(--ink)">"Neha's Report Room."</b></p>
+      <p class="cLabel">Configure</p>
+      <p class="mission">1. <b style="color:var(--ink)">Sources</b> (at least 4, mixed types): 1 PDF (a scoring/rules guide, or your own mock workload report), 1 YouTube video (a bowling technique or nets-session video), 1 web URL (a workload or fitness article), 1 pasted-text source (mock scouting notes or a shortlist).<br>2. <b style="color:var(--ink)">Ask three grounded questions:</b> "Based on my sources, which players show a rising workload trend?" · "Across all my sources, what's the most commonly flagged risk area?" · "What would I miss if I only checked the most recent report? Cite examples."<br>3. <b style="color:var(--ink)">Generate:</b> a Briefing Doc + Audio Overview.<br>4. <b style="color:var(--ink)">Share it.</b> Click Share and either invite one classmate by email or generate a link.</p>
+      <p class="cLabel">Success Criteria</p>
+      <p class="mission">Every answer has clickable citations pointing to real passages in your sources. A generic, uncited answer means a source didn't upload correctly. You have a working Share link or invite sent.</p>
+    </div>
+  </div>
+
+  <div class="chalCard" id="chalB">
+    <div class="chalHead"><span class="cn">PERPLEXITY</span><h4>Challenge B · "Karan's Opposition Desk"</h4><span class="chev">›</span></div>
+    <div class="chalBody">
+      <p class="mission"><b style="color:var(--ink)">Scenario:</b> Karan needs a fresh, sourced brief on the touring team before every selection meeting — team news, injury updates, recent form — and he's tired of an hour of manual reading every week.</p>
+      <p class="cLabel">Mission</p>
+      <p class="mission">Build a Perplexity <b style="color:var(--ink)">Space</b> called <b style="color:var(--ink)">"Opposition Desk."</b></p>
+      <p class="cLabel">Configure</p>
+      <p class="mission">1. Open perplexity.ai → <b style="color:var(--ink)">Spaces → Create a Space.</b> Name it "Opposition Desk."<br>2. <b style="color:var(--ink)">Custom instructions:</b> always cite sources for every claim, always flag where sources disagree, always end with one sentence on what matters most for the selection meeting.<br>3. Turn on <b style="color:var(--ink)">Deep Research</b> and run: "Produce a briefing on the touring team's current form, covering the last 7 days only: team news, injury updates, and recent match results. Cite sources for every claim. Flag anything where sources disagree. End with one sentence on what matters most for Friday's selection meeting."<br>4. <b style="color:var(--ink)">Verify</b> at least 2 citations by clicking them.<br>5. Note that Spaces support up to 10 collaborators — anyone invited can ask follow-ups in the same Space.</p>
+      <p class="cLabel">Success Criteria</p>
+      <p class="mission">Every claim in the brief has a citation, at least 2 verified as accurate, and the Space is set up to be reused next week with one click instead of retyping the prompt.</p>
+    </div>
+  </div>
+  <div class="divider"></div>
+</div></section>
+
+<!-- ============ SECTION: WRAP-UP ============ -->
+<section class="blk" id="wrap"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 6</span><h2>Wrap-Up — The Retrieval Fix</h2><span class="secTime">⏱ 10 min</span></div>
+
+  <div class="svgWrap">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/191/379/original/9.png?1776512610" alt="2026 reality check: RAG powers the entire AI ecosystem">
+    <div class="svgCap">2026 REALITY CHECK · RAG POWERS THE ENTIRE AI ECOSYSTEM</div>
+  </div>
+
+  <p>Look at how far we've come in one session — from Neha's Slack message about a wrong workload answer, to a correctly-grounded notebook the whole committee can actually use.</p>
+
+  <div class="sim">
+    <h3>🎯 SIM 8 · Pick The Right Tool</h3>
+    <p class="simSub">Five scenarios from around the committee. Guess Gemini Notebook, Perplexity, or NoteGPT for each — reveal the reasoning after every pick.</p>
+    <div class="matchScenario" id="pickScenario"><span>SCENARIO</span></div>
+    <div class="matchBtns" id="pickBtns"></div>
+    <div class="matchWhy" id="pickWhy"></div>
+    <div class="matchScore" id="pickScore">Score 0 / 5</div>
+  </div>
+
+  <table class="tbl"><thead><tr><th>Skill</th><th>What You Can Do Now</th></tr></thead><tbody>
+    <tr><td>RAG intuition</td><td>Explain retrieval-augmented generation as "give the AI the right notes — and make sure they're the right ones"</td></tr>
+    <tr><td>Gemini Notebook</td><td>Build a grounded assistant over a large document pile, with citations, that doesn't silently choke like a Project can — and share it with a team</td></tr>
+    <tr><td>Perplexity</td><td>Run live web-grounded searches, use Focus modes, kick off Deep Research reports, and save recurring ones as a Space</td></tr>
+    <tr><td>NoteGPT</td><td>Turn a long video into searchable, citable knowledge</td></tr>
+    <tr><td>Hallucination detection</td><td>Spot fabricated facts by checking citations and testing false premises</td></tr>
+  </tbody></table>
+
+  <div class="card">
+    <h4 style="color:var(--orange)">Key Takeaways</h4>
+    <ol style="padding-left:20px;margin-top:8px;color:var(--ink2);font-size:14.5px;line-height:1.95">
+      <li><b style="color:var(--ink)">RAG = retrieve → augment → generate.</b> Give the AI the right notes before it answers — and make sure they're the right notes. Everything else is implementation detail.</li>
+      <li><b style="color:var(--ink)">Memory (Class 4) and retrieval (Class 5) are different problems.</b> A Gem or Project remembers its job forever. Whether it finds the right passage in a pile of forty files is a separate question — the one that broke Neha.</li>
+      <li><b style="color:var(--ink)">"I don't know" is a feature.</b> A grounded tool that refuses when it lacks sources is more trustworthy than a clever one that lies confidently.</li>
+      <li><b style="color:var(--ink)">Different grounding tools for different source shapes.</b> Your files, quick answers → Gemini Notebook. The live web, recurring questions → Perplexity, saved as a Space. A video → NoteGPT.</li>
+      <li><b style="color:var(--ink)">A Claude Project isn't wrong, it's just opaque.</b> It never showed the committee which files it searched or why it picked one report over another. Gemini Notebook's citations are the closest thing to X-ray vision you get without leaving free, no-code tools.</li>
+      <li><b style="color:var(--ink)">These tools handle the vast majority of grounding needs.</b> You only need a fully custom RAG pipeline once you outgrow what a free, citation-first, no-code tool can do — and today gave you a very high ceiling before you hit that point.</li>
+    </ol>
+  </div>
+
+  <div class="card" style="border-color:#5fe08a44">
+    <h4 style="color:var(--green)">Neha's Report Room — One Week Later</h4>
+    <p style="font-size:14.5px">One week after Neha's Slack message. She's rebuilt her Scouting Intelligence Notebook properly — every workload report uploaded, nothing missing — and shared it with the whole committee. Karan opens the shared link and asks the exact same question that broke Scout Assist three weeks ago: <i>"What's Arjun Rathi's workload trend over his last 6 reports?"</i> Five reports come back. Each one cited. Each one checkable in one click. Karan didn't need Neha to rebuild anything for him — the shared notebook was already sitting there, already correct. <b style="color:var(--ink)">Neha doesn't send a frustrated Slack message this time. She forwards the citation straight to the coach.</b></p>
+  </div>
+
+  <p class="bigQuote">"Give the AI the right notes — and make sure they're <em>the right ones.</em>"</p>
+
+  <p>The difference between a hallucination and a citation is the difference between a toy and a tool — and the difference between a citation and the <i>right</i> citation is the difference between a tool and one you can actually trust. In 2026, shipping trustworthy AI means shipping grounded, correctly-retrieving AI. You now know how.</p>
+
+</div></section>
+
+<div class="footer"><div class="wrap">
+  <p>Class 5 · RAG — Retrieval-Augmented Generation — GenAI x Academy</p>
+  <p style="margin-top:6px">Interactive teaching companion · 8 simulators · 4 checkpoint quizzes · 3 tools covered</p>
+</div></div>
+
+<script>
+/* progress bar + hero counters */
+addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%'});
+document.querySelectorAll('.hstat .n').forEach(el=>{const t=+el.dataset.count;let c=0;const step=()=>{c+=Math.max(1,Math.round(t/30));if(c>=t)c=t;el.textContent=c;if(c<t)requestAnimationFrame(step)};setTimeout(step,300)});
+
+/* quizzes */
+document.querySelectorAll('.quiz').forEach(q=>{const opts=q.querySelectorAll('.opt');
+ opts.forEach(o=>o.addEventListener('click',()=>{opts.forEach(x=>{x.classList.add('locked');if(x.dataset.r==='c')x.classList.add('correct')});
+  if(o.dataset.r!=='c')o.classList.add('wrong');q.querySelector('.quizWhy').classList.add('show');}));});
+
+/* challenge accordion cards */
+document.querySelectorAll('.chalHead').forEach(h=>h.addEventListener('click',()=>h.closest('.chalCard').classList.toggle('open')));
+
+/* ===== SIM 1: The Retrieval Bug, Live ===== */
+(()=>{
+const ctx=document.getElementById('bugCtx'),out=document.getElementById('bugOut'),gap=document.getElementById('bugGap');
+const bad={
+ ctx:'<span class="lbl">CONTEXT RETRIEVED</span>Workload Report — 12 Aug: Rathi logged 340 deliveries this week, within safe limits.\n\n(Only one chunk retrieved — the other four reports were never pulled)',
+ out:'<span class="lbl">OUTPUT</span>Neha: "What\'s Arjun Rathi\'s workload trend over his last 6 reports?"<br><br>Based on the available report, Rathi logged 340 deliveries this week, within safe limits.<p style="font-size:12px;color:var(--rose);margin-top:10px">Cites a real report — but only the oldest one. No trend. No mention of the flag raised on 26 Aug. Confidently incomplete.</p>',
+ gap:'<b>Retrieve grabbed one chunk and stopped.</b> The citation is real, so it looks verified — but it\'s missing 4 of the 5 reports Neha actually needed. That\'s the bug, live.'
+};
+const good={
+ ctx:'<span class="lbl">CONTEXT RETRIEVED</span>Workload Report — 12 Aug: 340 deliveries, safe.\nWorkload Report — 19 Aug: 410 deliveries, approaching limit.\nWorkload Report — 26 Aug: 465 deliveries, flagged.\nWorkload Report — 2 Sep: 300 deliveries, flag lifted.\nWorkload Report — 9 Sep: 380 deliveries, safe.\n\n(All five relevant chunks retrieved)',
+ out:'<span class="lbl">OUTPUT</span>Neha: "What\'s Arjun Rathi\'s workload trend over his last 6 reports?"<br><br>Rathi\'s load rose steadily from 340→465 deliveries between 12 Aug and 26 Aug, triggering a workload flag. The flag was lifted by 2 Sep after a lighter week (300), and load has since stabilised around 380 (9 Sep).<p style="font-size:12px;color:var(--green);margin-top:10px">Cites all five reports · shows the actual trend, including the flag and its resolution · nothing missing.</p>',
+ gap:'<b>Same question, same model — but Retrieve did its job this time.</b> Five relevant chunks in, one accurate trend out. This is what "fixed" looks like.'
+};
+const setB=b=>{
+  document.querySelectorAll('#bugToggle button').forEach(btn=>btn.classList.toggle('on',btn.dataset.b===b));
+  const d=b==='bad'?bad:good;
+  ctx.innerHTML=d.ctx;out.innerHTML=d.out;gap.innerHTML=d.gap;
+};
+document.querySelectorAll('#bugToggle button').forEach(b=>b.onclick=()=>setB(b.dataset.b));
+setB('bad');
+})();
+
+/* ===== SIM 2: Retrieve -> Augment -> Generate stepper ===== */
+(()=>{
+const STEPS=[
+ {label:'Retrieve',text:'The system searches every uploaded report and pulls out the chunks that actually mention Rathi and workload — not just whichever report happens to be first alphabetically. This is exactly the step that failed Neha: it retrieved the August report and stopped.'},
+ {label:'Augment',text:'Those retrieved chunks get stuffed in front of the question. Instead of "What\'s Rathi\'s workload trend?" going in bare, the model receives: "Here are the five relevant passages. Now answer using only these."'},
+ {label:'Generate',text:'The model answers from those passages — and because it\'s anchored to specific text, it can cite exactly which report each number came from. Class 4 gave Scout Assist a permanent memory. This is how we make sure that memory finds the right page before it speaks.'}
+];
+let i=0;
+const badge=document.getElementById('stepBadge'),label=document.getElementById('stepLabel'),text=document.getElementById('stepText'),next=document.getElementById('stepNext'),reset=document.getElementById('stepReset');
+const render=()=>{badge.textContent=i+1;label.textContent=STEPS[i].label;text.textContent=STEPS[i].text;next.disabled=i===STEPS.length-1;next.textContent=i===STEPS.length-1?'Done':'Next step →'};
+next.onclick=()=>{if(i<STEPS.length-1){i++;render()}};
+reset.onclick=()=>{i=0;render()};
+render();
+})();
+
+/* ===== SIM 3: The Shape of a RAG Prompt ===== */
+(()=>{
+const out=document.getElementById('shapeOut');
+const bad='CONTEXT: Workload Report — 12 Aug: Rathi logged 340 deliveries this week, within safe limits.\n\nQUESTION: What\'s Arjun Rathi\'s workload trend over his last 6 reports?';
+const good='CONTEXT:\nWorkload Report — 12 Aug: 340 deliveries, safe.\nWorkload Report — 19 Aug: 410 deliveries, approaching limit.\nWorkload Report — 26 Aug: 465 deliveries, flagged.\nWorkload Report — 2 Sep: 300 deliveries, flag lifted.\nWorkload Report — 9 Sep: 380 deliveries, safe.\n\nQUESTION: What\'s Arjun Rathi\'s workload trend over his last 6 reports?';
+const setS=s=>{
+  document.querySelectorAll('#shapeToggle button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+  out.textContent=s==='bad'?bad:good;
+};
+document.querySelectorAll('#shapeToggle button').forEach(b=>b.onclick=()=>setS(b.dataset.s));
+setS('bad');
+})();
+
+/* ===== SIM 4: Gemini Notebook Console ===== */
+(()=>{
+const wrap=document.getElementById('nbBtns'),out=document.getElementById('nbOut');
+const QS=[
+ {label:'"Based on my sources, what\'s one framework recommended for limiting a young fast bowler\'s weekly overs?"',
+  out:'<span class="lbl">ANSWER</span>According to the workload article <b>[1]</b>, teams commonly use a "1-3-5" framework for younger bowlers — no more than one day of bowling in a row, no more than three bowling days a week, and no more than five overs in a single spell. <b>[1]</b> Sportsmith — Building Resilience in Cricket Fast Bowlers.'},
+ {label:'"According to my sources, how should a scorer record a wide ball?"',
+  out:'<span class="lbl">ANSWER</span>The scoring guide <b>[1]</b> notes a wide is recorded as one run to the batting side plus any additional runs run, and does not count against the bowler\'s over — an extra ball is bowled instead. <b>[1]</b> WACA Cricket Scoring Guide, p.4.'},
+ {label:'"Who won the Ranji Trophy final in 2019?" (refusal test)',
+  out:'<span class="lbl">ANSWER</span><i>"The sources don\'t contain information about that topic."</i><p style="font-size:12px;color:var(--green);margin-top:10px">No guess, no fabrication — a grounded tool that refuses is worth more than a clever one that guesses.</p>'}
+];
+QS.forEach((q,idx)=>{const b=document.createElement('button');b.className='pollBtn';b.textContent=q.label;b.onclick=()=>{document.querySelectorAll('#nbBtns .pollBtn').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');out.innerHTML=q.out};wrap.appendChild(b)});
+out.innerHTML='<span class="lbl">ANSWER</span><span style="color:var(--ink3);font-style:italic">Click a question above to see how Gemini Notebook answers it.</span>';
+})();
+
+/* ===== SIM 5: ChatGPT vs Perplexity, Live ===== */
+(()=>{
+const out=document.getElementById('perpOut'),gap=document.getElementById('perpGap');
+const raw={
+ out:'<span class="lbl">OUTPUT</span>"I don\'t have real-time access to this week\'s cricket news — my knowledge has a training cutoff, so I can\'t confirm recent results or transfers."<p style="font-size:12px;color:var(--rose);margin-top:10px">No retrieval, no citations — either an honest refusal or, worse, a dated/fabricated guess depending on the question.</p>',
+ gap:'<b>Web search is off, so there\'s nothing to retrieve from.</b> ChatGPT is working from training data with a cutoff date — exactly the "left side of the diagram" problem from Section 1.'
+};
+const grounded={
+ out:'<span class="lbl">OUTPUT</span>This week: [1] a series result confirmed with the final scorecard, [2] an injury update on a key bowler ahead of the next Test, [3] a domestic transfer window story. <b>Sources</b> [1] [2] [3] — three linked articles, all published in the last 5 days.<p style="font-size:12px;color:var(--green);margin-top:10px">Fresh answer, numbered inline citations, a "Sources" strip with real, clickable links.</p>',
+ gap:'<b>Same question, same underlying model quality — but one has retrieval and one doesn\'t.</b> That gap is the entire argument for RAG, side by side.'
+};
+const setP=p=>{
+  document.querySelectorAll('#perpToggle button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+  const d=p==='raw'?raw:grounded;
+  out.innerHTML=d.out;gap.innerHTML=d.gap;
+};
+document.querySelectorAll('#perpToggle button').forEach(b=>b.onclick=()=>setP(b.dataset.p));
+setP('raw');
+})();
+
+/* ===== SIM 6: Focus Mode Switcher ===== */
+(()=>{
+const out=document.getElementById('focusOut');
+const MODES={
+ web:'<span class="lbl">SOURCES · WEB</span>News articles and coaching-org blog posts on workload management — practical, current, aimed at coaches and parents.<div class="sec">Sample citation</div>"Cricket Australia\'s pathway guidelines recommend capping U17 bowlers at five overs per spell." — CoachingBlog.com',
+ academic:'<span class="lbl">SOURCES · ACADEMIC</span>Peer-reviewed sports-science journals and systematic reviews on bowling biomechanics and injury risk.<div class="sec">Sample citation</div>"Quantification of the demands of cricket bowling and the relationship to injury risk: a systematic review" — PMC, sports medicine journal',
+ reddit:'<span class="lbl">SOURCES · REDDIT</span>Practitioner and player discussions — what club-level coaches actually do in practice, not just published guidance.<div class="sec">Sample citation</div>"Our academy sticks to 3 spells max in a net session, more like 4 overs each" — r/Cricket, coaching thread'
+};
+const setF=f=>{
+  document.querySelectorAll('#focusTabs button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));
+  out.innerHTML=MODES[f];
+};
+document.querySelectorAll('#focusTabs button').forEach(b=>b.onclick=()=>setF(b.dataset.f));
+setF('web');
+})();
+
+/* ===== SIM 7: Grounded vs Ungrounded -- Three Tools ===== */
+(()=>{
+const out=document.getElementById('groundOut');
+const TOOLS={
+ chatgpt:'<span class="lbl">CHATGPT (web search off)</span>"Bowlers alternate ends after a set number of overs based on strategic rotation, which can create the appearance of bowling consecutive overs from the same end under certain field-restriction rules..."<p style="font-size:12px;color:var(--rose);margin-top:10px">Plays along. Invents a plausible-sounding explanation for a rule that does not exist. No citation, no correction.</p>',
+ perplexity:'<span class="lbl">PERPLEXITY</span>"Actually, this isn\'t correct — under the Laws of Cricket, a bowler cannot bowl two overs in a row; overs must alternate between different bowlers (or ends). <b>[1]</b>"<p style="font-size:12px;color:var(--green);margin-top:10px">Corrects the premise. Cites the actual Law before answering.</p>',
+ notebook:'<span class="lbl">GEMINI NOTEBOOK</span>"The sources don\'t contain information about that topic."<p style="font-size:12px;color:var(--gold);margin-top:10px">Honest refusal — the scoring guide and workload article never cover this rule, so it correctly declines rather than guessing.</p>'
+};
+const setG=g=>{
+  document.querySelectorAll('#groundTabs button').forEach(b=>b.classList.toggle('on',b.dataset.g===g));
+  out.innerHTML=TOOLS[g];
+};
+document.querySelectorAll('#groundTabs button').forEach(b=>b.onclick=()=>setG(b.dataset.g));
+setG('chatgpt');
+})();
+
+/* ===== SIM 8: Pick The Right Tool (matching game) ===== */
+(()=>{
+const SCENARIOS=[
+ {q:'Neha needs to cross-reference 15 workload reports and a scoring guide before a selection meeting.',a:'notebook',why:'A large, specific pile of your own documents, needing citations → Gemini Notebook.'},
+ {q:'Karan wants to know if the touring team announced any injury news in the last 48 hours.',a:'perplexity',why:'Time-sensitive, live-web information → Perplexity.'},
+ {q:'Vikram has a 2-hour documentary on a legendary player he wants summarised with timestamps.',a:'notegpt',why:'A single long video, needs a timestamped transcript → NoteGPT.'},
+ {q:'The committee wants a weekly, reusable "opposition brief" they can re-run every Friday.',a:'perplexity',why:'Recurring + live + reusable rules → Perplexity, saved as a Space.'},
+ {q:'A new committee member wants to ask questions about the shortlist without waiting for Neha.',a:'notebook',why:'Own documents, needs to be shared with others via citations → Gemini Notebook (shared).'}
+];
+let idx=0,score=0;
+const scenEl=document.getElementById('pickScenario'),btnsEl=document.getElementById('pickBtns'),whyEl=document.getElementById('pickWhy'),scoreEl=document.getElementById('pickScore');
+const OPTS=[{k:'notebook',l:'Gemini Notebook'},{k:'perplexity',l:'Perplexity'},{k:'notegpt',l:'NoteGPT'}];
+const render=()=>{
+  if(idx>=SCENARIOS.length){scenEl.innerHTML='<span>DONE</span>All five scenarios complete.';btnsEl.innerHTML='';whyEl.innerHTML='';return}
+  const s=SCENARIOS[idx];
+  scenEl.innerHTML='<span>SCENARIO '+(idx+1)+' / '+SCENARIOS.length+'</span>'+s.q;
+  whyEl.innerHTML='';
+  btnsEl.innerHTML='';
+  OPTS.forEach(o=>{
+    const b=document.createElement('button');b.className='matchBtn';b.textContent=o.l;
+    b.onclick=()=>{
+      document.querySelectorAll('#pickBtns .matchBtn').forEach(x=>x.classList.add('wrong'));
+      if(o.k===s.a){b.classList.remove('wrong');b.classList.add('right');score++}
+      else{const correctBtn=[...document.querySelectorAll('#pickBtns .matchBtn')].find(x=>x.textContent===OPTS.find(z=>z.k===s.a).l);if(correctBtn){correctBtn.classList.remove('wrong');correctBtn.classList.add('right')}}
+      whyEl.innerHTML='<b>'+(o.k===s.a?'Correct — ':'Not quite — ')+'</b>'+s.why;
+      scoreEl.textContent='Score '+score+' / '+SCENARIOS.length;
+      document.querySelectorAll('#pickBtns .matchBtn').forEach(x=>x.style.pointerEvents='none');
+      setTimeout(()=>{idx++;render()},1600);
+    };
+    btnsEl.appendChild(b);
+  });
+};
+render();
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/beginner-5-post_read" target="_blank" rel="noopener">github.com/scaler-content/beginner-5-post_read</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

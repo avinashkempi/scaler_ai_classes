@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Evaluation & Intro to KNN — Lecture Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum-deep:    #2A1A40;
+    --plum-mid:     #4A2A72;
+    --plum-soft:    #7048A8;
+    --plum-pale:    #B090D8;
+    --plum-mist:    #E4D8F5;
+    --lavender:     #F6F2FF;
+    --lavender-mid: #EDE4FA;
+    --violet:       #7C52C8;
+    --violet-light: #C4A8F0;
+    --charcoal:     #140E20;
+    --text-body:    #2A1A3E;
+    --text-muted:   #6A4E90;
+    --white:        #FFFFFF;
+    --sidebar-w:    280px;
+    --green:        #3A8A58;
+    --green-dim:    #EBF5EF;
+    --green-border: #A8D8BA;
+    --red:          #C04050;
+    --red-dim:      #FDEEF0;
+    --red-border:   #F0A8B0;
+    --amber:        #B07820;
+    --amber-dim:    #FDF6E8;
+    --amber-border: #E8D098;
+    --blue:         #3468A8;
+    --blue-dim:     #EEF3FB;
+    --blue-border:  #A8C0E0;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--lavender);
+    color: var(--text-body);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--plum-deep);
+    position: fixed; top: 0; left: 0;
+    height: 100vh; overflow-y: auto;
+    z-index: 100; display: flex; flex-direction: column;
+    transition: transform .3s ease;
+  }
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--plum-soft); border-radius: 4px; }
+
+  .sidebar-header {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    position: sticky; top: 0;
+    background: var(--plum-deep); z-index: 1;
+  }
+  .sidebar-header .course-label {
+    font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--plum-pale); font-weight: 600; margin-bottom: 6px;
+  }
+  .sidebar-header h1 {
+    font-family: 'Lora', serif; font-size: 15px;
+    color: var(--white); font-weight: 600; line-height: 1.4;
+  }
+
+  .progress-bar-wrap { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .progress-label { font-size: 11px; color: var(--plum-pale); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .progress-track { height: 4px; background: rgba(255,255,255,.1); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--plum-pale), var(--violet-light)); border-radius: 2px; transition: width .4s ease; width: 0%; }
+
+  .nav-list { list-style: none; padding: 12px 0 80px; }
+  .nav-item a {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 20px; text-decoration: none;
+    color: rgba(255,255,255,.55); font-size: 12.5px; line-height: 1.4;
+    transition: all .2s; border-left: 2px solid transparent;
+  }
+  .nav-item a:hover { color: var(--white); background: rgba(255,255,255,.05); }
+  .nav-item.active a { color: var(--violet-light); border-left-color: var(--violet); background: rgba(255,255,255,.07); font-weight: 500; }
+  .nav-dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; flex-shrink: 0; margin-top: 5px; transition: background .3s; }
+  .nav-item.visited .nav-dot { background: var(--violet-light); border-color: var(--violet-light); }
+  .nav-item .nav-type { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--plum-pale); margin-top: 2px; opacity: .7; }
+
+  /* ── MAIN ────────────────────────────────────────── */
+  #main { margin-left: var(--sidebar-w); flex: 1; max-width: 860px; padding: 48px 52px 120px; }
+
+  /* ── SECTION CARDS ───────────────────────────────── */
+  .section-card {
+    background: var(--white); border-radius: 12px;
+    border: 1px solid var(--plum-mist); margin-bottom: 34px;
+    overflow: hidden; scroll-margin-top: 32px;
+    box-shadow: 0 2px 12px rgba(42,26,64,.06); transition: box-shadow .2s;
+  }
+  .section-card:hover { box-shadow: 0 4px 22px rgba(42,26,64,.11); }
+
+  .card-header {
+    padding: 22px 28px 18px; border-bottom: 1px solid var(--lavender-mid);
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .card-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--plum-mist); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+  .card-meta { flex: 1; }
+  .card-type { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--plum-soft); font-weight: 600; margin-bottom: 4px; }
+  .card-title { font-family: 'Lora', serif; font-size: 20px; font-weight: 700; color: var(--plum-deep); line-height: 1.3; }
+  .card-duration { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+  .card-body { padding: 24px 28px 28px; }
+
+  /* ── TYPOGRAPHY ──────────────────────────────────── */
+  .card-body h2 { font-family: 'Lora', serif; font-size: 18px; color: var(--plum-mid); margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1.5px solid var(--plum-mist); }
+  .card-body h3 { font-family: 'Lora', serif; font-size: 15.5px; color: var(--plum-deep); margin: 22px 0 10px; font-style: italic; }
+  .card-body h4 { font-family: 'Lora', serif; font-size: 14px; color: var(--plum-mid); margin: 16px 0 8px; font-weight: 700; }
+  .card-body p { margin-bottom: 12px; font-size: 14.5px; }
+  .card-body ul, .card-body ol { margin: 8px 0 14px 20px; font-size: 14.5px; }
+  .card-body li { margin-bottom: 5px; }
+  .card-body strong { color: var(--plum-deep); font-weight: 600; }
+  .card-body em { color: var(--plum-soft); }
+
+  /* ── CALLOUTS ────────────────────────────────────── */
+  .callout-ask {
+    background: #F5F0FF; border-left: 3px solid var(--violet);
+    border-radius: 0 8px 8px 0; padding: 12px 16px;
+    margin: 15px 0; font-size: 13.5px; color: var(--plum-deep);
+  }
+  .callout-ask .callout-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); margin-bottom: 4px; }
+  .callout-note {
+    background: #F0EBFF; border-left: 3px solid var(--plum-soft);
+    border-radius: 0 8px 8px 0; padding: 12px 16px;
+    margin: 15px 0; font-size: 13.5px; color: var(--plum-deep);
+  }
+  .callout-note .callout-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--plum-soft); margin-bottom: 4px; }
+  .callout-viz {
+    background: #F8F4FF; border: 1.5px dashed var(--plum-pale);
+    border-radius: 10px; padding: 14px 18px; margin: 15px 0;
+    font-size: 13.5px; color: var(--plum-deep);
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .callout-viz .viz-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .callout-viz .viz-body { flex: 1; }
+  .callout-viz .viz-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--plum-soft); margin-bottom: 5px; }
+  .callout-viz a { color: var(--plum-mid); font-weight: 600; word-break: break-all; }
+
+  /* ── TABLE ───────────────────────────────────────── */
+  .card-body table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 14px 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--plum-mist); }
+  .card-body th { background: var(--plum-mid); color: var(--white); padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12px; letter-spacing: .04em; }
+  .card-body td { padding: 9px 14px; border-top: 1px solid var(--lavender-mid); font-size: 13px; }
+  .card-body tr:nth-child(even) td { background: var(--lavender); }
+
+  /* ── CODE ────────────────────────────────────────── */
+  .card-body pre {
+    background: var(--charcoal); color: #D8C8F8;
+    border-radius: 8px; padding: 16px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px; overflow-x: auto; margin: 14px 0; line-height: 1.6;
+  }
+  .card-body code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--lavender-mid); color: var(--plum-mid);
+    padding: 2px 6px; border-radius: 4px; font-size: 12.5px;
+  }
+  .card-body pre code { background: none; color: inherit; padding: 0; }
+
+  .output-wrap { margin: -4px 0 14px; }
+  .output-label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--plum-pale); font-weight: 600; margin-bottom: 5px; }
+  .output-block {
+    background: #FAF8FF; border: 1px solid var(--plum-mist);
+    border-radius: 8px; padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--text-body); line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+  }
+
+  /* ── EQUATION ────────────────────────────────────── */
+  .equation {
+    background: var(--lavender-mid); border: 1.5px solid var(--plum-mist);
+    border-radius: 8px; padding: 14px 20px; margin: 14px 0;
+    text-align: center; font-family: 'Lora', serif;
+    font-size: 16px; font-style: italic; color: var(--plum-deep); letter-spacing: .02em;
+  }
+
+  /* ── QUIZ ────────────────────────────────────────── */
+  .quiz-card .card-icon { background: #E8D8F8; }
+  .quiz-question { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; color: var(--plum-deep); margin-bottom: 18px; line-height: 1.5; }
+  .quiz-options { list-style: none; margin: 0; }
+  .quiz-option {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px; border: 1.5px solid var(--plum-mist);
+    border-radius: 8px; margin-bottom: 9px;
+    cursor: pointer; font-size: 14px;
+    transition: all .2s; user-select: none; background: var(--white);
+  }
+  .quiz-option:hover { border-color: var(--plum-soft); background: var(--lavender); }
+  .quiz-option.selected-correct { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+  .quiz-option.selected-wrong { border-color: var(--red); background: var(--red-dim); color: var(--red); }
+  .quiz-option.reveal-correct { border-color: var(--green); background: var(--green-dim); }
+  .quiz-circle { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--plum-mist); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; transition: all .2s; }
+  .selected-correct .quiz-circle { border-color: var(--green); background: var(--green); color: #fff; }
+  .selected-wrong .quiz-circle { border-color: var(--red); background: var(--red); color: #fff; }
+  .reveal-correct .quiz-circle { border-color: var(--green); background: var(--green-dim); }
+  .quiz-feedback { margin-top: 13px; padding: 11px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 500; display: none; }
+  .quiz-feedback.correct { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); display: block; }
+  .quiz-feedback.wrong { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); display: block; }
+
+  /* ── AUC INTERPRETATION TABLE ────────────────────── */
+  .auc-row-perfect td { color: var(--green); font-weight: 600; }
+  .auc-row-random td { color: var(--amber); font-weight: 600; }
+  .auc-row-bad td { color: var(--red); font-weight: 600; }
+
+  /* ── METRIC CHEATSHEET ───────────────────────────── */
+  .cheat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+  .cheat-card {
+    border-radius: 9px; padding: 14px 16px;
+    border: 1.5px solid var(--plum-mist); background: var(--lavender);
+    transition: border-color .2s, transform .2s;
+  }
+  .cheat-card:hover { border-color: var(--plum-soft); transform: translateY(-1px); }
+  .cheat-card .cc-when { font-size: 11.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .06em; }
+  .cheat-card .cc-metric { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-bottom: 6px; }
+  .cheat-card .cc-why { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+  .m-purple { background: var(--plum-mist); color: var(--plum-deep); }
+  .m-green  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); }
+  .m-red    { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); }
+  .m-amber  { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-border); }
+  .m-blue   { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue-border); }
+
+  /* ── KNN ALGORITHM STEPS ─────────────────────────── */
+  .algo-steps { margin: 16px 0; }
+  .algo-step { display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; border-bottom: 1px dashed var(--plum-mist); }
+  .algo-step:last-child { border-bottom: none; }
+  .algo-num { width: 30px; height: 30px; border-radius: 50%; background: var(--plum-mid); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .algo-content h4 { font-family: 'Lora', serif; font-size: 13.5px; font-weight: 700; color: var(--plum-deep); margin-bottom: 3px; }
+  .algo-content p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  /* ── KNN PROPERTIES GRID ─────────────────────────── */
+  .knn-props { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+  .knn-prop {
+    background: var(--lavender); border: 1px solid var(--plum-mist);
+    border-radius: 8px; padding: 13px 15px;
+  }
+  .knn-prop .kp-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--plum-soft); margin-bottom: 4px; }
+  .knn-prop .kp-value { font-size: 13.5px; color: var(--plum-deep); font-weight: 600; }
+  .knn-prop .kp-note  { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+  /* ── DISTANCE CARDS ──────────────────────────────── */
+  .dist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .dist-card { background: var(--lavender); border: 1.5px solid var(--plum-mist); border-radius: 9px; padding: 16px; transition: all .2s; }
+  .dist-card:hover { border-color: var(--plum-soft); }
+  .dist-card .dc-name { font-family: 'Lora', serif; font-size: 15px; font-weight: 700; color: var(--plum-deep); margin-bottom: 5px; }
+  .dist-card .dc-formula { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--plum-soft); background: var(--lavender-mid); padding: 5px 10px; border-radius: 5px; display: block; margin: 7px 0; }
+  .dist-card .dc-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+  .dist-card .dc-when { font-size: 11px; font-weight: 600; color: var(--plum-mid); margin-top: 7px; }
+
+  /* ── BV TRADEOFF TABLE ───────────────────────────── */
+  .bv-row-over td { background: var(--red-dim) !important; }
+  .bv-row-good td { background: var(--green-dim) !important; }
+  .bv-row-under td { background: var(--amber-dim) !important; }
+
+  /* ── SUMMARY GRID ────────────────────────────────── */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .summary-item {
+    background: var(--lavender); border: 1px solid var(--plum-mist);
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 13px; color: var(--plum-deep);
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .summary-item::before { content: '▸'; color: var(--plum-soft); font-size: 11px; margin-top: 2px; flex-shrink: 0; }
+
+  /* ── DIABETES METRICS ────────────────────────────── */
+  .metrics-inline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
+  .metric-pill {
+    background: var(--lavender-mid); border: 1px solid var(--plum-mist);
+    border-radius: 8px; padding: 11px 13px; text-align: center;
+  }
+  .metric-pill .mp-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; }
+  .metric-pill .mp-value { font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--plum-deep); }
+  .metric-pill .mp-note  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── HAMBURGER ───────────────────────────────────── */
+  #hamburger { display: none; position: fixed; top: 16px; left: 16px; z-index: 200; background: var(--plum-deep); border: none; border-radius: 8px; padding: 8px 10px; cursor: pointer; flex-direction: column; gap: 5px; }
+  #hamburger span { display: block; width: 20px; height: 2px; background: #fff; border-radius: 1px; }
+  #overlay { display: none; }
+
+  @media (max-width: 768px) {
+    #hamburger { display: flex; }
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; padding: 24px 18px 80px; max-width: 100%; }
+    #overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; opacity: 0; pointer-events: none; transition: opacity .3s; }
+    #overlay.active { opacity: 1; pointer-events: all; }
+    .cheat-grid, .knn-props, .dist-grid, .summary-grid, .metrics-inline { grid-template-columns: 1fr; }
+    .card-body { padding: 18px 18px 22px; }
+    .card-header { padding: 18px 18px 14px; }
+  }
+
+  /* ── BACK TO TOP ─────────────────────────────────── */
+  #back-top {
+    position: fixed; bottom: 32px; right: 32px;
+    background: var(--plum-mid); color: #fff;
+    border: none; border-radius: 50%;
+    width: 44px; height: 44px; font-size: 18px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(42,26,64,.3);
+    opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 50;
+  }
+  #back-top.visible { opacity: 1; pointer-events: all; }
+  #back-top:hover { background: var(--plum-deep); }
+
+  .card-body a { color: var(--plum-soft); text-decoration: underline; text-underline-offset: 3px; }
+  .card-body a:hover { color: var(--plum-deep); }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations 7 · Model evaluation and KNN</span><span class="pn"><a href="../ML-with-AI-workflows-10/" title="ML with AI 10 · Imbalanced data, ROC and AUC">← Prev</a><a href="../KNN-based-imputation-and-Decision-Trees-intro/" title="ML Foundations 8 · KNN imputation and imbalance">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><button id="hamburger" aria-label="Open menu" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</button>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="course-label">ML Foundations · Lecture 7</div>
+    <h1>Model Evaluation & Intro to KNN</h1>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-label"><span>Progress</span><span id="progress-pct">0%</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item" data-target="s-recap"><a href="#s-recap"><span class="nav-dot"></span><span><div>Recap</div><div class="nav-type">Review</div></span></a></li>
+    <li class="nav-item" data-target="s-auc"><a href="#s-auc"><span class="nav-dot"></span><span><div>AUC — Area Under ROC</div><div class="nav-type">Metric</div></span></a></li>
+    <li class="nav-item" data-target="q1"><a href="#q1"><span class="nav-dot"></span><span><div>Quiz 1 — ROC Shape</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-cheatsheet"><a href="#s-cheatsheet"><span class="nav-dot"></span><span><div>Metric Selection Cheatsheet</div><div class="nav-type">Reference</div></span></a></li>
+    <li class="nav-item" data-target="s-lossvmetric"><a href="#s-lossvmetric"><span class="nav-dot"></span><span><div>Loss Functions vs Metrics</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-evalmodel"><a href="#s-evalmodel"><span class="nav-dot"></span><span><div>Evaluating a Classifier — Pima</div><div class="nav-type">Case Study</div></span></a></li>
+    <li class="nav-item" data-target="s-threshold"><a href="#s-threshold"><span class="nav-dot"></span><span><div>Changing the Threshold</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-roc-code"><a href="#s-roc-code"><span class="nav-dot"></span><span><div>ROC Curve — Code</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-knn-intro"><a href="#s-knn-intro"><span class="nav-dot"></span><span><div>KNN Introduction</div><div class="nav-type">Algorithm</div></span></a></li>
+    <li class="nav-item" data-target="s-knn-apps"><a href="#s-knn-apps"><span class="nav-dot"></span><span><div>KNN Applications</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-knn-geo"><a href="#s-knn-geo"><span class="nav-dot"></span><span><div>Geometric Intuition</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-distance"><a href="#s-distance"><span class="nav-dot"></span><span><div>Distance Metrics</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-knn-code"><a href="#s-knn-code"><span class="nav-dot"></span><span><div>KNN Implementation</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-weighted"><a href="#s-weighted"><span class="nav-dot"></span><span><div>Weighted KNN</div><div class="nav-type">Technique</div></span></a></li>
+    <li class="nav-item" data-target="s-assumptions"><a href="#s-assumptions"><span class="nav-dot"></span><span><div>KNN Assumptions & Complexity</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-knn-bv"><a href="#s-knn-bv"><span class="nav-dot"></span><span><div>Bias-Variance in KNN</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="q2"><a href="#q2"><span class="nav-dot"></span><span><div>Quiz 2 — Train vs Test Compute</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="q3"><a href="#q3"><span class="nav-dot"></span><span><div>Quiz 3 — K and Bias-Variance</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="q5"><a href="#q5"><span class="nav-dot"></span><span><div>Quiz 5 — KNN Tasks</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-wrap"><a href="#s-wrap"><span class="nav-dot"></span><span><div>Wrap Up</div><div class="nav-type">Summary</div></span></a></li>
+  </ul>
+</nav>
+
+<main id="main">
+
+  <!-- RECAP -->
+  <section class="section-card" id="s-recap">
+    <div class="card-header">
+      <div class="card-icon">🔁</div>
+      <div class="card-meta">
+        <div class="card-type">Review</div>
+        <div class="card-title">Recap of Classification Metrics</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Last lecture we covered the full toolkit for evaluating binary classifiers:</p>
+      <ul>
+        <li><strong>Confusion Matrix</strong> — TP, TN, FP, FN at a fixed threshold</li>
+        <li><strong>Accuracy</strong> — misleading on imbalanced data</li>
+        <li><strong>Precision</strong> — of all predicted positives, how many are correct</li>
+        <li><strong>Recall (Sensitivity)</strong> — of all actual positives, how many did we find</li>
+        <li><strong>F1-Score</strong> — harmonic mean of Precision and Recall</li>
+        <li><strong>ROC Curve</strong> — TPR vs FPR across all thresholds</li>
+      </ul>
+      <div class="callout-note">
+        <div class="callout-label">📌 Today's Focus</div>
+        We complete the metrics picture with <strong>AUC</strong> and a clean cheatsheet for which metric to use. Then we introduce a fundamentally different classification algorithm — <strong>K-Nearest Neighbors</strong> — that makes no linearity assumptions at all.
+      </div>
+    </div>
+  </section>
+
+  <!-- AUC -->
+  <section class="section-card" id="s-auc">
+    <div class="card-header">
+      <div class="card-icon">📐</div>
+      <div class="card-meta">
+        <div class="card-type">Metric</div>
+        <div class="card-title">AUC — Area Under the ROC Curve</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>The <strong>AUC</strong> (Area Under the Curve) collapses the entire ROC curve into a single number. It approximates the area under the TPR vs FPR plot by summing small rectangles formed at each threshold step.</p>
+
+      <h3>Interpreting AUC</h3>
+      <table>
+        <tr><th>AUC Value</th><th>Meaning</th><th>Implication</th></tr>
+        <tr class="auc-row-perfect"><td>1.0</td><td>Perfect model</td><td>Passes through (0,1) — catches all positives with zero false alarms</td></tr>
+        <tr><td>0.9–0.99</td><td>Excellent</td><td>Very strong discriminating power</td></tr>
+        <tr><td>0.7–0.9</td><td>Good</td><td>Solid model — works well in most real scenarios</td></tr>
+        <tr class="auc-row-random"><td>0.5</td><td>Random model</td><td>No discriminating power — equivalent to flipping a coin</td></tr>
+        <tr class="auc-row-bad"><td>&lt; 0.5</td><td>Worse than random</td><td>Invert predictions → AUC becomes 1 − current AUC</td></tr>
+        <tr class="auc-row-bad"><td>0.0</td><td>Worst possible</td><td>Every positive predicted as negative and vice versa</td></tr>
+      </table>
+
+      <h3>Comparing Two Models with AUC</h3>
+      <p>When two ROC curves are plotted together, the model whose curve is <strong>further toward the top-left corner</strong> (closer to point (0,1)) has a higher AUC and is the better model — it achieves higher TPR for the same FPR across all thresholds.</p>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          Watch the ROC curve form rectangle-by-rectangle as the threshold sweeps:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/roc-curve-auc-rectangle-building-threshold-slider-sweep/" target="_blank">ROC Curve & AUC — Rectangle Building with Threshold Slider →</a>
+        </div>
+      </div>
+
+      <h3>A Key Property: AUC is Order-Dependent, Not Value-Dependent</h3>
+      <p>AUC doesn't care about the absolute values of predicted probabilities — only their <em>ordering</em>. Models M1 (probabilities: 0.95, 0.92, 0.80, 0.76, 0.71) and M2 (0.20, 0.10, 0.08, 0.06, 0.01) will produce the same ROC curve and AUC if they rank the same points in the same order.</p>
+
+      <div class="callout-note">
+        <div class="callout-label">⚠️ AUC Limitation</div>
+        AUC works well for slightly imbalanced data but fails for <strong>severely imbalanced</strong> datasets (e.g., 1 positive in 1000). In those cases, use <strong>Precision-Recall AUC (PR-AUC)</strong> instead, which focuses only on the positive class.
+      </div>
+
+      <h3>Code</h3>
+      <pre><code>from sklearn.metrics import roc_curve, roc_auc_score
+import matplotlib.pyplot as plt
+
+fpr, tpr, thr = roc_curve(data.y, data.proba)
+
+plt.plot(fpr, tpr)
+plt.title('ROC Curve'); plt.xlabel('FPR'); plt.ylabel('TPR')
+plt.show()
+
+print("AUC:", roc_auc_score(data.y, data.proba))</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">AUC: 0.9377570000000001</div>
+      </div>
+      <p>AUC = 0.938 — a strong result. This means the model correctly ranks a random positive above a random negative <strong>93.8% of the time</strong>.</p>
+    </div>
+  </section>
+
+  <!-- QUIZ 1 -->
+  <section class="section-card quiz-card" id="q1">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 1</div>
+        <div class="card-title">Shape of the ROC Curve</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">For the ROC curve (TPR vs FPR), which of the following is true about its shape?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>The curve is always concave.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>The curve is never concave.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>The curve may or may not be concave.</li>
+      </ul>
+      <div class="quiz-feedback" id="q1-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        A ROC curve can be concave, convex, or mixed. An ideally performing model produces a concave curve bowing toward (0,1). A convex ROC (bowing away) implies TPR + FPR are both low — the model is worse than random in those threshold regions.
+      </div>
+    </div>
+  </section>
+
+  <!-- CHEATSHEET -->
+  <section class="section-card" id="s-cheatsheet">
+    <div class="card-header">
+      <div class="card-icon">📋</div>
+      <div class="card-meta">
+        <div class="card-type">Reference</div>
+        <div class="card-title">Metric Selection Cheatsheet</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Choosing the right metric depends on your data balance and what type of error costs you the most.</p>
+      <div class="cheat-grid">
+        <div class="cheat-card">
+          <div class="cc-when">Need probabilities</div>
+          <span class="cc-metric m-purple">Log Loss</span>
+          <div class="cc-why">Measures how confident and calibrated the probability estimates are.</div>
+        </div>
+        <div class="cheat-card">
+          <div class="cc-when">Classes are balanced</div>
+          <span class="cc-metric m-purple">Accuracy</span>
+          <div class="cc-why">Safe to use when positive and negative samples are roughly equal.</div>
+        </div>
+        <div class="cheat-card">
+          <div class="cc-when">Imbalanced — FP is costly</div>
+          <span class="cc-metric m-blue">Precision</span>
+          <div class="cc-why">When you can't afford false alarms (e.g., spam filter, recommendation engine).</div>
+        </div>
+        <div class="cheat-card">
+          <div class="cc-when">Imbalanced — FN is costly</div>
+          <span class="cc-metric m-green">Recall</span>
+          <div class="cc-why">When missing a true positive is catastrophic (e.g., cancer detection, fraud).</div>
+        </div>
+        <div class="cheat-card">
+          <div class="cc-when">Both FP and FN matter</div>
+          <span class="cc-metric m-amber">F1-Score</span>
+          <div class="cc-why">Balances precision and recall — loan defaults, content moderation.</div>
+        </div>
+        <div class="cheat-card">
+          <div class="cc-when">Threshold-independent comparison</div>
+          <span class="cc-metric m-purple">ROC-AUC</span>
+          <div class="cc-why">Evaluates ranking quality across all thresholds. Use for model comparison.</div>
+        </div>
+        <div class="cheat-card">
+          <div class="cc-when">Severe class imbalance</div>
+          <span class="cc-metric m-red">PR-AUC</span>
+          <div class="cc-why">Precision-Recall AUC handles severe imbalance where ROC-AUC is overly optimistic.</div>
+        </div>
+        <div class="cheat-card">
+          <div class="cc-when">Need both class perspectives</div>
+          <span class="cc-metric m-purple">ROC-AUC</span>
+          <div class="cc-why">Considers TN and TP together — good when both negative and positive class matter.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOSS vs METRIC -->
+  <section class="section-card" id="s-lossvmetric">
+    <div class="card-header">
+      <div class="card-icon">⚖️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Performance Metrics vs Loss Functions</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>These terms are often confused. They serve different purposes in the ML workflow.</p>
+      <table>
+        <tr><th></th><th>Loss Function</th><th>Performance Metric</th></tr>
+        <tr><td><strong>Purpose</strong></td><td>Used to <em>train</em> the model (optimization target)</td><td>Used to <em>evaluate</em> the model (human-interpretable score)</td></tr>
+        <tr><td><strong>Differentiable?</strong></td><td>Yes — gradient descent requires it</td><td>Not required — may be discrete (e.g., accuracy)</td></tr>
+        <tr><td><strong>Examples</strong></td><td>MSE, Binary Cross-Entropy, Log Loss</td><td>Accuracy, Precision, Recall, F1, AUC</td></tr>
+        <tr><td><strong>Overlap?</strong></td><td colspan="2">Yes — MSE and Log Loss can serve as both (with regularization)</td></tr>
+      </table>
+      <div class="callout-note">
+        <div class="callout-label">📌 Key Distinction</div>
+        The optimizer minimizes the loss function during training. The performance metric tells you how well the final model actually performs on your task. They don't have to be the same — you might train with cross-entropy but evaluate with F1-score.
+      </div>
+    </div>
+  </section>
+
+  <!-- EVAL MODEL: PIMA -->
+  <section class="section-card" id="s-evalmodel">
+    <div class="card-header">
+      <div class="card-icon">🏥</div>
+      <div class="card-meta">
+        <div class="card-type">Case Study</div>
+        <div class="card-title">Evaluating a Classifier — Pima Diabetes Dataset</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Dataset: 768 patients, 7 features (glucose, BMI, age, etc.), binary target: diabetic (1) or not (0).</p>
+
+      <h3>Build & Evaluate Logistic Regression</h3>
+      <pre><code>import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn import metrics
+
+col_names = ['pregnant','glucose','bp','skin','insulin','bmi','pedigree','age','label']
+pima = pd.read_csv('pima-indians-diabetes.csv', header=1, names=col_names)
+
+feature_cols = ['pregnant','glucose','bp','skin','insulin','bmi','age']
+X = pima[feature_cols]; y = pima.label
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=1)
+logreg = LogisticRegression()
+logreg.fit(X_train, y_train)
+
+y_pred = logreg.predict(X_test)</code></pre>
+
+      <h3>Confusion Matrix Values</h3>
+      <p>From the confusion matrix: TP=31, TN=111, FP=17, FN=33</p>
+      <div class="metrics-inline">
+        <div class="metric-pill">
+          <div class="mp-label">Accuracy</div>
+          <div class="mp-value">74.0%</div>
+          <div class="mp-note">(TP+TN)/Total</div>
+        </div>
+        <div class="metric-pill">
+          <div class="mp-label">Recall</div>
+          <div class="mp-value">48.4%</div>
+          <div class="mp-note">TP/(TP+FN)</div>
+        </div>
+        <div class="metric-pill">
+          <div class="mp-label">Specificity</div>
+          <div class="mp-value">86.7%</div>
+          <div class="mp-note">TN/(TN+FP)</div>
+        </div>
+      </div>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Is Recall of 48.4% acceptable here?</div>
+        For diabetic screening, recall (sensitivity) is critical — missing a diabetic patient can have serious health consequences. A recall of only 48.4% means we're missing more than half of actual diabetic patients. This suggests we should lower the threshold to improve recall, even at the cost of more false positives.
+      </div>
+    </div>
+  </section>
+
+  <!-- THRESHOLD TUNING -->
+  <section class="section-card" id="s-threshold">
+    <div class="card-header">
+      <div class="card-icon">🎚️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Changing the Decision Threshold</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>The default threshold of 0.5 is not always optimal. Lowering the threshold makes the model more sensitive to the positive class — useful when recall matters more than precision.</p>
+
+      <h3>Threshold = 0.5 (Default) vs Threshold = 0.3</h3>
+      <table>
+        <tr><th>Threshold</th><th>Sensitivity (Recall)</th><th>Specificity</th><th>Tradeoff</th></tr>
+        <tr><td>0.5</td><td>0.484</td><td>0.883</td><td>Conservative — fewer false alarms</td></tr>
+        <tr><td>0.3</td><td>0.742</td><td>0.695</td><td>Aggressive — catches more diabetics, more false positives</td></tr>
+      </table>
+
+      <pre><code>from sklearn.preprocessing import binarize
+
+y_pred_prob = logreg.predict_proba(X_test)[:, 1]
+
+# Lower threshold to 0.3 → more diabetics flagged
+y_pred_03 = binarize([y_pred_prob], threshold=0.3)[0]
+
+print("Sensitivity at 0.3:", 46/(46+16))   # 0.742
+print("Specificity at 0.3:", 80/(80+50))   # 0.615</code></pre>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Key Insight</div>
+        There is no universally correct threshold. The ROC curve lets you explore all possible threshold tradeoffs visually — you pick the operating point that best balances the costs of false positives and false negatives for your specific use case.
+      </div>
+    </div>
+  </section>
+
+  <!-- ROC CODE -->
+  <section class="section-card" id="s-roc-code">
+    <div class="card-header">
+      <div class="card-icon">📈</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">ROC Curve & AUC — Diabetes Model</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <pre><code>fpr, tpr, thresholds = metrics.roc_curve(y_test, y_pred_prob)
+
+plt.plot(fpr, tpr)
+plt.xlim([0, 1]); plt.ylim([0, 1])
+plt.title('ROC — Diabetes Classifier')
+plt.xlabel('FPR (1 - Specificity)')
+plt.ylabel('TPR (Sensitivity)')
+plt.grid(True)</code></pre>
+
+      <pre><code># AUC score
+print(metrics.roc_auc_score(y_test, y_pred_prob))   # 0.805
+
+# Cross-validated AUC (more reliable)
+from sklearn.model_selection import cross_val_score
+cv_auc = cross_val_score(logreg, X, y, cv=10, scoring='roc_auc').mean()
+print("CV AUC:", cv_auc)   # 0.824</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">AUC (test):        0.80517578125
+AUC (10-fold CV):  0.823920227920228</div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">✅ Why Cross-Validated AUC Is More Reliable</div>
+        A single train-test split might give an optimistic or pessimistic AUC depending on which points ended up in the test set. 10-fold cross-validation averages over 10 different splits — the result of <strong>0.824</strong> is a much more trustworthy estimate of real-world performance.
+      </div>
+    </div>
+  </section>
+
+  <!-- KNN INTRO -->
+  <section class="section-card" id="s-knn-intro">
+    <div class="card-header">
+      <div class="card-icon">🏘️</div>
+      <div class="card-meta">
+        <div class="card-type">Algorithm</div>
+        <div class="card-title">K-Nearest Neighbors — Introduction</div>
+        <div class="card-duration">⏱ 6 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Logistic Regression requires a <em>linear decision boundary</em>. Not all real-world problems are linearly separable. <strong>KNN</strong> takes a completely different approach — it makes no assumptions about the shape of the boundary at all.</p>
+
+      <h3>The Core Idea: Similarity by Proximity</h3>
+      <p>Imagine a new student joins your school. You know nothing about their interests — so you look at the students sitting closest to them. If most nearby students are into sports, you'd guess the new student probably is too. That's KNN.</p>
+      <p>In our reseller classification problem: when a new reseller joins, compare their order pattern to existing resellers. If 4 of their 5 closest neighbors belong to Class 1, predict Class 1.</p>
+
+      <div class="knn-props">
+        <div class="knn-prop">
+          <div class="kp-label">Learning Type</div>
+          <div class="kp-value">Supervised</div>
+          <div class="kp-note">Uses labeled training data</div>
+        </div>
+        <div class="knn-prop">
+          <div class="kp-label">Training Phase</div>
+          <div class="kp-value">Lazy Learner</div>
+          <div class="kp-note">Just stores data — no model fitting</div>
+        </div>
+        <div class="knn-prop">
+          <div class="kp-label">Parametric?</div>
+          <div class="kp-value">Non-parametric</div>
+          <div class="kp-note">No assumptions about data distribution</div>
+        </div>
+        <div class="knn-prop">
+          <div class="kp-label">Tasks</div>
+          <div class="kp-value">Classification & Regression</div>
+          <div class="kp-note">Majority vote (class) or mean/median (regression)</div>
+        </div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Why "Lazy Learner"?</div>
+        KNN does zero work during training — it simply stores all data points. All computation happens at <em>prediction time</em>, when it calculates distances to every training point. This is the opposite of algorithms like Logistic Regression, which front-load all work into training.
+      </div>
+    </div>
+  </section>
+
+  <!-- KNN APPLICATIONS -->
+  <section class="section-card" id="s-knn-apps">
+    <div class="card-header">
+      <div class="card-icon">🌐</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">KNN Applications</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>KNN's strength lies in finding <em>similar items</em>. Any time you need "find things like this one," KNN is a natural fit.</p>
+      <table>
+        <tr><th>Application</th><th>How KNN Helps</th></tr>
+        <tr><td><strong>Recommender Systems</strong></td><td>Find users or items similar to the current one — the biggest real-world use case of KNN-style search</td></tr>
+        <tr><td><strong>Concept / Semantic Search</strong></td><td>Retrieve documents with similar topics or meaning</td></tr>
+        <tr><td><strong>Credit Card Fraud Detection</strong></td><td>Flag transactions that are far from their nearest neighbors — outlier detection</td></tr>
+        <tr><td><strong>Missing Value Imputation</strong></td><td>Fill in missing feature values using the average of K most similar data points</td></tr>
+        <tr><td><strong>Image Classification</strong></td><td>Match new images to their nearest neighbors in a feature embedding space</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- KNN GEOMETRIC INTUITION -->
+  <section class="section-card" id="s-knn-geo">
+    <div class="card-header">
+      <div class="card-icon">📍</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Geometric Intuition & The KNN Algorithm</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>How K Controls the Prediction</h3>
+      <p>Suppose a query point <code>x_q</code> has 3 negative neighbors and 1 positive neighbor nearby.</p>
+      <ul>
+        <li>With <strong>K=4</strong>: majority is negative → predict negative</li>
+        <li>With <strong>K=1</strong>: nearest neighbor is positive → predict positive</li>
+      </ul>
+      <p>The value of K fundamentally changes what "neighborhood" means. Larger K = smoother, more global decisions. Smaller K = more local, sensitive to individual points.</p>
+
+      <h3>The KNN Algorithm (Pseudocode)</h3>
+      <div class="algo-steps">
+        <div class="algo-step">
+          <div class="algo-num">1</div>
+          <div class="algo-content">
+            <h4>Compute Distances</h4>
+            <p>For each training point xᵢ, compute distance(xᵢ, x_q). Store all results in a distance vector D.</p>
+          </div>
+        </div>
+        <div class="algo-step">
+          <div class="algo-num">2</div>
+          <div class="algo-content">
+            <h4>Sort by Distance</h4>
+            <p>Sort vector D in ascending order — closest points first.</p>
+          </div>
+        </div>
+        <div class="algo-step">
+          <div class="algo-num">3</div>
+          <div class="algo-content">
+            <h4>Select K Nearest Neighbors</h4>
+            <p>Take the top-K points with smallest distance to x_q.</p>
+          </div>
+        </div>
+        <div class="algo-step">
+          <div class="algo-num">4</div>
+          <div class="algo-content">
+            <h4>Majority Vote</h4>
+            <p>Count class labels among K neighbors. Return the class with the most votes.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">💡 Practical Tips</div>
+        <ul>
+          <li>Prefer <strong>odd values of K</strong> to avoid ties in binary classification</li>
+          <li>When a tie occurs (e.g., equal distances), KNN defaults to random choice — rare in practice but worth knowing</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- DISTANCE METRICS -->
+  <section class="section-card" id="s-distance">
+    <div class="card-header">
+      <div class="card-icon">📏</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Distance Metrics</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>The choice of distance function is itself a <strong>hyperparameter</strong> in KNN. Different distance metrics suit different data types and problem geometries.</p>
+
+      <div class="dist-grid">
+        <div class="dist-card">
+          <div class="dc-name">Euclidean Distance</div>
+          <span class="dc-formula">d = √(Σ (x1ⱼ − x2ⱼ)²)</span>
+          <div class="dc-desc">The straight-line "as the crow flies" distance between two points. The most intuitive and commonly used metric.</div>
+          <div class="dc-when">⚠️ Fails in high dimensions (Curse of Dimensionality)</div>
+        </div>
+        <div class="dist-card">
+          <div class="dc-name">Manhattan Distance</div>
+          <span class="dc-formula">d = Σ |x1ⱼ − x2ⱼ|</span>
+          <div class="dc-desc">The "city block" distance — travel only along axes, like navigating a grid of streets. Sum of absolute differences per dimension.</div>
+          <div class="dc-when">✅ More robust in high dimensions than Euclidean</div>
+        </div>
+        <div class="dist-card">
+          <div class="dc-name">Minkowski Distance</div>
+          <span class="dc-formula">d = (Σ |x1ⱼ − x2ⱼ|ᵖ)^(1/p)</span>
+          <div class="dc-desc">A generalization: p=1 gives Manhattan, p=2 gives Euclidean. Choosing p is another hyperparameter.</div>
+          <div class="dc-when">✅ Flexible — subsumes both above</div>
+        </div>
+        <div class="dist-card">
+          <div class="dc-name">Cosine Similarity</div>
+          <span class="dc-formula">sim = (x1·x2) / (|x1||x2|)</span>
+          <div class="dc-desc">Measures the angle between two vectors, not their absolute distance. Direction matters more than magnitude.</div>
+          <div class="dc-when">✅ Best for text/NLP and sparse data</div>
+        </div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">⚠️ Always Scale Before KNN</div>
+        Distance metrics are sensitive to feature scale. A feature in thousands (salary) will dominate one in single digits (number of children). Always apply <code>StandardScaler</code> or <code>MinMaxScaler</code> before running KNN.
+      </div>
+
+      <p>Interactive KNN visualization: <a href="https://www.luseratech.com/knn-visual" target="_blank">https://www.luseratech.com/knn-visual →</a></p>
+    </div>
+  </section>
+
+  <!-- KNN CODE -->
+  <section class="section-card" id="s-knn-code">
+    <div class="card-header">
+      <div class="card-icon">💻</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">KNN with Sklearn — Reseller Dataset</div>
+        <div class="card-duration">⏱ 12 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Dataset: 267 resellers, 7 features (region + 6 product category order counts), 2 classes. We use PCA to reduce to 2D for visualization, then run on all 7 features for real performance.</p>
+
+      <h3>Reduce to 2D with PCA (for visualization)</h3>
+      <pre><code>from sklearn.decomposition import PCA
+
+pca = PCA(n_components=2)
+X_2d = pca.fit_transform(X)
+print("Variance explained:", pca.explained_variance_ratio_)
+# [0.506, 0.350] → 85.6% of variance in just 2 components</code></pre>
+
+      <h3>Train / Validation / Test Split</h3>
+      <pre><code>from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+X_tcv, X_test, y_tcv, y_test = train_test_split(X_2d, y, test_size=0.20, random_state=42)
+X_train, X_val, y_train, y_val = train_test_split(X_tcv, y_tcv, test_size=0.20, random_state=42)
+
+scaler = StandardScaler()
+X_train_sc = scaler.fit_transform(X_train)
+X_val_sc   = scaler.transform(X_val)
+X_test_sc  = scaler.transform(X_test)</code></pre>
+
+      <h3>Fit KNN and Evaluate</h3>
+      <pre><code>from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report
+
+knn = KNeighborsClassifier(n_neighbors=5, metric='euclidean')
+knn.fit(X_train_sc, y_train)
+
+y_pred = knn.predict(X_test_sc)
+print("Test Accuracy:", knn.score(X_test_sc, y_test))
+print(classification_report(y_test, y_pred))</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output — KNN on PCA data</div>
+        <div class="output-block">Test Accuracy: 0.9629629629629629
+
+              precision    recall  f1-score   support
+           1       1.00      0.85      0.92        13
+           2       0.95      1.00      0.98        41
+    accuracy                           0.96        54</div>
+      </div>
+
+      <h3>KNN on All 7 Original Features</h3>
+      <pre><code>knn_full = KNeighborsClassifier(n_neighbors=5, metric='euclidean')
+knn_full.fit(X_train_scaled, y_train)
+print("Validation Accuracy:", knn_full.score(X_val_scaled, y_val))</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Validation Accuracy: 0.9</div>
+      </div>
+      <p>PCA (96%) slightly outperforms full features (90%) here — the two principal components already capture 85.6% of variance while removing noise from the remaining dimensions.</p>
+    </div>
+  </section>
+
+  <!-- WEIGHTED KNN -->
+  <section class="section-card" id="s-weighted">
+    <div class="card-header">
+      <div class="card-icon">⚡</div>
+      <div class="card-meta">
+        <div class="card-type">Technique</div>
+        <div class="card-title">Weighted KNN</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Standard KNN gives every neighbor an equal vote. But what if 2 very close negative neighbors are outvoted by 3 distant positive ones? The majority can overrule proximity — leading to wrong predictions.</p>
+
+      <h3>The Problem with Equal Weighting</h3>
+      <p>K=5: 2 negative neighbors (very close, distance ≈ 0.1) and 3 positive neighbors (far away, distance ≈ 0.5). Standard KNN votes: +3, −2 → predicts <strong>positive</strong>. But the closest points are negative!</p>
+
+      <h3>Weighted KNN: Weight = 1/distance</h3>
+      <p>Assign each neighbor a weight inversely proportional to their distance. Closer neighbors count more:</p>
+      <table>
+        <tr><th>Neighbor</th><th>Class</th><th>Distance</th><th>Weight (1/d)</th></tr>
+        <tr><td>N1</td><td>Negative</td><td>0.1</td><td><strong>10</strong></td></tr>
+        <tr><td>N2</td><td>Negative</td><td>0.1</td><td><strong>10</strong></td></tr>
+        <tr><td>N3</td><td>Positive</td><td>0.5</td><td>2</td></tr>
+        <tr><td>N4</td><td>Positive</td><td>0.5</td><td>2</td></tr>
+        <tr><td>N5</td><td>Positive</td><td>0.5</td><td>2</td></tr>
+      </table>
+      <p>Weighted scores: Negative = 10+10 = <strong>20</strong>, Positive = 2+2+2 = <strong>6</strong>. Predict: <strong>Negative</strong> ✓</p>
+
+      <pre><code>w_knn = KNeighborsClassifier(n_neighbors=5, weights='distance', metric='euclidean')
+w_knn.fit(X_train, y_train)
+
+print("Weighted KNN score:", w_knn.score(X_test, y_test))</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Weighted KNN score: 0.9253731343283582</div>
+      </div>
+      <p>Weighted KNN improves from 90% → 92.5% — closer neighbors now carry the influence they deserve.</p>
+    </div>
+  </section>
+
+  <!-- ASSUMPTIONS & COMPLEXITY -->
+  <section class="section-card" id="s-assumptions">
+    <div class="card-header">
+      <div class="card-icon">📜</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">KNN Assumptions & Time Complexity</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Core Assumption</h3>
+      <p><strong>Similar data points exist in close proximity.</strong> Neighborhoods are homogeneous — things that are near each other tend to have the same class label. If this isn't true in your data (e.g., overlapping or interleaved classes), KNN will struggle.</p>
+
+      <div class="callout-note">
+        <div class="callout-label">Compare: Logistic Regression vs KNN</div>
+        Logistic Regression assumes a <em>linear decision boundary</em> exists. KNN assumes <em>local homogeneity</em> — no global shape requirement. This makes KNN more flexible but more sensitive to local noise.
+      </div>
+
+      <h3>Test-Time Complexity</h3>
+      <p>KNN does no training — but at prediction time it must:</p>
+      <ol>
+        <li>Compute distance from x_q to all n training points (each d-dimensional) → <code>O(n·d)</code></li>
+        <li>Sort the distance array → <code>O(n·log n)</code></li>
+        <li>Pick top-K → <code>O(k)</code> (negligible)</li>
+      </ol>
+      <div class="equation">Total: O(n·d + n·log n) = O(n · (d + log n))</div>
+      <div class="callout-ask">
+        <div class="callout-label">⚠️ Scalability Concern</div>
+        For large datasets (n = millions) and high-dimensional data (d = hundreds), KNN becomes extremely slow at prediction time. Approximation methods (KD-trees, Ball trees, FAISS) are used in production.
+      </div>
+    </div>
+  </section>
+
+  <!-- BIAS-VARIANCE IN KNN -->
+  <section class="section-card" id="s-knn-bv">
+    <div class="card-header">
+      <div class="card-icon">⚖️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Bias-Variance Tradeoff in KNN</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>In KNN, there's no model to train — the only hyperparameter is <strong>K</strong>. And K entirely controls the bias-variance tradeoff.</p>
+
+      <table>
+        <tr><th>K value</th><th>Behavior</th><th>Bias</th><th>Variance</th><th>Risk</th></tr>
+        <tr class="bv-row-over"><td>K = 1</td><td>Each neighbor is a single point — highly sensitive to noise and outliers</td><td>Low</td><td>High</td><td>Overfitting</td></tr>
+        <tr class="bv-row-good"><td>K = moderate (e.g., 5–15)</td><td>Balanced neighborhood — generalizes well</td><td>Medium</td><td>Medium</td><td>Best ✓</td></tr>
+        <tr class="bv-row-under"><td>K = n (all points)</td><td>Always predicts the majority class regardless of position</td><td>High</td><td>Low</td><td>Underfitting</td></tr>
+      </table>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          Slide K from 1 to n and watch the decision boundary change from jagged to smooth:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/k-value-overfitting-underfitting-sweep/" target="_blank">K-Value Overfitting/Underfitting Sweep →</a>
+        </div>
+      </div>
+
+      <h3>How to Find the Best K</h3>
+      <p>Plot the validation error (or F1/accuracy) against different K values. The best K is where the validation error is minimized — not the training error, which always improves as K decreases.</p>
+      <div class="callout-note">
+        <div class="callout-label">📌 Important</div>
+        Always do K-selection on the <strong>validation set</strong>, never the test set. Using the test set to pick K leaks information and gives an overly optimistic estimate of generalization.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 2 -->
+  <section class="section-card quiz-card" id="q2">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 2</div>
+        <div class="card-title">KNN — Training vs Testing Computation</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">The k-Nearest Neighbors algorithm performs <strong>more computation</strong> during <em>test time</em> than during <em>training time</em>. True or False?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>True</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>False</li>
+      </ul>
+      <div class="quiz-feedback" id="q2-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        KNN's training phase is just storing the dataset — O(1). All the real work happens at test time: computing distances to every training point, sorting, and selecting K neighbors. This makes KNN a "lazy learner" — it defers computation until prediction.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 3 -->
+  <section class="section-card quiz-card" id="q3">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 3</div>
+        <div class="card-title">K and Bias-Variance in KNN</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Which of the following is true about increasing <strong>k</strong> in k-Nearest Neighbors with respect to bias and variance?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>When you increase k, both bias and variance increase.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>When you increase k, bias increases and variance decreases.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>When you increase k, bias decreases and variance increases.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>When you increase k, both bias and variance decrease.</li>
+      </ul>
+      <div class="quiz-feedback" id="q3-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        Large K → model consults more neighbors → smoother, more "average" predictions → <strong>high bias, low variance</strong> (underfitting). Small K → each prediction depends on very few neighbors → highly sensitive to local noise → <strong>low bias, high variance</strong> (overfitting).
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 5 -->
+  <section class="section-card quiz-card" id="q5">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 5</div>
+        <div class="card-title">KNN — Classification and Regression</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Which of the following is true about the k-NN algorithm?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>It can only be used for classification.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>It can only be used for regression.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>It can be used for both classification and regression.</li>
+      </ul>
+      <div class="quiz-feedback" id="q5-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        For <strong>classification</strong>: take majority vote of K neighbors' class labels. For <strong>regression</strong>: take mean or median of K neighbors' target values. The distance-finding step is identical — only the aggregation changes.
+      </div>
+    </div>
+  </section>
+
+  <!-- WRAP UP -->
+  <section class="section-card" id="s-wrap">
+    <div class="card-header">
+      <div class="card-icon">✅</div>
+      <div class="card-meta">
+        <div class="card-type">Summary</div>
+        <div class="card-title">Wrapping Up</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="summary-grid">
+        <div class="summary-item">AUC = area under ROC — single number for model comparison</div>
+        <div class="summary-item">AUC = 1 (perfect), 0.5 (random), &lt;0.5 (invert predictions)</div>
+        <div class="summary-item">AUC is order-based, not value-based</div>
+        <div class="summary-item">PR-AUC for severely imbalanced data</div>
+        <div class="summary-item">Loss functions: used for training (differentiable)</div>
+        <div class="summary-item">Metrics: used for evaluation (human-readable)</div>
+        <div class="summary-item">Threshold tuning: lower threshold → higher recall</div>
+        <div class="summary-item">KNN: lazy learner, non-parametric, no training phase</div>
+        <div class="summary-item">KNN algorithm: distance → sort → K neighbors → vote</div>
+        <div class="summary-item">Use odd K; scale features before KNN</div>
+        <div class="summary-item">Euclidean, Manhattan, Minkowski, Cosine distances</div>
+        <div class="summary-item">Weighted KNN: weight = 1/distance</div>
+        <div class="summary-item">Test complexity: O(n·(d + log n))</div>
+        <div class="summary-item">Small K = overfit; large K = underfit; pick on validation set</div>
+      </div>
+      <blockquote style="border-left:3px solid var(--violet); padding:10px 16px; margin:20px 0 0; background:#F5F0FF; border-radius:0 8px 8px 0; font-family:'Lora',serif; font-style:italic; color:var(--plum-deep); font-size:14.5px;">
+        Next lecture: extending KNN from binary to multiclass classification — and discovering that the algorithm needs almost no modification to handle it.
+      </blockquote>
+    </div>
+  </section>
+
+</main>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script>
+  document.querySelectorAll('.quiz-options').forEach(list => {
+    list.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const card = list.closest('.section-card');
+        if (card.dataset.answered) return;
+        card.dataset.answered = '1';
+        const isCorrect = opt.dataset.correct === 'true';
+        const feedback = list.closest('.card-body').querySelector('.quiz-feedback');
+        list.querySelectorAll('.quiz-option').forEach(o => { o.style.cursor = 'default'; });
+        if (isCorrect) {
+          opt.classList.add('selected-correct');
+          opt.querySelector('.quiz-circle').textContent = '✓';
+          feedback.textContent = '✅ Correct!';
+          feedback.className = 'quiz-feedback correct';
+        } else {
+          opt.classList.add('selected-wrong');
+          opt.querySelector('.quiz-circle').textContent = '✗';
+          feedback.textContent = '❌ Not quite — see the explanation below.';
+          feedback.className = 'quiz-feedback wrong';
+          list.querySelectorAll('.quiz-option[data-correct="true"]').forEach(o => {
+            o.classList.add('reveal-correct');
+            o.querySelector('.quiz-circle').textContent = '✓';
+          });
+        }
+      });
+    });
+  });
+
+  const sections = document.querySelectorAll('.section-card');
+  const navItems = document.querySelectorAll('.nav-item');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct  = document.getElementById('progress-pct');
+  const visited = new Set();
+
+  function onScroll() {
+    let current = '';
+    sections.forEach(sec => {
+      if (sec.getBoundingClientRect().top <= 120) { current = sec.id; visited.add(sec.id); }
+    });
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.target === current);
+      if (visited.has(item.dataset.target)) item.classList.add('visited');
+    });
+    const pct = Math.round((visited.size / sections.length) * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent  = pct + '%';
+    document.getElementById('back-top').classList.toggle('visible', window.scrollY > 400);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('active');
+  }
+  document.querySelectorAll('.nav-item a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth <= 768) toggleSidebar(); });
+  });
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Model-evaluation-and-Intro-to-KNN" target="_blank" rel="noopener">github.com/scaler-content/Model-evaluation-and-Intro-to-KNN</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

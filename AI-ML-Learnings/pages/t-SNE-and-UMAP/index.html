@@ -1,0 +1,1251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>t-SNE and UMAP post read</title>
+<meta name="description" content="An interactive read on how t-SNE and UMAP preserve neighbourhoods where PCA only preserves variance.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================= TOKENS ============================= */
+:root{
+  --bg:#120C07;
+  --bg-soft:#170F08;
+  --surface:#1E1409;
+  --surface-2:#28190C;
+  --border:#3C2B14;
+  --border-bright:#8A6425;
+  --gold:#F4B93C;
+  --gold-bright:#FFDA7A;
+  --gold-deep:#D69A2E;
+  --gold-dim:#BA8B2F;
+  --cream:#F3E9D2;
+  --cream-dim:#C7B694;
+  --cream-paper:#F1E5C9;
+  --ink:#150E06;
+  --success:#8AAE5B;
+  --success-bg:rgba(138,174,91,0.14);
+  --error:#C97158;
+  --error-bg:rgba(201,113,88,0.14);
+  --radius-sm:8px;
+  --radius-md:14px;
+  --radius-lg:28px;
+  --shadow:0 25px 60px -25px rgba(0,0,0,0.7);
+  --font-display:'Fraunces', Georgia, serif;
+  --font-body:'Source Serif 4', Georgia, serif;
+  --font-mono:'JetBrains Mono', 'Courier New', monospace;
+  --container:740px;
+  --container-wide:1040px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; scroll-behavior:auto !important; }
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0;
+  background:
+    radial-gradient(ellipse 900px 500px at 50% -5%, rgba(244,185,60,0.16), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 20%, rgba(244,185,60,0.06), transparent 55%),
+    var(--bg);
+  color:var(--cream);
+  font-family:var(--font-body);
+  font-size:17px;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+img{ max-width:100%; display:block; }
+a{ color:var(--gold-bright); text-decoration-color:rgba(242,196,99,0.4); text-underline-offset:3px; }
+a:hover{ text-decoration-color:var(--gold-bright); }
+h1,h2,h3,h4{ font-family:var(--font-display); color:var(--cream); font-weight:600; margin:0; line-height:1.15; }
+p{ margin:0 0 1.1em; }
+ul,ol{ margin:0 0 1.1em; padding-left:1.3em; }
+li{ margin-bottom:0.5em; }
+strong{ color:var(--gold-bright); font-weight:700; }
+code{ font-family:var(--font-mono); background:rgba(244,185,60,0.12); color:var(--gold-bright); padding:0.1em 0.4em; border-radius:5px; font-size:0.9em; }
+:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:3px; border-radius:4px; }
+.visually-hidden{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+.skip-link{ position:absolute; left:1rem; top:-3rem; background:var(--gold); color:var(--ink); padding:0.6rem 1rem; border-radius:8px; font-family:var(--font-mono); font-size:0.85rem; z-index:200; transition:top 0.2s ease; }
+.skip-link:focus{ top:1rem; }
+
+/* ============================= LAYOUT HELPERS ============================= */
+.wrap{ max-width:var(--container); margin:0 auto; padding:0 1.5rem; }
+.wrap-wide{ max-width:var(--container-wide); margin:0 auto; padding:0 1.5rem; }
+.eyebrow{ font-family:var(--font-mono); font-size:0.72rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold-deep); font-weight:600; }
+
+/* ============================= HEADER / PROGRESS ============================= */
+.progress-track{ position:fixed; top:0; left:0; width:100%; height:3px; background:rgba(255,255,255,0.06); z-index:120; }
+.progress-fill{ height:100%; width:0%; background:linear-gradient(90deg,var(--gold-deep),var(--gold-bright)); transition:width 0.08s linear; }
+
+.site-header{ position:sticky; top:0; z-index:110; backdrop-filter:blur(10px); background:rgba(18,12,7,0.86); border-bottom:1px solid var(--border); }
+.site-header-inner{ max-width:var(--container-wide); margin:0 auto; padding:0.85rem 1.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.site-brand{ font-family:var(--font-display); font-weight:600; font-size:1.02rem; color:var(--cream); text-decoration:none; letter-spacing:0.01em; }
+.site-brand span{ color:var(--gold-bright); }
+.toc-toggle{ display:inline-flex; align-items:center; gap:0.5rem; background:transparent; border:1px solid var(--border-bright); color:var(--cream); font-family:var(--font-mono); font-size:0.78rem; letter-spacing:0.06em; text-transform:uppercase; padding:0.5rem 0.9rem; border-radius:999px; cursor:pointer; transition:border-color 0.2s ease, background 0.2s ease;}
+.toc-toggle:hover{ border-color:var(--gold-bright); background:rgba(244,185,60,0.08); }
+.toc-toggle-icon{ width:14px; height:10px; position:relative; display:inline-block; }
+.toc-toggle-icon::before,.toc-toggle-icon::after,.toc-toggle-icon span{ content:""; position:absolute; left:0; width:100%; height:2px; background:var(--gold-bright); border-radius:2px; }
+.toc-toggle-icon::before{ top:0; }
+.toc-toggle-icon::after{ bottom:0; }
+.toc-toggle-icon span{ top:4px; }
+
+/* ============================= TOC DRAWER ============================= */
+.toc-overlay{ position:fixed; inset:0; background:rgba(6,4,2,0.6); backdrop-filter:blur(2px); z-index:140; opacity:0; pointer-events:none; transition:opacity 0.25s ease; }
+.toc-overlay.is-open{ opacity:1; pointer-events:auto; }
+.toc-drawer{ position:fixed; top:0; left:0; height:100%; width:min(360px,88vw); background:var(--surface); border-right:1px solid var(--border-bright); z-index:150; transform:translateX(-100%); transition:transform 0.3s cubic-bezier(.4,0,.2,1); overflow-y:auto; padding:1.5rem 1.4rem 3rem; }
+.toc-drawer.is-open{ transform:translateX(0); }
+.toc-close{ background:none; border:1px solid var(--border-bright); color:var(--cream); width:34px; height:34px; border-radius:50%; font-size:1.1rem; cursor:pointer; margin-bottom:1.4rem; }
+.toc-close:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
+.toc-drawer-title{ font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.14em; font-size:0.72rem; color:var(--gold-deep); margin-bottom:1.2rem; }
+.toc-group{ margin-bottom:1.5rem; }
+.toc-group-label{ display:block; font-family:var(--font-display); font-style:italic; color:var(--gold-bright); font-size:0.95rem; margin-bottom:0.6rem; }
+.toc-drawer a{ display:block; color:var(--cream-dim); text-decoration:none; font-size:0.92rem; padding:0.35rem 0; border-left:2px solid transparent; padding-left:0.7rem; transition:color 0.15s ease, border-color 0.15s ease; }
+.toc-drawer a:hover{ color:var(--gold-bright); border-left-color:var(--gold-bright); }
+
+/* ============================= HERO ============================= */
+.hero{ padding:4.5rem 0 3rem; text-align:center; }
+.hero-eyebrow{ font-family:var(--font-mono); font-size:0.75rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--gold-deep); margin-bottom:1.4rem; }
+.hero h1{ font-size:clamp(2.3rem,6vw,4.4rem); font-weight:700; letter-spacing:-0.01em; }
+.hero h1 em{ font-style:italic; color:var(--gold-bright); font-weight:500; }
+.hero-tagline{ font-family:var(--font-display); font-style:italic; font-size:clamp(1.05rem,2.4vw,1.35rem); color:var(--cream-dim); max-width:640px; margin:1.3rem auto 0; line-height:1.5; }
+
+.hero-viz-wrap{ max-width:820px; margin:3rem auto 0; padding:0 1.5rem; }
+.hero-viz-card{ background:var(--surface); border:1px solid var(--border-bright); border-radius:var(--radius-lg); padding:1.6rem 1.6rem 1.2rem; box-shadow:var(--shadow); }
+.hero-viz-svg{ width:100%; height:auto; display:block; }
+.hero-viz-footer{ display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-top:0.6rem; flex-wrap:wrap; }
+.hero-viz-caption{ font-family:var(--font-mono); font-size:0.78rem; color:var(--cream-dim); }
+.hero-viz-caption strong{ color:var(--gold-bright); }
+.hero-replay{ font-family:var(--font-mono); font-size:0.76rem; letter-spacing:0.05em; text-transform:uppercase; background:transparent; border:1px solid var(--border-bright); color:var(--cream); padding:0.45rem 0.9rem; border-radius:999px; cursor:pointer; transition:all 0.2s ease; }
+.hero-replay:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
+.hero-dot{ transition:transform 0.9s cubic-bezier(.4,0,.2,1); }
+.hero-scroll-cue{ margin:2.6rem auto 0; font-family:var(--font-mono); font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dim); }
+
+/* ============================= SECTIONS ============================= */
+main{ padding-bottom:4rem; }
+.section{ padding:4.2rem 0; border-top:1px solid var(--border); }
+.section:first-of-type{ border-top:none; }
+.section-alt{ background:linear-gradient(180deg, rgba(244,185,60,0.045), transparent 60%); }
+.section-kicker{ font-family:var(--font-mono); font-size:0.75rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold-deep); margin-bottom:0.9rem; display:flex; align-items:center; gap:0.6rem; }
+.section-kicker::before{ content:""; width:26px; height:1px; background:var(--gold-dim); display:inline-block; }
+.section h2{ font-size:clamp(1.7rem,3.6vw,2.5rem); margin-bottom:1.4rem; }
+.section h2 .num{ color:var(--gold-bright); font-style:italic; margin-right:0.3rem; }
+.section h3{ font-size:1.32rem; margin:2rem 0 0.9rem; color:var(--gold-bright); }
+.prose{ font-size:1.08rem; }
+.lede{ font-family:var(--font-display); font-size:1.22rem; color:var(--cream); line-height:1.55; }
+
+/* ============================= CALLOUTS ============================= */
+.callout{ border-left:3px solid var(--gold); background:var(--surface); border-radius:0 var(--radius-md) var(--radius-md) 0; padding:1.2rem 1.4rem; margin:1.8rem 0; }
+.callout-label{ font-family:var(--font-mono); font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold-deep); margin-bottom:0.5rem; display:block; }
+.callout p{ margin:0; }
+.callout--question{ background:linear-gradient(135deg, rgba(244,185,60,0.1), var(--surface)); }
+.callout--question p{ font-family:var(--font-display); font-style:italic; font-size:1.18rem; color:var(--gold-bright); line-height:1.5; }
+
+.field-note{ background:var(--surface-2); border:1px dashed var(--border-bright); border-radius:var(--radius-md); padding:1.2rem 1.4rem; margin:1.8rem 0; position:relative; }
+.field-note-label{ font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold-deep); margin-bottom:0.5rem; display:block; }
+.field-note p{ font-family:var(--font-display); font-style:italic; font-size:1.15rem; color:var(--cream); margin:0; }
+
+.analogy{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:1.3rem 1.5rem; margin:1.8rem 0; }
+.analogy-label{ font-family:var(--font-mono); font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold-deep); margin-bottom:0.5rem; display:block; }
+.analogy p{ margin:0; }
+
+/* ============================= CARD GRIDS ============================= */
+.card-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1.1rem; margin:1.8rem 0; }
+.card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:1.4rem; transition:border-color 0.2s ease, transform 0.2s ease; }
+.card:hover{ border-color:var(--border-bright); }
+.card h4{ font-size:1.05rem; color:var(--gold-bright); margin-bottom:0.5rem; }
+.card p{ font-size:0.96rem; color:var(--cream-dim); margin:0; }
+.card .card-num{ font-family:var(--font-mono); color:var(--gold-dim); font-size:0.85rem; }
+
+/* ============================= ACCORDION ============================= */
+.accordion{ border:1px solid var(--border); border-radius:var(--radius-md); overflow:hidden; margin-bottom:0.7rem; background:var(--surface); }
+.accordion-trigger{ width:100%; display:flex; align-items:center; gap:0.9rem; background:none; border:none; color:var(--cream); text-align:left; padding:1.05rem 1.3rem; cursor:pointer; font-family:var(--font-body); font-size:1.02rem; }
+.accordion-trigger:hover{ background:rgba(244,185,60,0.06); }
+.accordion-num{ font-family:var(--font-mono); color:var(--gold-deep); font-size:0.85rem; flex-shrink:0; }
+.accordion-title{ flex:1; font-weight:600; color:var(--gold-bright); font-family:var(--font-display); font-size:1.1rem; }
+.accordion-icon{ width:18px; height:18px; position:relative; flex-shrink:0; }
+.accordion-icon::before,.accordion-icon::after{ content:""; position:absolute; background:var(--gold-bright); border-radius:2px; }
+.accordion-icon::before{ width:100%; height:2px; top:50%; left:0; transform:translateY(-50%); }
+.accordion-icon::after{ width:2px; height:100%; left:50%; top:0; transform:translateX(-50%); transition:opacity 0.2s ease; }
+.accordion-trigger[aria-expanded="true"] .accordion-icon::after{ opacity:0; }
+.accordion-panel{ padding:0 1.3rem 1.2rem 2.9rem; color:var(--cream-dim); font-size:0.98rem; }
+.accordion-panel p{ margin:0; }
+.accordion-flag{ display:inline-block; margin-top:0.7rem; font-family:var(--font-mono); font-size:0.74rem; color:var(--gold-bright); background:rgba(244,185,60,0.1); padding:0.25rem 0.6rem; border-radius:6px; }
+
+/* ============================= CHART CARD (real images) ============================= */
+.chart-card{ border:1px solid var(--border-bright); border-radius:var(--radius-md); overflow:hidden; background:var(--surface); margin:2rem 0; box-shadow:var(--shadow); }
+.chart-card-frame{ background:var(--cream-paper); padding:1.1rem; }
+.chart-card-frame img{ border-radius:6px; width:100%; }
+.chart-card-caption{ padding:0.95rem 1.3rem; display:flex; gap:0.9rem; align-items:flex-start; }
+.chart-card-tag{ font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-deep); background:rgba(244,185,60,0.1); padding:0.25rem 0.55rem; border-radius:6px; flex-shrink:0; margin-top:0.15rem; }
+.chart-card-desc{ font-size:0.94rem; color:var(--cream-dim); line-height:1.55; }
+.chart-row{ display:grid; grid-template-columns:1fr 1fr; gap:1.4rem; }
+@media (max-width:720px){ .chart-row{ grid-template-columns:1fr; } }
+
+/* ============================= STAT ROW ============================= */
+.stat-row{ display:flex; gap:1rem; flex-wrap:wrap; margin:1.8rem 0; }
+.stat{ flex:1 1 140px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:1.1rem 1.2rem; }
+.stat-value{ font-family:var(--font-mono); font-size:1.55rem; font-weight:700; color:var(--gold-bright); display:block; }
+.stat-label{ font-size:0.82rem; color:var(--cream-dim); margin-top:0.2rem; }
+
+/* ============================= TABLE ============================= */
+.table-wrap{ overflow-x:auto; margin:1.8rem 0; border:1px solid var(--border); border-radius:var(--radius-md); }
+table{ width:100%; border-collapse:collapse; font-size:0.95rem; min-width:480px; }
+th,td{ padding:0.85rem 1.1rem; text-align:left; border-bottom:1px solid var(--border); }
+th{ font-family:var(--font-mono); font-size:0.74rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold-deep); background:var(--surface-2); }
+td{ color:var(--cream-dim); }
+tr:last-child td{ border-bottom:none; }
+td:first-child, th:first-child{ color:var(--gold-bright); font-weight:600; }
+
+/* ============================= QUIZ ============================= */
+.quiz-card{ background:var(--surface); border:1px solid var(--gold-dim); border-radius:var(--radius-lg); padding:1.8rem 1.8rem 1.6rem; margin:2.4rem 0; }
+.quiz-eyebrow{ font-family:var(--font-mono); font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold-bright); margin-bottom:0.7rem; display:flex; align-items:center; gap:0.5rem;}
+.quiz-eyebrow::before{ content:"?"; display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; border:1px solid var(--gold-bright); font-size:0.7rem; }
+.quiz-question{ font-family:var(--font-display); font-size:1.24rem; font-weight:600; margin-bottom:1.2rem; line-height:1.4; }
+.quiz-options{ display:flex; flex-direction:column; gap:0.6rem; }
+.quiz-option{ text-align:left; background:var(--surface-2); border:1px solid var(--border); color:var(--cream); padding:0.85rem 1.1rem; border-radius:var(--radius-sm); font-family:var(--font-body); font-size:0.98rem; cursor:pointer; transition:border-color 0.15s ease, background 0.15s ease; }
+.quiz-option:hover:not(:disabled){ border-color:var(--gold-bright); background:rgba(244,185,60,0.08); }
+.quiz-option:disabled{ cursor:default; }
+.quiz-option.is-correct{ border-color:var(--success); background:var(--success-bg); color:var(--cream); }
+.quiz-option.is-incorrect{ border-color:var(--error); background:var(--error-bg); }
+.quiz-feedback{ margin-top:1.1rem; padding:1rem 1.2rem; border-radius:var(--radius-sm); font-size:0.96rem; line-height:1.55; }
+.quiz-feedback.is-correct-fb{ background:var(--success-bg); border:1px solid var(--success); color:var(--cream); }
+.quiz-feedback.is-incorrect-fb{ background:var(--error-bg); border:1px solid var(--error); color:var(--cream); }
+.quiz-reset{ margin-top:0.9rem; background:none; border:1px solid var(--border-bright); color:var(--cream-dim); font-family:var(--font-mono); font-size:0.75rem; letter-spacing:0.05em; text-transform:uppercase; padding:0.4rem 0.85rem; border-radius:999px; cursor:pointer; }
+.quiz-reset:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
+
+/* ============================= PLAYGROUND (sigma slider) ============================= */
+.playground{ background:var(--surface); border:1px solid var(--border-bright); border-radius:var(--radius-lg); padding:1.8rem; margin:2.2rem 0; box-shadow:var(--shadow); }
+.playground-eyebrow{ font-family:var(--font-mono); font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold-bright); }
+.playground h4{ font-size:1.3rem; margin:0.5rem 0 0.7rem; color:var(--cream); }
+.playground > p{ color:var(--cream-dim); font-size:0.97rem; }
+.playground-svg{ width:100%; height:auto; margin:1.2rem 0 0.6rem; background:var(--cream-paper); border-radius:var(--radius-md); }
+.axis-line{ stroke:#8a7a52; stroke-width:1.5; }
+.sigma-path{ fill:rgba(214,154,46,0.3); stroke:#BA8B2F; stroke-width:3; }
+.playground-controls{ display:flex; flex-direction:column; gap:0.5rem; }
+.playground-controls label{ font-family:var(--font-mono); font-size:0.85rem; color:var(--gold-bright); }
+input[type="range"]{ width:100%; accent-color:var(--gold-bright); height:6px; }
+.playground-readout{ font-size:0.92rem; color:var(--cream-dim); font-style:italic; font-family:var(--font-display); }
+
+/* ============================= VISUALIZER EMBED ============================= */
+.embed-card{ background:var(--surface); border:1px solid var(--border-bright); border-radius:var(--radius-lg); overflow:hidden; margin:2.2rem 0; box-shadow:var(--shadow); }
+.embed-card-header{ padding:1.4rem 1.6rem 1.1rem; display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; }
+.embed-card-header h4{ font-size:1.2rem; color:var(--gold-bright); margin-bottom:0.3rem; }
+.embed-card-header p{ color:var(--cream-dim); font-size:0.92rem; margin:0; max-width:520px; }
+.embed-open{ flex-shrink:0; font-family:var(--font-mono); font-size:0.76rem; letter-spacing:0.05em; text-transform:uppercase; background:var(--gold); color:var(--ink); padding:0.55rem 1rem; border-radius:999px; text-decoration:none; white-space:nowrap; display:inline-block; }
+.embed-open:hover{ background:var(--gold-bright); }
+.embed-frame-wrap{ background:var(--cream-paper); }
+.embed-frame-wrap iframe{ width:100%; height:640px; border:none; display:block; }
+@media (max-width:640px){ .embed-frame-wrap iframe{ height:480px; } }
+
+/* ============================= EXTERNAL RESOURCE LINK ============================= */
+.resource-link{ display:flex; align-items:center; gap:1rem; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:1.1rem 1.4rem; margin:1.8rem 0; text-decoration:none; transition:border-color 0.2s ease; }
+.resource-link:hover{ border-color:var(--gold-bright); }
+.resource-link-icon{ font-family:var(--font-mono); font-size:1.3rem; color:var(--gold-bright); flex-shrink:0; }
+.resource-link-title{ color:var(--gold-bright); font-weight:600; font-family:var(--font-display); font-size:1.05rem; }
+.resource-link-desc{ color:var(--cream-dim); font-size:0.88rem; margin-top:0.15rem; }
+
+/* ============================= CAVEAT / WARNING BOX ============================= */
+.caveat-box{ border:1px solid #7A4A28; background:linear-gradient(135deg, rgba(193,113,74,0.1), var(--surface)); border-radius:var(--radius-lg); padding:1.8rem; margin:2rem 0; }
+.caveat-box-title{ font-family:var(--font-mono); font-size:0.76rem; letter-spacing:0.1em; text-transform:uppercase; color:#E0A57E; margin-bottom:1rem; }
+.caveat-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.9rem; }
+.caveat-list li{ display:flex; gap:0.9rem; margin:0; }
+.caveat-list-num{ font-family:var(--font-mono); color:#E0A57E; font-weight:700; flex-shrink:0; }
+.caveat-note{ margin-top:1.2rem; padding-top:1.1rem; border-top:1px dashed rgba(193,113,74,0.4); font-size:0.9rem; color:var(--cream-dim); font-style:italic; }
+
+/* ============================= RESOLUTION COMPARISON ============================= */
+.resolution-grid{ display:grid; grid-template-columns:1fr 1fr; gap:1.3rem; margin:1.8rem 0; }
+@media (max-width:720px){ .resolution-grid{ grid-template-columns:1fr; } }
+.resolution-card{ border-radius:var(--radius-lg); padding:1.6rem; border:1px solid var(--border-bright); background:var(--surface); }
+.resolution-card-tag{ font-family:var(--font-mono); font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-deep); }
+.resolution-card h4{ font-size:1.4rem; color:var(--gold-bright); margin:0.4rem 0 0.9rem; }
+.resolution-card ul{ padding-left:1.1em; margin:0; }
+.resolution-card li{ font-size:0.94rem; color:var(--cream-dim); }
+
+.pull-quote{ font-family:var(--font-display); font-style:italic; font-size:clamp(1.2rem,3vw,1.55rem); line-height:1.5; color:var(--gold-bright); text-align:center; max-width:660px; margin:2.6rem auto; padding:0 1rem; }
+.pull-quote::before{ content:"\201C"; }
+.pull-quote::after{ content:"\201D"; }
+.pull-quote-attr{ display:block; font-family:var(--font-mono); font-style:normal; font-size:0.78rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--cream-dim); margin-top:0.9rem; }
+
+/* ============================= WRAP UP ============================= */
+.takeaway-groups{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1.4rem; margin-top:1.6rem; }
+.takeaway-group{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1.5rem; }
+.takeaway-group h4{ font-size:1.05rem; color:var(--gold-bright); margin-bottom:0.9rem; }
+.takeaway-group ul{ margin:0; padding-left:1.1em; }
+.takeaway-group li{ font-size:0.92rem; color:var(--cream-dim); margin-bottom:0.6rem; }
+.takeaway-group li::marker{ color:var(--gold-dim); }
+
+/* ============================= FOOTER ============================= */
+footer{ border-top:1px solid var(--border); padding:3rem 0 3.5rem; text-align:center; }
+.footer-brand{ font-family:var(--font-display); font-size:1.2rem; color:var(--gold-bright); font-weight:600; }
+.footer-note{ font-family:var(--font-mono); font-size:0.76rem; color:var(--gold-dim); margin-top:0.6rem; letter-spacing:0.03em; }
+
+/* ============================= MISC ============================= */
+.divider-orn{ display:flex; align-items:center; justify-content:center; gap:0.7rem; margin:0 0 2rem; }
+.divider-orn::before,.divider-orn::after{ content:""; width:40px; height:1px; background:var(--border-bright); }
+.divider-orn span{ color:var(--gold-dim); font-family:var(--font-mono); font-size:0.8rem; }
+
+@media (max-width:600px){
+  .hero{ padding:3rem 0 2rem; }
+  .section{ padding:3rem 0; }
+  body{ font-size:16px; }
+}
+</style>
+</head>
+<body id="top">
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Dimensionality reduction · t-SNE and UMAP</span><span class="pn"><a href="../Principal-Component-Analysis/" title="Dimensionality reduction · PCA for a wall-screen view">← Prev</a><a href="../Anomaly-Detection/" title="Anomaly detection · Four unsupervised methods">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a href="#main-content" class="skip-link">Skip to content</a>
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="#top" class="site-brand">t-SNE <span>&amp;</span> UMAP</a>
+    <button class="toc-toggle" id="tocToggle" aria-expanded="false" aria-controls="tocDrawer">
+      <span class="toc-toggle-icon" aria-hidden="true"><span></span></span> Contents
+    </button>
+  </div>
+</header>
+
+<div class="toc-overlay" id="tocOverlay"></div>
+<div class="toc-drawer" id="tocDrawer" aria-hidden="true">
+  <nav aria-label="Table of contents">
+    <button class="toc-close" id="tocClose" aria-label="Close contents menu">&times;</button>
+    <div class="toc-drawer-title">Contents</div>
+    <div class="toc-group">
+      <span class="toc-group-label">Part I &middot; The limits of PCA</span>
+      <a data-toc href="#recap">Before we start</a>
+      <a data-toc href="#pca-limits">1. Where PCA stops working</a>
+      <a data-toc href="#swiss-roll">Seeing the limit: the Swiss roll</a>
+    </div>
+    <div class="toc-group">
+      <span class="toc-group-label">Part II &middot; How t-SNE thinks</span>
+      <a data-toc href="#decoding-tsne">2. Decoding t-SNE</a>
+      <a data-toc href="#distance-to-probability">3. Distance into probability</a>
+      <a data-toc href="#low-dimension">4. Random start, then push</a>
+      <a data-toc href="#crowding">5. Crowding &amp; the t-distribution</a>
+      <a data-toc href="#kl-divergence">6. KL divergence &amp; gradient descent</a>
+    </div>
+    <div class="toc-group">
+      <span class="toc-group-label">Part III &middot; t-SNE in practice</span>
+      <a data-toc href="#running-tsne">7. Running t-SNE on the digits</a>
+      <a data-toc href="#tsne-costs">8. What t-SNE costs</a>
+    </div>
+    <div class="toc-group">
+      <span class="toc-group-label">Part IV &middot; UMAP</span>
+      <a data-toc href="#umap-graph">9. The graph idea &amp; two dials</a>
+      <a data-toc href="#umap-loss">10. UMAP's loss, and why it's fast</a>
+      <a data-toc href="#running-umap">11. Running UMAP, the fine print</a>
+    </div>
+    <div class="toc-group">
+      <span class="toc-group-label">Part V &middot; The resolution</span>
+      <a data-toc href="#resolution">12. Meera's memo to Rohit</a>
+      <a data-toc href="#wrap-up">Key takeaways</a>
+    </div>
+  </nav>
+</div>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="hero-eyebrow">An interactive read on dimensionality reduction</div>
+    <h1>t-SNE and UMAP<br><em>post read</em></h1>
+    <p class="hero-tagline">From a smudge to a story — how two neighbourhood-preserving methods pick up exactly where PCA runs out of road.</p>
+  </div>
+  <div class="hero-viz-wrap">
+    <div class="hero-viz-card">
+      <svg class="hero-viz-svg" id="heroSvg" viewBox="0 0 700 380" role="img" aria-label="Illustration of scattered overlapping points reorganising into ten separated clusters"></svg>
+      <div class="hero-viz-footer">
+        <div class="hero-viz-caption" id="heroCaption"><strong>PCA:</strong> everything blurs into one smear.</div>
+        <button class="hero-replay" id="heroReplay" type="button">Replay</button>
+      </div>
+    </div>
+  </div>
+  <div class="hero-scroll-cue">Scroll to begin ↓</div>
+</div>
+
+<main id="main-content">
+
+  <!-- ============================= RECAP ============================= -->
+  <section class="section" id="recap" data-section>
+    <div class="wrap">
+      <div class="section-kicker">Before we start</div>
+      <h2>What PCA already gave us</h2>
+      <p class="lede">Meera has already met PCA. It compresses a dataset by finding new axes — directions that capture as much of the overall spread as possible — instead of simply dropping columns.</p>
+      <div class="card-grid">
+        <div class="card"><p>High dimensions make visualisation hard, and distances between points become less meaningful the more features you add.</p></div>
+        <div class="card"><p>PCA combines features into new axes rather than deleting any of the original columns.</p></div>
+        <div class="card"><p><strong>PC1</strong> captures the direction of maximum variance; <strong>PC2</strong> captures the next most, perpendicular to PC1.</p></div>
+        <div class="card"><p>Variance explained tells you how much information each component retains — and a scree plot helps decide how many components are "enough."</p></div>
+      </div>
+      <p>Applied to a 30-column medical dataset, PCA compressed everything down to a single 2D chart. The result was a smudge, not a clean split.</p>
+    </div>
+  </section>
+
+  <!-- ============================= STORY HOOK ============================= -->
+  <section class="section section-alt" id="story-hook" data-section>
+    <div class="wrap">
+      <div class="section-kicker">The problem</div>
+      <h2>A new dataset, and a new problem</h2>
+      <p>Meera tries PCA again — this time on 1,797 scanned handwritten digits from NovaCare's requisition slips. Each image becomes a row of pixel features, and PCA reduces those many dimensions down to two so the digits can be plotted.</p>
+      <p>The result is encouraging at first: <strong>the 3s and 4s separate nicely.</strong> But the 1s, 7s, 8s, and 9s pile on top of each other, forming a single central smear.</p>
+      <p>PCA has preserved the directions with the most overall variation — but that isn't the same thing as preserving the local relationships between similar examples.</p>
+      <div class="field-note">
+        <span class="field-note-label">Meera's notes</span>
+        <p>"Straight lines aren't enough. I need something that cares about neighbours."</p>
+      </div>
+      <div class="callout callout--question">
+        <span class="callout-label">Key question</span>
+        <p>What if, instead of only asking which directions capture the most variation, we also cared about which points are close to each other?</p>
+      </div>
+      <p>That question is the doorway into <strong>neighbourhood-based dimensionality reduction</strong> — the family of methods this entire read is about.</p>
+    </div>
+  </section>
+
+  <!-- ============================= 1. WHERE PCA STOPS WORKING ============================= -->
+  <section class="section" id="pca-limits" data-section>
+    <div class="wrap">
+      <div class="section-kicker">Part I</div>
+      <h2><span class="num">1</span>Where PCA stops working</h2>
+      <p>Before building anything new, it's worth being precise about why PCA produced a smudge instead of an answer. Four limitations, each one tied to something already familiar about how PCA works.</p>
+
+      <div class="accordion" data-accordion>
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="acc-1"><span class="accordion-num">1.1</span><span class="accordion-title">Low interpretability</span><span class="accordion-icon" aria-hidden="true"></span></button>
+        <div class="accordion-panel" id="acc-1" hidden><p>PC1 has no name. A linear combination of thirty original features resists being summarised in a word — you can't point at PC1 and say "that's texture" or "that's ink pressure."</p></div>
+      </div>
+      <div class="accordion" data-accordion>
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="acc-2"><span class="accordion-num">1.2</span><span class="accordion-title">Assumes linear relationships</span><span class="accordion-icon" aria-hidden="true"></span></button>
+        <div class="accordion-panel" id="acc-2" hidden><p>PCA can only rotate and stretch a straight axis through the data. It draws straight lines, full stop. If the true structure in the data is curved, a straight axis simply cannot follow it round the bend.<span class="accordion-flag">This is the one that matters most today</span></p></div>
+      </div>
+      <div class="accordion" data-accordion>
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="acc-3"><span class="accordion-num">1.3</span><span class="accordion-title">Scale-sensitive</span><span class="accordion-icon" aria-hidden="true"></span></button>
+        <div class="accordion-panel" id="acc-3" hidden><p>Get scaling wrong, and PCA reports back your units, not your biology — or your handwriting.</p></div>
+      </div>
+      <div class="accordion" data-accordion>
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="acc-4"><span class="accordion-num">1.4</span><span class="accordion-title">Not robust to outliers</span><span class="accordion-icon" aria-hidden="true"></span></button>
+        <div class="accordion-panel" id="acc-4" hidden><p>A single wild record can drag PC1 toward itself, because outliers manufacture enormous variance — and variance is exactly the thing PCA is chasing.</p></div>
+      </div>
+
+      <p style="margin-top:1.6rem;">Limitation 1.2 is the direct bridge into everything that follows. Rather than just stating it, let's build a dataset that only makes sense when you follow it around a curve, then watch PCA fail at exactly that job.</p>
+    </div>
+  </section>
+
+  <!-- ============================= SWISS ROLL ============================= -->
+  <section class="section section-alt" id="swiss-roll" data-section>
+    <div class="wrap-wide">
+      <div class="section-kicker">Seeing the limit</div>
+      <h2>The Swiss roll</h2>
+      <div class="wrap" style="padding:0; max-width:740px;">
+        <p>Picture a flat, continuous sheet of data that has been rolled up into a spiral in 3D space — a "Swiss roll." Colour marks each point's true position along that unrolled sheet, from one end to the other.</p>
+      </div>
+    </div>
+    <div class="wrap-wide">
+      <div class="chart-row" style="align-items:stretch;">
+        <div>
+          <svg viewBox="0 0 340 300" role="img" aria-label="Conceptual illustration of a flat coloured sheet rolled into a spiral, representing the Swiss roll dataset" style="width:100%; background:var(--cream-paper); border-radius:var(--radius-md);">
+            <defs>
+              <linearGradient id="rollGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#2c1e6b"/>
+                <stop offset="25%" stop-color="#1f6b6b"/>
+                <stop offset="50%" stop-color="#3f8f4f"/>
+                <stop offset="75%" stop-color="#c9a227"/>
+                <stop offset="100%" stop-color="#e0d43a"/>
+              </linearGradient>
+            </defs>
+            <path id="rollPath" d="M170,150 m0,-90 a90,90 0 1,1 -0.1,0" fill="none" stroke="url(#rollGrad)" stroke-width="26" stroke-linecap="round"/>
+            <path d="M170,150 m0,-58 a58,58 0 1,1 -0.1,0" fill="none" stroke="url(#rollGrad)" stroke-width="18" stroke-linecap="round" opacity="0.9"/>
+            <path d="M170,150 m0,-28 a28,28 0 1,1 -0.1,0" fill="none" stroke="url(#rollGrad)" stroke-width="10" stroke-linecap="round" opacity="0.85"/>
+            <text x="170" y="280" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#5b4623">conceptual illustration — not measured data</text>
+          </svg>
+        </div>
+        <figure class="chart-card" style="margin:0;">
+          <div class="chart-card-frame">
+            <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/916/original/Screenshot_2026-08-19_030104.png?1787088679" alt="PCA's flattened 2D view of the Swiss roll: the continuous colour gradient is compressed into a set of nested arcs, with different parts of the roll overlapping." loading="lazy" decoding="async">
+          </div>
+          <figcaption class="chart-card-caption">
+            <span class="chart-card-tag">Real output</span>
+            <span class="chart-card-desc">PCA's flattened view. The continuous sheet becomes a set of <strong>nested arcs</strong> — points far apart along the roll's surface can land relatively close together once flattened.</span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="wrap" style="max-width:740px;">
+      <div class="stat-row">
+        <div class="stat"><span class="stat-value">49.3%</span><span class="stat-label">variance explained by PC1</span></div>
+        <div class="stat"><span class="stat-value">44.9%</span><span class="stat-label">variance explained by PC2</span></div>
+      </div>
+      <p>The colour ordering is still partly preserved, so PCA hasn't completely failed — but the geometry has changed. That's the limitation that matters: PCA chooses the flat plane that preserves the most overall variance, without knowing the data is actually a rolled-up surface.</p>
+      <h3>Two different questions</h3>
+      <div class="chart-row">
+        <div class="card"><p><strong>PCA asks:</strong> "Which flat directions capture the most overall variation?"</p></div>
+        <div class="card"><p><strong>We now want to ask:</strong> "Which points are neighbours on the underlying structure, and can we keep those neighbourhoods together?"</p></div>
+      </div>
+      <div class="callout">
+        <span class="callout-label">The key distinction</span>
+        <p><strong>PCA preserves global variance. It does not explicitly preserve local neighbourhood relationships.</strong> That's the motivation for the method that follows: instead of hunting for the best straight-line projection, we'll look for a way to preserve the local geometry of the data.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= 2. DECODING T-SNE ============================= -->
+  <section class="section" id="decoding-tsne" data-section>
+    <div class="wrap">
+      <div class="section-kicker">Part II &middot; How t-SNE thinks</div>
+      <h2><span class="num">2</span>Decoding t-SNE</h2>
+      <p>t-SNE comes from Van der Maaten &amp; Hinton, 2008. The name tells you the whole plan, if you take it apart:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Piece</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>Stochastic</td><td>We work in probabilities, not fixed distances.</td></tr>
+            <tr><td>Neighbor</td><td>We only care about local company.</td></tr>
+            <tr><td>Embedding</td><td>We place points into a low-dimensional space.</td></tr>
+            <tr><td>t-distributed</td><td>Parked for now — we'll earn the <code>t</code> properly a bit later.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>The strategy, before any maths:</strong> measure neighbourliness in 64D, throw points down randomly in 2D, then shove them around until the 2D neighbourliness matches the 64D neighbourliness.</p>
+      <div class="analogy">
+        <span class="analogy-label">Analogy &middot; the party re-seating problem</span>
+        <p>You know who talks to whom in a big hall. Now you have to re-seat everyone at one long table so the same people are still within earshot. You cannot preserve every distance. You can preserve the conversations.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 1 -->
+  <section class="section section-alt" data-section>
+    <div class="wrap">
+      <div class="quiz-card" data-quiz data-explanation="PCA represents data using linear combinations of the original features. Adding more principal components gives more linear directions, but it does not make PCA capable of following curved or nonlinear structures. If the important structure in the data is curved, simply keeping more PCs may not solve the problem.">
+        <span class="quiz-eyebrow">Check your understanding</span>
+        <h3 class="quiz-question">Why can increasing the number of principal components fail to solve a problem where the important structure in the data is nonlinear or curved?</h3>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="true">PCA only finds linear directions, regardless of how many components are kept.</button>
+          <button class="quiz-option" data-correct="false">PCA ignores all information contained in the original features.</button>
+          <button class="quiz-option" data-correct="false">PCA can only be applied when there are exactly two features.</button>
+          <button class="quiz-option" data-correct="false">PCA automatically removes the local neighborhood structure from every dataset.</button>
+        </div>
+        <div class="quiz-feedback" hidden><p class="quiz-feedback-text"></p></div>
+        <button class="quiz-reset" hidden>Try again</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= 3. DISTANCE TO PROBABILITY ============================= -->
+  <section class="section" id="distance-to-probability" data-section>
+    <div class="wrap">
+      <div class="section-kicker">Part II</div>
+      <h2><span class="num">3</span>Turning distance into probability</h2>
+      <p>t-SNE is trying to preserve neighbourhoods — but that raises an immediate question. Our data lives in 64 dimensions, so we need a way to turn distances between points into something t-SNE can reason about as neighbourliness.</p>
+      <div class="callout callout--question">
+        <span class="callout-label">Key question</span>
+        <p>How do we decide, mathematically, whether one point is a good neighbour of another?</p>
+      </div>
+      <p>Raw distance isn't enough — a distance that feels small in one part of the dataset might be large in another. Instead of asking <em>"How far away is this point?"</em>, t-SNE asks <em>"How likely is this point to be one of my neighbours?"</em> That's the bridge from intuition to mathematics, built here as a sequence of rejected attempts. The failures are what make the final formula obvious.</p>
+
+      <h3>Attempt 1 — raw distance</h3>
+      <p>Fails immediately: there's no upper bound, and no natural way to compare what "near" means for different points.</p>
+      <h3>Attempt 2 — 1 / distance²</h3>
+      <p>A better direction — close points get a big number, distant points get a small number. But it explodes as distance approaches zero, and its decay is too abrupt at the extremes.</p>
+
+      <figure class="chart-card">
+        <div class="chart-card-frame">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/915/original/Screenshot_2026-08-19_025956.png?1787088605" alt="Two line charts side by side. Left: raw distance plotted against itself, an unbounded straight line. Right: one over distance squared, exploding sharply near zero and decaying abruptly." loading="lazy" decoding="async">
+        </div>
+        <figcaption class="chart-card-caption">
+          <span class="chart-card-tag">Attempts 1 &amp; 2</span>
+          <span class="chart-card-desc">Raw distance has no bound and no shared scale across points. 1/distance² explodes near zero and decays too abruptly — neither shape matches how we intuitively think about "somewhat close."</span>
+        </figcaption>
+      </figure>
+
+      <h3>Attempt 3 — a Gaussian centred on the point</h3>
+      <p>This is the one that survives. Bounded, smooth, falls off gracefully — only the positive side of the curve matters, since distance can't be negative. Pick a point, build a bell curve centred on it, and every other point's height on that curve becomes its probability of being picked as a neighbour. Normalise so each row sums to 1, and you have a genuine probability distribution — call it <strong>P<sub>ij</sub></strong>.</p>
+
+      <figure class="chart-card">
+        <div class="chart-card-frame">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/914/original/Screenshot_2026-08-19_025919.png?1787088569" alt="A smooth green bell curve centred on the origin, filled beneath, representing similarity as a function of distance from a point." loading="lazy" decoding="async">
+        </div>
+        <figcaption class="chart-card-caption">
+          <span class="chart-card-tag">Attempt 3</span>
+          <span class="chart-card-desc">Height on the curve equals similarity — the probability of being picked as a neighbour. Bounded and smooth: the shape that survives.</span>
+        </figcaption>
+      </figure>
+
+      <h3>Why every point needs its own bell curve</h3>
+      <p>Two points at identical distance from their respective centres don't mean the same thing. In a dense cluster, that distance describes a stranger. In a sparse region, that same distance describes a close friend — <strong>distance means different things in different neighbourhoods.</strong> So every point gets its own <code>σᵢ</code> (standard deviation), derived from the spread of its nearest neighbours: a dense region gets a small σ and a narrow curve; a sparse region gets a large σ and a wide curve.</p>
+      <div class="analogy">
+        <span class="analogy-label">Analogy</span>
+        <p>Living 5 km from your nearest neighbour means something completely different in a dense city than it does in a remote mountain village.</p>
+      </div>
+
+      <figure class="chart-card">
+        <div class="chart-card-frame">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/913/original/Screenshot_2026-08-19_025830.png?1787088520" alt="A narrow blue Gaussian curve fitted over a dense cluster of points, and a wide orange Gaussian curve fitted over a sparse cluster of points further along the axis." loading="lazy" decoding="async">
+        </div>
+        <figcaption class="chart-card-caption">
+          <span class="chart-card-tag">Density sets σᵢ</span>
+          <span class="chart-card-desc">Same basic Gaussian shape, different widths. The same physical distance can represent a strong similarity for one point and a weak one for another, depending on local density.</span>
+        </figcaption>
+      </figure>
+
+      <h3>Perplexity</h3>
+      <p>The number of neighbours to consider is a hyperparameter called <strong>perplexity</strong> — the paper calls it "the effective number of neighbours." σᵢ is solved so that each point's curve achieves that perplexity. Low perplexity favours local detail; high perplexity favours the big picture. The paper suggests a range of <strong>5–50</strong>, with a warning: never set it near the total number of data points.</p>
+
+      <div class="playground" data-sigma-playground>
+        <span class="playground-eyebrow">Try it</span>
+        <h4>Stretch the bell curve</h4>
+        <p>Drag the slider to change σ — the width of one point's neighbourhood curve. A small σ keeps the curve narrow, so only very close points count as neighbours. A large σ spreads it wide, drawing more points into the neighbourhood.</p>
+        <svg viewBox="0 0 600 240" class="playground-svg" id="sigmaSvg" role="img" aria-label="A Gaussian curve that narrows or widens as sigma changes, illustrating a point's neighbourhood radius">
+          <line x1="20" y1="200" x2="580" y2="200" class="axis-line"/>
+          <path id="sigmaPath" class="sigma-path" d=""></path>
+        </svg>
+        <div class="playground-controls">
+          <label for="sigmaRange">σ = <span id="sigmaValue">1.00</span> &nbsp;·&nbsp; effective neighbourhood: <span id="sigmaPerplexity">low</span></label>
+          <input type="range" id="sigmaRange" min="0.3" max="3" step="0.05" value="1">
+          <div class="playground-readout" id="sigmaReadout">Narrow curve — only the closest points count as neighbours.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 2 -->
+  <section class="section section-alt" data-section>
+    <div class="wrap">
+      <div class="quiz-card" data-quiz data-explanation="t-SNE adapts its similarity measure to the local density around each point. The same distance can therefore represent a close neighbour in a sparse region but a relatively distant point in a dense region.">
+        <span class="quiz-eyebrow">Check your understanding</span>
+        <h3 class="quiz-question">Two points are both 3.0 units away from one of their neighbours. Why can t-SNE assign different similarity scores to these two pairs?</h3>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="false">t-SNE uses the same distance differently depending on the number of dimensions.</button>
+          <button class="quiz-option" data-correct="true">t-SNE uses a different local scale for each point, depending on the density around it.</button>
+          <button class="quiz-option" data-correct="false">Points in dense regions are always assigned higher similarity scores.</button>
+          <button class="quiz-option" data-correct="false">t-SNE ignores distance when calculating similarity.</button>
+        </div>
+        <div class="quiz-feedback" hidden><p class="quiz-feedback-text"></p></div>
+        <button class="quiz-reset" hidden>Try again</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= 4. LOW DIMENSION ============================= -->
+  <section class="section" id="low-dimension" data-section>
+    <div class="wrap">
+      <div class="section-kicker">Part II</div>
+      <h2><span class="num">4</span>Low dimension — random start, then push</h2>
+      <p>We now have a similarity matrix in high dimensions — every point measured against every other, using each point's own Gaussian. Call this <strong>S1</strong>.</p>
+      <p>Now the low-dimensional side. These probabilities are called <strong>Q<sub>ij</sub></strong>, and two things differ here: low-dimensional data is already normalised by construction, so no σ is needed, and it uses a different distribution than the Gaussian — the second time we've dodged the <code>t</code>. Points start scattered randomly in 2D space, and a second similarity matrix, <strong>S2</strong>, is built from those random positions.</p>
+
+      <figure class="chart-card">
+        <div class="chart-card-frame">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/912/original/Screenshot_2026-08-19_025751.png?1787088480" alt="Two green heatmap matrices side by side. Left, S1, shows clear block-like patterns from the high-dimensional data grouped by true digit. Right, S2, shows no structure, computed from a random 2D starting position." loading="lazy" decoding="async">
+        </div>
+        <figcaption class="chart-card-caption">
+          <span class="chart-card-tag">S1 vs S2</span>
+          <span class="chart-card-desc"><strong>S1</strong> (high-dimensional) shows block-like patterns — groups of points similar in the original data. <strong>S2</strong> (a random 2D start) shows no structure at all yet.</span>
+        </figcaption>
+      </figure>
+
+      <p>t-SNE's job is simple to state: <strong>move the points in 2D until S2 looks as much like S1 as possible.</strong> The rest of the algorithm is about doing that efficiently.</p>
+      <div class="callout callout--question">
+        <span class="callout-label">A question to sit with</span>
+        <p>Two points sit 5 cm apart in 3D. We move them into 2D. What happens to that 5 cm — and is there enough room for everyone else to keep their distances too?</p>
+      </div>
+
+      <div class="embed-card">
+        <div class="embed-card-header">
+          <div>
+            <h4>Interactive: t-SNE iterative point movement</h4>
+            <p>Watch the low-dimensional layout get pushed, step by step, until its similarity structure matches the high-dimensional original.</p>
+          </div>
+          <a class="embed-open" href="https://aiml-vizs-new.vercel.app/un-supervised-learning/t-sne-iterative-point-movement/" target="_blank" rel="noopener noreferrer">Open full view ↗</a>
+        </div>
+        <div class="embed-frame-wrap">
+          <iframe src="https://aiml-vizs-new.vercel.app/un-supervised-learning/t-sne-iterative-point-movement/" title="t-SNE iterative point movement visualizer" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock"></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= 5. CROWDING ============================= -->
+  <section class="section section-alt" id="crowding" data-section>
+    <div class="wrap">
+      <div class="section-kicker">Part II</div>
+      <h2><span class="num">5</span>Crowding, and finally earning the t</h2>
+      <p><strong>The volume argument:</strong> imagine a million points packed into a cube of side <em>a</em>. Flatten that into a square of side <em>a</em>. To hold the same number of points, the 2D space has to stretch — pairs that were 5 cm apart in 3D end up much further apart once squeezed into 2D. The low-dimensional space is simply too cramped for everything to fit at honest distances.</p>
+      <p>Formally: <strong>it is impossible to preserve all neighbourhood distances when mapping high dimensions down to low ones.</strong> This is the <strong>crowding problem</strong>, and plain SNE — t-SNE's predecessor — suffered badly from it.</p>
+      <p><strong>The fix, as a design decision:</strong> if we can't fit everyone at true distance, deliberately push the far points further away to free up room in the middle for the near ones. That calls for a low-dimensional distribution with a fatter, taller tail than the Gaussian — enter the <strong>t-distribution with 1 degree of freedom</strong>, the fattest tail in the family. The <code>t</code> is finally earned.</p>
+
+      <figure class="chart-card">
+        <div class="chart-card-frame">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/911/original/Screenshot_2026-08-19_025709.png?1787088440" alt="A green Gaussian curve used in high dimensions plotted alongside a purple t-distribution curve with one degree of freedom, used in low dimensions. The purple curve sits above the green one at the tails." loading="lazy" decoding="async">
+        </div>
+        <figcaption class="chart-card-caption">
+          <span class="chart-card-tag">Gaussian vs t-distribution</span>
+          <span class="chart-card-desc">The purple curve's fatter tail pushes distant points further apart, freeing up room near the centre. This improves the crowding problem — it doesn't eliminate it. Nothing can, given the volume argument above.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- QUIZ 3 -->
+  <section class="section" data-section>
+    <div class="wrap">
+      <div class="quiz-card" data-quiz data-explanation="The Gaussian provides a smooth way to measure similarities in the original high-dimensional space. In the low-dimensional space, the t-distribution has heavier tails, giving distant points more room and helping prevent the points from becoming too crowded together.">
+        <span class="quiz-eyebrow">Check your understanding</span>
+        <h3 class="quiz-question">Why does t-SNE use a Gaussian distribution in high dimensions but a t-distribution in low dimensions?</h3>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="false">The Gaussian is faster to compute, while the t-distribution completely removes the need to calculate distances.</button>
+          <button class="quiz-option" data-correct="true">The Gaussian captures high-dimensional similarities, while the t-distribution's heavier tails help reduce crowding in the low-dimensional map.</button>
+          <button class="quiz-option" data-correct="false">The t-distribution is used in low dimensions because low-dimensional data has no meaningful distances.</button>
+          <button class="quiz-option" data-correct="false">Both distributions serve exactly the same purpose; t-SNE chooses them randomly.</button>
+        </div>
+        <div class="quiz-feedback" hidden><p class="quiz-feedback-text"></p></div>
+        <button class="quiz-reset" hidden>Try again</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= 6. KL DIVERGENCE ============================= -->
+  <section class="section section-alt" id="kl-divergence" data-section>
+    <div class="wrap">
+      <div class="section-kicker">Part II</div>
+      <h2><span class="num">6</span>Measuring the gap — KL divergence &amp; gradient descent</h2>
+      <p>"Make S2 match S1" is a goal, not a loss function. We need a single number — something quantitative and differentiable that an optimiser can push down, step by step, rather than something we simply eyeball.</p>
+      <p><strong>KL divergence</strong> is that number: a measure of how far distribution Q (low-D) sits from distribution P (high-D). Zero when they're identical, larger as they diverge.</p>
+      <p>We minimise it with <strong>gradient descent</strong> — with one twist worth flagging. Normally gradient descent learns model weights. Here, <strong>the learnable parameters are the 2D coordinates of the points themselves.</strong> Every point's (x, y) position is a parameter being optimised. With <code>n</code> points, that means optimising <code>2n</code> numbers simultaneously, and every step touches every pair — a large part of why this is expensive.</p>
+    </div>
+  </section>
+
+  <!-- ============================= 7. RUNNING T-SNE ============================= -->
+  <section class="section" id="running-tsne" data-section>
+    <div class="wrap-wide">
+      <div class="section-kicker">Part III &middot; t-SNE in practice</div>
+      <h2><span class="num">7</span>Running t-SNE on the digit slips</h2>
+      <div class="wrap" style="padding:0; max-width:740px;">
+        <p>Time to run the complete algorithm on Meera's actual digits, timed against PCA's baseline for comparison.</p>
+      </div>
+      <figure class="chart-card">
+        <div class="chart-card-frame">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/910/original/Screenshot_2026-08-19_025630.png?1787088399" alt="Two scatter plots side by side. Left, PCA, shows overlapping colours in a central smear. Right, t-SNE, shows ten distinctly separated, colour-coded clusters, one per digit." loading="lazy" decoding="async">
+        </div>
+        <figcaption class="chart-card-caption">
+          <span class="chart-card-tag">Real output</span>
+          <span class="chart-card-desc">t-SNE produces ten separated clusters. Strip the colours from the right-hand plot and you could still count ten distinct groups by eye — impossible on the PCA plot.</span>
+        </figcaption>
+      </figure>
+      <div class="wrap" style="padding:0; max-width:740px;">
+        <div class="stat-row">
+          <div class="stat"><span class="stat-value">0.01s</span><span class="stat-label">PCA</span></div>
+          <div class="stat"><span class="stat-value">2.14s</span><span class="stat-label">t-SNE</span></div>
+          <div class="stat"><span class="stat-value">214×</span><span class="stat-label">slower than PCA</span></div>
+        </div>
+        <h3>Reading the result, the way Meera would</h3>
+        <ul>
+          <li>The 1s split into roughly three sub-clusters, sitting near the 2, 8, and 9 groups — three distinct handwriting styles for "1," each confusable with something different.</li>
+          <li>Some 3s drift toward the 8 cluster — genuinely ambiguous slips.</li>
+        </ul>
+        <p>This is her deliverable: it tells the lab exactly which digit pairs the automated scanner is likely to get wrong.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 4 -->
+  <section class="section section-alt" data-section>
+    <div class="wrap">
+      <div class="quiz-card" data-quiz data-explanation="t-SNE is not training a neural network. It is learning where to place each point in the low-dimensional space. During gradient descent, the 2D coordinates are repeatedly adjusted so that the low-dimensional similarities better match the similarities from the original data.">
+        <span class="quiz-eyebrow">Check your understanding</span>
+        <h3 class="quiz-question">In t-SNE's optimisation process, what are the learnable parameters?</h3>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="false">The weights of a neural network.</button>
+          <button class="quiz-option" data-correct="false">The values of the original high-dimensional features.</button>
+          <button class="quiz-option" data-correct="true">The 2D coordinates assigned to each data point.</button>
+          <button class="quiz-option" data-correct="false">The pairwise distances in the original dataset.</button>
+        </div>
+        <div class="quiz-feedback" hidden><p class="quiz-feedback-text"></p></div>
+        <button class="quiz-reset" hidden>Try again</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= 8. T-SNE COSTS ============================= -->
+  <section class="section" id="tsne-costs" data-section>
+    <div class="wrap">
+      <div class="section-kicker">Part III</div>
+      <h2><span class="num">8</span>What t-SNE costs</h2>
+      <p>Three problems, each framed through Meera's actual workflow:</p>
+      <div class="card-grid">
+        <div class="card"><span class="card-num">01</span><h4>No reusable transform</h4><p>PCA gave her a recipe she could apply to next month's patients. t-SNE gives her a picture of these 1,797 slips only — tomorrow's batch means starting over from scratch.</p></div>
+        <div class="card"><span class="card-num">02</span><h4>Slow</h4><p>Two n×n matrices, and a summation in every gradient step. 1,797 points is fine. Rohit is talking about 200,000 slips.</p></div>
+        <div class="card"><span class="card-num">03</span><h4>Non-deterministic</h4><p>Run it twice, get two different pictures — awkward when a pathologist asks why last week's chart looked different.</p></div>
+      </div>
+      <p>Meera's conclusion: the idea is right. The implementation is too expensive at the scale she actually needs — which is exactly the gap <strong>UMAP</strong> was built to close, in 2018. Same goal — preserve neighbourhoods. Completely different machinery underneath.</p>
+    </div>
+  </section>
+
+  <!-- ============================= 9. UMAP GRAPH ============================= -->
+  <section class="section section-alt" id="umap-graph" data-section>
+    <div class="wrap-wide">
+      <div class="section-kicker">Part IV &middot; UMAP</div>
+      <h2><span class="num">9</span>UMAP — the graph idea and its two dials</h2>
+      <div class="wrap" style="padding:0; max-width:740px;">
+        <p><strong>Uniform Manifold Approximation and Projection.</strong> Its mathematical foundation is algebraic topology — worth naming, not worth deriving. We move straight past it to the intuition that actually matters.</p>
+        <p><strong>The key structural difference from t-SNE:</strong> t-SNE computes every pairwise distance — a dense n×n matrix. UMAP connects each point only to its <code>n_neighbors</code> nearest points, builds a weighted graph, and finds a low-dimensional layout where that graph's edge weights are preserved. Sparse instead of dense — that alone accounts for most of the speed-up.</p>
+        <h3><code>n_neighbors</code> — the local / global dial</h3>
+        <div class="card-grid">
+          <div class="card"><h4>Low values</h4><p>The map fragments into local shards; global shape becomes meaningless.</p></div>
+          <div class="card"><h4>High values</h4><p>Global structure is preserved, but fine local detail is lost.</p></div>
+        </div>
+        <h3><code>min_dist</code> — how tightly points may pack</h3>
+        <div class="card-grid">
+          <div class="card"><h4>Low</h4><p>Dense, clumpy clusters.</p></div>
+          <div class="card"><h4>High</h4><p>Spread out, more even.</p></div>
+        </div>
+        <p>This dial is purely a cosmetic-but-consequential control over the final layout, not the neighbour graph itself.</p>
+      </div>
+
+      <figure class="chart-card">
+        <div class="chart-card-frame">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/909/original/Screenshot_2026-08-19_025546.png?1787088357" alt="Three scatter plots of the digits dataset with n_neighbors set to 3, 15, and 100. At 3, the points fragment into many small local shards. At 15, distinct clusters form. At 100, the clusters blend together while an overall global shape emerges." loading="lazy" decoding="async">
+        </div>
+        <figcaption class="chart-card-caption">
+          <span class="chart-card-tag">n_neighbors sweep</span>
+          <span class="chart-card-desc">Low n_neighbors fragments the map into local shards. High n_neighbors preserves the global shape but loses local detail.</span>
+        </figcaption>
+      </figure>
+      <figure class="chart-card">
+        <div class="chart-card-frame">
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/908/original/Screenshot_2026-08-19_025456.png?1787088320" alt="Three scatter plots of the digits dataset with min_dist set to 0.0, 0.3, and 0.8. At 0.0, clusters are tight and clumpy. At 0.8, points spread out much more evenly." loading="lazy" decoding="async">
+        </div>
+        <figcaption class="chart-card-caption">
+          <span class="chart-card-tag">min_dist sweep</span>
+          <span class="chart-card-desc">Low min_dist produces tight, clumpy clusters. High min_dist spreads points out more evenly.</span>
+        </figcaption>
+      </figure>
+
+      <div class="embed-card">
+        <div class="embed-card-header">
+          <div>
+            <h4>Interactive: n_neighbors &amp; min_dist effects</h4>
+            <p>Tune both UMAP dials directly and watch the digit layout deform in real time.</p>
+          </div>
+          <a class="embed-open" href="https://aiml-vizs-new.vercel.app/un-supervised-learning/umap-n-neighbors-and-min-dist-hyperparameter-effects/" target="_blank" rel="noopener noreferrer">Open full view ↗</a>
+        </div>
+        <div class="embed-frame-wrap">
+          <iframe src="https://aiml-vizs-new.vercel.app/un-supervised-learning/umap-n-neighbors-and-min-dist-hyperparameter-effects/" title="UMAP n_neighbors and min_dist hyperparameter effects visualizer" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock"></iframe>
+        </div>
+      </div>
+
+      <div class="wrap" style="padding:0; max-width:740px;">
+        <a class="resource-link" href="https://pair-code.github.io/understanding-umap/" target="_blank" rel="noopener noreferrer">
+          <span class="resource-link-icon">↗</span>
+          <span>
+            <span class="resource-link-title">The UMAP mammoth explainer</span>
+            <span class="resource-link-desc">Drag n_neighbors live on a 3D mammoth model — at very low values it fragments into shards, at very high values it's recognisable but loses fine detail. Same effect as on the digits, easier to see on a shape everyone already knows.</span>
+          </span>
+        </a>
+        <p>Two dials set. But what is UMAP actually minimising while it lays the graph out?</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= 10. UMAP LOSS ============================= -->
+  <section class="section" id="umap-loss" data-section>
+    <div class="wrap">
+      <div class="section-kicker">Part IV</div>
+      <h2><span class="num">10</span>UMAP's loss, and why it's fast</h2>
+      <p>UMAP minimises a <strong>cross-entropy loss</strong> over the graph's edges.</p>
+      <div class="card-grid">
+        <div class="card"><h4>First half</h4><p>Matters when the high-D edge weight is large — a real neighbour. It forces the low-D edge weight to also be large, <strong>pulling true neighbours together.</strong></p></div>
+        <div class="card"><h4>Second half</h4><p>Matters when the high-D edge weight is small — not a neighbour. The term grows large, forcing the low-D weight small, <strong>pushing non-neighbours apart.</strong></p></div>
+      </div>
+      <p><strong>The consequence — and the reason UMAP beats t-SNE on structure:</strong> it optimises both the attractive and repulsive terms, so it preserves small and large distances at the same time. t-SNE effectively concentrates on the local ones. That's why UMAP tends to keep global structure that t-SNE loses.</p>
+      <p><strong>Speed summary:</strong> a sparse neighbour graph instead of all-pairs distances, plus this two-sided loss, adds up to dramatically less work per optimisation step.</p>
+    </div>
+  </section>
+
+  <!-- ============================= 11. RUNNING UMAP ============================= -->
+  <section class="section section-alt" id="running-umap" data-section>
+    <div class="wrap-wide">
+      <div class="section-kicker">Part IV</div>
+      <h2><span class="num">11</span>Running UMAP, and the fine print</h2>
+      <div class="chart-row">
+        <figure class="chart-card" style="margin:0;">
+          <div class="chart-card-frame">
+            <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/906/original/Screenshot_2026-08-19_025221.png?1787088163" alt="Bar chart comparing runtime in seconds for PCA, t-SNE, and UMAP. PCA is fastest, t-SNE is slowest, UMAP sits in between." loading="lazy" decoding="async">
+          </div>
+          <figcaption class="chart-card-caption">
+            <span class="chart-card-tag">Timing</span>
+            <span class="chart-card-desc">The session's punchline, side by side.</span>
+          </figcaption>
+        </figure>
+        <figure class="chart-card" style="margin:0;">
+          <div class="chart-card-frame">
+            <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/907/original/Screenshot_2026-08-19_025351.png?1787088239" alt="Scatter plot of the digits dataset produced by UMAP, showing tight, well-separated, colour-coded clusters with global structure preserved alongside local structure." loading="lazy" decoding="async">
+          </div>
+          <figcaption class="chart-card-caption">
+            <span class="chart-card-tag">UMAP result</span>
+            <span class="chart-card-desc">Tighter, better-separated clusters, with global structure preserved too.</span>
+          </figcaption>
+        </figure>
+      </div>
+      <div class="wrap" style="padding:0; max-width:740px;">
+        <div class="stat-row">
+          <div class="stat"><span class="stat-value">0.01s</span><span class="stat-label">PCA</span></div>
+          <div class="stat"><span class="stat-value">2.14s</span><span class="stat-label">t-SNE</span></div>
+          <div class="stat"><span class="stat-value">0.81s</span><span class="stat-label">UMAP</span></div>
+        </div>
+        <p>The UMAP plot shows tighter, better-separated clusters than t-SNE, with previously-overlapping groups now cleanly split — because global structure is preserved alongside local structure. t-SNE at a very high perplexity can approach UMAP's global fidelity, but the compute cost for that is punishing.</p>
+
+        <div class="caveat-box">
+          <div class="caveat-box-title">Now the honest part — things that will embarrass you in a review if you skip them</div>
+          <ol class="caveat-list">
+            <li><span class="caveat-list-num">1</span><span><strong>Hyperparameters genuinely matter.</strong> Expect several attempts before you trust a layout.</span></li>
+            <li><span class="caveat-list-num">2</span><span><strong>Cluster sizes are not meaningful.</strong> A big blob is not a big group.</span></li>
+            <li><span class="caveat-list-num">3</span><span><strong>Distances between clusters are not meaningful.</strong> Two adjacent clusters are not necessarily similar.</span></li>
+            <li><span class="caveat-list-num">4</span><span><strong>Random noise can produce apparent clusters.</strong> You can hallucinate structure in nothing.</span></li>
+            <li><span class="caveat-list-num">5</span><span><strong>Same hyperparameters do not guarantee the same plot.</strong> Produce more than one before you believe any of them.</span></li>
+          </ol>
+          <p class="caveat-note">Neither "A has twice as many members," "A and B are dissimilar," nor "the distance between them is meaningful" is a safe read in t-SNE or UMAP. The only safe read: A and B are two distinct groups.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= 12. RESOLUTION ============================= -->
+  <section class="section" id="resolution" data-section>
+    <div class="wrap">
+      <div class="section-kicker">Part V &middot; The resolution</div>
+      <h2><span class="num">12</span>Story resolution — Meera's memo to Rohit</h2>
+      <div class="resolution-grid">
+        <div class="resolution-card">
+          <span class="resolution-card-tag">Triage board</span>
+          <h4>→ PCA</h4>
+          <ul>
+            <li>Needs a fixed, reusable transform for every new biopsy.</li>
+            <li>Needs to quote a variance-explained number — 83% across two axes is defensible.</li>
+          </ul>
+        </div>
+        <div class="resolution-card">
+          <span class="resolution-card-tag">Slip audit</span>
+          <h4>→ UMAP</h4>
+          <ul>
+            <li>Needs to see which digit classes collide.</li>
+            <li>Never reapplying the transform, and 200,000 slips rules t-SNE out on time alone.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="pull-quote">They're not competitors. PCA compresses. t-SNE and UMAP visualise. I was using a compression tool to do a visualisation job.<span class="pull-quote-attr">— Meera</span></p>
+      <p>One practical note to close on: in industry, when the goal is visualising high-dimensional data, most teams reach for UMAP first and tune from there. t-SNE remains excellent, but its cost and non-determinism push it toward exploratory one-off work rather than a production habit.</p>
+
+      <h3>At a glance</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Method</th><th>Speed (1,797 digits)</th><th>Reusable transform</th><th>What it preserves</th></tr></thead>
+          <tbody>
+            <tr><td>PCA</td><td>0.01s</td><td>Yes — apply to new data directly</td><td>Global variance only</td></tr>
+            <tr><td>t-SNE</td><td>2.14s (214× slower than PCA)</td><td>No — recompute from scratch each time</td><td>Local neighbourhoods; concentrates on the near ones</td></tr>
+            <tr><td>UMAP</td><td>0.81s</td><td>Not covered in this lecture</td><td>Local <em>and</em> global structure, via a two-sided loss</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= WRAP UP ============================= -->
+  <section class="section section-alt" id="wrap-up" data-section>
+    <div class="wrap-wide">
+      <div class="section-kicker">Summary</div>
+      <h2>Key takeaways</h2>
+      <div class="takeaway-groups">
+        <div class="takeaway-group">
+          <h4>Why PCA wasn't enough</h4>
+          <ul>
+            <li>Linear projections collapse curved structure — that's why PCA failed on the digits and the Swiss roll.</li>
+            <li>PCA preserves global variance, not local neighbourhood relationships.</li>
+          </ul>
+        </div>
+        <div class="takeaway-group">
+          <h4>How t-SNE thinks</h4>
+          <ul>
+            <li>Reframes the goal as preserving neighbourhoods, not spread.</li>
+            <li>Distance becomes a Gaussian-based probability; each point's own σ accounts for local density (perplexity).</li>
+            <li>A random low-dimensional layout is pushed, step by step, to match the high-dimensional similarity matrix.</li>
+            <li>Crowding is unavoidable going from high-D to low-D; a t-distribution's fat tail buys back room.</li>
+            <li>KL divergence is the loss; the point coordinates themselves are the parameters being optimised.</li>
+          </ul>
+        </div>
+        <div class="takeaway-group">
+          <h4>t-SNE's real-world costs</h4>
+          <ul>
+            <li>No reusable transform — every new batch starts from scratch.</li>
+            <li>Slow — dense n×n matrices at every gradient step.</li>
+            <li>Non-deterministic — two runs can produce two different pictures.</li>
+          </ul>
+        </div>
+        <div class="takeaway-group">
+          <h4>UMAP's answer</h4>
+          <ul>
+            <li>Swaps all-pairs distances for a sparse n_neighbors graph — much faster.</li>
+            <li>Its loss pulls true neighbours together and pushes non-neighbours apart, preserving both local and global structure.</li>
+          </ul>
+        </div>
+        <div class="takeaway-group">
+          <h4>Reading either plot safely</h4>
+          <ul>
+            <li>Cluster size is not reliable.</li>
+            <li>Distance between clusters is not reliable.</li>
+            <li>Apparent structure from noise is possible in either method.</li>
+          </ul>
+        </div>
+        <div class="takeaway-group">
+          <h4>The one-line version</h4>
+          <ul>
+            <li>PCA compresses. t-SNE and UMAP visualise. Different tools, for different jobs.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="divider-orn"><span>&#10022;</span></div>
+  <div class="footer-brand">t-SNE and UMAP post read</div>
+  <div class="footer-note">An interactive learning article on neighbourhood-preserving dimensionality reduction</div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- Reading progress bar ---------- */
+  var progressFill = document.getElementById('progressFill');
+  function updateProgress(){
+    var scrollTop = window.scrollY || document.documentElement.scrollTop;
+    var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    var pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    progressFill.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, { passive:true });
+  updateProgress();
+
+  /* ---------- TOC drawer ---------- */
+  var tocToggle = document.getElementById('tocToggle');
+  var tocClose = document.getElementById('tocClose');
+  var tocDrawer = document.getElementById('tocDrawer');
+  var tocOverlay = document.getElementById('tocOverlay');
+
+  function openToc(){
+    tocDrawer.classList.add('is-open');
+    tocOverlay.classList.add('is-open');
+    tocDrawer.setAttribute('aria-hidden','false');
+    tocToggle.setAttribute('aria-expanded','true');
+  }
+  function closeToc(){
+    tocDrawer.classList.remove('is-open');
+    tocOverlay.classList.remove('is-open');
+    tocDrawer.setAttribute('aria-hidden','true');
+    tocToggle.setAttribute('aria-expanded','false');
+  }
+  tocToggle.addEventListener('click', function(){
+    tocDrawer.classList.contains('is-open') ? closeToc() : openToc();
+  });
+  tocClose.addEventListener('click', closeToc);
+  tocOverlay.addEventListener('click', closeToc);
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') closeToc();
+  });
+  document.querySelectorAll('[data-toc]').forEach(function(link){
+    link.addEventListener('click', closeToc);
+  });
+
+  /* ---------- Accordions ---------- */
+  document.querySelectorAll('[data-accordion]').forEach(function(acc){
+    var trigger = acc.querySelector('.accordion-trigger');
+    var panel = acc.querySelector('.accordion-panel');
+    trigger.addEventListener('click', function(){
+      var expanded = trigger.getAttribute('aria-expanded') === 'true';
+      trigger.setAttribute('aria-expanded', String(!expanded));
+      panel.hidden = expanded;
+    });
+  });
+
+  /* ---------- Quizzes ---------- */
+  document.querySelectorAll('[data-quiz]').forEach(function(card){
+    var options = card.querySelectorAll('.quiz-option');
+    var feedback = card.querySelector('.quiz-feedback');
+    var feedbackText = card.querySelector('.quiz-feedback-text');
+    var resetBtn = card.querySelector('.quiz-reset');
+    var explanation = card.getAttribute('data-explanation') || '';
+    var answered = false;
+
+    options.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(answered) return;
+        answered = true;
+        var isCorrect = btn.getAttribute('data-correct') === 'true';
+        options.forEach(function(o){
+          o.disabled = true;
+          if(o.getAttribute('data-correct') === 'true') o.classList.add('is-correct');
+        });
+        if(!isCorrect) btn.classList.add('is-incorrect');
+        feedback.hidden = false;
+        feedback.classList.add(isCorrect ? 'is-correct-fb' : 'is-incorrect-fb');
+        feedbackText.innerHTML = (isCorrect ? '<strong>Correct.</strong> ' : '<strong>Not quite.</strong> ') + explanation;
+        resetBtn.hidden = false;
+      });
+    });
+
+    resetBtn.addEventListener('click', function(){
+      answered = false;
+      options.forEach(function(o){
+        o.disabled = false;
+        o.classList.remove('is-correct','is-incorrect');
+      });
+      feedback.hidden = true;
+      feedback.classList.remove('is-correct-fb','is-incorrect-fb');
+      resetBtn.hidden = true;
+    });
+  });
+
+  /* ---------- Sigma / perplexity playground ---------- */
+  var sigmaRange = document.getElementById('sigmaRange');
+  var sigmaValue = document.getElementById('sigmaValue');
+  var sigmaPath = document.getElementById('sigmaPath');
+  var sigmaReadout = document.getElementById('sigmaReadout');
+  var sigmaPerplexity = document.getElementById('sigmaPerplexity');
+
+  function drawSigma(sigma){
+    var W = 600, H = 240, baseline = 200, midX = 300, scaleX = 46, scaleY = 150;
+    var points = [];
+    for(var i = 0; i <= 120; i++){
+      var x = -6 + (12 * i / 120);
+      var y = Math.exp(-(x*x) / (2 * sigma * sigma));
+      var px = midX + x * scaleX;
+      var py = baseline - y * scaleY;
+      points.push(px.toFixed(1) + ',' + py.toFixed(1));
+    }
+    var d = 'M20,' + baseline + ' L' + points.join(' L') + ' L580,' + baseline + ' Z';
+    sigmaPath.setAttribute('d', d);
+  }
+
+  function updateSigma(){
+    var sigma = parseFloat(sigmaRange.value);
+    sigmaValue.textContent = sigma.toFixed(2);
+    drawSigma(sigma);
+    var level, readout;
+    if(sigma < 1.0){ level = 'low'; readout = 'Narrow curve — only the closest points count as neighbours.'; }
+    else if(sigma < 2.0){ level = 'medium'; readout = 'A moderate curve — a balanced neighbourhood, comparable to a mid-range perplexity.'; }
+    else { level = 'high'; readout = 'Wide curve — many more points are treated as neighbours, favouring the big picture.'; }
+    sigmaPerplexity.textContent = level;
+    sigmaReadout.textContent = readout;
+  }
+  if(sigmaRange){
+    sigmaRange.addEventListener('input', updateSigma);
+    updateSigma();
+  }
+
+  /* ---------- Hero signature visualization: smudge -> clusters ---------- */
+  var heroSvg = document.getElementById('heroSvg');
+  var heroCaption = document.getElementById('heroCaption');
+  var heroReplay = document.getElementById('heroReplay');
+  var svgNS = 'http://www.w3.org/2000/svg';
+  var W = 700, H = 380;
+  var numClusters = 10;
+  var perCluster = 15;
+  var palette = ['#FFDA7A','#F4B93C','#D69A2E','#E7B27E','#D98A6A','#D1A24E','#F5E5AE','#BA8B2F','#FFCF6E','#E8C24A'];
+  var points = [];
+
+  function rand(min, max){ return min + Math.random() * (max - min); }
+
+  // Build cluster (t-SNE/UMAP) target layout: 10 groups arranged in a ring
+  var clusterCenters = [];
+  for(var c = 0; c < numClusters; c++){
+    var angle = (c / numClusters) * Math.PI * 2 - Math.PI/2;
+    var rx = 250, ry = 140;
+    clusterCenters.push({ x: W/2 + Math.cos(angle) * rx, y: H/2 + Math.sin(angle) * ry, color: palette[c % palette.length] });
+  }
+
+  // Build smudge (PCA) source layout: most groups overlap near centre, two stay separated (echoes "3s and 4s separate, others smear")
+  var smudgeCenters = [];
+  for(var s = 0; s < numClusters; s++){
+    if(s === 0){ smudgeCenters.push({ x: W/2 - 160, y: H/2 - 40 }); }
+    else if(s === 1){ smudgeCenters.push({ x: W/2 + 170, y: H/2 + 50 }); }
+    else { smudgeCenters.push({ x: W/2 + rand(-40,40), y: H/2 + rand(-30,30) }); }
+  }
+
+  for(var ci = 0; ci < numClusters; ci++){
+    for(var p = 0; p < perCluster; p++){
+      var cAngle = rand(0, Math.PI*2);
+      var cRadius = rand(0, 1) * 34;
+      var clusterX = clusterCenters[ci].x + Math.cos(cAngle) * cRadius;
+      var clusterY = clusterCenters[ci].y + Math.sin(cAngle) * cRadius * 0.85;
+
+      var sAngle = rand(0, Math.PI*2);
+      var sRadius = (ci === 0 || ci === 1) ? rand(0,1) * 26 : rand(0,1) * 70;
+      var smudgeX = smudgeCenters[ci].x + Math.cos(sAngle) * sRadius;
+      var smudgeY = smudgeCenters[ci].y + Math.sin(sAngle) * sRadius * 0.85;
+
+      points.push({
+        smudgeX: smudgeX, smudgeY: smudgeY,
+        clusterX: clusterX, clusterY: clusterY,
+        color: clusterCenters[ci].color
+      });
+    }
+  }
+
+  var circleEls = [];
+  points.forEach(function(pt){
+    var circle = document.createElementNS(svgNS, 'circle');
+    circle.setAttribute('cx', pt.smudgeX.toFixed(1));
+    circle.setAttribute('cy', pt.smudgeY.toFixed(1));
+    circle.setAttribute('r', 4.2);
+    circle.setAttribute('fill', pt.color);
+    circle.setAttribute('opacity', '0.88');
+    circle.classList.add('hero-dot');
+    circle.style.setProperty('--dx', (pt.clusterX - pt.smudgeX).toFixed(1) + 'px');
+    circle.style.setProperty('--dy', (pt.clusterY - pt.smudgeY).toFixed(1) + 'px');
+    heroSvg.appendChild(circle);
+    circleEls.push(circle);
+  });
+
+  var isClustered = false;
+  function setClustered(state){
+    isClustered = state;
+    circleEls.forEach(function(circle){
+      circle.style.transform = state ? 'translate(var(--dx), var(--dy))' : 'translate(0,0)';
+    });
+    heroCaption.innerHTML = state
+      ? '<strong>t-SNE / UMAP:</strong> the same ten digit classes, cleanly separated.'
+      : '<strong>PCA:</strong> everything blurs into one smear.';
+  }
+
+  heroReplay.addEventListener('click', function(){
+    setClustered(!isClustered);
+  });
+
+  // Auto-run the reveal shortly after load
+  if(reduceMotion){
+    setClustered(true);
+  } else {
+    setTimeout(function(){ setClustered(true); }, 1200);
+  }
+
+  /* ---------- Smooth-scroll offset correction for sticky header ---------- */
+  document.querySelectorAll('a[href^="#"]').forEach(function(link){
+    link.addEventListener('click', function(e){
+      var id = link.getAttribute('href').slice(1);
+      var target = document.getElementById(id);
+      if(target){
+        e.preventDefault();
+        var headerOffset = 70;
+        var y = target.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+        window.scrollTo({ top:y, behavior: reduceMotion ? 'auto' : 'smooth' });
+        history.pushState(null, '', '#' + id);
+      }
+    });
+  });
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/t-SNE-and-UMAP" target="_blank" rel="noopener">github.com/scaler-content/t-SNE-and-UMAP</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

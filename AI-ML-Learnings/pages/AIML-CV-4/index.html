@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Computer Vision 4 post read</title>
+<style>
+
+:root{
+  --bg:#F3ECD9; --paper:#FBF7EB; --sand:#E7DBBE; --sand-d:#CDBE96; --line:#D5C7A3;
+  --ink:#18261F; --muted:#47574D;
+  --g900:#12392A; --g700:#1D5A41; --g500:#3A8660; --g200:#BCD9C4; --g100:#DDEBDD;
+  --clay:#9A5F33; --clay-100:#EBD5BC;
+  --serif:Georgia,"Iowan Old Style","Palatino Linotype",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.7 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--g700)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+:focus-visible{outline:3px solid var(--g500);outline-offset:2px;border-radius:4px}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:50;background:rgba(243,236,217,.95);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:18px;padding:8px 20px}
+.brand{font:700 .95rem var(--serif);color:var(--g900);white-space:nowrap}
+.toc{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;flex:1}
+.toc a{white-space:nowrap;text-decoration:none;font-size:.82rem;font-weight:600;color:var(--muted);padding:5px 10px;border-radius:999px}
+.toc a:hover{background:var(--sand)}
+.toc a.on{background:var(--g700);color:#fff}
+.bar{height:3px;background:transparent}
+.bar i{display:block;height:100%;width:0;background:var(--g500)}
+
+/* hero */
+.hero{background:var(--g900);color:var(--paper);padding:72px 20px 64px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:0;background:
+  linear-gradient(90deg,rgba(243,236,217,.06) 1px,transparent 1px) 0 0/28px 28px,
+  linear-gradient(0deg,rgba(243,236,217,.06) 1px,transparent 1px) 0 0/28px 28px;pointer-events:none}
+.hero-in{max-width:860px;margin:0 auto;position:relative;z-index:1}
+.kicker{font:700 .78rem var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--g200)}
+.hero h1{font:700 clamp(2.2rem,5.5vw,3.6rem)/1.1 var(--serif);margin:.3em 0 .35em}
+.hero p.lede{font-size:1.2rem;max-width:36em;color:#E9E2CD;margin:0 0 30px}
+.obj{background:rgba(243,236,217,.1);border:1px solid rgba(243,236,217,.25);border-radius:14px;padding:20px 24px}
+.obj h2{font:700 .78rem var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--g200);margin:0 0 10px}
+.obj ol{margin:0;padding-left:1.3em}
+.obj li{margin:.3em 0}
+
+/* layout */
+main{max-width:860px;margin:0 auto;padding:0 20px 40px}
+section.sec{padding-top:64px}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px}
+.num{font:700 .9rem var(--mono);color:var(--paper);background:var(--g700);border-radius:6px;padding:2px 8px}
+h2.t{font:700 clamp(1.6rem,3.4vw,2.2rem)/1.2 var(--serif);color:var(--g900);margin:0}
+h3{font:700 1.2rem/1.3 var(--serif);color:var(--g900);margin:1.8em 0 .4em}
+p{margin:.7em 0}
+ul,ol{padding-left:1.3em}
+li{margin:.3em 0}
+code{font:.88em var(--mono);background:var(--sand);padding:.1em .35em;border-radius:4px}
+pre{background:var(--g900);color:#EFE9D4;padding:16px 18px;border-radius:12px;overflow-x:auto;font:.85rem/1.55 var(--mono);margin:10px 0}
+pre code{background:none;padding:0;color:inherit;font-size:inherit}
+pre .out{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(243,236,217,.3);color:var(--g200)}
+details.code{margin:12px 0}
+details.code>summary{cursor:pointer;font-weight:600;color:var(--g700);padding:4px 0}
+
+/* callouts */
+.callout{border-left:5px solid var(--g500);background:var(--g100);border-radius:0 12px 12px 0;padding:12px 18px;margin:18px 0}
+.callout b.lab{display:block;font:700 .75rem var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--g700)}
+.callout.warm{border-color:var(--clay);background:var(--clay-100)}
+.callout.warm b.lab{color:var(--clay)}
+.callout p{margin:.3em 0}
+
+/* tables */
+.tw{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;background:var(--paper);font-size:.95rem}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--g700);color:#fff;font-weight:600}
+td.k{font-weight:700;color:var(--g900)}
+tbody tr:hover td{background:var(--g100)}
+
+/* widget shell */
+.viz{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px 20px 20px;margin:22px 0;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+.viz>.vt{font:700 .78rem var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--g700);margin:0 0 4px}
+.viz>.vd{margin:0 0 14px;color:var(--muted);font-size:.95rem}
+.row{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.col{flex:1 1 260px;min-width:0}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0 12px}
+.controls label{font-size:.9rem;font-weight:600;color:var(--muted)}
+.btn,.seg button,.chip{font:600 .88rem var(--sans);border:1.5px solid var(--g700);background:transparent;color:var(--g700);padding:6px 13px;border-radius:999px;cursor:pointer}
+.btn:hover,.seg button:hover,.chip:hover{background:var(--g100)}
+.btn.solid,.seg button[aria-pressed=true],.chip[aria-pressed=true]{background:var(--g700);color:#fff}
+.seg{display:inline-flex;gap:6px;flex-wrap:wrap}
+input[type=number],select{font:600 .95rem var(--mono);padding:6px 8px;border:1.5px solid var(--sand-d);border-radius:8px;background:#fff;color:var(--ink);width:5.2em}
+select{width:auto;font-family:var(--sans)}
+input[type=range]{accent-color:var(--g700);width:100%;max-width:300px}
+.readout{background:var(--g100);border-radius:10px;padding:10px 14px;font-size:.95rem;margin-top:10px}
+.readout b{font-family:var(--mono)}
+.big{font:700 clamp(1.8rem,5vw,2.6rem)/1.1 var(--serif);color:var(--g900)}
+.sw{display:inline-block;width:1.4em;height:1.4em;border-radius:5px;border:1.5px solid rgba(0,0,0,.35);vertical-align:-.3em;margin-right:.4em}
+.cap{font-size:.85rem;color:var(--muted);margin:6px 0 0}
+.mono{font-family:var(--mono)}
+
+/* grids */
+.g{display:grid;gap:2px;grid-template-columns:repeat(var(--cols),1fr)}
+.g .c{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font:600 .8rem/1 var(--mono);border-radius:3px;background:var(--sand);color:var(--ink);overflow:hidden}
+.g.tight{gap:1px}
+.px{font-size:.6rem!important}
+.c.sel{outline:3px solid var(--ink);outline-offset:-3px;z-index:1}
+#pix-grid{max-width:480px;cursor:crosshair;border:2px solid var(--g900);border-radius:6px;padding:0;background:var(--g900)}
+#pix-grid:focus-visible{outline:3px solid var(--g500);outline-offset:3px}
+.mat{max-width:260px}
+.mat .c{font-size:1rem;aspect-ratio:1.15}
+.hl{background:var(--g200)!important;outline:2px solid var(--g700);outline-offset:-2px}
+.obj-c{background:var(--g500)!important;color:#fff}
+.w-c{box-shadow:inset 0 0 0 2px var(--clay)}
+.pad-c{background:repeating-linear-gradient(45deg,var(--sand),var(--sand) 3px,var(--sand-d) 3px,var(--sand-d) 5px)!important}
+.lbl{font:700 .78rem var(--sans);color:var(--muted);margin:0 0 6px;text-transform:uppercase;letter-spacing:.06em}
+button.c{border:0;cursor:pointer;font:inherit}
+.filt{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-width:200px}
+.filt input{width:100%;text-align:center;padding:8px 2px}
+.sumline{font:.9rem/1.5 var(--mono);background:var(--g900);color:#EFE9D4;border-radius:10px;padding:10px 14px;overflow-x:auto;margin-top:10px}
+.arrow{align-self:center;font-size:1.6rem;color:var(--g700);padding:0 4px}
+
+/* pills */
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.pill{min-width:64px;text-align:center;border-radius:10px;padding:6px 10px;color:#fff;font-weight:700;line-height:1.2}
+.pill small{display:block;font:600 .72rem var(--sans);opacity:.9}
+.pill span{font:700 1.3rem var(--mono)}
+.p-H{background:var(--g700)}.p-W{background:var(--g500)}.p-C{background:var(--clay)}.p-B{background:var(--g900)}
+
+/* math */
+.math{font:1.1rem var(--serif);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 18px;margin:14px 0;overflow-x:auto;text-align:center}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .25em;font-size:.95em}
+.frac>span:first-child{border-bottom:1.5px solid currentColor;padding:0 .3em}
+.frac>span:last-child{padding:0 .3em}
+sub{font-size:.7em}
+
+/* pipeline */
+.pipe{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.node{font:700 .9rem var(--sans);padding:10px 14px;border-radius:12px;border:2px solid var(--g700);background:var(--paper);color:var(--g900);cursor:pointer}
+.node[aria-pressed=true]{background:var(--g700);color:#fff}
+.node.io{border-style:dashed;cursor:default;border-color:var(--sand-d);color:var(--muted)}
+.grp{border:2px dashed var(--g500);border-radius:16px;padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px}
+.grp>.gl{font:700 .72rem var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--g700)}
+.grp>.ns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sep{color:var(--g700);font-weight:700}
+
+/* bars */
+.bars .br{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:center;margin:8px 0;font-size:.92rem}
+.bars .tr{background:var(--sand);border-radius:8px;height:26px;overflow:hidden;position:relative}
+.bars .fl{height:100%;background:var(--g700);min-width:3px;border-radius:8px 0 0 8px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;color:#fff;font:700 .78rem var(--mono);white-space:nowrap}
+.bars .fl.alt{background:var(--clay)}
+.bars .vl{margin-left:8px;font:700 .85rem var(--mono);color:var(--ink)}
+
+/* layer ribbon */
+.layers{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.layer{text-align:left;border:2px solid var(--g700);background:var(--paper);border-radius:12px;padding:10px;cursor:pointer;font:inherit;color:var(--ink)}
+.layer[aria-pressed=true]{background:var(--g700);color:#fff}
+.layer b{display:block;font-size:.85rem}
+.layer span{display:block;font:.78rem var(--mono);margin-top:4px;word-break:break-all}
+
+/* strip (stride/padding) */
+.strip{display:flex;gap:2px;overflow-x:auto;padding:4px 0}
+.strip .s{flex:0 0 auto;width:16px;height:30px;border-radius:3px;background:var(--g200)}
+.strip .s.p{background:repeating-linear-gradient(45deg,var(--sand),var(--sand) 3px,var(--sand-d) 3px,var(--sand-d) 5px)}
+.strip .s.w{background:var(--g700)}
+.strip .o{background:var(--g500);opacity:.35}
+.strip .o.cur{opacity:1;background:var(--clay)}
+
+/* quiz */
+.quiz{background:var(--g100);border:1px solid var(--g200);border-radius:14px;padding:16px 20px;margin:20px 0}
+.quiz .ql{font:700 .75rem var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--g700);margin:0}
+.quiz .qt{font-weight:600;margin:.3em 0 .6em}
+.quiz fieldset{border:0;padding:0;margin:0}
+.qo{margin:6px 0}
+.qo input{position:absolute;opacity:0}
+.qo label{display:block;border:2px solid var(--g200);background:var(--paper);padding:9px 14px;border-radius:10px;cursor:pointer}
+.qo label:hover{border-color:var(--g500)}
+.qo input:focus-visible+label{outline:3px solid var(--g500);outline-offset:2px}
+.qo.right label{border-color:var(--g700);background:#fff;box-shadow:inset 6px 0 0 var(--g700)}
+.qo.wrong label{border-color:var(--clay);background:var(--clay-100);box-shadow:inset 6px 0 0 var(--clay)}
+.qfb{margin-top:10px;font-size:.95rem}
+
+/* details / flashcards */
+details.dq{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:2px 16px;margin:10px 0}
+details.dq summary{cursor:pointer;font-weight:600;padding:10px 0;color:var(--g900)}
+.fcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.fc{text-align:left;font:inherit;color:var(--ink);background:var(--paper);border:2px solid var(--g700);border-radius:14px;padding:16px;cursor:pointer;min-height:150px}
+.fc .q{font-weight:700;color:var(--g900)}
+.fc .a{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--g500)}
+.fc[aria-expanded=true]{background:var(--g100)}
+.fc[aria-expanded=true] .a{display:block}
+.fc .hint{display:block;margin-top:10px;font-size:.8rem;color:var(--g700);font-weight:600}
+.fc[aria-expanded=true] .hint{display:none}
+.take{counter-reset:t;list-style:none;padding:0}
+.take li{counter-increment:t;display:flex;gap:14px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:8px 0}
+.take li::before{content:counter(t);flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:var(--g700);color:#fff;font:700 .9rem var(--sans);display:grid;place-items:center}
+
+footer{background:var(--g900);color:var(--g200);text-align:center;padding:28px 20px;font:600 .95rem var(--serif);margin-top:40px}
+
+@media (max-width:600px){
+  body{font-size:16px}
+  .hero{padding:48px 16px 44px}
+  .viz{padding:14px}
+  .brand{display:none}
+  .bars .br{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+.chart{width:100%;height:auto;display:block;touch-action:pan-y}
+.chart text{font-family:var(--sans);fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:6px 0 4px;font-size:.85rem;font-weight:600}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend svg{width:34px;height:12px}
+.tag{display:inline-block;font:700 .75rem var(--sans);background:var(--g100);color:var(--g700);border:1px solid var(--g200);border-radius:999px;padding:1px 10px;margin:2px 3px 2px 0}
+.cards3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0}
+.mini{background:var(--paper);border:1px solid var(--line);border-top:5px solid var(--g500);border-radius:12px;padding:12px 16px}
+.mini.c2{border-top-color:var(--clay)}.mini.c3{border-top-color:var(--g900)}
+.mini b{display:block;font:700 .78rem var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--g700)}
+.unit{aspect-ratio:1;border-radius:50%;background:var(--g500);display:flex;align-items:center;justify-content:center;color:#fff;font:700 .8rem var(--mono)}
+.unit.off{background:repeating-linear-gradient(45deg,var(--sand),var(--sand) 3px,var(--sand-d) 3px,var(--sand-d) 5px);color:var(--ink);border:2px dashed var(--clay)}
+.frame{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font:700 .78rem var(--mono);color:#fff;border:3px solid transparent}
+.frame.tr{background:var(--g700)}.frame.va{background:var(--clay)}
+.frame.dup{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset}
+.flow{display:flex;flex-direction:column;gap:6px;max-width:420px;margin:14px auto}
+.flow div{background:var(--g700);color:#fff;border-radius:10px;padding:10px 16px;text-align:center;font-weight:600}
+.flow div:nth-child(even){background:transparent;color:var(--g700);padding:0;font-size:1.3rem;line-height:1}
+.flow div:last-child{background:var(--g900)}
+.ex{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:8px 0}
+.ex .nums{font:.95rem/1.6 var(--mono);background:var(--g900);color:#EFE9D4;border-radius:8px;padding:8px 12px;margin:6px 0;white-space:pre-wrap}
+.step6{counter-reset:s;list-style:none;padding:0}
+.step6 li{counter-increment:s;display:flex;gap:12px;margin:6px 0}
+.step6 li::before{content:counter(s);flex:0 0 28px;height:28px;border-radius:50%;background:var(--g700);color:#fff;font:700 .85rem var(--sans);display:grid;place-items:center}
+
+.blk{flex:1 1 90px;border:2px solid var(--g700);border-radius:12px;padding:10px 8px;text-align:center;background:var(--g100);font-size:.85rem;min-width:84px}
+.blk b{display:block;color:var(--g900)}
+.blk.sel{background:var(--g700);color:#fff}.blk.sel b{color:#fff}
+.branches{display:flex;flex-direction:column;gap:8px;flex:1 1 260px}
+.sw2{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/cv/">Computer vision</a><span class="t">· Computer Vision 4 · Image similarity and embeddings</span><span class="pn"><a href="../AIML-CV-3/" title="Computer Vision 3 · Transfer learning with pretrained CNNs">← Prev</a><a href="../AIML-CV-5/" title="Computer Vision 5 · Visual search with ResNet-50 embeddings">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><header class="topbar">
+  <div class="topbar-in">
+    <span class="brand">Computer Vision 4 post read</span>
+    <nav class="toc" aria-label="Sections" id="toc"></nav>
+  </div>
+  <div class="bar" aria-hidden="true"><i id="prog"></i></div>
+</header>
+
+<div class="hero">
+  <div class="hero-in">
+    <div class="kicker">Computer Vision · Image similarity</div>
+    <h1>Computer Vision 4 post read</h1>
+    <p class="lede">How computers compare pictures: why pixel matching fails, how embeddings describe images, how a pretrained CNN becomes a feature extractor, and what Inception and ResNet contribute.</p>
+    <div class="obj">
+      <h2>Learning path</h2>
+      <ol>
+        <li>Pixels: why comparing them directly fails</li>
+        <li>Embeddings: a vector that captures what an image means</li>
+        <li>Distance: Euclidean distance and cosine similarity</li>
+        <li>Backbone: a pretrained CNN with its head removed</li>
+        <li>Inception and ResNet: lighter, stronger backbones</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<main>
+
+<!-- 1 BRIDGE -->
+<section class="sec" id="bridge" aria-labelledby="h-br" data-nav="The bridge">
+  <div class="sec-head"><span class="num">01</span><h2 class="t" id="h-br">Same backbone idea, a different question</h2></div>
+  <p>In the transfer-learning post we kept a pretrained backbone and <b>trained a new head</b> to answer <i>"Which of these 10 landmarks is this?"</i>, which needed labelled data for every class. Today's question is different: <i>"Which images look most like this one?"</i> Nobody gives us labels for "looks like".</p>
+  <p>There is also a loose end: VGG16's fully connected layers hold about 124M of its 138M parameters, which makes it heavy. We will meet lighter, stronger backbones (GoogLeNet and ResNet) and pick one.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th></th><th>Transfer learning</th><th>Image similarity</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Question</td><td>Which landmark is this?</td><td>Which images look most like this one?</td></tr>
+      <tr><td class="k">Output</td><td>One label out of 10</td><td>A ranked list of similar images</td></tr>
+      <tr><td class="k">Pretrained part we use</td><td>Backbone <b>+ a new trained head</b></td><td>Backbone <b>only</b> (head removed)</td></tr>
+      <tr><td class="k">Training</td><td>Train the new head</td><td><b>No training at all</b></td></tr>
+      <tr><td class="k">Data</td><td>10 landmark classes, about 70 images each</td><td>Caltech-101: about 9,000 images, 101 classes</td></tr>
+      <tr><td class="k">How labels are used</td><td>To train the head</td><td><b>Only to check our results</b></td></tr>
+      <tr><td class="k">How we judge it</td><td>Test accuracy</td><td>Neighbor accuracy plus looking at the results</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>The bridge idea</h3>
+  <p>At the end of the backbone, every image has already been turned into a long list of numbers that describes it. Before, we passed that list to a classifier. <b>What if we stop there and compare the lists directly?</b> Two images with similar lists should look alike. Will two photos of different dogs be closer than a dog and a car? Probably yes, because the backbone was trained to tell such things apart; we will test it rather than assume it.</p>
+
+  <h3>Warm-up recall</h3>
+  <div class="fcs" id="fcs0"></div>
+</section>
+
+<!-- 2 WHAT IS -->
+<section class="sec" id="what" aria-labelledby="h-wh" data-nav="What is similarity">
+  <div class="sec-head"><span class="num">02</span><h2 class="t" id="h-wh">What is image similarity?</h2></div>
+  <p><b>Image similarity</b> measures how alike two images are. Using it to search a collection for pictures that look like a query picture is called <b>reverse image search</b> or <b>visual search</b>.</p>
+  <div class="callout"><b class="lab">Problem statement</b><p>You are a data scientist at a Pinterest-like company. Given a query image, return the most similar images from millions of others, with no hand-written tags.</p></div>
+  <div class="tw"><table>
+    <thead><tr><th>Use case</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Visual search (Google Images, Pinterest, shopping apps)</td><td>"Show me products that look like this photo."</td></tr>
+      <tr><td class="k">"Celebrity look-alike" apps</td><td>Compare a face to a gallery of faces.</td></tr>
+      <tr><td class="k">Browsing and clustering</td><td>Group an unlabeled archive, or an online shop's items, by visual similarity.</td></tr>
+      <tr><td class="k">Duplicate removal</td><td>Find duplicate or near-duplicate images in a training set. Duplicates cause leakage between train and test.</td></tr>
+      <tr><td class="k">Recommendation</td><td>"If you liked this, you may like these."</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 3 PIXELS -->
+<section class="sec" id="pixels" aria-labelledby="h-px" data-nav="Why not pixels">
+  <div class="sec-head"><span class="num">03</span><h2 class="t" id="h-px">Why not just compare pixels?</h2></div>
+  <p>The obvious idea: subtract two images pixel by pixel and sum the squared differences. Test it on a tiny example. Image A has a white disc on the left. Image B has the <i>same</i> disc, shifted. Image C is completely black. Which is "closer" to A in pixel distance, B or C?</p>
+  <div class="viz" id="disc-viz">
+    <p class="vt">Visualizer · Pixel distance vs. a shifted object</p>
+    <p class="vd">Drag B's disc. Each image is 20×20 with white = 1, black = 0.</p>
+    <div class="controls"><label for="dc-r">Shift B to the right by</label><input type="range" id="dc-r" min="0" max="12" value="9"> <b class="mono" id="dc-v"></b></div>
+    <div class="row">
+      <div class="col" style="flex-basis:150px"><div class="lbl">A (query)</div><div class="g tight" id="dc-a" style="--cols:20;max-width:170px"></div></div>
+      <div class="col" style="flex-basis:150px"><div class="lbl">B (same disc, shifted)</div><div class="g tight" id="dc-b" style="--cols:20;max-width:170px"></div></div>
+      <div class="col" style="flex-basis:150px"><div class="lbl">C (all black)</div><div class="g tight" id="dc-c" style="--cols:20;max-width:170px"></div></div>
+    </div>
+    <div class="bars" id="dc-bars" style="margin-top:10px"></div>
+    <div class="readout" id="dc-read" aria-live="polite"></div>
+  </div>
+  <p>A pixel-by-pixel difference compares <i>positions</i>, not <i>content</i>. Moving an object a little, rotating it, changing the lighting, or cropping differently changes almost every pixel, even though a human sees "the same thing". The meaning of an image lives in how pixels relate to each other, not in individual pixel values.</p>
+  <p>So we need a <b>description of the image's content</b> that does not change when the object moves a little. That description is what a CNN's feature extractor already computes.</p>
+  <div class="quiz" data-quiz="q1"></div>
+</section>
+
+<!-- 4 EMBEDDINGS -->
+<section class="sec" id="emb" aria-labelledby="h-emb" data-nav="Embeddings">
+  <div class="sec-head"><span class="num">04</span><h2 class="t" id="h-emb">Embeddings</h2></div>
+  <p>A <b>vector</b> is an ordered list of numbers, like <code>[0.2, -1.5, 3.1]</code>. Its <b>dimension</b> is how many numbers it has: this one has 3. Computers are good with numbers, so we want each image to become one vector.</p>
+  <div class="callout"><b class="lab">Definition</b><p>An <b>embedding</b> is a vector that captures the <i>meaning</i> of an image, so that images with similar content get vectors that are close together. For a CNN we take the output of the backbone, the part just before the head; for ResNet-50 it has <b>2048 numbers</b>.</p></div>
+  <p>Think of it as GPS coordinates for meaning: two nearby coordinates mean two nearby places, and two nearby embeddings mean two images with similar content. Real embeddings have 2048 dimensions, which we cannot draw, so here is a 2-D toy version.</p>
+  <div class="viz" id="toy-viz">
+    <p class="vt">Visualizer · A toy embedding space</p>
+    <p class="vd">Illustrative 2-D points, not real embeddings. Click a point to make it the query and see its nearest neighbours.</p>
+    <div class="controls"><div class="seg" id="ty-seg" role="group" aria-label="Metric"></div></div>
+    <div class="row">
+      <div class="col" style="flex-basis:340px"><div id="ty-plot"></div></div>
+      <div class="col" style="flex-basis:220px"><div class="lbl">Ranked neighbours</div><ol id="ty-list" style="margin:0;padding-left:1.3em"></ol></div>
+    </div>
+    <div class="readout" id="ty-read" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 5 DISTANCE -->
+<section class="sec" id="dist" aria-labelledby="h-di" data-nav="Distance">
+  <div class="sec-head"><span class="num">05</span><h2 class="t" id="h-di">Two ways to measure “close”</h2></div>
+  <p>Let <b>a</b> and <b>b</b> be two embeddings.</p>
+  <ul>
+    <li><b>Euclidean distance</b> is the straight-line distance between the two points: <code>sqrt(sum((a_i − b_i)²))</code>. Smaller means more similar.</li>
+    <li><b>Cosine similarity</b> measures the <i>angle</i> between the vectors, ignoring their lengths: <code>(a · b) / (|a| |b|)</code>. It ranges from −1 to 1, and bigger means more similar. The dot product is <code>sum(a_i × b_i)</code> and <code>|a|</code> is the vector's length.</li>
+  </ul>
+  <h3>L2 norm and L2 normalization</h3>
+  <p>The <b>L2 norm</b> <code>|a| = sqrt(sum(a_i²))</code> is the vector's length. <b>L2 normalization</b> divides a vector by its length so every vector has length exactly 1; only the <i>direction</i> is left. Two embeddings can point in the same direction but have different lengths, for example because of image brightness or contrast.</p>
+
+  <div class="viz" id="vec-viz">
+    <p class="vt">Visualizer · Euclidean vs. cosine, with and without normalization</p>
+    <p class="vd">a = [3, 1] and c = [1, 3] are fixed. b points the same way as a, scaled by the slider (2 gives b = [6, 2]).</p>
+    <div class="controls">
+      <label for="vc-k">Length of b relative to a</label><input type="range" id="vc-k" min="0.5" max="3" step="0.5" value="2"> <b class="mono" id="vc-kv"></b>
+      <div class="seg" id="vc-seg" role="group" aria-label="Normalization"></div>
+    </div>
+    <div class="row">
+      <div class="col" style="flex-basis:300px"><div id="vc-plot"></div></div>
+      <div class="col" style="flex-basis:260px"><div class="tw"><table><thead><tr><th>Pair</th><th>Euclidean</th><th>Cosine</th></tr></thead><tbody id="vc-tab"></tbody></table></div><div class="readout" id="vc-read" aria-live="polite"></div></div>
+    </div>
+  </div>
+
+  <div class="callout"><b class="lab">The takeaway</b><p>After L2 normalization, <b>Euclidean distance and cosine similarity produce the same ranking</b> for nonzero vectors normalized to unit length: smaller Euclidean distance means greater cosine similarity. For unit vectors, squared Euclidean distance equals 2 − 2 × cosine similarity. Remember: their numerical values are not the same; only their rankings are equivalent.</p></div>
+  <details class="code"><summary>Code and output</summary>
+<pre><code>a = np.array([3.0, 1.0])
+b = np.array([6.0, 2.0])  # Same direction as a, but twice as long
+c = np.array([1.0, 3.0])  # Different direction
+
+def euclid(u, v): return float(np.linalg.norm(u - v))
+def cosine(u, v): return float(u @ v / (np.linalg.norm(u) * np.linalg.norm(v)))
+def l2n(u): return u / np.linalg.norm(u)
+<span class="out">WITHOUT NORMALIZATION
+a vs b: Euclidean = 3.16, Cosine = 1.00
+a vs c: Euclidean = 2.83, Cosine = 0.60
+AFTER L2 NORMALIZATION
+a vs b: Euclidean = 0.00, Cosine = 1.00
+a vs c: Euclidean = 0.89, Cosine = 0.60
+Unit-vector identity holds: True</span></code></pre></details>
+  <div class="quiz" data-quiz="q2"></div>
+</section>
+
+<!-- 6 REMOVE HEAD -->
+<section class="sec" id="head" aria-labelledby="h-hd" data-nav="Remove the head">
+  <div class="sec-head"><span class="num">06</span><h2 class="t" id="h-hd">From classifier to feature extractor: remove the head</h2></div>
+  <p>A classification CNN has a <b>backbone</b> (convolutional layers that turn an image into a feature vector) and a <b>head</b> (a classifier that turns that vector into one score per class). For similarity we <b>cut the network just before the head</b> and use the vector as the embedding. Using the model only to produce outputs, with no training, is called <b>inference</b>.</p>
+  <div class="viz" id="cut-viz">
+    <p class="vt">Visualizer · Keep the head, or cut it?</p>
+    <div class="controls"><div class="seg" id="ct-seg" role="group" aria-label="Task"></div></div>
+    <div class="pipe" id="ct-pipe"></div>
+    <div class="readout" id="ct-read" aria-live="polite"></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>Image classification</th><th>Image similarity</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Output</td><td>One of a fixed set of labels</td><td>A vector, then a ranked list of neighbors</td></tr>
+      <tr><td class="k">Information kept</td><td>Only what separates the known classes; the rest is thrown away</td><td>Much more: colour, shape, texture, scene, many aspects at once</td></tr>
+      <tr><td class="k">New categories</td><td>Need retraining</td><td>Work without retraining, since we only compare vectors</td></tr>
+      <tr><td class="k">Labels needed</td><td>Yes</td><td>No (only to evaluate)</td></tr>
+    </tbody>
+  </table></div>
+  <p>That is why the vector <i>before</i> the head is richer than the final label: the head squeezes it down to a few class scores.</p>
+</section>
+
+<!-- 7 BACKBONE -->
+<section class="sec" id="backbone" aria-labelledby="h-bb" data-nav="Choosing a backbone">
+  <div class="sec-head"><span class="num">07</span><h2 class="t" id="h-bb">Choosing a backbone: why not VGG16?</h2></div>
+  <p>VGG16 is slow and large: about 138M parameters, most of them in the three fully connected layers at the end. For a search system that must embed millions of images we want a backbone that is <b>smaller, faster and more accurate</b>. Do you expect the most accurate model to be the one with the most parameters? Look at the numbers, read from torchvision's record of each pretrained model.</p>
+  <div class="viz" id="bb-viz">
+    <p class="vt">Visualizer · Four ImageNet backbones</p>
+    <div class="controls"><div class="seg" id="bb-seg" role="group" aria-label="Metric"></div></div>
+    <div class="bars" id="bb-bars"></div>
+    <div class="tw"><table><thead><tr><th>Model</th><th>Params (M)</th><th>Top-1 %</th><th>Top-5 %</th><th>Embedding length</th></tr></thead><tbody id="bb-tab"></tbody></table></div>
+  </div>
+  <ul>
+    <li><b>Top-1 accuracy</b> = the fraction of images where the model's single best guess is correct; <b>top-5</b> = where the right answer is among its five best guesses.</li>
+    <li>VGG16 uses by far the most parameters, yet <b>ResNet-50 is more accurate with about a fifth of them</b>, and GoogLeNet comes close with roughly a twentieth. Bigger is not better by itself; the <b>design</b> matters.</li>
+    <li>The numbers come from torchvision's weights, so they may differ slightly from the original papers.</li>
+  </ul>
+
+  <h3>Embedding length and storage</h3>
+  <p>With the head cut off, each backbone gives a vector of a different length. Shorter vectors are cheaper to store and search.</p>
+  <div class="viz" id="st-viz">
+    <p class="vt">Visualizer · Storage for an image collection</p>
+    <div class="controls"><label>Backbone <select id="st-m"></select></label><label>Images <select id="st-n"><option value="1000">1 thousand</option><option value="100000">100 thousand</option><option value="1000000" selected>1 million</option><option value="10000000">10 million</option></select></label></div>
+    <div class="readout" id="st-read" aria-live="polite"></div>
+    <p class="cap">Stored as float32 (4 bytes per number).</p>
+  </div>
+
+  <h3>How did they get smaller? Global average pooling</h3>
+  <p>Most of VGG16's weight sits in its fully connected layers. GoogLeNet and ResNet avoid them with <b>global average pooling (GAP)</b>: for each channel (feature map), take the <b>average of all its values</b>. A map of size C × 7 × 7 becomes just C numbers. No big fully connected layer is needed, and the output length no longer depends on the image size.</p>
+  <div class="viz" id="gap-viz">
+    <p class="vt">Visualizer · Global average pooling</p>
+    <p class="vd">Three 4×4 feature maps with illustrative values. Each one collapses to its average.</p>
+    <div class="row" id="gap-maps"></div>
+    <div class="readout" id="gap-read" aria-live="polite"></div>
+    <div class="controls" style="margin-top:12px"><label>Channels C <select id="gp-c"><option>512</option><option>1024</option><option selected>2048</option></select></label><label>Map size <select id="gp-s"><option>7</option><option>14</option></select></label></div>
+    <div class="readout" id="gp-read" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 8 INCEPTION -->
+<section class="sec" id="inception" aria-labelledby="h-in" data-nav="Inception">
+  <div class="sec-head"><span class="num">08</span><h2 class="t" id="h-in">Inception (GoogLeNet): look at several scales at once</h2></div>
+  <p>GoogLeNet won the 2014 ImageNet competition. Its name, <b>Inception</b>, is a joke on the film: researchers wanted to "go deeper".</p>
+  <p>How big should a filter be? An object that fills the picture (a field of wheat) is best seen with a large filter; a small detail (a bird) with a small one. Instead of choosing, <b>let the network use several at once</b> and keep what helps. An <b>Inception module</b> runs four branches in parallel on the same input, then <b>concatenates</b> their outputs along the channel axis (puts the stacks of maps side by side).</p>
+  <div class="viz" id="inc-viz">
+    <p class="vt">Visualizer · Inception module</p>
+    <p class="vd">Select a branch to see what it does.</p>
+    <div class="row" style="align-items:center">
+      <div class="node io">Input</div><span class="sep">→</span>
+      <div class="branches" id="inc-br"></div>
+      <span class="sep">→</span><div class="node" style="background:var(--g700);color:#fff;cursor:default">Concatenate<br><small>along channels</small></div>
+    </div>
+    <div class="readout" id="inc-read" aria-live="polite"></div>
+    <div class="controls" style="margin-top:12px"><span class="lbl" style="margin:0">Example output channels per branch (editable)</span><label>1<input type="number" id="ic0" value="64" min="1"></label><label>2<input type="number" id="ic1" value="128" min="1"></label><label>3<input type="number" id="ic2" value="32" min="1"></label><label>4<input type="number" id="ic3" value="32" min="1"></label></div>
+    <div class="readout" id="inc-sum" aria-live="polite"></div>
+  </div>
+
+  <h3>The 1×1 convolution: the cheap channel mixer</h3>
+  <p>A 1×1 convolution sounds silly: a kernel of one pixel just multiplies each pixel by a number. But on an input with many <b>channels</b>, it gives each channel its own weight and <b>adds them up at every pixel</b>. That is a learned <i>mix of channels</i>, and it can change how many channels there are. This makes it a <b>bottleneck</b>: squeeze the channels first with a cheap 1×1 convolution, then apply the expensive 3×3 or 5×5 convolution to the thinner stack.</p>
+  <div class="viz" id="bn-viz">
+    <p class="vt">Visualizer · Measure the bottleneck saving</p>
+    <p class="vd">Parameters = C<sub>out</sub> × (C<sub>in</sub> × K × K + 1). Defaults: a 5×5 convolution taking 192 channels to 32, with and without a 1×1 reduction to 16 channels first.</p>
+    <div class="controls"><label>C<sub>in</sub> <input type="number" id="bn-i" value="192" min="1"></label><label>Reduce to <input type="number" id="bn-m" value="16" min="1"></label><label>C<sub>out</sub> <input type="number" id="bn-o" value="32" min="1"></label><label>K×K <input type="number" id="bn-k" value="5" min="1" max="7"></label></div>
+    <div class="bars" id="bn-bars"></div>
+    <div class="readout" id="bn-read" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 9 RESNET -->
+<section class="sec" id="resnet" aria-labelledby="h-rn" data-nav="ResNet">
+  <div class="sec-head"><span class="num">09</span><h2 class="t" id="h-rn">ResNet: how to go very deep without breaking training</h2></div>
+  <p>Inception showed that smart design beats raw size. The natural next question: accuracy rose as networks got deeper, so <b>why not build a 500-layer network?</b></p>
+  <h3>The problem: vanishing gradients</h3>
+  <p>Training adjusts every weight using its <b>gradient</b>: how much the loss changes if that weight changes. Gradients are computed by <b>backpropagation</b>, which starts at the last layer and passes the signal backward, <b>multiplying by a number at every layer</b>. If those numbers are mostly below 1, the signal shrinks at every step; after many layers it is almost zero, so the earliest layers hardly learn. This is the <b>vanishing gradient problem</b>. If the numbers are above 1, the signal blows up: the <b>exploding gradient</b> problem.</p>
+  <div class="viz" id="vg-viz">
+    <p class="vt">Visualizer · Gradient signal through depth</p>
+    <p class="vd">Each layer multiplies the backward signal by the same number m. The chart shows log₁₀ of the signal at each layer counted from the output.</p>
+    <div class="controls"><label for="vg-l">Layers</label><input type="range" id="vg-l" min="5" max="100" value="50" style="max-width:200px"> <b class="mono" id="vg-lv"></b>
+      <label for="vg-m">m</label><input type="range" id="vg-m" min="0.5" max="1.5" step="0.05" value="0.8" style="max-width:200px"> <b class="mono" id="vg-mv"></b></div>
+    <div id="vg-chart"></div>
+    <div class="readout" id="vg-read" aria-live="polite"></div>
+  </div>
+
+  <h3>The fix: the skip connection</h3>
+  <p>ResNet (Microsoft Research, winner of ImageNet 2015) adds a <b>skip connection</b> (a shortcut): the block's <i>input</i> is added directly to its <i>output</i>.</p>
+  <div class="math">output = F(x) + x</div>
+  <p>Here <code>F(x)</code> is what the block's convolutions compute. A block built this way is a <b>residual block</b>. Two things follow:</p>
+  <ol>
+    <li>The block only has to learn the <b>residual</b> <code>F(x) = desired output − x</code>, the small correction to the input. If the best thing is to change nothing, it can learn <code>F(x) ≈ 0</code>.</li>
+    <li>During backpropagation the gradient has a <b>direct path</b> back through the <code>+ x</code>, so it does not have to pass through every layer's multiplication.</li>
+  </ol>
+  <div class="viz" id="res-viz">
+    <p class="vt">Visualizer · What a residual block must learn</p>
+    <p class="vd">Input x = [2, −1, 3]. Set the desired output; the block only needs to produce the difference.</p>
+    <div class="controls" id="rs-pre"></div>
+    <div class="controls"><label>desired₁ <input type="number" step="0.5" id="rd0"></label><label>desired₂ <input type="number" step="0.5" id="rd1"></label><label>desired₃ <input type="number" step="0.5" id="rd2"></label></div>
+    <div class="tw"><table><thead><tr><th></th><th>1</th><th>2</th><th>3</th></tr></thead><tbody id="rs-tab"></tbody></table></div>
+    <div class="readout" id="rs-read" aria-live="polite"></div>
+  </div>
+  <p>ResNet-50 uses bottleneck residual blocks across four stages. Its "50" counts weighted layers; the pretrained model is used here as a fixed feature extractor.</p>
+  <div class="quiz" data-quiz="q3"></div>
+</section>
+
+<!-- 10 RECAP -->
+<section class="sec" id="recap" aria-labelledby="h-rc" data-nav="Recap">
+  <div class="sec-head"><span class="num">10</span><h2 class="t" id="h-rc">Recap and interview checkpoint</h2></div>
+  <p>You should now be able to explain pixels versus embeddings, compare distance metrics, describe feature extraction, justify backbone selection, and explain Inception and ResNet at a high level. Try each question aloud, then flip the card.</p>
+  <div class="fcs" id="fcs"></div>
+  <h3>Up next</h3>
+  <p>Turn these ideas into a working retrieval pipeline, evaluate its results, and improve search speed.</p>
+</section>
+
+</main>
+
+<footer>Computer Vision 4 post read</footer>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const fmt=n=>Number(n).toLocaleString('en-US');
+function h(tag,attrs,...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs||{})){if(k==='class')e.className=v;else if(k==='style')e.style.cssText=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(v!==false&&v!=null)e.setAttribute(k,v);}
+  kids.flat().forEach(c=>{if(c==null||c===false)return;e.append(c.nodeType?c:document.createTextNode(c));});return e;}
+function seg(host,items,cur,cb){host.innerHTML='';items.forEach(([v,l])=>{const b=h('button',{type:'button','aria-pressed':String(v===cur)},l);b.addEventListener('click',()=>{$$('button',host).forEach((x,i)=>x.setAttribute('aria-pressed',String(items[i][0]===v)));cb(v);});host.append(b);});}
+function mkGrid(host,rows,cols,fn){host.innerHTML='';host.style.setProperty('--cols',cols);const cells=[];for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const d=h('div',{class:'c'});fn&&fn(d,r,c);host.append(d);cells.push(d);}return cells;}
+
+/* nav */
+(function(){const toc=$('#toc');$$('section.sec').forEach(s=>toc.append(h('a',{href:'#'+s.id},s.dataset.nav)));const links=$$('a',toc);
+ const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.toggle('on',l.getAttribute('href')==='#'+e.target.id));const on=$('a.on',toc);if(on)on.scrollIntoView({block:'nearest',inline:'center'});}}),{rootMargin:'-30% 0px -60% 0px'});
+ $$('section.sec').forEach(s=>io.observe(s));const prog=$('#prog');const upd=()=>{const d=document.documentElement;prog.style.width=(100*d.scrollTop/(d.scrollHeight-d.clientHeight||1))+'%';};addEventListener('scroll',upd,{passive:true});upd();})();
+
+/* ---------- line chart ---------- */
+function lineChart(host,o){
+  host.innerHTML='';
+  const W=640,H=300,m={l:56,r:16,t:14,b:44},n=o.xs.length,dec=o.dec??3;
+  const all=o.series.flatMap(s=>s.vals);let lo=o.ymin??Math.min(...all),hi=o.ymax??Math.max(...all);if(o.ymin==null||o.ymax==null){const p=(hi-lo)*.08||.1;if(o.ymin==null)lo-=p;if(o.ymax==null)hi+=p;}
+  const x=i=>m.l+(n===1?0:i*(W-m.l-m.r)/(n-1)),y=v=>m.t+(hi-v)*(H-m.t-m.b)/(hi-lo||1);
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" tabindex="0" role="img" aria-label="${o.aria||'Line chart'}. Use left and right arrow keys to read values.">`;
+  for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,yy=y(v);s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}" stroke="#D5C7A3" stroke-width="1"/><text x="${m.l-8}" y="${yy+4}" font-size="11" text-anchor="end">${(+v.toFixed(2)).toString()}</text>`;}
+  const step=Math.ceil(n/12);o.xs.forEach((l,i)=>{if(i%step===0||i===n-1)s+=`<text x="${x(i)}" y="${H-m.b+16}" font-size="11" text-anchor="middle">${l}</text>`;});
+  s+=`<text x="${(W+m.l)/2}" y="${H-6}" font-size="12" text-anchor="middle">${o.xTitle||'Epoch'}</text><text x="14" y="${H/2}" font-size="12" text-anchor="middle" transform="rotate(-90 14 ${H/2})">${o.yTitle||''}</text>`;
+  if(o.zero!==false&&lo<0&&hi>0)s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(0)}" y2="${y(0)}" stroke="#18261F" stroke-width="1.5"/>`;
+  o.series.forEach(se=>{const pts=se.vals.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+    s+=`<polyline points="${pts}" fill="none" stroke="${se.color}" stroke-width="${se.w||2.5}" ${se.dash?`stroke-dasharray="${se.dash}"`:''} stroke-linejoin="round"/>`;
+    if(n<=30)se.vals.forEach((v,i)=>{s+=se.shape==='sq'?`<rect x="${x(i)-3.5}" y="${y(v)-3.5}" width="7" height="7" fill="${se.color}"/>`:se.shape==='tri'?`<path d="M${x(i)},${y(v)-4.5}l4.5,8h-9z" fill="${se.color}"/>`:`<circle cx="${x(i)}" cy="${y(v)}" r="3.3" fill="${se.color}"/>`;});});
+  (o.marks||[]).forEach(mk=>{s+=`<line x1="${x(mk.i)}" x2="${x(mk.i)}" y1="${m.t}" y2="${H-m.b}" stroke="${mk.color||'#18261F'}" stroke-width="2" stroke-dasharray="3 3"/><text x="${x(mk.i)+4}" y="${m.t+12}" font-size="11" font-weight="700" style="fill:#18261F">${mk.label}</text>`;});
+  s+=`<g id="hv" style="display:none"><line id="hl" y1="${m.t}" y2="${H-m.b}" stroke="#18261F" stroke-width="1.5"/></g></svg>`;
+  const leg=h('div',{class:'legend'});o.series.forEach(se=>leg.append(h('span',{},(()=>{const e=document.createElementNS('http://www.w3.org/2000/svg','svg');e.setAttribute('viewBox','0 0 34 12');e.innerHTML=`<line x1="2" x2="32" y1="6" y2="6" stroke="${se.color}" stroke-width="3" ${se.dash?`stroke-dasharray="${se.dash}"`:''}/>`+(se.shape==='sq'?`<rect x="13" y="2" width="8" height="8" fill="${se.color}"/>`:se.shape==='tri'?`<path d="M17,1l5,10h-10z" fill="${se.color}"/>`:`<circle cx="17" cy="6" r="4" fill="${se.color}"/>`);return e;})(),se.name)));
+  const box=h('div');box.innerHTML=s;const svg=box.firstChild;const rd=h('div',{class:'readout','aria-live':'polite'},o.hint||'Hover the chart, or focus it and use ← → keys, to read exact values.');
+  host.append(leg,box,rd);
+  const hv=$('#hv',svg),hl=$('#hl',svg);let idx=0;
+  function show(i){idx=Math.max(0,Math.min(n-1,i));hv.style.display='';hl.setAttribute('x1',x(idx));hl.setAttribute('x2',x(idx));
+    rd.innerHTML=`<b>${o.xName||'Epoch'} ${o.xs[idx]}</b> — `+o.series.map(se=>`${se.name}: <b>${se.vals[idx].toFixed(dec)}</b>`).join(' · ');}
+  svg.addEventListener('mousemove',e=>{const r=svg.getBoundingClientRect(),px=(e.clientX-r.left)*W/r.width;show(Math.round((px-m.l)/((W-m.l-m.r)/(n-1||1))));});
+  svg.addEventListener('touchmove',e=>{const t=e.touches[0],r=svg.getBoundingClientRect(),px=(t.clientX-r.left)*W/r.width;show(Math.round((px-m.l)/((W-m.l-m.r)/(n-1||1))));},{passive:true});
+  svg.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();show(idx+1);}if(e.key==='ArrowLeft'){e.preventDefault();show(idx-1);}});
+}
+const C={tr:'#1D5A41',va:'#9A5F33'};
+
+function barRows(host,rows){rows.forEach(([l,pct,txt,alt])=>host.append(h('div',{class:'br'},h('span',{},l),h('div',{style:'display:flex;align-items:center'},h('div',{class:'tr',style:'flex:1'},h('div',{class:'fl'+(alt?' alt':''),style:`width:${Math.max(pct,.4)}%`})),h('span',{class:'vl'},txt)))));}
+
+/* ---------- 3 disc ---------- */
+(function(){
+  const N=20,R=3.5,cy=9.5;const disc=cx=>Array.from({length:N},(_,r)=>Array.from({length:N},(_,c)=>((r-cy)**2+(c-cx)**2<=R*R)?1:0));
+  const A=disc(4.5),Z=Array.from({length:N},()=>Array(N).fill(0));
+  const draw=(id,m)=>mkGrid($(id),N,N,(d,r,c)=>{d.style.background=m[r][c]?'#FBF7EB':'#12392A';d.style.borderRadius='1px';});
+  const ssd=(x,y)=>x.flat().reduce((s,v,i)=>s+(v-y.flat()[i])**2,0);
+  const r=$('#dc-r');
+  function upd(){const s=+r.value;$('#dc-v').textContent=s+' px';const B=disc(4.5+s);draw('#dc-a',A);draw('#dc-b',B);draw('#dc-c',Z);
+    const ab=ssd(A,B),ac=ssd(A,Z),mx=Math.max(ab,ac,1);const bars=$('#dc-bars');bars.innerHTML='';barRows(bars,[['A vs B',ab/mx*100,String(ab)],['A vs C',ac/mx*100,String(ac),true]]);
+    $('#dc-read').innerHTML=ab<ac?`Pixel distance says <b>B is closer</b> to A (${ab} < ${ac}).`:ab===ac?`Tie.`:`Pixel distance says the <b>black image C is closer</b> to A than the identical disc B (${ac} < ${ab}). Same object, wrong answer.`;}
+  r.addEventListener('input',upd);upd();
+})();
+
+/* ---------- 4 toy embedding space ---------- */
+(function(){
+  const P=[['dog 1',1.2,1.6,'dog'],['dog 2',1.8,1.2,'dog'],['dog 3',1.5,2.0,'dog'],['cat 1',3.5,4.8,'cat'],['cat 2',4.2,4.4,'cat'],['cat 3',3.9,5.3,'cat'],['car 1',6.4,1.4,'car'],['car 2',6.9,1.9,'car'],['car 3',6.0,1.0,'car']];
+  const col={dog:'#1D5A41',cat:'#9A5F33',car:'#12392A'};let q=0,metric='euc';
+  const n=v=>{const l=Math.hypot(v[0],v[1]);return[v[0]/l,v[1]/l];};
+  function score(i,j){const a=[P[i][1],P[i][2]],b=[P[j][1],P[j][2]];if(metric==='euc')return Math.hypot(a[0]-b[0],a[1]-b[1]);const cs=(a[0]*b[0]+a[1]*b[1])/(Math.hypot(...a)*Math.hypot(...b));return cs;}
+  function draw(){const W=340,H=300,sx=x=>30+x*(W-50)/8,sy=y=>H-30-y*(H-50)/6;
+    let s=`<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Toy embedding space with nine labelled points"><line x1="30" y1="${H-30}" x2="${W-10}" y2="${H-30}" stroke="#18261F"/><line x1="30" y1="${H-30}" x2="30" y2="10" stroke="#18261F"/><text x="${W/2}" y="${H-8}" font-size="11" text-anchor="middle">dimension 1</text><text x="10" y="${H/2}" font-size="11" transform="rotate(-90 10 ${H/2})" text-anchor="middle">dimension 2</text>`;
+    P.forEach((p,i)=>{const sel=i===q;s+=`<g tabindex="0" role="button" aria-label="${p[0]}" data-i="${i}" style="cursor:pointer"><circle cx="${sx(p[1])}" cy="${sy(p[2])}" r="${sel?11:8}" fill="${col[p[3]]}" stroke="${sel?'#18261F':'#FBF7EB'}" stroke-width="${sel?3:2}"/><text x="${sx(p[1])+11}" y="${sy(p[2])-9}" font-size="11" font-weight="700" style="fill:#18261F">${p[0]}</text></g>`;});
+    s+='</svg>';$('#ty-plot').innerHTML=s;
+    $$('#ty-plot g').forEach(g=>{const go=()=>{q=+g.dataset.i;draw();};g.addEventListener('click',go);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});});
+    const ord=P.map((_,i)=>i).filter(i=>i!==q).sort((a,b)=>metric==='euc'?score(q,a)-score(q,b):score(q,b)-score(q,a));
+    const L=$('#ty-list');L.innerHTML='';ord.forEach(i=>L.append(h('li',{},`${P[i][0]} — ${score(q,i).toFixed(3)}`)));
+    $('#ty-read').innerHTML=`Query: <b>${P[q][0]}</b>. Nearest: <b>${P[ord[0]][0]}</b>, then <b>${P[ord[1]][0]}</b>. Values are ${metric==='euc'?'Euclidean distances (smaller = closer)':'cosine similarities (bigger = closer)'}.`;}
+  seg($('#ty-seg'),[['euc','Euclidean distance'],['cos','Cosine similarity']],'euc',v=>{metric=v;draw();});draw();
+})();
+
+/* ---------- 5 vectors ---------- */
+(function(){
+  let norm=false;const k=$('#vc-k');
+  const E=(u,v)=>Math.hypot(u[0]-v[0],u[1]-v[1]),Co=(u,v)=>(u[0]*v[0]+u[1]*v[1])/(Math.hypot(...u)*Math.hypot(...v)),L2=u=>{const l=Math.hypot(...u);return[u[0]/l,u[1]/l];};
+  function draw(){const kk=+k.value;$('#vc-kv').textContent='×'+kk;let a=[3,1],b=[3*kk,kk],c=[1,3];if(norm){a=L2(a);b=L2(b);c=L2(c);}
+    const lim=norm?1.2:7,W=300,H=300,sx=x=>30+x*(W-45)/lim,sy=y=>H-30-y*(H-45)/lim;
+    let s=`<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Vectors a, b and c drawn as arrows from the origin"><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0L8,4L0,8z" fill="context-stroke"/></marker></defs><line x1="30" y1="${H-30}" x2="${W-8}" y2="${H-30}" stroke="#18261F"/><line x1="30" y1="${H-30}" x2="30" y2="8" stroke="#18261F"/>`;
+    if(norm)s+=`<path d="M${sx(1)},${sy(0)} A${sx(1)-30},${sy(0)-sy(1)} 0 0 0 ${sx(0)},${sy(1)}" fill="none" stroke="#D5C7A3" stroke-dasharray="4 3"/>`;
+    [[a,'a','#1D5A41',''],[b,'b','#9A5F33','6 3'],[c,'c','#12392A','2 3']].forEach(([v,l,cl,d])=>{s+=`<line x1="30" y1="${H-30}" x2="${sx(v[0])}" y2="${sy(v[1])}" stroke="${cl}" stroke-width="3" ${d?`stroke-dasharray="${d}"`:''} marker-end="url(#ar)"/><text x="${sx(v[0])+6}" y="${sy(v[1])-6}" font-size="13" font-weight="700" style="fill:${cl}">${l}</text>`;});
+    s+='</svg>';$('#vc-plot').innerHTML=s;
+    const f=v=>v.map(x=>+x.toFixed(2)).join(', ');
+    $('#vc-tab').innerHTML=`<tr><td class="k">a vs b</td><td class="mono">${E(a,b).toFixed(2)}</td><td class="mono">${Co(a,b).toFixed(2)}</td></tr><tr><td class="k">a vs c</td><td class="mono">${E(a,c).toFixed(2)}</td><td class="mono">${Co(a,c).toFixed(2)}</td></tr>`;
+    $('#vc-read').innerHTML=norm?`b = [${f(b)}] now has the same length as a. Euclidean distance a–b is ${E(a,b).toFixed(2)} and cosine stays ${Co(a,b).toFixed(2)}. Check: ${E(a,c).toFixed(2)}² = ${(E(a,c)**2).toFixed(2)} = 2 − 2×${Co(a,c).toFixed(2)}.`:`b = [${f(b)}]. Cosine ignores length (a–b is always ${Co(a,b).toFixed(2)}), but Euclidean distance grows or shrinks with b's length. Try 3: b looks <i>farther</i> than c although it points the same way as a.`;}
+  seg($('#vc-seg'),[['raw','Raw vectors'],['norm','L2-normalized']],'raw',v=>{norm=v==='norm';draw();});k.addEventListener('input',draw);draw();
+})();
+
+/* ---------- 6 cut head ---------- */
+(function(){
+  const M={cls:{pipe:['Image','Backbone','Feature vector','Head (classifier)','Class scores'],read:'<b>Classification:</b> the head squeezes the vector down to one score per class, keeping only what separates the known classes. New categories need retraining.'},sim:{pipe:['Image','Backbone','Feature vector = embedding'],read:'<b>Similarity:</b> cut just before the head. The vector (2048 numbers for ResNet-50) keeps colour, shape, texture and scene, and we compare vectors directly. No training, no labels.'}};
+  let cur='sim';const p=$('#ct-pipe');
+  function draw(){p.innerHTML='';M[cur].pipe.forEach((t,i)=>{if(i)p.append(h('span',{class:'sep'},'→'));const head=t.startsWith('Head')||t==='Class scores';p.append(h('div',{class:'node io',style:head?'':'border-style:solid;border-color:var(--g700);color:var(--g900)'},t));});$('#ct-read').innerHTML=M[cur].read;}
+  seg($('#ct-seg'),[['cls','Image classification'],['sim','Image similarity']],'sim',v=>{cur=v;draw();});draw();
+})();
+
+/* ---------- 7 backbones ---------- */
+const BB=[['AlexNet',61.1,56.5,79.1,4096],['VGG16',138.4,71.6,90.4,4096],['GoogLeNet',6.6,69.8,89.5,1024],['ResNet-50',25.6,76.1,92.9,2048]];
+(function(){
+  const tb=$('#bb-tab');BB.forEach(b=>tb.append(h('tr',{},h('td',{class:'k'},b[0]),h('td',{class:'mono'},b[1].toFixed(1)),h('td',{class:'mono'},b[2].toFixed(1)),h('td',{class:'mono'},b[3].toFixed(1)),h('td',{class:'mono'},fmt(b[4])))));
+  const I={p:['Parameters (millions): smaller is cheaper',1,138.4],a:['ImageNet top-1 accuracy (%): higher is better',2,100],b:['ImageNet top-5 accuracy (%): higher is better',3,100]};
+  function draw(k){const[t,i,mx]=I[k];const bars=$('#bb-bars');bars.innerHTML='';bars.append(h('p',{class:'cap',style:'margin:0 0 6px'},t));
+    const best=k==='p'?Math.min(...BB.map(b=>b[i])):Math.max(...BB.map(b=>b[i]));barRows(bars,BB.map(b=>[b[0],b[i]/mx*100,b[i].toFixed(1)+(b[i]===best?' ★':''),b[i]===best]));}
+  seg($('#bb-seg'),[['p','Parameters'],['a','Top-1 accuracy'],['b','Top-5 accuracy']],'p',draw);draw('p');
+  const sel=$('#st-m');BB.forEach(b=>sel.append(h('option',{value:b[4],selected:b[0]==='ResNet-50'},b[0])));
+  function st(){const L=+sel.value,n=+$('#st-n').value,by=L*4,tot=by*n;$('#st-read').innerHTML=`${fmt(L)} numbers × 4 bytes = <b>${(by/1024).toFixed(0)} KB</b> per image → ${fmt(n)} images = <b>${tot>=1e9?(tot/1e9).toFixed(1)+' GB':tot>=1e6?(tot/1e6).toFixed(1)+' MB':(tot/1e3).toFixed(0)+' KB'}</b>.`;}
+  sel.addEventListener('input',st);$('#st-n').addEventListener('input',st);st();
+  // GAP
+  const maps=[[[1,3,2,0],[4,6,2,2],[0,1,5,3],[2,2,4,4]],[[0,0,1,1],[0,2,3,1],[1,3,2,0],[1,1,0,0]],[[5,4,4,5],[3,2,2,3],[1,0,0,1],[2,1,1,2]]];
+  maps.forEach((m,ci)=>{const g=h('div',{class:'g mat','style':'--cols:4;width:130px'});m.flat().forEach(v=>g.append(h('div',{class:'c',style:`background:rgba(29,90,65,${.1+v/7});color:${v>3?'#fff':'#18261F'}`},v)));const avg=m.flat().reduce((a,b)=>a+b,0)/16;$('#gap-maps').append(h('div',{class:'col',style:'flex:0 0 150px'},h('div',{class:'lbl'},'Channel '+(ci+1)),g,h('div',{class:'mono',style:'margin-top:6px'},'average = '+avg.toFixed(2))));});
+  $('#gap-read').innerHTML='3 maps of 4×4 → <b>3 numbers</b>, one per channel.';
+  function gp(){const c=+$('#gp-c').value,s=+$('#gp-s').value;$('#gp-read').innerHTML=`${c} × ${s} × ${s} feature maps → GAP → <b>${fmt(c)} numbers</b>. The output length does not depend on the map size (flattening would give ${fmt(c*s*s)} values).`;}
+  $('#gp-c').addEventListener('input',gp);$('#gp-s').addEventListener('input',gp);gp();
+})();
+
+/* ---------- 8 inception ---------- */
+(function(){
+  const B=[['1×1 conv','A 1×1 convolution: a cheap mix of channels at every pixel.'],['1×1 conv → 3×3 conv','Squeeze channels with a 1×1 convolution, then look at medium-sized patterns with a 3×3.'],['1×1 conv → 5×5 conv','Squeeze channels with a 1×1 convolution, then look at larger patterns with a 5×5.'],['3×3 max pool → 1×1 conv','Max pooling over 3×3 neighbourhoods, then a 1×1 convolution to set the channel count.']];
+  const box=$('#inc-br');let cur=0;
+  B.forEach((b,i)=>{const x=h('button',{type:'button',class:'node','aria-pressed':'false',style:'text-align:left'},`${i+1}. ${b[0]}`);x.addEventListener('click',()=>{cur=i;u();});box.append(x);});
+  function u(){$$('.node',box).forEach((b,i)=>b.setAttribute('aria-pressed',String(i===cur)));$('#inc-read').innerHTML=`<b>Branch ${cur+1}:</b> ${B[cur][1]}`;}u();
+  function sum(){const v=[0,1,2,3].map(i=>+$('#ic'+i).value||0);$('#inc-sum').innerHTML=`Concatenation stacks channels: ${v.join(' + ')} = <b>${v.reduce((a,b)=>a+b,0)}</b> output channels. Spatial size is unchanged.`;}
+  [0,1,2,3].forEach(i=>$('#ic'+i).addEventListener('input',sum));sum();
+  // bottleneck
+  function bn(){const i=+$('#bn-i').value||1,m=+$('#bn-m').value||1,o=+$('#bn-o').value||1,k=+$('#bn-k').value||1;
+    const d=o*(i*k*k+1),r1=m*(i+1),r2=o*(m*k*k+1),t=r1+r2;const mx=Math.max(d,t);
+    const bars=$('#bn-bars');bars.innerHTML='';barRows(bars,[[`Direct ${k}×${k}`,d/mx*100,fmt(d),true],['1×1 reduce + '+k+'×'+k,t/mx*100,fmt(t)]]);
+    $('#bn-read').innerHTML=`Direct: ${o} × (${i}×${k}×${k} + 1) = <b>${fmt(d)}</b>.<br>Bottleneck: ${m} × (${i} + 1) + ${o} × (${m}×${k}×${k} + 1) = ${fmt(r1)} + ${fmt(r2)} = <b>${fmt(t)}</b>.<br>That is <b>${fmt(d-t)} fewer</b> parameters (${(d/t).toFixed(1)}× smaller).`;}
+  ['#bn-i','#bn-m','#bn-o','#bn-k'].forEach(s=>$(s).addEventListener('input',bn));bn();
+})();
+
+/* ---------- 9 vanishing + residual ---------- */
+(function(){
+  const L=$('#vg-l'),M=$('#vg-m');
+  function d(){const n=+L.value,m=+M.value;$('#vg-lv').textContent=n;$('#vg-mv').textContent=m.toFixed(2);
+    const xs=Array.from({length:n+1},(_,i)=>i),plain=xs.map(i=>i*Math.log10(m));
+    lineChart($('#vg-chart'),{xs,xTitle:'Layers back from the output',xName:'Layer',yTitle:'log₁₀(signal)',dec:2,ymin:Math.min(-1,...plain)-.2,ymax:Math.max(1,...plain)+.2,aria:'Gradient signal vs depth',series:[{name:'plain stack: m^layers',vals:plain,color:C.va,dash:'7 4',shape:'sq'},{name:'direct skip path: always 1',vals:xs.map(()=>0),color:C.tr,shape:'circle'}]});
+    const v=Math.pow(m,n);$('#vg-read').innerHTML=m<1?`After ${n} layers the plain signal is ${m.toFixed(2)}<sup>${n}</sup> ≈ <b>${v.toExponential(2)}</b>: <b>vanishing</b>.`:m>1?`After ${n} layers the plain signal is ≈ <b>${v.toExponential(2)}</b>: <b>exploding</b>.`:'With m = 1 the signal neither shrinks nor grows.';
+    $('#vg-read').innerHTML+=' The path that runs only through the <code>+ x</code> shortcuts adds a term of 1 regardless of depth (log₁₀ 1 = 0).';}
+  L.addEventListener('input',d);M.addEventListener('input',d);d();
+  const x=[2,-1,3],ins=[0,1,2].map(i=>$('#rd'+i));
+  function r(){const des=ins.map(i=>+i.value||0),F=des.map((v,i)=>v-x[i]);
+    $('#rs-tab').innerHTML=[['input x',x],['desired output',des],['F(x) = desired − x (what the block learns)',F],['output = F(x) + x',F.map((f,i)=>f+x[i])]].map(([l,v])=>`<tr><td class="k">${l}</td>${v.map(n=>`<td class="mono">${+n.toFixed(2)}</td>`).join('')}</tr>`).join('');
+    $('#rs-read').innerHTML=F.every(f=>Math.abs(f)<1e-9)?'<b>Best thing is to change nothing:</b> the block only has to learn F(x) = 0.':`The block learns only the correction: ${F.map(f=>+f.toFixed(2)).join(', ')}.`;}
+  const pre=[['Change nothing',[2,-1,3]],['Small correction',[2.5,-1,2.5]],['Large change',[-1,4,0]]];
+  pre.forEach(([l,v])=>{const b=h('button',{type:'button',class:'chip'},l);b.addEventListener('click',()=>{v.forEach((n,i)=>ins[i].value=n);r();});$('#rs-pre').append(b);});
+  ins.forEach((i,k)=>{i.value=pre[1][1][k];i.addEventListener('input',r);});r();
+})();
+
+/* ---------- quizzes ---------- */
+const QZ={
+ q1:{q:'Two photos show the same cat, but the cat is a few pixels to the left in the second photo. What does a raw pixel difference tell us?',o:['The images have similar pixel values because they contain the same cat.','The images must show different animals because their pixel positions do not match.','They may look very different to the computer, because many pixels change even though the content is the same.','Pixel difference works reliably for color images but struggles mainly with black-and-white images.'],a:2,e:'Pixel difference compares values at the same positions. A small shift changes many of them, so the distance can be large even when the content is the same, exactly what the disc demo showed.'},
+ q2:{q:'After L2 normalization, what is true about nearest neighbors found by Euclidean distance and by cosine similarity?',o:['They may rank the same vectors differently because distance and similarity measure different properties.','They produce the same ranking because squared Euclidean distance for unit vectors equals two minus twice their cosine similarity.','Cosine similarity becomes undefined because normalized vectors all have a magnitude of one.','Euclidean distance can become negative when normalized vectors point in opposite directions.'],a:1,e:'L2 normalization makes each length 1. For unit vectors, squared Euclidean distance = 2 − 2 × cosine similarity, so smaller distances correspond to larger similarities and the ranking is the same.'},
+ q3:{q:'What problem does a ResNet skip connection address?',o:['It makes images smaller so the network runs faster.','It gives gradients a direct path backward, easing the vanishing-gradient problem in very deep networks.','It replaces the convolution layers with fully connected layers.','It removes the need for a pretrained backbone.'],a:1,e:'With output = F(x) + x, the gradient can flow back through the + x without being multiplied at every layer, and the block only has to learn the residual F(x).'}
+};
+$$('[data-quiz]').forEach(host=>{const q=QZ[host.dataset.quiz],name='qz-'+host.dataset.quiz;const fb=h('div',{class:'qfb',role:'status','aria-live':'polite'}),fs=h('fieldset',{},h('legend',{class:'sr'},q.q));
+  q.o.forEach((t,i)=>{const id=name+i,inp=h('input',{type:'radio',name,id}),row=h('div',{class:'qo'},inp,h('label',{for:id},t));
+    inp.addEventListener('change',()=>{$$('.qo',fs).forEach(r=>r.classList.remove('right','wrong'));if(i===q.a){row.classList.add('right');fb.innerHTML='<b>Correct.</b> '+q.e;$$('input',fs).forEach(x=>x.disabled=true);}else{row.classList.add('wrong');fb.innerHTML='<b>Not quite.</b> Try another option.';}});fs.append(row);});
+  host.append(h('p',{class:'ql'},'Check yourself'),h('p',{class:'qt'},q.q),fs,fb);});
+
+/* ---------- flashcards ---------- */
+const cards=(host,list)=>list.forEach(([q,a])=>{const b=h('button',{type:'button',class:'fc','aria-expanded':'false',style:'min-height:110px'},h('div',{class:'q'},q),h('span',{class:'hint'},'Click to reveal'),h('div',{class:'a'},a));b.addEventListener('click',()=>b.setAttribute('aria-expanded',String(b.getAttribute('aria-expanded')!=='true')));host.append(b);});
+cards($('#fcs0'),[['What are ImageNet and VGG16?','ImageNet is a huge labelled image dataset (the 1,000-class version is what “pretrained” usually means). VGG16 is a 16-weight-layer CNN (13 conv + 3 fully connected layers) trained on it.'],['What is the backbone and what is the head of a CNN?','Backbone = the convolutional layers that turn an image into features. Head = the final classifier that turns features into class scores.'],['Why did we replace VGG16’s head for landmarks?','The original head predicts the 1,000 ImageNet classes, but the task had 10 landmark classes.']]);
+cards($('#fcs'),[['Why does pixel distance fail for semantic image search?','It compares values at the same positions, not content. A small shift, rotation, lighting change or crop alters many pixels even though the content is the same.'],['What information does an embedding represent?','The meaning of the image: a vector where similar content gives nearby vectors (colour, shape, texture, scene, many aspects at once).'],['Why remove a classifier head?','The head squeezes the vector down to a few class scores. Before it, the vector is richer, needs no labels or retraining, and can be compared directly.'],['How does Inception process multiple scales?','Parallel branches (1×1, 1×1→3×3, 1×1→5×5, pool→1×1) look at the same input at several scales, and their outputs are concatenated along the channel axis.'],['What problem does a ResNet skip connection address?','Vanishing gradients in very deep networks: output = F(x) + x gives the gradient a direct path back, and the block only learns the residual.'],['Why can cosine similarity beat raw pixel distance?','It compares embeddings by direction, so it is robust to length differences such as brightness or contrast, and the embedding already encodes content rather than positions.']]);
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/AIML-CV-4" target="_blank" rel="noopener">github.com/scaler-content/AIML-CV-4</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

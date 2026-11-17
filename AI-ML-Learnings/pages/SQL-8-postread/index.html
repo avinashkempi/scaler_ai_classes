@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JOINs 1 — Relationships & INNER JOIN — Post-Read</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#E23744; --red-dark:#B71C2B; --cream:#FFF8EE; --paper:#FFFFFF;
+  --ink:#2B2024; --teal:#0E9594; --teal-soft:#E0F5F4; --yellow:#FFC53D;
+  --yellow-soft:#FFF3D6; --purple:#7C5CBF; --purple-soft:#F0EAFB;
+  --green:#3BA55C; --green-soft:#E4F6EA; --orange:#F4793B; --orange-soft:#FDEBDD;
+  --blue:#2D7DD2; --blue-soft:#E3EFFB; --pink:#E84393; --pink-soft:#FDE7F1;
+  --shadow:0 6px 0 rgba(43,32,36,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:var(--cream);color:var(--ink);font-size:17px;line-height:1.65;
+  background-image:radial-gradient(rgba(226,55,68,.06) 2px, transparent 2px);background-size:28px 28px;}
+.wrap{max-width:960px;margin:0 auto;padding:24px 20px 80px}
+h1,h2,h3,h4{font-family:'Baloo 2',cursive;line-height:1.2}
+.hero{background:linear-gradient(135deg,var(--red) 0%,var(--red-dark) 100%);color:#fff;border-radius:28px;
+  padding:44px 36px;position:relative;overflow:hidden;box-shadow:0 10px 0 rgba(183,28,43,.35);margin-bottom:34px}
+.hero::after{content:"🔗🗄️🏨";position:absolute;font-size:90px;opacity:.14;right:-10px;top:10px;transform:rotate(12deg)}
+.hero .kicker{display:inline-block;background:var(--yellow);color:var(--ink);font-family:'Baloo 2';font-weight:700;
+  padding:5px 16px;border-radius:999px;font-size:14px;letter-spacing:.5px;margin-bottom:14px}
+.hero h1{font-size:clamp(30px,5vw,46px);font-weight:800;margin-bottom:8px}
+.hero p{font-size:18px;opacity:.95;max-width:640px}
+.section{background:var(--paper);border-radius:24px;padding:30px 28px;margin:26px 0;border:3px solid var(--ink);
+  box-shadow:var(--shadow);position:relative}
+.secnum{position:absolute;top:-20px;left:24px;background:var(--red);color:#fff;font-family:'Baloo 2';font-weight:800;
+  font-size:18px;padding:6px 18px;border-radius:999px;border:3px solid var(--ink);box-shadow:0 4px 0 rgba(43,32,36,.2)}
+.secnum.teal{background:var(--teal)} .secnum.purple{background:var(--purple)} .secnum.orange{background:var(--orange)}
+.secnum.blue{background:var(--blue)} .secnum.pink{background:var(--pink)} .secnum.green{background:var(--green)}
+.section h2{font-size:28px;margin:10px 0 4px;color:var(--red-dark)}
+.section h3{font-size:21px;margin:22px 0 8px;color:var(--ink)}
+.timebadge{display:inline-block;background:var(--yellow-soft);border:2px dashed var(--yellow);border-radius:999px;
+  padding:2px 14px;font-size:13px;font-weight:800;color:#8a6400;margin-bottom:10px}
+.analogy{background:var(--teal-soft);border:3px solid var(--teal);border-radius:18px;padding:18px 20px;margin:18px 0;
+  display:flex;gap:14px;align-items:flex-start}
+.analogy .emoji{font-size:36px;line-height:1;flex-shrink:0}
+.analogy b{color:#066968}
+.talk{margin:14px 0;display:flex;gap:10px;align-items:flex-start}
+.talk .who{flex-shrink:0;width:84px;text-align:center;font-family:'Baloo 2';font-weight:700;font-size:13px;
+  background:var(--ink);color:#fff;border-radius:10px;padding:5px 4px;margin-top:4px}
+.talk.learner .who{background:var(--blue)}
+.talk .bubble{background:var(--cream);border:2px solid var(--ink);border-radius:4px 16px 16px 16px;padding:10px 16px;flex:1}
+.talk.learner .bubble{background:var(--blue-soft);font-style:italic}
+.query{margin:18px 0;border:3px solid var(--ink);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.query .qtitle{background:var(--ink);color:var(--yellow);font-family:'Baloo 2';font-weight:700;font-size:15px;padding:8px 16px;display:flex;align-items:center;gap:8px}
+.query pre{background:#241B1E;color:#FDEBDD;padding:18px 20px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:14.5px;line-height:1.7;margin:0}
+.kw{color:#FF8A95;font-weight:600}.str{color:#FFD66B}.num{color:#7FE3C1}.fn{color:#9CCBFF}.cm{color:#9b8a8f;font-style:italic}.tb{color:#FFB8C6}
+.reads{background:var(--green-soft);border-top:3px solid var(--ink);padding:10px 16px;font-size:15px}
+.reads b{color:var(--green)}
+.warn{background:var(--pink-soft);border:3px solid var(--pink);border-radius:18px;padding:16px 20px;margin:18px 0}
+.warn .t{font-family:'Baloo 2';font-weight:800;color:#b62a6e;font-size:17px;margin-bottom:6px}
+.golden{background:linear-gradient(135deg,var(--yellow-soft),#fff);border:3px solid var(--yellow);border-radius:18px;
+  padding:18px 22px;margin:20px 0;font-family:'Baloo 2';font-weight:700;font-size:19px;text-align:center;color:#7a5800}
+.tip{background:var(--purple-soft);border:3px solid var(--purple);border-radius:18px;padding:16px 20px;margin:18px 0}
+.tip .t{font-family:'Baloo 2';font-weight:800;color:var(--purple);font-size:16px;margin-bottom:6px}
+.industry{background:var(--blue-soft);border:3px solid var(--blue);border-radius:18px;padding:16px 20px;margin:18px 0}
+.industry .t{font-family:'Baloo 2';font-weight:800;color:var(--blue);font-size:16px;margin-bottom:6px}
+table.nice{width:100%;border-collapse:separate;border-spacing:0;margin:16px 0;border:3px solid var(--ink);border-radius:14px;overflow:hidden;font-size:15px}
+table.nice th{background:var(--red);color:#fff;font-family:'Baloo 2';font-weight:700;padding:10px 12px;text-align:left}
+table.nice td{padding:9px 12px;border-top:2px solid #f0e4e6;background:#fff}
+table.nice tr:nth-child(even) td{background:var(--cream)}
+table.nice code{background:var(--ink);color:var(--yellow);padding:2px 8px;border-radius:6px;font-family:'JetBrains Mono';font-size:13px;white-space:nowrap}
+.diagram{margin:20px 0;text-align:center;background:#fff;border:3px dashed var(--teal);border-radius:18px;padding:18px 10px}
+.diagram img{max-width:100%;height:auto;border-radius:14px;border:1px solid #eee}
+.diaglabel{font-size:13px;font-weight:700;color:var(--teal);margin-top:8px;font-family:'Baloo 2'}
+.hourbanner{background:var(--ink);color:#fff;border-radius:22px;padding:26px 30px;margin:40px 0 30px;text-align:center;box-shadow:0 8px 0 rgba(43,32,36,.3)}
+.hourbanner h2{font-size:30px;color:var(--yellow)}
+.hourbanner p{color:#e7d8db;font-size:16px}
+.breakbanner{background:repeating-linear-gradient(45deg,var(--yellow),var(--yellow) 20px,var(--yellow-soft) 20px,var(--yellow-soft) 40px);
+  border:3px solid var(--ink);border-radius:22px;padding:22px;margin:34px 0;text-align:center;font-family:'Baloo 2';font-weight:800;font-size:24px;box-shadow:var(--shadow)}
+.tier{border-radius:18px;padding:18px 22px;margin:14px 0;border:3px solid var(--ink)}
+.tier.b1{background:var(--green-soft)} .tier.b2{background:var(--yellow-soft)} .tier.b3{background:var(--pink-soft)}
+.tier h4{font-size:19px;margin-bottom:8px}
+.tier ol{margin-left:22px}
+.tier li{margin:6px 0}
+.note{background:#fff;border:2px dashed var(--orange);border-radius:14px;padding:12px 16px;margin:14px 0;font-size:15px}
+.note b{color:var(--orange)}
+ul.clean{margin:10px 0 10px 24px}
+ul.clean li{margin:6px 0}
+ol.clean{margin:10px 0 10px 24px}
+ol.clean li{margin:6px 0}
+.qbox{background:#fff;border:3px solid var(--ink);border-radius:18px;padding:16px 20px;margin:14px 0}
+.qbox .qlabel{font-family:'Baloo 2';font-weight:800;color:var(--red-dark);font-size:16px;margin-bottom:6px}
+.qbox .ans{background:var(--green-soft);border-left:4px solid var(--green);padding:10px 14px;border-radius:8px;margin-top:8px;font-size:15px}
+.pk{display:inline-block;background:#E23744;color:#fff;font-family:'Baloo 2';font-weight:800;font-size:12px;padding:2px 10px;border-radius:999px;border:2px solid var(--ink);white-space:nowrap}
+.fk{display:inline-block;background:#2D7DD2;color:#fff;font-family:'Baloo 2';font-weight:800;font-size:12px;padding:2px 10px;border-radius:999px;border:2px solid var(--ink);white-space:nowrap}
+/* SIMULATOR */
+.sim{background:#241B1E;border:3px solid var(--ink);border-radius:20px;padding:22px;margin:22px 0;color:#fff;box-shadow:0 8px 0 rgba(43,32,36,.25)}
+.sim .simtitle{font-family:'Baloo 2';font-weight:800;font-size:20px;color:var(--yellow);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.sim .simsub{font-size:14px;color:#cdbabf;margin-bottom:14px}
+.sim select,.sim input[type=text]{font-family:'JetBrains Mono';font-size:14px;padding:8px 10px;border-radius:10px;border:2px solid var(--yellow);background:#3a2c30;color:#fff;margin:3px}
+.sim button{font-family:'Baloo 2';font-weight:700;font-size:15px;padding:9px 20px;border-radius:999px;border:3px solid var(--ink);
+  background:var(--yellow);color:var(--ink);cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.4);margin:6px 4px;transition:transform .08s}
+.sim button:active{transform:translateY(3px);box-shadow:none}
+.sim button.alt{background:var(--teal);color:#fff}
+.sim button.purple{background:var(--purple);color:#fff}
+.sim table{width:100%;border-collapse:collapse;margin-top:14px;font-family:'JetBrains Mono';font-size:12.5px}
+.sim th{background:#3a2c30;color:var(--yellow);padding:7px 8px;text-align:left;border-bottom:2px solid var(--yellow)}
+.sim td{padding:6px 8px;border-bottom:1px solid #4a393e}
+.sim tr.highlight td{background:rgba(59,165,92,.35);color:#baf5cd}
+.sim tr.dimmed td{opacity:.3}
+.sim tr.dropped td{opacity:.35;text-decoration:line-through;color:#ff9aa8}
+.sim .result{margin-top:12px;font-family:'Baloo 2';font-weight:700;font-size:16px;color:var(--yellow)}
+.sim .nullcell{color:#ff9aa8;font-style:italic}
+.sim .rowline{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-bottom:10px}
+.sim .rowline .grp{display:flex;flex-direction:column;gap:2px}
+.sim .rowline label{font-family:'Baloo 2';font-weight:700;font-size:13px;color:#e0d0d4}
+.sim .checkrow{display:flex;align-items:center;gap:10px;margin:6px 0}
+.sim .checkrow label{font-family:'Nunito';font-size:13px;color:#e0d0d4;cursor:pointer}
+.sim .checkrow input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--yellow)}
+.sim .twogrid{display:flex;flex-wrap:wrap;gap:24px}
+.sim .twogrid>div{flex:1;min-width:220px}
+.sim .minitbl-title{font-family:'Baloo 2';font-weight:700;font-size:14px;color:var(--yellow);margin-bottom:6px}
+@media(max-width:640px){.talk .who{width:64px;font-size:11px}.section{padding:24px 18px}}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· SQL 8 · JOINs 1: relationships and INNER JOIN</span><span class="pn"><a href="../SQL-7-postread/" title="SQL 7 · CASE, IF() and conditional aggregation">← Prev</a><a href="../DSML-2026/" title="SQL Advanced · Indexing, partitioning and functions">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="wrap">
+
+
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <span class="kicker">LECTURE 8 · POST-READ</span>
+  <h1>🔗 JOINs 1 — Relationships &amp; INNER JOIN</h1>
+  <p><b>What this covers:</b> A reflective recap of how relational data is split across tables, how relationships (1:1, 1:N, M:N) connect them, and how <code>INNER JOIN</code> physically stitches two or more tables together using the <code>ON</code> clause. All examples continue on the leela_palace hotel dataset — no more single-table limits from here on.</p>
+</div>
+
+
+<!-- ============ DATASET INTRO ============ -->
+<div class="section">
+  <span class="secnum" style="background:var(--ink)">🗄️</span>
+  <h2>The leela_palace Dataset — Now With JOINs</h2>
+  <p>Lecture 7 kept every query confined to a single table. From today, that restriction lifts. The four tables in focus are <code>staff</code>, <code>departments</code>, <code>salary_grades</code>, and <code>staff_salaries</code> — and for the first time, we connect them.</p>
+
+
+  <table class="nice">
+    <tr><th>Table</th><th>Primary Key</th><th>Key Foreign Keys</th></tr>
+    <tr><td><code>departments</code></td><td><span class="pk">department_id</span></td><td><span class="fk">head_id</span> → staff.staff_id</td></tr>
+    <tr><td><code>staff</code></td><td><span class="pk">staff_id</span></td><td><span class="fk">department_id</span> → departments.department_id · <span class="fk">manager_id</span> → staff.staff_id (self) · <span class="fk">grade_id</span> → salary_grades.grade_id</td></tr>
+    <tr><td><code>staff_salaries</code></td><td><span class="pk">salary_id</span></td><td><span class="fk">staff_id</span> → staff.staff_id</td></tr>
+    <tr><td><code>salary_grades</code></td><td><span class="pk">grade_id</span></td><td>—</td></tr>
+  </table>
+
+
+  <p>Dataset: Leela_Palace - BigQuery V2 (7-14)</p>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/213/625/original/leela_palace_ER.png?1784987086" alt="leela_palace Entity Relationship Diagram, updated">
+    <div class="diaglabel">leela_palace ER Diagram — note department_id on staff can be NULL for new joiners, and manager_id is a self-referencing FK</div>
+  </div>
+</div>
+
+
+<!-- ============ 1. OPENING HOOK ============ -->
+<div class="section">
+  <span class="secnum">1</span>
+  <h2>Opening Hook — Why Is Our Data Split Into So Many Tables? 🤔</h2>
+
+
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">I want a report showing every staff member's name, their department's location, and their salary grade's role level — all in one view.</div></div>
+  <div class="talk learner"><div class="who">ANALYST</div><div class="bubble">Department location lives in the departments table. Role level lives in salary_grades. Staff details live in staff. None of it is in one place.</div></div>
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">Then bring it together.</div></div>
+
+
+  <p>Real-world databases are deliberately split into many small tables instead of one giant table — this is called <b>normalization</b>. It avoids repeating a department's location on every single staff row, and avoids repeating a salary band's range on every single staff row. Each fact lives in exactly one place. The cost of this design is that answering a real business question almost always means <b>reading from more than one table at once</b>. The tool that makes this possible is the <code>JOIN</code>.</p>
+
+
+  <div class="golden">⭐ Data is split for cleanliness. JOINs bring it back together for analysis.</div>
+</div>
+
+
+<!-- ============ 2. RELATIONSHIPS ============ -->
+<div class="section">
+  <span class="secnum teal">2</span>
+  <h2>Relationships — How Tables Connect 🧩</h2>
+
+
+  <p>Every relationship between two tables can be described by how many rows on one side correspond to rows on the other side. Three possibilities exist — and each one you will encounter in real hotel data.</p>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/212/392/original/Screenshot_2026-07-21_154012.png?1784628631" alt="The three blueprints of data relationships: 1:1, 1:N, M:N">
+    <div class="diaglabel">1:1, 1:N, and M:N — the three relationship blueprints, each with a leela_palace example</div>
+  </div>
+
+
+  <h3>1️⃣ One-to-One (1:1)</h3>
+  <p>One record on each side. No repeating. The Foreign Key is always unique on the side that holds it. <b>Hotel example:</b> one staff member ↔ one <i>current</i> salary record (if we only ever track the latest salary). Rare in practice — most systems favor 1:N so history can be tracked.</p>
+
+
+  <h3>2️⃣ One-to-Many (1:N) — the most common relationship</h3>
+  <p>One row on the "one" side can relate to many rows on the "many" side. The Foreign Key always sits on the <b>many</b> side. <b>Hotel examples:</b></p>
+  <ul class="clean">
+    <li>One <code>department</code> ↔ many <code>staff</code> members (department_id is the FK, sitting on staff)</li>
+    <li>One <code>salary_grade</code> ↔ many <code>staff</code> members who share that grade</li>
+    <li>One <code>staff</code> member ↔ many <code>staff_salaries</code> rows (salary history over time)</li>
+  </ul>
+
+
+  <h3>3️⃣ Many-to-Many (M:N)</h3>
+  <p>Many rows on one side can relate to many rows on the other side — and this cannot be stored directly in a two-table structure. It requires a <b>junction (bridge) table</b> that breaks the M:N relationship into two clean 1:N relationships. <b>Hotel example:</b> many <code>guests</code> ↔ many <code>spa_services</code>, connected through the <code>spa_bookings</code> junction table. A guest can book many services; a service can be booked by many guests.</p>
+
+
+  <table class="nice">
+    <tr><th>Relationship</th><th>Rule</th><th>Where the FK lives</th></tr>
+    <tr><td>1:1</td><td>One record on each side, never repeats</td><td>Either side (unique)</td></tr>
+    <tr><td>1:N</td><td>One side has many matching rows on the other</td><td>Always on the "many" side</td></tr>
+    <tr><td>M:N</td><td>Both sides can repeat against each other</td><td>Cannot be direct — needs a junction table</td></tr>
+  </table>
+
+
+  <div class="golden">⭐ Get the relationship right first. The relationship tells you which column is the Foreign Key — and that decides how you write the JOIN.</div>
+</div>
+
+
+<!-- ============ 3. WHAT IS A JOIN ============ -->
+<div class="section">
+  <span class="secnum purple">3</span>
+  <h2>What Is a JOIN — Concept Before Syntax 🔧</h2>
+
+
+  <p>A JOIN does not add new data anywhere. It does not change a single row in your actual tables. It <b>matches and aligns</b> rows from two tables, side by side, on the fly — only for the duration of that one query.</p>
+
+
+  <p>Think of it like this visually — before the JOIN:</p>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/213/030/original/Screenshot_2026-07-23_105613.png?1784784384" alt="A JOIN does not add data; it matches and aligns it on the fly - mental model with gears">
+    <div class="diaglabel">SQL looks at every row in the anchor table, hunts for a match in the target table, and fuses them into a temporary "virtual table"</div>
+  </div>
+
+
+  <p>Notice in the diagram: <code>staff_id 3 (Mike Brown)</code> is missing from the joined result even though it exists in the staff table — because there was no row 3 present with a match under the join logic shown. This is the first hint of a theme we return to later — <b>JOINs can silently drop rows</b> if the matching condition isn't satisfied.</p>
+
+
+  <div class="analogy"><span class="emoji">🧲</span><div><b>The Magnet Analogy:</b> Imagine laying two decks of cards side by side — one deck is <code>staff</code>, the other is <code>departments</code>. A magnet scans every card in the staff deck, reads its department_id, and pulls over the matching department card from the other deck, gluing them together temporarily. Once the query finishes, the glue disappears — the original two decks are untouched.</div></div>
+
+
+  <!-- JOIN MATCHER SIMULATOR -->
+  <div class="sim">
+    <div class="simtitle">🎮 SIMULATOR — Watch a JOIN Match Rows Live!</div>
+    <div class="simsub">Toggle rows on/off in either table below. Watch the "virtual result table" rebuild itself instantly based on which department_ids actually match.</div>
+    <div class="twogrid">
+      <div>
+        <div class="minitbl-title">staff (toggle rows off/on)</div>
+        <div id="staffToggleBox"></div>
+      </div>
+      <div>
+        <div class="minitbl-title">departments (toggle rows off/on)</div>
+        <div id="deptToggleBox"></div>
+      </div>
+    </div>
+    <button onclick="runJoinSim()">▶ RUN INNER JOIN</button>
+    <div class="result" id="joinSimResult"></div>
+    <div style="overflow-x:auto"><table id="joinSimTable"></table></div>
+  </div>
+</div>
+
+
+<!-- ============ 4. JOIN TYPES OVERVIEW ============ -->
+<div class="section">
+  <span class="secnum orange">4</span>
+  <h2>JOIN Types Overview — The Map 🗺️</h2>
+
+
+  <p>Five types exist. Today we cover INNER JOIN only. This is the map — so you know where we are headed.</p>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/213/034/original/Screenshot_2026-07-23_105851.png?1784784540" alt="INNER JOIN is the foundational connection - overview of six JOIN types">
+    <div class="diaglabel">INNER JOIN handles roughly 80% of day-to-day analytical queries — LEFT, RIGHT, FULL OUTER, CROSS, and SELF JOIN build on the same foundation</div>
+  </div>
+
+
+  <table class="nice">
+    <tr><th>JOIN type</th><th>What it returns</th><th>Covered</th></tr>
+    <tr><td><b>INNER JOIN</b></td><td>Only rows with a match in BOTH tables</td><td>✅ Today</td></tr>
+    <tr><td>LEFT JOIN</td><td>All rows from the left table + matches from the right</td><td>Lecture 9</td></tr>
+    <tr><td>RIGHT JOIN</td><td>All rows from the right table + matches from the left</td><td>Lecture 9</td></tr>
+    <tr><td>FULL OUTER JOIN</td><td>All rows where there's a match in either table</td><td>Lecture 9</td></tr>
+    <tr><td>CROSS JOIN</td><td>Every row of A paired with every row of B (Cartesian product)</td><td>Later</td></tr>
+    <tr><td>SELF JOIN</td><td>A table joined to itself, using aliases</td><td>Later (perfect for manager_id!)</td></tr>
+  </table>
+
+
+  <div class="tip"><div class="t">💡 Rule of thumb</div>
+    <p>Get the strictest JOIN right first — <b>INNER JOIN</b> — and the rest follow naturally once you understand how matching works.</p>
+  </div>
+</div>
+
+
+<!-- ============ 5. TABLE ALIASES ============ -->
+<div class="section">
+  <span class="secnum blue">5</span>
+  <h2>Table Aliases — Mandatory Once Two Tables Are Involved 🏷️</h2>
+
+
+  <p>Both <code>staff</code> and <code>departments</code> could have overlapping column names, or the query simply gets long and repetitive writing <code>leela_palace.staff.department_id</code> every time. The fix: give each table a short alias right after naming it in <code>FROM</code> or <code>JOIN</code>.</p>
+
+
+  <div class="query"><div class="qtitle">📄 Aliasing two tables</div>
+<pre><span class="kw">FROM</span>        leela_palace.staff       <span class="kw">AS</span> s
+<span class="kw">INNER JOIN</span>  leela_palace.departments <span class="kw">AS</span> d
+  <span class="kw">ON</span>        s.department_id = d.department_id</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> staff becomes "s", departments becomes "d". Every column reference downstream — in SELECT, WHERE, GROUP BY — can now use the short prefix instead of the full table name.</div></div>
+
+
+  <table class="nice">
+    <tr><th>Rule</th><th>Why it matters</th></tr>
+    <tr><td>Alias right after the table name (<code>AS s</code>, or just <code>s</code>)</td><td>AS is optional but improves readability</td></tr>
+    <tr><td>Use the alias everywhere after — SELECT, ON, WHERE</td><td>Consistency avoids "which staff?" ambiguity errors</td></tr>
+    <tr><td>Keep aliases short and meaningful (<code>s</code> for staff, <code>d</code> for departments)</td><td>Long queries stay readable</td></tr>
+    <tr><td>If both tables have a column with the same name (e.g. both have <code>status</code>)</td><td>SQL throws an "ambiguous column" error unless prefixed with the alias</td></tr>
+  </table>
+
+
+  <div class="warn"><div class="t">⚠️ Forgetting the alias prefix on an ambiguous column</div>
+    <p>If both <code>staff</code> and <code>departments</code> had a <code>name</code> column and you wrote <code>SELECT name</code> without a prefix, BigQuery would throw: <i>"Column name is ambiguous."</i> Always write <code>s.first_name</code> or <code>d.department_name</code> once two tables are in play.</p>
+  </div>
+</div>
+
+
+<!-- ============ 6. THE ON CLAUSE ============ -->
+<div class="section">
+  <span class="secnum pink">6</span>
+  <h2>The ON Clause — The Load-Bearing Pillar 🏛️</h2>
+
+
+  <p>ON is the most important line in any JOIN. It defines the matching condition. Getting it wrong silently produces wrong results — no error message.</p>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/213/035/original/Screenshot_2026-07-23_110226.png?1784784756" alt="The ON clause is the critical load-bearing pillar of your query">
+    <div class="diaglabel">ON connects the Foreign Key in one table to the Primary Key in the other — think of it as the WHERE clause for your JOIN</div>
+  </div>
+
+
+  <div class="tip"><div class="t">✅ The Golden Rule</div>
+    <ul class="clean">
+      <li>Think of <code>ON</code> as the <code>WHERE</code> clause for your JOIN.</li>
+      <li>Always connect the Foreign Key (FK) in one table to the Primary Key (PK) of the other.</li>
+    </ul>
+  </div>
+
+
+  <div class="warn"><div class="t">🚨 The Silent Error</div>
+    <ul class="clean">
+      <li>Connecting the wrong columns (e.g. <code>s.department_id = s.staff_id</code>) will not trigger a system error.</li>
+      <li>It will run perfectly and return entirely meaningless data. <b>You own this logic</b> — SQL will not warn you.</li>
+    </ul>
+  </div>
+
+
+  <div class="golden">⭐ Get the ON clause right, and your results will be reliable and accurate. Get it wrong, and nothing will tell you.</div>
+</div>
+
+
+<div class="breakbanner">☕ END OF HOUR 1 — 5 MIN BREAK</div>
+
+
+<!-- ============ 7. INNER JOIN SYNTAX ============ -->
+<div class="section">
+  <span class="secnum green">7</span>
+  <h2>INNER JOIN Syntax — Your First Live Query 🚀</h2>
+
+
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">Give me every staff member, their employment type, and their exact department location.</div></div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 7.1 — First INNER JOIN: staff + departments</div>
+<pre><span class="kw">SELECT</span>      s.first_name,
+            s.last_name,
+            s.employment_type,
+            d.department_name,
+            d.location
+<span class="kw">FROM</span>        leela_palace.staff       <span class="kw">AS</span> s
+<span class="kw">INNER JOIN</span>  leela_palace.departments <span class="kw">AS</span> d
+  <span class="kw">ON</span>        s.department_id = d.department_id;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> For each staff member, find the matching department (where department_id matches), then return columns from both tables together.</div></div>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/213/039/original/Screenshot_2026-07-23_110712.png?1784785040" alt="Scenario 1: Uniting staff records with department locations - editorial blueprint">
+    <div class="diaglabel">Anchor table (s) + Target table (d), matched on the Connection Condition (ON), producing names + locations</div>
+  </div>
+
+
+  <p>How it reads logically: start with <code>staff (s)</code>, bring in <code>departments (d)</code>, match them where <code>department_id</code> is identical, and pull specific columns from the newly fused virtual table.</p>
+
+
+  <table class="nice">
+    <tr><th>Keyword</th><th>Role</th></tr>
+    <tr><td><code>SELECT</code></td><td>Choose columns — can pull from either table using the alias prefix</td></tr>
+    <tr><td><code>FROM ... AS s</code></td><td>The anchor (left/first) table</td></tr>
+    <tr><td><code>INNER JOIN ... AS d</code></td><td>The target table to connect</td></tr>
+    <tr><td><code>ON s.col = d.col</code></td><td>The matching condition — FK to PK</td></tr>
+  </table>
+</div>
+
+
+<!-- ============ 8. FOUR BUSINESS SCENARIOS ============ -->
+<div class="section">
+  <span class="secnum orange">8</span>
+  <h2>Four Business Scenarios — JOINs in Action 📋</h2>
+
+
+  <h3>Scenario 2 — Staff + Salary Grade</h3>
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">Show every staff member alongside their salary grade name and role level.</div></div>
+  <div class="query"><div class="qtitle">📄 Query 8.1 — staff + salary_grades</div>
+<pre><span class="kw">SELECT</span>      s.staff_id,
+            s.first_name,
+            s.role,
+            g.grade_name,
+            g.role_level
+<span class="kw">FROM</span>        leela_palace.staff         <span class="kw">AS</span> s
+<span class="kw">INNER JOIN</span>  leela_palace.salary_grades <span class="kw">AS</span> g
+  <span class="kw">ON</span>        s.grade_id = g.grade_id;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> For every staff row, look up the matching salary grade using grade_id, and attach the grade name and role level.</div></div>
+
+
+  <h3>Scenario 3 — Staff + Department + Salary (a 3-table JOIN)</h3>
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">I need staff name, department name, and their current monthly salary — all in one row.</div></div>
+  <div class="query"><div class="qtitle">📄 Query 8.2 — three tables joined in a chain</div>
+<pre><span class="kw">SELECT</span>      s.first_name,
+            s.last_name,
+            d.department_name,
+            ss.monthly_salary_inr
+<span class="kw">FROM</span>        leela_palace.staff          <span class="kw">AS</span> s
+<span class="kw">INNER JOIN</span>  leela_palace.departments    <span class="kw">AS</span> d
+  <span class="kw">ON</span>        s.department_id = d.department_id
+<span class="kw">INNER JOIN</span>  leela_palace.staff_salaries <span class="kw">AS</span> ss
+  <span class="kw">ON</span>        s.staff_id = ss.staff_id;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> Start from staff. Chain in departments using department_id. Chain in staff_salaries using staff_id. Every JOIN adds one more ON clause, connecting a new table to something already in the chain.</div></div>
+
+
+  <div class="note"><b>Note:</b> A 3-table JOIN is just two INNER JOINs stacked back to back. Each new <code>INNER JOIN ... ON ...</code> block can reference <b>any</b> table already joined so far — not just the very first one.</div>
+
+
+  <h3>Scenario 4 — Aggregation Across Joined Tables (Headcount per Department)</h3>
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">How many staff members work in each department, by department name (not just the ID)?</div></div>
+  <div class="query"><div class="qtitle">📄 Query 8.3 — JOIN + GROUP BY for headcount</div>
+<pre><span class="kw">SELECT</span>      d.department_name,
+            <span class="fn">COUNT</span>(*) <span class="kw">AS</span> headcount
+<span class="kw">FROM</span>        leela_palace.staff       <span class="kw">AS</span> s
+<span class="kw">INNER JOIN</span>  leela_palace.departments <span class="kw">AS</span> d
+  <span class="kw">ON</span>        s.department_id = d.department_id
+<span class="kw">GROUP BY</span>    d.department_name
+<span class="kw">ORDER BY</span>    headcount <span class="kw">DESC</span>;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> Join staff to departments to get readable names, then count how many staff rows land in each department name group, sorted busiest first.</div></div>
+
+
+  <h3>Scenario 5 — JOIN + WHERE + Aggregation (Average Salary of Active Staff, per Department)</h3>
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">What is the average monthly salary of active staff, calculated per department?</div></div>
+  <div class="query"><div class="qtitle">📄 Query 8.4 — the complete analytical pipeline</div>
+<pre><span class="kw">SELECT</span>      d.department_name,
+            <span class="fn">ROUND</span>(<span class="fn">AVG</span>(ss.monthly_salary_inr), <span class="num">0</span>) <span class="kw">AS</span> avg_salary
+<span class="kw">FROM</span>        leela_palace.staff          <span class="kw">AS</span> s
+<span class="kw">INNER JOIN</span>  leela_palace.departments    <span class="kw">AS</span> d
+  <span class="kw">ON</span>        s.department_id = d.department_id
+<span class="kw">INNER JOIN</span>  leela_palace.staff_salaries <span class="kw">AS</span> ss
+  <span class="kw">ON</span>        s.staff_id = ss.staff_id
+<span class="kw">WHERE</span>       s.status = <span class="str">'active'</span>
+<span class="kw">GROUP BY</span>    d.department_name
+<span class="kw">ORDER BY</span>    avg_salary <span class="kw">DESC</span>;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> Fuse all three tables. Keep only active staff. Group the survivors by department. Calculate the average salary per group.</div></div>
+
+
+  <h3>The Universal JOIN Query Pattern</h3>
+  <p>Every JOIN query — no matter how many tables — follows the same six building blocks in the same order:</p>
+  <ol class="clean">
+    <li><b>FROM</b> → anchor table</li>
+    <li><b>INNER JOIN</b> → target table(s)</li>
+    <li><b>ON</b> → matching condition (FK = PK)</li>
+    <li><b>WHERE</b> → filter rows (before grouping)</li>
+    <li><b>GROUP BY</b> → group similar rows together</li>
+    <li><b>ORDER BY</b> → sort the result</li>
+  </ol>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/213/044/original/Screenshot_2026-07-23_111337.png?1784785426" alt="The complete analytical pipeline: Filter, Join, Aggregate">
+    <div class="diaglabel">Execution order: connect the tables first, filter the rows second, aggregate the surviving dataset last</div>
+  </div>
+
+
+  <div class="golden">⭐ Connect the tables first. Filter the rows second. Aggregate the surviving dataset last. That order never changes.</div>
+</div>
+
+
+<!-- ============ 9. NON-MATCHING ROWS ============ -->
+<div class="section">
+  <span class="secnum pink">9</span>
+  <h2>Non-Matching Rows — INNER JOIN's Silent Trap ⚠️</h2>
+
+
+  <p>Recall from the schema: <code>staff.department_id</code> is <b>NULL for new joiners</b> who haven't been assigned to a department yet. What happens to those staff members in an INNER JOIN against <code>departments</code>?</p>
+
+
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">What's our average salary across the whole hotel?</div></div>
+  <div class="talk learner"><div class="who">ANALYST</div><div class="bubble">I ran the staff + departments + staff_salaries JOIN and got the average... but wait, this doesn't include the staff still waiting on department assignment. They just vanished from the query.</div></div>
+
+
+  <p>INNER JOIN requires a match on <b>both</b> sides. If a staff member hasn't been assigned a department yet (their <code>department_id</code> is NULL), there is nothing on the departments side to match against — <b>they silently disappear</b> from the result. No error. No warning. The row is simply gone.</p>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/213/046/original/Screenshot_2026-07-23_111612.png?1784785580" alt="The Analyst Trap: INNER JOIN drops non-matching rows silently">
+    <div class="diaglabel">500 total staff → INNER JOIN on department_id → only 487 emerge matched, 13 staff (missing department IDs) drop entirely</div>
+  </div>
+
+
+  <table class="nice">
+    <tr><th>Risk</th><th>Consequence</th></tr>
+    <tr><td>INNER JOIN drops staff with no department yet</td><td>Headcount reports undercount reality</td></tr>
+    <tr><td>Averages computed only on matched rows</td><td>Reporting an undercounted average salary without knowing it can trigger wrong business decisions</td></tr>
+  </table>
+
+
+  <!-- NON-MATCHING ROWS SIMULATOR -->
+  <div class="sim">
+    <div class="simtitle">🎮 SIMULATOR — Watch INNER JOIN Drop Unmatched Rows!</div>
+    <div class="simsub">Some staff below have a NULL department_id (new joiners). Run the INNER JOIN and see exactly who survives — and who silently disappears.</div>
+    <button onclick="runDropSim()">▶ RUN INNER JOIN</button>
+    <div class="result" id="dropSimResult"></div>
+    <div style="overflow-x:auto"><table id="dropSimTable"></table></div>
+  </div>
+
+
+  <div class="warn"><div class="t">🎯 The Fix</div>
+    <p>Rule: always check <code>COUNT(*)</code> from the JOIN vs <code>COUNT(*)</code> from the source table before trusting any aggregate.</p>
+    <p style="margin-top:6px"><code>SELECT COUNT(*) FROM leela_palace.staff</code> vs <code>SELECT COUNT(*) FROM (your joined query)</code> — if the numbers differ, rows were dropped. (LEFT JOIN, covered in Lecture 9, is the fix when you need to keep unmatched rows too.)</p>
+  </div>
+
+
+  <div class="golden">⭐ INNER JOIN = keeps matches only. Unmatched rows disappear silently. Always validate row counts!</div>
+</div>
+
+
+<!-- ============ 10. AI SEGMENT ============ -->
+<div class="section">
+  <span class="secnum teal">10</span>
+  <h2>AI Segment — "Write My JOIN Query" 🤖</h2>
+
+
+  <div class="analogy"><span class="emoji">✈️</span><div><b>The Co-Pilot Analogy:</b> AI drafts JOIN structures fast — but the ON clause logic, alias consistency, and filter placement are the analyst's responsibility to verify. Wrong ON clauses don't throw errors; only you can catch them.</div></div>
+
+
+  <h3>Step 1 — the prompt</h3>
+  <div class="query"><div class="qtitle">📋 Paste this into Claude or ChatGPT</div>
+<pre><span class="cm">I have three tables in BigQuery: leela_palace.staff (staff_id, first_name,
+department_id, grade_id, status), leela_palace.departments (department_id,
+department_name, location), and leela_palace.staff_salaries (staff_id,
+monthly_salary_inr). Write a query that joins all three tables and shows,
+per department, the average monthly salary of active staff only. Use table
+aliases and sort by average salary descending.</span></pre>
+  </div>
+
+
+  <h3>Step 2 — what to verify in AI's response</h3>
+  <ul class="clean">
+    <li>Did it use <code>INNER JOIN ... ON</code> with the correct FK-to-PK pairing on both joins?</li>
+    <li>Are table aliases used consistently across SELECT, ON, and WHERE?</li>
+    <li>Is the <code>WHERE status = 'active'</code> filter present — and placed before GROUP BY, not after?</li>
+    <li>Did it GROUP BY the same column it's displaying (department_name), not department_id alone with a mismatched label?</li>
+    <li>Did it validate row counts, or just trust the JOIN blindly? (AI usually won't think to check this — you must.)</li>
+  </ul>
+
+
+  <table class="nice">
+    <tr><th>Task</th><th>AI's tendency</th></tr>
+    <tr><td>JOIN + ON structure</td><td>✅ Handles well — very common pattern</td></tr>
+    <tr><td>Correct FK/PK pairing across 3 tables</td><td>⚠️ Watch closely — verify against the actual schema</td></tr>
+    <tr><td>Row-count / dropped-row awareness</td><td>❌ AI will not warn you about silently dropped rows — that's your job</td></tr>
+  </table>
+
+
+  <div class="golden">⭐ AI writes the JOIN structure fast. You verify the ON clause and the row counts. That is the partnership.</div>
+</div>
+
+
+<!-- ============ 11. INTERVIEW QUESTIONS ============ -->
+<div class="section">
+  <span class="secnum purple">11</span>
+  <h2>Interview-Style Questions — Self-Check 🎤</h2>
+
+
+  <div class="qbox">
+    <div class="qlabel">Q1. What is the difference between a 1:N and an M:N relationship? Give a hotel example of each.</div>
+    <div class="ans">In a <b>1:N</b> relationship, one row on the "one" side can relate to many rows on the "many" side, and the Foreign Key sits on the many side — e.g., one department has many staff members. In an <b>M:N</b> relationship, rows on both sides can relate to many rows on the other, and it cannot be stored directly — it needs a junction table. Example: many guests can book many spa services, connected through the spa_bookings junction table.</div>
+  </div>
+
+
+  <div class="qbox">
+    <div class="qlabel">Q2. Why is getting the ON clause wrong more dangerous than a syntax error?</div>
+    <div class="ans">A syntax error stops the query from running at all — it's obvious and gets fixed immediately. An incorrect ON clause (e.g., joining on the wrong columns) runs perfectly fine and returns a full result set — just one that is logically meaningless. Because there's no error message, this kind of mistake can go unnoticed and feed wrong numbers directly into a business report.</div>
+  </div>
+
+
+  <div class="qbox">
+    <div class="qlabel">Q3. Why might an INNER JOIN report show fewer staff than actually exist in the staff table? How would you catch this?</div>
+    <div class="ans">INNER JOIN only returns rows that have a match in <b>both</b> tables. If a staff member's department_id is NULL (e.g., a new joiner not yet assigned to a department), there is no matching department row, so that staff member is silently dropped from the result. To catch this, always compare COUNT(*) from the joined query against COUNT(*) from the original staff table — a mismatch reveals dropped rows.</div>
+  </div>
+</div>
+
+
+<!-- ============ 12. PRACTICE PREVIEW ============ -->
+<div class="section">
+  <span class="secnum blue">12</span>
+  <h2>Practice Preview — Before Next Class 💪</h2>
+
+
+  <p>Tables available: <code>leela_palace.staff</code>, <code>leela_palace.departments</code>, <code>leela_palace.salary_grades</code>, <code>leela_palace.staff_salaries</code>.</p>
+
+
+  <div class="tier b1">
+    <h4>🟢 Beginner — single INNER JOIN</h4>
+    <ol>
+      <li>Join staff and departments. Show staff_id, first_name, department_name, and location for every matched staff member.</li>
+      <li>Join staff and salary_grades. Show staff_id, first_name, grade_name, and role_level.</li>
+      <li>Join staff and staff_salaries. Show staff_id, first_name, monthly_salary_inr, and effective_date.</li>
+      <li>Join departments and staff. Show department_name and the head_id of each department (do not resolve the head's name yet — that needs a self-join, coming later).</li>
+    </ol>
+  </div>
+
+
+  <div class="tier b2">
+    <h4>🟡 Intermediate — 3-table JOINs and aggregation</h4>
+    <ol>
+      <li>Join staff, departments, and staff_salaries. Show first_name, last_name, department_name, and monthly_salary_inr.</li>
+      <li>Using a JOIN + GROUP BY, show department_name and headcount, sorted by headcount descending.</li>
+      <li>Join staff and salary_grades, then filter to only 'Manager' role_level. Show first_name, department_id, grade_name.</li>
+      <li>Join staff and staff_salaries, filter to status = 'active', and show total payroll (SUM of monthly_salary_inr) per employment_type.</li>
+    </ol>
+  </div>
+
+
+  <div class="tier b3">
+    <h4>🔴 Senior-track bonus</h4>
+    <p><b>Business question:</b> "Build a per-department salary report joining staff, departments, and staff_salaries. Show department_name, count of active staff, average monthly salary (ROUND 0dp), and total monthly payroll — for active staff only. Sort by total payroll descending. Then, separately, verify your JOIN didn't silently drop any staff by comparing COUNT(*) on the joined query against COUNT(*) on the raw staff table."</p>
+    <p style="margin-top:8px">Uses: 3-table INNER JOIN, table aliases, WHERE before GROUP BY, COUNT, AVG, SUM, ROUND, and a row-count validation query.</p>
+  </div>
+
+
+  <div class="golden">⭐ JOINs turn scattered tables into one analytical view. INNER JOIN is strict — master its matching logic, and every other JOIN type becomes easy.</div>
+</div>
+
+
+<!-- ============ CONCEPTS TABLE ============ -->
+<div class="section">
+  <span class="secnum blue">📚 RECAP</span>
+  <h2>Concepts Covered Today — Quick Reference</h2>
+  <table class="nice">
+    <tr><th>Concept</th><th>What it does</th><th>Syntax / Key rule</th></tr>
+    <tr><td><b>1:1 Relationship</b></td><td>One record each side, no repeats</td><td>FK is unique on the side that holds it</td></tr>
+    <tr><td><b>1:N Relationship</b></td><td>One row relates to many rows</td><td>FK always sits on the "many" side</td></tr>
+    <tr><td><b>M:N Relationship</b></td><td>Many rows relate to many rows</td><td>Needs a junction/bridge table</td></tr>
+    <tr><td><b>JOIN (concept)</b></td><td>Matches and aligns rows from two tables temporarily</td><td>Does not alter the original tables</td></tr>
+    <tr><td><b>Table Alias</b></td><td>Short name for a table used throughout the query</td><td><code>FROM table AS t</code></td></tr>
+    <tr><td><b>ON clause</b></td><td>Defines the matching condition (FK = PK)</td><td><code>ON s.department_id = d.department_id</code></td></tr>
+    <tr><td><b>INNER JOIN</b></td><td>Returns only rows with a match in both tables</td><td><code>FROM a INNER JOIN b ON a.id = b.id</code></td></tr>
+    <tr><td><b>3-table JOIN</b></td><td>Chain multiple INNER JOINs together</td><td>Each new JOIN can reference any table already joined</td></tr>
+    <tr><td><b>JOIN + GROUP BY</b></td><td>Aggregate across combined tables</td><td>Filter (WHERE) before grouping</td></tr>
+    <tr><td><b>Dropped rows</b></td><td>INNER JOIN silently excludes non-matching rows</td><td>Always validate: COUNT(*) joined vs COUNT(*) source</td></tr>
+  </table>
+
+
+  <div class="hourbanner" style="margin-top:24px;margin-bottom:0">
+    <h2>🎉 Recap complete!</h2>
+    <p>You can now describe table relationships, write multi-table INNER JOINs with correct aliases and ON clauses, combine JOINs with GROUP BY and WHERE, and spot the silent row-dropping trap. Next up: LEFT JOIN, RIGHT JOIN, and FULL OUTER JOIN — for when you need to keep the unmatched rows too! 💪</p>
+  </div>
+</div>
+
+
+</div><!-- /wrap -->
+
+
+<script>
+/* ====== JOIN MATCHER SIMULATOR (Section 3) ====== */
+const STAFF_JOIN_ROWS = [
+ {staff_id:'ST01', name:'John Smith',  department_id:2, active:true},
+ {staff_id:'ST02', name:'Sarah Lee',   department_id:1, active:true},
+ {staff_id:'ST03', name:'Mike Brown',  department_id:2, active:true}
+];
+const DEPT_JOIN_ROWS = [
+ {department_id:1, department_name:'Sales'},
+ {department_id:2, department_name:'Food & Beverage'}
+];
+
+
+function fmt(v){ return (v===null||v===undefined) ? '<span class="nullcell">NULL</span>' : v; }
+
+
+function initJoinToggles(){
+  const sBox = document.getElementById('staffToggleBox');
+  STAFF_JOIN_ROWS.forEach((r,i)=>{
+    const d = document.createElement('div');
+    d.className='checkrow';
+    d.innerHTML = `<input type="checkbox" id="sChk${i}" checked> <span style="color:#e0d0d4;font-family:'JetBrains Mono';font-size:12.5px">${r.staff_id} · ${r.name} · dept_id=${r.department_id}</span>`;
+    sBox.appendChild(d);
+  });
+  const dBox = document.getElementById('deptToggleBox');
+  DEPT_JOIN_ROWS.forEach((r,i)=>{
+    const d = document.createElement('div');
+    d.className='checkrow';
+    d.innerHTML = `<input type="checkbox" id="dChk${i}" checked> <span style="color:#e0d0d4;font-family:'JetBrains Mono';font-size:12.5px">dept_id=${r.department_id} · ${r.department_name}</span>`;
+    dBox.appendChild(d);
+  });
+}
+initJoinToggles();
+
+
+function runJoinSim(){
+  const activeStaff = STAFF_JOIN_ROWS.filter((r,i)=>document.getElementById('sChk'+i).checked);
+  const activeDepts = DEPT_JOIN_ROWS.filter((r,i)=>document.getElementById('dChk'+i).checked);
+
+
+  let matched = 0;
+  let h = '<tr><th>staff_id</th><th>name</th><th>department_id</th><th>department_name</th></tr>';
+  activeStaff.forEach(s=>{
+    const dept = activeDepts.find(d=>d.department_id===s.department_id);
+    if(dept){
+      matched++;
+      h += `<tr class="highlight"><td>${s.staff_id}</td><td>${s.name}</td><td>${s.department_id}</td><td>${dept.department_name}</td></tr>`;
+    }
+  });
+  document.getElementById('joinSimTable').innerHTML = h || '<tr><td>No matches — every staff row was dropped!</td></tr>';
+  document.getElementById('joinSimResult').textContent =
+    `INNER JOIN result: ${matched} row(s) survived out of ${activeStaff.length} active staff toggled on. Turn off a department and watch its staff disappear!`;
+}
+runJoinSim();
+
+
+/* ====== NON-MATCHING ROWS SIMULATOR (Section 9) ====== */
+const STAFF_DROP_ROWS = [
+ {staff_id:'ST01', first_name:'Aditi',  department_id:'D01'},
+ {staff_id:'ST02', first_name:'Rohan',  department_id:'D02'},
+ {staff_id:'ST03', first_name:'Kavya',  department_id:null},
+ {staff_id:'ST04', first_name:'Farah',  department_id:'D01'},
+ {staff_id:'ST05', first_name:'Vikram', department_id:null},
+ {staff_id:'ST06', first_name:'Neha',   department_id:'D03'},
+ {staff_id:'ST07', first_name:'Sameer', department_id:'D02'},
+ {staff_id:'ST08', first_name:'Priya',  department_id:null}
+];
+const DEPT_DROP_ROWS = [
+ {department_id:'D01', department_name:'Front Office'},
+ {department_id:'D02', department_name:'Food & Beverage'},
+ {department_id:'D03', department_name:'Spa & Wellness'}
+];
+
+
+function runDropSim(){
+  let matched = 0, dropped = 0;
+  let h = '<tr><th>staff_id</th><th>first_name</th><th>department_id</th><th>JOIN outcome</th></tr>';
+  STAFF_DROP_ROWS.forEach(s=>{
+    const dept = DEPT_DROP_ROWS.find(d=>d.department_id===s.department_id);
+    if(dept){
+      matched++;
+      h += `<tr class="highlight"><td>${s.staff_id}</td><td>${s.first_name}</td><td>${fmt(s.department_id)}</td><td>✅ Matched → ${dept.department_name}</td></tr>`;
+    } else {
+      dropped++;
+      h += `<tr class="dropped"><td>${s.staff_id}</td><td>${s.first_name}</td><td>${fmt(s.department_id)}</td><td>❌ Dropped — no matching department</td></tr>`;
+    }
+  });
+  document.getElementById('dropSimTable').innerHTML = h;
+  document.getElementById('dropSimResult').textContent =
+    `COUNT(*) on staff = ${STAFF_DROP_ROWS.length} · COUNT(*) on INNER JOIN result = ${matched} · ${dropped} staff silently dropped (NULL department_id) ⚠️`;
+}
+runDropSim();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/SQL-8-postread" target="_blank" rel="noopener">github.com/scaler-content/SQL-8-postread</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

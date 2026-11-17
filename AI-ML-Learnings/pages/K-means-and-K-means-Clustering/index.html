@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-means and K-means ++ post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink-950:#150713;
+    --ink-900:#1c0a1a;
+    --ink-850:#241026;
+    --surface:#2a1228;
+    --surface-2:#341531;
+    --line:#4a2144;
+    --magenta-700:#8f0f52;
+    --magenta-600:#b5136a;
+    --magenta-500:#d6146e;
+    --magenta-400:#ef3f8f;
+    --magenta-300:#ff77b7;
+    --magenta-200:#ffb3d9;
+    --paper:#fbeef6;
+    --text-hi:#fdf3f9;
+    --text-mid:#e3c7dc;
+    --text-low:#a887a8;
+    --good:#3ecf8e;
+    --bad:#ff6b6b;
+    --amber:#f4b740;
+    --shadow: 0 20px 50px -20px rgba(0,0,0,.6);
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 620px at 82% -8%, rgba(214,20,110,.28), transparent 60%),
+      radial-gradient(900px 500px at -10% 15%, rgba(239,63,143,.16), transparent 55%),
+      var(--ink-950);
+    color:var(--text-mid);
+    font-family:'Source Sans 3', system-ui, sans-serif;
+    font-size:17px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{
+    font-family:'Fraunces', serif;
+    color:var(--text-hi);
+    font-weight:600;
+    line-height:1.15;
+    margin:0 0 .5em;
+  }
+  .mono{font-family:'JetBrains Mono', monospace;}
+  a{color:var(--magenta-300);}
+  ::selection{background:var(--magenta-600); color:#fff;}
+  :focus-visible{outline:2px solid var(--magenta-300); outline-offset:3px; border-radius:4px;}
+
+  /* ============ layout shell ============ */
+  .wrap{max-width:900px; margin:0 auto; padding:0 24px;}
+  .rail{
+    position:fixed; top:0; left:0; height:3px; width:100%;
+    background:linear-gradient(90deg, var(--magenta-500), var(--magenta-300));
+    transform-origin:left; transform:scaleX(0); z-index:100;
+  }
+
+  /* ============ hero ============ */
+  header.hero{
+    position:relative;
+    padding:min(14vh,120px) 0 88px;
+    overflow:hidden;
+    border-bottom:1px solid var(--line);
+  }
+  header.hero::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,.05) 0, transparent 40%),
+      repeating-linear-gradient(120deg, rgba(255,255,255,.02) 0 1px, transparent 1px 90px);
+    pointer-events:none;
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:10px;
+    font-family:'JetBrains Mono', monospace; font-size:12.5px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--magenta-300);
+    padding:6px 14px; border:1px solid var(--magenta-700);
+    border-radius:999px; background:rgba(214,20,110,.08);
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--magenta-400); box-shadow:0 0 0 4px rgba(239,63,143,.25);}
+  h1.title{
+    font-size:clamp(2.4rem, 5.2vw, 4rem);
+    margin:22px 0 18px;
+    max-width:14ch;
+  }
+  h1.title em{
+    font-style:normal; color:var(--magenta-300);
+  }
+  .dek{
+    max-width:60ch; font-size:1.15rem; color:var(--text-mid);
+  }
+  .dek strong{color:var(--text-hi); font-weight:600;}
+
+  .storycard{
+    margin-top:44px;
+    background:linear-gradient(180deg, var(--surface), var(--surface-2));
+    border:1px solid var(--line); border-radius:var(--radius);
+    padding:28px 30px; box-shadow:var(--shadow);
+  }
+  .msg{
+    font-family:'Fraunces', serif; font-style:italic; font-size:1.25rem;
+    color:var(--paper); padding:2px 0 2px 18px; border-left:3px solid var(--magenta-500);
+    margin:14px 0;
+  }
+
+  /* timeline (intro) */
+  .timeline{display:flex; gap:0; margin:34px 0 6px; overflow-x:auto; padding-bottom:6px;}
+  .tl-stop{flex:1; min-width:130px; position:relative; text-align:center; padding-top:26px;}
+  .tl-stop::before{
+    content:""; position:absolute; top:8px; left:50%; width:14px; height:14px;
+    background:var(--ink-950); border:3px solid var(--magenta-400); border-radius:50%;
+    transform:translateX(-50%); z-index:2;
+  }
+  .tl-stop::after{
+    content:""; position:absolute; top:14px; left:-50%; width:100%; height:2px;
+    background:var(--line); z-index:1;
+  }
+  .tl-stop:first-child::after{display:none;}
+  .tl-stop span{font-size:.86rem; color:var(--text-mid); display:block;}
+  .tl-stop.alert span{color:var(--bad);}
+  .tl-stop.alert::before{border-color:var(--bad);}
+
+  /* ============ sections ============ */
+  main{padding:64px 0 20px;}
+  section.block{
+    padding:64px 0; border-bottom:1px solid var(--line);
+    scroll-margin-top:24px;
+  }
+  section.block:last-of-type{border-bottom:none;}
+  .kicker{
+    font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--magenta-400); margin-bottom:10px; display:block;
+  }
+  section.block h2{font-size:clamp(1.6rem, 3.2vw, 2.2rem); max-width:22ch;}
+  .lede{font-size:1.08rem; color:var(--text-mid); max-width:66ch;}
+  p{max-width:68ch;}
+
+  figure{margin:30px 0;}
+  figure img{width:100%; display:block; border-radius:10px; border:1px solid var(--line); background:#fff;}
+  figcaption{
+    font-size:.88rem; color:var(--text-low); margin-top:10px; font-family:'JetBrains Mono', monospace;
+  }
+
+  .callout{
+    border:1px solid var(--line); background:var(--surface);
+    border-left:3px solid var(--magenta-500);
+    border-radius:10px; padding:18px 22px; margin:26px 0; max-width:68ch;
+  }
+  .callout.warn{border-left-color:var(--amber);}
+  .callout h4{font-size:1rem; color:var(--magenta-300); margin-bottom:6px; font-family:'Source Sans 3',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:.8rem;}
+
+  ul.assumptions{list-style:none; padding:0; margin:24px 0; display:grid; gap:10px; max-width:60ch;}
+  ul.assumptions li{
+    background:var(--surface); border:1px solid var(--line); border-radius:9px;
+    padding:12px 16px; display:flex; gap:10px; align-items:flex-start;
+  }
+  ul.assumptions li::before{content:"—"; color:var(--magenta-400); font-weight:700;}
+
+  /* ============ visualizer embed ============ */
+  .viz-embed{
+    margin:32px 0; border-radius:var(--radius); overflow:hidden;
+    border:1px solid var(--line); background:var(--ink-900); box-shadow:var(--shadow);
+  }
+  .viz-embed .viz-head{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 18px; background:var(--surface); border-bottom:1px solid var(--line);
+  }
+  .viz-embed .viz-head h4{margin:0; font-size:1rem; color:var(--text-hi); font-family:'Fraunces',serif;}
+  .viz-embed .viz-head a{
+    font-size:.8rem; font-family:'JetBrains Mono',monospace; color:var(--magenta-300);
+    border:1px solid var(--magenta-700); padding:5px 10px; border-radius:6px; white-space:nowrap; text-decoration:none;
+  }
+  .viz-embed iframe{width:100%; height:520px; border:0; display:block; background:#fff;}
+  .viz-embed .viz-note{padding:12px 18px; font-size:.86rem; color:var(--text-low); border-top:1px solid var(--line);}
+
+  /* ============ accordion (kmeans++ steps) ============ */
+  .steps{margin:28px 0; display:grid; gap:10px; max-width:68ch;}
+  .step{
+    border:1px solid var(--line); border-radius:10px; background:var(--surface); overflow:hidden;
+  }
+  .step > button{
+    width:100%; text-align:left; background:none; border:0; color:var(--text-hi);
+    font-family:'Fraunces',serif; font-size:1.05rem; padding:16px 20px;
+    display:flex; align-items:center; gap:14px; cursor:pointer;
+  }
+  .step > button .num{
+    flex:none; width:30px; height:30px; border-radius:50%; background:var(--magenta-700);
+    color:#fff; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:.85rem;
+  }
+  .step > button .chev{margin-left:auto; transition:transform .25s ease; color:var(--magenta-300);}
+  .step.open > button .chev{transform:rotate(180deg);}
+  .step .panel{
+    max-height:0; overflow:hidden; transition:max-height .3s ease;
+  }
+  .step.open .panel{max-height:220px;}
+  .step .panel-inner{padding:0 20px 18px 64px; color:var(--text-mid); font-size:.98rem;}
+
+  /* ============ warehouse analogy ============ */
+  .analogy{
+    display:grid; grid-template-columns:1fr 1fr; gap:24px; margin:28px 0; max-width:68ch;
+  }
+  @media(max-width:640px){.analogy{grid-template-columns:1fr;}}
+  .analogy .card{border:1px solid var(--line); border-radius:10px; padding:18px 20px; background:var(--surface);}
+  .analogy .card h4{font-size:.95rem; color:var(--magenta-300); margin-bottom:8px;}
+
+  /* ============ quiz ============ */
+  .quiz{
+    margin:36px 0; border:1px solid var(--magenta-700); border-radius:var(--radius);
+    background:linear-gradient(180deg, rgba(214,20,110,.08), transparent 40%), var(--surface);
+    padding:26px 26px 22px; max-width:70ch; box-shadow:var(--shadow);
+  }
+  .quiz .qtag{
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--magenta-300); margin-bottom:10px; display:block;
+  }
+  .quiz .qtext{font-size:1.08rem; color:var(--text-hi); margin-bottom:18px; font-weight:600;}
+  .quiz fieldset{border:0; margin:0; padding:0;}
+  .quiz .choice{
+    display:flex; gap:12px; align-items:flex-start; width:100%; text-align:left;
+    background:var(--ink-900); border:1px solid var(--line); border-radius:9px;
+    padding:12px 14px; margin-bottom:9px; color:var(--text-mid); cursor:pointer; font-size:.98rem;
+    font-family:inherit; transition:border-color .15s ease, background .15s ease;
+  }
+  .quiz .choice:hover{border-color:var(--magenta-500);}
+  .quiz .choice .mark{
+    flex:none; width:20px; height:20px; border-radius:50%; border:2px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-size:.7rem; margin-top:1px;
+  }
+  .quiz .choice[data-state="correct"]{border-color:var(--good); background:rgba(62,207,142,.08);}
+  .quiz .choice[data-state="correct"] .mark{border-color:var(--good); background:var(--good); color:#08281b;}
+  .quiz .choice[data-state="incorrect"]{border-color:var(--bad); background:rgba(255,107,107,.08);}
+  .quiz .choice[data-state="incorrect"] .mark{border-color:var(--bad); background:var(--bad); color:#3a0a0a;}
+  .quiz .choice[disabled]{cursor:default;}
+  .quiz .explain{
+    display:none; margin-top:14px; padding:14px 16px; border-radius:8px;
+    background:var(--ink-900); border:1px solid var(--line); font-size:.94rem; color:var(--text-mid);
+  }
+  .quiz .explain.show{display:block;}
+  .quiz .explain strong{color:var(--magenta-300);}
+
+  /* ============ data table ============ */
+  table.data{
+    width:100%; border-collapse:collapse; margin:26px 0; max-width:60ch;
+    font-family:'JetBrains Mono',monospace; font-size:.9rem;
+  }
+  table.data caption{caption-side:top; text-align:left; font-family:'Source Sans 3',sans-serif; color:var(--text-low); margin-bottom:8px; font-size:.85rem;}
+  table.data th, table.data td{border:1px solid var(--line); padding:10px 14px; text-align:left;}
+  table.data th{background:var(--surface); color:var(--magenta-300); font-weight:600;}
+  table.data td{color:var(--text-mid);}
+  table.data tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+
+  .personas{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:22px 0; max-width:68ch;}
+  .persona{border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:var(--surface); text-align:center;}
+  .persona .swatch{width:26px;height:26px;border-radius:50%;margin:0 auto 8px;}
+  .persona span{font-size:.92rem; color:var(--text-hi); font-weight:600;}
+
+  /* ============ playground ============ */
+  .playground{
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);
+    padding:26px; margin:30px 0; box-shadow:var(--shadow);
+  }
+  .pg-grid{display:grid; grid-template-columns:280px 1fr; gap:26px;}
+  @media(max-width:760px){.pg-grid{grid-template-columns:1fr;}}
+  .pg-controls{display:grid; gap:16px; align-content:start;}
+  .pg-controls label{font-size:.82rem; color:var(--text-low); display:block; margin-bottom:6px; font-family:'JetBrains Mono',monospace;}
+  .pg-controls select, .pg-controls input[type=range]{width:100%;}
+  .pg-controls select{
+    background:var(--ink-900); color:var(--text-hi); border:1px solid var(--line); border-radius:7px; padding:8px 10px;
+  }
+  .pg-row-val{display:flex; justify-content:space-between; font-size:.8rem; color:var(--text-mid);}
+  .init-toggle{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden;}
+  .init-toggle button{flex:1; background:var(--ink-900); border:0; color:var(--text-mid); padding:9px 6px; font-size:.85rem; cursor:pointer; font-family:'JetBrains Mono',monospace;}
+  .init-toggle button.active{background:var(--magenta-600); color:#fff;}
+  .pg-btn{
+    background:var(--magenta-500); color:#fff; border:0; border-radius:8px; padding:11px 14px;
+    font-weight:600; cursor:pointer; font-size:.95rem; margin-top:4px;
+  }
+  .pg-btn:hover{background:var(--magenta-400);}
+  .pg-canvas-wrap{position:relative; background:#fff; border-radius:10px; overflow:hidden; border:1px solid var(--line);}
+  canvas{display:block; width:100%; height:auto;}
+  .pg-stats{
+    display:flex; gap:18px; flex-wrap:wrap; margin-top:14px; font-family:'JetBrains Mono',monospace; font-size:.85rem; color:var(--text-mid);
+  }
+  .pg-stats b{color:var(--magenta-300);}
+
+  /* ============ wrap up ============ */
+  .recap{list-style:none; padding:0; margin:26px 0; counter-reset:step; display:grid; gap:14px; max-width:70ch;}
+  .recap li{
+    counter-increment:step; position:relative; padding:16px 20px 16px 62px;
+    border:1px solid var(--line); border-radius:10px; background:var(--surface);
+  }
+  .recap li::before{
+    content:counter(step); position:absolute; left:18px; top:50%; transform:translateY(-50%);
+    width:28px; height:28px; border-radius:50%; background:var(--magenta-700); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:.85rem;
+  }
+  .recap li strong{color:var(--text-hi);}
+
+  .nextup{
+    margin-top:36px; padding:24px 26px; border-radius:var(--radius);
+    border:1px dashed var(--magenta-600); background:rgba(214,20,110,.06); max-width:68ch;
+  }
+  .nextup h4{color:var(--magenta-300); font-family:'JetBrains Mono',monospace; font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px;}
+
+  footer{
+    text-align:center; padding:50px 24px 60px; color:var(--text-low); font-size:.85rem;
+    border-top:1px solid var(--line);
+  }
+  footer .fname{font-family:'Fraunces',serif; color:var(--magenta-300); font-size:1.1rem; display:block; margin-bottom:6px;}
+
+  /* skip link */
+  .skip{position:absolute; left:-999px; top:0; background:var(--magenta-500); color:#fff; padding:10px 16px; z-index:200;}
+  .skip:focus{left:12px; top:12px;}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Clustering · K-means limits and K-means++</span><span class="pn"><a href="../Intro-to-clustering-and-K-means/" title="Clustering · Intro to clustering and K-means">← Prev</a><a href="../Hierarchical-Clustering/" title="Clustering · Hierarchical clustering and dendrograms">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip" href="#main">Skip to content</a>
+<div class="rail" id="rail"></div>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow"><span class="dot"></span> Unsupervised Learning · Clustering</span>
+    <h1 class="title">K-means and K-means <em>++</em> post read</h1>
+    <p class="dek">Why a textbook clustering algorithm can pass every demo and still <strong>break in production</strong> — and how a smarter initialization strategy fixes half the problem, but not all of it.</p>
+
+    <div class="storycard">
+      <p style="margin:0; color:var(--text-low); font-family:'JetBrains Mono',monospace; font-size:.85rem; letter-spacing:.04em;">CASE FILE — CLUSTERMART</p>
+      <p style="margin-top:10px;">ClusterMart's data team built a customer segmentation engine using K-Means. It worked beautifully in the demo. It went to production. One week later, two messages landed in the team's inbox:</p>
+      <p class="msg">"Some customer segments don't make sense."</p>
+      <p class="msg">"Predictions are inconsistent."</p>
+      <p style="margin-top:10px;">This is the story of figuring out <strong style="color:var(--text-hi)">why</strong> it broke, what could be fixed, and what couldn't — ending at the doorstep of a completely different way to group customers.</p>
+
+      <div class="timeline" role="img" aria-label="Timeline: segmentation model built, deployed to production, new customer data arrives, complaints begin">
+        <div class="tl-stop"><span>Segmentation model built</span></div>
+        <div class="tl-stop"><span>Deployed to production</span></div>
+        <div class="tl-stop"><span>New customer data arrives</span></div>
+        <div class="tl-stop alert"><span>Complaints begin</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+
+  <!-- LIMITATIONS (decoupled from the case study) -->
+  <section class="block" id="limits">
+    <span class="kicker">Before we dive in</span>
+    <h2>Two separate limitations of K-Means</h2>
+    <p class="lede">Before returning to ClusterMart, it's worth naming K-Means' two core limitations directly — independent of any one dataset. They are different problems with different fixes, and it's easy to blur them together.</p>
+
+    <div class="analogy">
+      <div class="card"><h4>1. Cluster shape</h4>K-Means works best when clusters are roughly spherical / convex, with similar variance. It measures straight-line (Euclidean) distance to a single center point, so clusters that are stretched, curved, or nested inside one another won't be represented well — no matter how carefully the algorithm is run.</div>
+      <div class="card"><h4>2. Local minima / initialization</h4>K-Means starts by placing centroids, then refines them. Where those centroids start matters: different starting positions can make the algorithm settle into different final solutions, even on the exact same data with the exact same K.</div>
+    </div>
+
+    <div class="callout">
+      <h4>How each one gets addressed</h4>
+      <p style="margin:0 0 10px;">These two limitations don't share a fix, so this post treats them separately:</p>
+      <ul class="assumptions" style="margin:0;">
+        <li>For <strong style="color:var(--text-hi)">local minima / initialization</strong>, we'll walk through <strong style="color:var(--text-hi)">K-Means++</strong>, a smarter initialization strategy that is the main focus of this post.</li>
+        <li>For <strong style="color:var(--text-hi)">non-spherical cluster shape</strong>, the honest answer is that K-Means simply isn't the right tool — no initialization method changes what shapes it can represent. Other algorithms (density-based or hierarchical approaches, for instance) are better suited to that case, and we'll only touch on that briefly here.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- SECTION 1 -->
+  <section class="block" id="s1">
+    <span class="kicker">Section 1 · Limitation #1, in production</span>
+    <h2>Where K-Means breaks: cluster shape</h2>
+    <p class="lede">With that distinction in mind, here's how the shape limitation actually showed up at ClusterMart. Its customers don't all behave the same way — some segments really do look like tidy, round groups, but others are stretched, curved, or overlapping. Before touching any algorithm, here are four shapes of customer behavior that ClusterMart's analysts flagged as suspicious.</p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/358/original/Screenshot_2026-08-07_205910.png?1786119862" alt="Four scatter plots showing raw, unclustered data: blobs, circles, moons, and unequal-density blobs.">
+      <figcaption>ClusterMart's four customer behavior shapes, before any clustering.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/357/original/Screenshot_2026-08-07_205926.png?1786119834" alt="K-Means results on the same four shapes: clean round clusters on blobs, but nonsensical splits on circles and moons.">
+      <figcaption>K-Means results: clean on blobs, falls apart everywhere else.</figcaption>
+    </figure>
+
+    <p><strong style="color:var(--text-hi)">What's going on:</strong> K-Means didn't fail because it's a bad algorithm — it failed because its assumptions were violated. K-Means assumes:</p>
+    <ul class="assumptions">
+      <li>Clusters are roughly <strong style="color:var(--text-hi)">spherical / convex</strong></li>
+      <li>Clusters have roughly <strong style="color:var(--text-hi)">equal variance</strong></li>
+      <li>Distance is measured in <strong style="color:var(--text-hi)">straight lines</strong> (Euclidean)</li>
+      <li>Every cluster can be summarized by <strong style="color:var(--text-hi)">one single center point</strong></li>
+    </ul>
+    <p>This is exactly what ClusterMart's engineers found when they dug into the complaints: some real customer segments behave more like the circles and moons above than the tidy blobs.</p>
+
+    <div class="viz-embed">
+      <div class="viz-head">
+        <h4>Interactive: K-Means on non-spherical shapes</h4>
+        <a href="https://aiml-vizs-new.vercel.app/un-supervised-learning/k-means-failure-on-non-spherical-shapes/" target="_blank" rel="noopener">Open full screen ↗</a>
+      </div>
+      <iframe src="https://aiml-vizs-new.vercel.app/un-supervised-learning/k-means-failure-on-non-spherical-shapes/" title="Interactive visualization of K-Means failing on non-spherical cluster shapes" loading="lazy"></iframe>
+      <div class="viz-note">Try switching the data shape and watch how the straight-line decision boundaries stay fixed, regardless of what the data actually looks like.</div>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <span class="qtag">Check your understanding</span>
+      <p class="qtext">ClusterMart's original K-Means model produced messy segments for a group of customers whose behavior formed two interleaving crescent shapes rather than round blobs. Which K-Means assumption does this most directly violate?</p>
+      <fieldset>
+        <button class="choice" data-correct="false">Clusters must all have the same WCSS.</button>
+        <button class="choice" data-correct="true">Clusters are assumed to be roughly spherical (convex).</button>
+        <button class="choice" data-correct="false">K must always be less than 4.</button>
+        <button class="choice" data-correct="false">Distance must be measured using Manhattan distance.</button>
+      </fieldset>
+      <div class="explain">K-Means assigns every point to its nearest centroid using Euclidean distance, which naturally creates round, convex decision boundaries. Interleaving crescent shapes can't be represented well by a single centroid, so K-Means struggles <em>regardless</em> of how the centroids are initialized — this is a limitation of cluster shape, not initialization.</div>
+    </div>
+  </section>
+
+  <!-- SECTION 2 -->
+  <section class="block" id="s2">
+    <span class="kicker">Section 2 · Limitation #2, in production</span>
+    <h2>Where K-Means breaks: local minima and initialization</h2>
+    <p class="lede">Shape wasn't the only thing that went wrong. Engineering reran the segmentation engine on the <strong style="color:var(--text-hi)">exact same dataset</strong>, five separate times. Every run gave different clusters. The question that landed on the data team's desk: <em>"How can the same algorithm give different answers on the same data?"</em></p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/355/original/Screenshot_2026-08-07_205947.png?1786119806" alt="Five separate K-Means runs on identical data, each producing a different clustering and a different WCSS score.">
+      <figcaption>Same data, same algorithm, five different answers (random initialization).</figcaption>
+    </figure>
+
+    <p>Random starting points mean K-Means can get "stuck" in a different — often worse — arrangement each time it runs. That instability is exactly what ClusterMart's engineers were seeing in production.</p>
+
+    <div class="quiz" data-quiz>
+      <span class="qtag">Check your understanding</span>
+      <p class="qtext">Engineering reran the exact same dataset five times and got five different segmentations each time. What is the most likely root cause?</p>
+      <fieldset>
+        <button class="choice" data-correct="false">The dataset changed slightly between runs.</button>
+        <button class="choice" data-correct="true">K-Means centroids were initialized randomly and converged to different local minima.</button>
+        <button class="choice" data-correct="false">K-Means++ was configured incorrectly.</button>
+        <button class="choice" data-correct="false">A different number of clusters (K) was used on each run.</button>
+      </fieldset>
+      <div class="explain">With random initialization, starting centroid positions are pure chance. Different starting points can lead the algorithm to converge on different local minima, even on identical data with an identical K. Neither the dataset nor K changed — only luck did.</div>
+    </div>
+  </section>
+
+  <!-- KMEANS++ FROM SCRATCH -->
+  <section class="block" id="build">
+    <span class="kicker">Building it</span>
+    <h2>Building K-Means++ from scratch</h2>
+    <p class="lede">K-Means++ fixes the instability problem by choosing the starting centroids more carefully. Instead of picking every centroid randomly, it follows a simple idea: farther-away points get a higher chance of becoming the next centroid. No formulas required to get the intuition — just walk through the four steps.</p>
+
+    <div class="steps" id="steps">
+      <div class="step open">
+        <button aria-expanded="true"><span class="num">1</span> Pick the first centroid randomly<span class="chev">▾</span></button>
+        <div class="panel"><div class="panel-inner">There's no way to be "smart" about the very first pick — any point in the dataset is chosen at random to be centroid #1.</div></div>
+      </div>
+      <div class="step">
+        <button aria-expanded="false"><span class="num">2</span> Compute distance to the nearest chosen centroid<span class="chev">▾</span></button>
+        <div class="panel"><div class="panel-inner">For every remaining point, measure how far it is from whichever centroid has already been picked and is closest to it.</div></div>
+      </div>
+      <div class="step">
+        <button aria-expanded="false"><span class="num">3</span> Favor far-away points for the next pick<span class="chev">▾</span></button>
+        <div class="panel"><div class="panel-inner">Points that are far from any existing centroid get a proportionally higher probability of being chosen next — this is what spreads centroids out instead of letting them clump.</div></div>
+      </div>
+      <div class="step">
+        <button aria-expanded="false"><span class="num">4</span> Repeat until all K centroids are selected<span class="chev">▾</span></button>
+        <div class="panel"><div class="panel-inner">The goal isn't to optimize the clusters yet — it's simply to begin with well-separated starting points, giving K-Means a much better chance of finding good clusters.</div></div>
+      </div>
+    </div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/352/original/Screenshot_2026-08-07_210014.png?1786119741" alt="Four panels showing the K-Means++ initialization process step by step, with distance-to-nearest-centroid shown as a color gradient.">
+      <figcaption>The K-Means++ selection process, step by step. Darker points are farther from any chosen centroid — and more likely to be picked next.</figcaption>
+    </figure>
+
+    <div class="viz-embed">
+      <div class="viz-head">
+        <h4>Interactive: step through centroid selection</h4>
+        <a href="https://aiml-vizs-new.vercel.app/un-supervised-learning/k-means-step-by-step-centroid-selection/v2/" target="_blank" rel="noopener">Open full screen ↗</a>
+      </div>
+      <iframe src="https://aiml-vizs-new.vercel.app/un-supervised-learning/k-means-step-by-step-centroid-selection/v2/" title="Interactive step-by-step K-Means++ centroid selection visualizer" loading="lazy"></iframe>
+      <div class="viz-note">Pick centroids yourself, one at a time, and see how favoring distant points spreads them across the dataset.</div>
+    </div>
+  </section>
+
+  <!-- SECTION 3 -->
+  <section class="block" id="s3">
+    <span class="kicker">Section 3</span>
+    <h2>How K-Means++ fixes it</h2>
+    <p class="lede"><strong style="color:var(--text-hi)">The warehouse story:</strong> imagine placing 4 ClusterMart warehouses across a city. Would you drop all 4 randomly — maybe clustered in one neighborhood? Or deliberately spread them out to cover the whole city? That's the entire idea behind K-Means++.</p>
+
+    <div class="analogy">
+      <div class="card"><h4>Random initialization</h4>Warehouses can land clustered together by chance, leaving whole neighborhoods poorly covered.</div>
+      <div class="card"><h4>K-Means++ initialization</h4>Each new warehouse deliberately favors the farthest uncovered ground, spreading coverage out.</div>
+    </div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/350/original/Screenshot_2026-08-07_210033.png?1786119682" alt="Side-by-side comparison: random initialization with clumped centroids vs K-Means++ with spread-out centroids.">
+      <figcaption>Random initialization can clump centroids together; K-Means++ spreads them out.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/349/original/Screenshot_2026-08-07_210041.png?1786119658" alt="Final clustering results for random init versus K-Means++ init on the same data, with WCSS scores labeled.">
+      <figcaption>Same data, same K — only the initialization method differs. Lower WCSS means tighter, more compact clusters.</figcaption>
+    </figure>
+
+    <p>But one comparison could be luck — consistency across many runs is the real test.</p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/348/original/Screenshot_2026-08-07_210048.png?1786119633" alt="Scatter plot of WCSS values across 20 runs, comparing random initialization (wide spread) to K-Means++ (tight spread).">
+      <figcaption>WCSS across 20 runs. Random init has a much wider spread of outcomes — including some genuinely bad ones. K-Means++ narrows that spread: its runs cluster around a lower, more stable WCSS. It still starts from one random pick, so it won't produce the identical result every time — but poor, clumped starts become far less likely, which is exactly the improved reliability ClusterMart's production pipeline needed.</figcaption>
+    </figure>
+
+    <div class="quiz" data-quiz>
+      <span class="qtag">Check your understanding</span>
+      <p class="qtext">Marketing complains that the same customer dataset produces different customer segments every time the model is rerun. Which of the following directly addresses this issue?</p>
+      <fieldset>
+        <button class="choice" data-correct="false">Switch to hierarchical clustering.</button>
+        <button class="choice" data-correct="true">Use K-Means++ for smarter, well-separated initialization.</button>
+        <button class="choice" data-correct="false">Increase the number of clusters (K).</button>
+        <button class="choice" data-correct="false">Use a different distance metric.</button>
+      </fieldset>
+      <div class="explain">Hierarchical clustering solves a different problem — shape flexibility, not run-to-run instability. K-Means++ is the direct fix because it uses distance-weighted probability to spread its starting centroids out, which makes a poor, clumped start much less likely. It doesn't remove randomness entirely — the first centroid is still picked at random, and results can still vary slightly — but it makes bad outcomes far rarer and results noticeably more stable. Increasing K doesn't fix instability (it can worsen it), and changing the distance metric doesn't touch initialization, the actual root cause.</div>
+    </div>
+  </section>
+
+  <!-- SECTION 4 -->
+  <section class="block" id="s4">
+    <span class="kicker">Section 4</span>
+    <h2>Is initialization enough?</h2>
+    <p class="lede">The obvious next question: <em>"Great — if we use K-Means++, can we solve every clustering problem?"</em> Let's return to the moon-shaped customers from Section 1 and give them the best initialization available.</p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/347/original/Screenshot_2026-08-07_210058.png?1786119611" alt="K-Means++ applied to moon-shaped data, still splitting the two crescents with a straight line.">
+      <figcaption>K-Means++ on moon-shaped customers — still a straight-line split.</figcaption>
+    </figure>
+
+    <p>Even with the best initialization available, K-Means++ still slices the two crescents apart with a straight line. <strong style="color:var(--text-hi)">Initialization was never the real problem here.</strong> K-Means++ only fixes <em>where</em> you start — it doesn't change <em>what shape</em> of cluster the algorithm can represent. K-Means still assumes spherical, centroid-based clusters; no initialization trick changes that.</p>
+
+    <div class="callout">
+      <h4>Open question</h4>
+      If centroids are the real limitation, what's a completely different way to group customers — one that doesn't rely on a single "center" at all? Keep this in mind — it resurfaces at the end.
+    </div>
+
+    <div class="quiz" data-quiz>
+      <span class="qtag">Check your understanding</span>
+      <p class="qtext">After switching to K-Means++, ClusterMart's model still produced a nonsensical straight-line split through two crescent-shaped customer segments. What does this tell the team?</p>
+      <fieldset>
+        <button class="choice" data-correct="false">K-Means++ was implemented incorrectly.</button>
+        <button class="choice" data-correct="true">The initialization method improves stability, but it does not fix K-Means' underlying assumption of spherical (convex) clusters.</button>
+        <button class="choice" data-correct="false">The number of clusters (K) was chosen incorrectly.</button>
+        <button class="choice" data-correct="false">The data needed to be normalized first.</button>
+      </fieldset>
+      <div class="explain">K-Means++ ran exactly as intended — the centroids were well spread out. The straight-line split persists because K-Means, with any initialization, can only represent spherical, centroid-based clusters. Better initialization improves consistency, not the shape of clusters the algorithm can find.</div>
+    </div>
+  </section>
+
+  <!-- SECTION 5 -->
+  <section class="block" id="s5">
+    <span class="kicker">Section 5</span>
+    <h2>Choosing K: the elbow method</h2>
+    <p class="lede">So far, K-Means has always been told how many segments (K) to look for in advance. In practice, nobody hands you that number — you have to decide it yourself.</p>
+
+    <p><strong style="color:var(--text-hi)">The idea, no formulas required:</strong></p>
+    <ul class="assumptions">
+      <li>Run K-Means++ for K = 1, 2, 3, 4, 5, 6… and for each, note how "tight" the clusters are (their WCSS).</li>
+      <li>As K increases, clusters always get tighter — more centroids means less average distance.</li>
+      <li>The real question: where do we stop getting <em>meaningfully</em> tighter?</li>
+      <li>Plot WCSS against K — the line drops fast at first, then flattens out. The bend — the "elbow" — is usually a good choice for K.</li>
+    </ul>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/346/original/Screenshot_2026-08-07_210108.png?1786119588" alt="WCSS plotted against K from 1 to 8, showing a steep drop that flattens into an elbow shape.">
+      <figcaption>The elbow method — where does the curve stop getting meaningfully tighter?</figcaption>
+    </figure>
+
+    <div class="callout warn">
+      <h4>Caveat</h4>
+      The elbow isn't always obvious on real, messy data — it's a guide, not a guarantee. A different approach, the dendrogram, lets the data suggest K a different way entirely.
+    </div>
+
+    <div class="quiz" data-quiz>
+      <span class="qtag">Check your understanding</span>
+      <p class="qtext">On the WCSS vs. K elbow chart, what should you look for to choose a good value of K?</p>
+      <fieldset>
+        <button class="choice" data-correct="false">The highest point on the curve.</button>
+        <button class="choice" data-correct="false">The point where WCSS becomes exactly zero.</button>
+        <button class="choice" data-correct="true">The point where the curve stops decreasing steeply and begins to flatten.</button>
+        <button class="choice" data-correct="false">Always choose K = 10, regardless of the chart.</button>
+      </fieldset>
+      <div class="explain">WCSS always decreases as K increases — it will never hit exactly zero except when K equals the number of data points. The useful signal is the bend: the point where adding another cluster stops buying you much improvement in tightness.</div>
+    </div>
+  </section>
+
+  <!-- SECTION 6 -->
+  <section class="block" id="s6">
+    <span class="kicker">Section 6</span>
+    <h2>Applying K-Means++ to real ClusterMart customers</h2>
+    <p class="lede">Time to put everything together — well-chosen initialization and a sensible K — on data that actually looks like ClusterMart's customer base: <strong style="color:var(--text-hi)">Annual Income vs. Spending Score.</strong></p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/345/original/Screenshot_2026-08-07_210118.png?1786119552" alt="Scatter plot of Annual Income versus Spending Score, before segmentation, showing four loosely visible groups.">
+      <figcaption>ClusterMart customers — before segmentation.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/344/original/Screenshot_2026-08-07_210127.png?1786119521" alt="The same customers segmented into four colored clusters using K-Means++ with K=4, with black X markers at the centroids.">
+      <figcaption>ClusterMart customers — segmented with K-Means++ (K = 4).</figcaption>
+    </figure>
+
+    <table class="data">
+      <caption>Cluster summary — mean Income ($1000s) and Spending Score per segment</caption>
+      <thead><tr><th>Segment</th><th>Income</th><th>Spending Score</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>25.1</td><td>20.1</td></tr>
+        <tr><td>1</td><td>25.0</td><td>80.0</td></tr>
+        <tr><td>2</td><td>75.0</td><td>20.0</td></tr>
+        <tr><td>3</td><td>75.0</td><td>80.0</td></tr>
+      </tbody>
+    </table>
+
+    <p>As a last-mile step, ClusterMart's team sometimes turns these numeric summaries into short marketing-friendly persona names:</p>
+    <div class="personas">
+      <div class="persona"><div class="swatch" style="background:#4c72b0"></div><span>Thrifty Explorer</span></div>
+      <div class="persona"><div class="swatch" style="background:#dd8452"></div><span>Wealthy Investor</span></div>
+      <div class="persona"><div class="swatch" style="background:#55a868"></div><span>Frugal Dreamer</span></div>
+      <div class="persona"><div class="swatch" style="background:#c44e52"></div><span>Affluent Connoisseur</span></div>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <span class="qtag">Check your understanding</span>
+      <p class="qtext">Which statement about K-Means++ is true?</p>
+      <fieldset>
+        <button class="choice" data-correct="false">It guarantees finding the perfect number of clusters automatically.</button>
+        <button class="choice" data-correct="false">It selects all centroids completely at random, with equal probability.</button>
+        <button class="choice" data-correct="true">It picks the first centroid randomly, then favors farther-away points for each subsequent centroid.</button>
+        <button class="choice" data-correct="false">It removes the need to choose K entirely.</button>
+      </fieldset>
+      <div class="explain">K-Means++ still picks its very first centroid at random. What changes is every centroid after the first: each is chosen with probability proportional to squared distance from the nearest already-chosen centroid, so far-away points are more likely to be picked. K still has to be chosen upfront, and the initialization mechanism is exactly what makes K-Means++ better than plain random init.</div>
+    </div>
+
+    <div class="callout">
+      <h4>From centroids to something completely different</h4>
+      If centroids are the real limitation, what's a completely different way to group customers — without using a "center" at all? One answer: instead of starting with K centers and assigning points to them, start with every single customer as their own tiny cluster, and merge similar ones together, one pair at a time, until a natural grouping emerges. No centroid required at any step. This approach is called <strong style="color:var(--text-hi)">hierarchical clustering</strong>.
+    </div>
+  </section>
+
+  <!-- PLAYGROUND -->
+  <section class="block" id="playground">
+    <span class="kicker">Try it yourself</span>
+    <h2>Playground: run K-Means live</h2>
+    <p class="lede">Generate a dataset, choose an initialization strategy, and watch K-Means converge. Compare how <span class="mono" style="color:var(--magenta-300);">random</span> and <span class="mono" style="color:var(--magenta-300);">k-means++</span> initialization behave on the same data.</p>
+
+    <div class="playground">
+      <div class="pg-grid">
+        <div class="pg-controls">
+          <div>
+            <label for="pg-shape">Dataset shape</label>
+            <select id="pg-shape">
+              <option value="blobs">Blobs</option>
+              <option value="moons">Moons</option>
+              <option value="circles">Circles</option>
+              <option value="uneven">Unequal density</option>
+            </select>
+          </div>
+          <div>
+            <div class="pg-row-val"><label for="pg-k" style="margin:0;">K (clusters)</label><span id="pg-k-val">4</span></div>
+            <input type="range" id="pg-k" min="1" max="8" value="4" step="1">
+          </div>
+          <div>
+            <div class="pg-row-val"><label for="pg-n" style="margin:0;">Samples</label><span id="pg-n-val">300</span></div>
+            <input type="range" id="pg-n" min="60" max="500" value="300" step="20">
+          </div>
+          <div>
+            <div class="pg-row-val"><label for="pg-noise" style="margin:0;">Noise</label><span id="pg-noise-val">0.8</span></div>
+            <input type="range" id="pg-noise" min="0.1" max="2.5" value="0.8" step="0.1">
+          </div>
+          <div>
+            <div class="pg-row-val"><label for="pg-seed" style="margin:0;">Seed</label><span id="pg-seed-val">1</span></div>
+            <input type="range" id="pg-seed" min="1" max="50" value="1" step="1">
+          </div>
+          <div>
+            <label style="margin-bottom:8px;">Initialization</label>
+            <div class="init-toggle">
+              <button type="button" id="init-random">Random</button>
+              <button type="button" id="init-pp" class="active">K-Means++</button>
+            </div>
+          </div>
+          <button class="pg-btn" id="pg-run">Regenerate &amp; run</button>
+        </div>
+        <div>
+          <div class="pg-canvas-wrap">
+            <canvas id="pg-canvas" width="600" height="440" role="img" aria-label="Live K-Means clustering visualization"></canvas>
+          </div>
+          <div class="pg-stats">
+            <span>Shape: <b id="stat-shape">blobs</b></span>
+            <span>Init: <b id="stat-init">k-means++</b></span>
+            <span>Iterations to converge: <b id="stat-iters">–</b></span>
+            <span>Final WCSS: <b id="stat-wcss">–</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WRAP UP -->
+  <section class="block" id="wrapup">
+    <span class="kicker">Wrap up</span>
+    <h2>The throughline, start to finish</h2>
+    <ol class="recap">
+      <li>K-Means shipped to production and broke — some segments made no sense, and results were inconsistent run-to-run.</li>
+      <li><strong>Shape</strong> turned out to be one culprit: K-Means only sees round, centroid-based clusters.</li>
+      <li><strong>Random initialization</strong> turned out to be the other culprit: identical data, different answers, every run.</li>
+      <li><strong>K-Means++</strong> substantially reduced the second problem — smarter, distance-weighted starting points make K-Means far less sensitive to unlucky initialization, producing noticeably more stable results, even though some randomness (and run-to-run variation) still remains.</li>
+      <li>But K-Means++ <strong>couldn't</strong> fix the first problem — the moon-shaped customers still split down a straight line, because no initialization trick changes what shapes K-Means can represent.</li>
+      <li>Along the way: the <strong>elbow method</strong> for choosing K when nobody hands it to you, applied to a realistic Income vs. Spending Score segmentation.</li>
+      <li>That left one open question — <em>what if we didn't need a center point at all?</em> — which leads straight into <strong>hierarchical clustering</strong>: a bottom-up, dendrogram-driven approach with no centroids in sight.</li>
+    </ol>
+  </section>
+
+</div>
+</main>
+
+<footer>
+  <span class="fname">K-means and K-means ++ post read</span>
+</footer>
+
+<script>
+/* ============ scroll progress rail ============ */
+const rail = document.getElementById('rail');
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const scrolled = h.scrollTop / (h.scrollHeight - h.clientHeight);
+  rail.style.transform = `scaleX(${scrolled})`;
+});
+
+/* ============ accordion steps ============ */
+document.querySelectorAll('.step > button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const step = btn.parentElement;
+    const wasOpen = step.classList.contains('open');
+    step.parentElement.querySelectorAll('.step').forEach(s => {
+      s.classList.remove('open');
+      s.querySelector('button').setAttribute('aria-expanded','false');
+    });
+    if (!wasOpen) {
+      step.classList.add('open');
+      btn.setAttribute('aria-expanded','true');
+    }
+  });
+});
+
+/* ============ quizzes ============ */
+document.querySelectorAll('[data-quiz]').forEach(quiz => {
+  const choices = quiz.querySelectorAll('.choice');
+  const explain = quiz.querySelector('.explain');
+  let answered = false;
+  choices.forEach(choice => {
+    choice.addEventListener('click', () => {
+      if (answered) return;
+      answered = true;
+      const isCorrect = choice.dataset.correct === 'true';
+      choices.forEach(c => {
+        c.disabled = true;
+        if (c.dataset.correct === 'true') {
+          c.dataset.state = 'correct';
+          c.querySelector('.mark') ? null : c.insertAdjacentHTML('afterbegin', '<span class="mark">✓</span>');
+        } else if (c === choice) {
+          c.dataset.state = 'incorrect';
+          c.insertAdjacentHTML('afterbegin', '<span class="mark">✕</span>');
+        }
+      });
+      explain.classList.add('show');
+    });
+  });
+});
+
+/* ============ K-Means playground ============ */
+(function(){
+  const canvas = document.getElementById('pg-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const shapeSel = document.getElementById('pg-shape');
+  const kSlider = document.getElementById('pg-k');
+  const nSlider = document.getElementById('pg-n');
+  const noiseSlider = document.getElementById('pg-noise');
+  const seedSlider = document.getElementById('pg-seed');
+  const kVal = document.getElementById('pg-k-val');
+  const nVal = document.getElementById('pg-n-val');
+  const noiseVal = document.getElementById('pg-noise-val');
+  const seedVal = document.getElementById('pg-seed-val');
+  const runBtn = document.getElementById('pg-run');
+  const initRandomBtn = document.getElementById('init-random');
+  const initPPBtn = document.getElementById('init-pp');
+  const statShape = document.getElementById('stat-shape');
+  const statInit = document.getElementById('stat-init');
+  const statIters = document.getElementById('stat-iters');
+  const statWcss = document.getElementById('stat-wcss');
+
+  let initMethod = 'pp';
+  const palette = ['#d6146e','#3ecf8e','#f4b740','#4c9aff','#ff77b7','#8f5bff','#2dd4bf','#f97316'];
+
+  function mulberry32(seed){
+    return function(){
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function gaussian(rng){
+    let u=0,v=0;
+    while(u===0) u=rng();
+    while(v===0) v=rng();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  }
+
+  function genBlobs(n,k,noise,rng,uneven){
+    const centers = [];
+    const nc = Math.max(k,2);
+    for(let i=0;i<nc;i++){
+      const ang = (i/nc)*Math.PI*2;
+      const r = uneven ? 3 + (i%3)*2 : 5;
+      centers.push([Math.cos(ang)*r, Math.sin(ang)*r]);
+    }
+    const pts = [];
+    for(let i=0;i<n;i++){
+      const c = centers[i%centers.length];
+      const std = uneven ? noise*(0.5+((i%3)*0.6)) : noise;
+      pts.push([c[0]+gaussian(rng)*std, c[1]+gaussian(rng)*std]);
+    }
+    return pts;
+  }
+  function genMoons(n,noise,rng){
+    const pts=[];
+    const half = Math.floor(n/2);
+    for(let i=0;i<half;i++){
+      const t = Math.PI * i/half;
+      pts.push([Math.cos(t)*4 + gaussian(rng)*noise, Math.sin(t)*4 + gaussian(rng)*noise]);
+    }
+    for(let i=0;i<n-half;i++){
+      const t = Math.PI * i/(n-half);
+      pts.push([1 - Math.cos(t)*4 + gaussian(rng)*noise, 1 - Math.sin(t)*4 - 2 + gaussian(rng)*noise]);
+    }
+    return pts;
+  }
+  function genCircles(n,noise,rng){
+    const pts=[];
+    const half = Math.floor(n/2);
+    for(let i=0;i<half;i++){
+      const t = (i/half)*Math.PI*2;
+      pts.push([Math.cos(t)*5 + gaussian(rng)*noise, Math.sin(t)*5 + gaussian(rng)*noise]);
+    }
+    for(let i=0;i<n-half;i++){
+      const t = (i/(n-half))*Math.PI*2;
+      pts.push([Math.cos(t)*2.2 + gaussian(rng)*noise, Math.sin(t)*2.2 + gaussian(rng)*noise]);
+    }
+    return pts;
+  }
+
+  function dist2(a,b){ const dx=a[0]-b[0], dy=a[1]-b[1]; return dx*dx+dy*dy; }
+
+  function initCentroids(pts,k,rng,method){
+    if(method==='random'){
+      const idx = new Set();
+      while(idx.size<k) idx.add(Math.floor(rng()*pts.length));
+      return [...idx].map(i=>pts[i].slice());
+    }
+    // k-means++
+    const cs = [];
+    cs.push(pts[Math.floor(rng()*pts.length)].slice());
+    while(cs.length<k){
+      const d2 = pts.map(p=>Math.min(...cs.map(c=>dist2(p,c))));
+      const sum = d2.reduce((a,b)=>a+b,0);
+      let r = rng()*sum, idx=0;
+      for(;idx<d2.length;idx++){ r-=d2[idx]; if(r<=0) break; }
+      cs.push(pts[Math.min(idx,pts.length-1)].slice());
+    }
+    return cs;
+  }
+
+  function runKMeans(pts,k,rng,method){
+    let centroids = initCentroids(pts,k,rng,method);
+    let labels = new Array(pts.length).fill(0);
+    let iters=0;
+    for(iters=0; iters<50; iters++){
+      let changed=false;
+      for(let i=0;i<pts.length;i++){
+        let best=0, bd=Infinity;
+        for(let c=0;c<centroids.length;c++){
+          const d = dist2(pts[i],centroids[c]);
+          if(d<bd){bd=d;best=c;}
+        }
+        if(labels[i]!==best){labels[i]=best; changed=true;}
+      }
+      const sums = centroids.map(()=>[0,0,0]);
+      for(let i=0;i<pts.length;i++){
+        const s = sums[labels[i]];
+        s[0]+=pts[i][0]; s[1]+=pts[i][1]; s[2]++;
+      }
+      centroids = sums.map((s,ci)=> s[2]>0 ? [s[0]/s[2], s[1]/s[2]] : centroids[ci]);
+      if(!changed) break;
+    }
+    let wcss=0;
+    for(let i=0;i<pts.length;i++) wcss += dist2(pts[i],centroids[labels[i]]);
+    return {centroids, labels, iters: iters+1, wcss};
+  }
+
+  function draw(pts,labels,centroids){
+    ctx.clearRect(0,0,W,H);
+    const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
+    const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+    const pad=40;
+    const sx = x => pad + (x-minX)/(maxX-minX||1) * (W-2*pad);
+    const sy = y => H-pad - (y-minY)/(maxY-minY||1) * (H-2*pad);
+
+    for(let i=0;i<pts.length;i++){
+      ctx.beginPath();
+      ctx.fillStyle = palette[labels[i]%palette.length];
+      ctx.globalAlpha = 0.85;
+      ctx.arc(sx(pts[i][0]), sy(pts[i][1]), 3.6, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    centroids.forEach(c=>{
+      const x=sx(c[0]), y=sy(c[1]);
+      ctx.strokeStyle = '#150713'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(x-7,y-7); ctx.lineTo(x+7,y+7); ctx.moveTo(x+7,y-7); ctx.lineTo(x-7,y+7); ctx.stroke();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(x-7,y-7); ctx.lineTo(x+7,y+7); ctx.moveTo(x+7,y-7); ctx.lineTo(x-7,y+7); ctx.stroke();
+    });
+  }
+
+  function refresh(){
+    const shape = shapeSel.value;
+    const k = +kSlider.value;
+    const n = +nSlider.value;
+    const noise = +noiseSlider.value;
+    const seed = +seedSlider.value;
+    kVal.textContent=k; nVal.textContent=n; noiseVal.textContent=noise.toFixed(1); seedVal.textContent=seed;
+
+    const rng = mulberry32(seed*1000+7);
+    let pts;
+    if(shape==='blobs') pts = genBlobs(n,k,noise,rng,false);
+    else if(shape==='uneven') pts = genBlobs(n,k,noise,rng,true);
+    else if(shape==='moons') pts = genMoons(n,noise*0.5,rng);
+    else pts = genCircles(n,noise*0.5,rng);
+
+    const runRng = mulberry32(seed*777+3);
+    const result = runKMeans(pts,k,runRng,initMethod);
+    draw(pts,result.labels,result.centroids);
+
+    statShape.textContent = shape;
+    statInit.textContent = initMethod==='pp' ? 'k-means++' : 'random';
+    statIters.textContent = result.iters;
+    statWcss.textContent = result.wcss.toFixed(1);
+  }
+
+  [shapeSel,kSlider,nSlider,noiseSlider,seedSlider].forEach(el=>{
+    el.addEventListener('input', ()=>{
+      kVal.textContent=kSlider.value; nVal.textContent=nSlider.value;
+      noiseVal.textContent=(+noiseSlider.value).toFixed(1); seedVal.textContent=seedSlider.value;
+    });
+  });
+  runBtn.addEventListener('click', refresh);
+  initRandomBtn.addEventListener('click', ()=>{ initMethod='random'; initRandomBtn.classList.add('active'); initPPBtn.classList.remove('active'); refresh(); });
+  initPPBtn.addEventListener('click', ()=>{ initMethod='pp'; initPPBtn.classList.add('active'); initRandomBtn.classList.remove('active'); refresh(); });
+
+  refresh();
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/K-means-and-K-means-Clustering" target="_blank" rel="noopener">github.com/scaler-content/K-means-and-K-means-Clustering</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

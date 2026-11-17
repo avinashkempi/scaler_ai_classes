@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handling Imbalanced Data post read</title>
+<style>
+  :root{
+    --bg:#FCFAFE;
+    --paper:#FFFFFF;
+    --ink:#241733;
+    --ink-soft:#63527D;
+    --ink-faint:#9686B0;
+    --violet-950:#241033;
+    --violet-800:#4B2079;
+    --violet-600:#6C3FA6;
+    --violet-400:#9A6FC7;
+    --violet-300:#C9AEEA;
+    --violet-150:#E9DEF7;
+    --violet-100:#F2EAFB;
+    --magenta-700:#8F1F6E;
+    --magenta-600:#B22E8F;
+    --magenta-400:#D874B7;
+    --magenta-150:#F7E0EF;
+    --line:#E4D8F2;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: 'SFMono-Regular', Menlo, Consolas, monospace;
+    --radius: 10px;
+    --content-w: 700px;
+    --wide-w: 940px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth; scroll-padding-top:20px;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:17px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--violet-300); color:var(--violet-950); }
+  a{ color:var(--violet-700, var(--violet-600)); }
+  img{max-width:100%;}
+  .skip-link{
+    position:absolute; left:-999px; top:0; background:var(--violet-800); color:#fff;
+    padding:.6em 1em; z-index:200; border-radius:0 0 8px 0;
+  }
+  .skip-link:focus{ left:0; }
+  :focus-visible{ outline:2.5px solid var(--magenta-600); outline-offset:2px; }
+
+  /* ---------- Layout shell ---------- */
+  .shell{
+    display:grid;
+    grid-template-columns: 236px minmax(0,1fr);
+    gap:0 32px;
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 24px;
+  }
+  @media (max-width:980px){
+    .shell{ grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Top banner ---------- */
+  header.masthead{
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, var(--violet-100), var(--bg) 85%);
+  }
+  .masthead-inner{
+    max-width:1180px; margin:0 auto; padding:20px 24px 14px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; font-family:var(--sans); font-weight:700; color:var(--violet-800); letter-spacing:.01em; }
+  .brand .dot{ width:9px; height:9px; border-radius:50%; background:var(--magenta-600); box-shadow:0 0 0 4px var(--magenta-150); flex:none; }
+  .brand span{ font-size:.95rem; }
+  details.toc-mobile{ display:none; }
+  @media (max-width:980px){
+    details.toc-mobile{ display:block; width:100%; margin-top:6px; }
+    details.toc-mobile summary{
+      cursor:pointer; list-style:none; padding:10px 14px; border:1px solid var(--line);
+      border-radius:8px; background:var(--paper); font-weight:600; color:var(--violet-800); font-size:.9rem;
+    }
+    details.toc-mobile summary::-webkit-details-marker{ display:none; }
+    details.toc-mobile[open] summary{ border-bottom-left-radius:0; border-bottom-right-radius:0; }
+    details.toc-mobile nav{ border:1px solid var(--line); border-top:none; border-radius:0 0 8px 8px; background:var(--paper); padding:6px 4px; }
+  }
+
+  /* ---------- Side rail TOC (desktop) ---------- */
+  nav.rail{
+    position:sticky; top:24px; align-self:start;
+    padding:28px 0 40px;
+    font-size:.86rem;
+  }
+  @media (max-width:980px){ nav.rail{ display:none; } }
+  nav.rail .rail-label, .toc-mobile .rail-label{
+    font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin:0 0 10px 14px;
+  }
+  nav.rail ol, .toc-mobile ol{ list-style:none; margin:0; padding:0; border-left:2px solid var(--violet-150); }
+  .toc-mobile ol{ border-left:none; padding-left:6px; }
+  nav.rail li, .toc-mobile li{ margin:0; }
+  nav.rail a, .toc-mobile a{
+    display:block; padding:6px 14px; text-decoration:none; color:var(--ink-soft);
+    border-left:2px solid transparent; margin-left:-2px; transition:color .15s ease;
+  }
+  nav.rail a:hover{ color:var(--violet-800); }
+  nav.rail a.active{ color:var(--violet-800); border-left-color:var(--magenta-600); font-weight:600; }
+
+  /* ---------- Main column ---------- */
+  main{ min-width:0; padding-bottom:60px; }
+
+  .hero{ padding:56px 4px 30px; max-width:var(--wide-w); }
+  .hero .eyebrow{ color:var(--magenta-600); font-weight:600; font-size:.85rem; margin:0 0 14px; }
+  .hero h1{
+    font-family:var(--serif); font-weight:600; color:var(--violet-950);
+    font-size:clamp(2.1rem, 5vw, 3.15rem); line-height:1.08; margin:0 0 8px; letter-spacing:-.01em;
+  }
+  .hero .kicker{
+    font-family:var(--serif); font-style:italic; color:var(--violet-600);
+    font-size:clamp(1.1rem,2.4vw,1.5rem); margin:0 0 22px;
+  }
+  .hero p.lede{ max-width:60ch; color:var(--ink-soft); font-size:1.08rem; }
+  .hero .scene-strip{
+    margin-top:28px; display:flex; gap:0; border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; background:var(--paper);
+  }
+  .scene-cell{ flex:1; padding:16px 18px; border-right:1px solid var(--line); }
+  .scene-cell:last-child{ border-right:none; }
+  .scene-cell .big{ font-family:var(--serif); font-size:1.5rem; color:var(--violet-800); }
+  .scene-cell .lbl{ font-size:.78rem; color:var(--ink-faint); margin-top:2px; }
+  @media (max-width:560px){ .scene-strip{ flex-wrap:wrap; } .scene-cell{ min-width:44%; border-bottom:1px solid var(--line);} }
+
+  section{ padding:46px 4px 6px; max-width:var(--wide-w); scroll-margin-top:20px; }
+  section.wide{ max-width:var(--wide-w); }
+  .section-tag{ font-size:.76rem; text-transform:uppercase; letter-spacing:.09em; color:var(--magenta-600); font-weight:700; margin:0 0 10px; }
+  h2{ font-family:var(--serif); font-weight:600; color:var(--violet-950); font-size:clamp(1.5rem,3vw,2rem); margin:0 0 18px; line-height:1.2; }
+  h3{ font-family:var(--serif); font-weight:600; color:var(--violet-800); font-size:1.25rem; margin:28px 0 10px; }
+  p{ margin:0 0 16px; max-width:68ch; }
+  ul, ol.plain{ margin:0 0 16px; padding-left:1.3em; max-width:66ch; }
+  li{ margin-bottom:6px; }
+  strong{ color:var(--violet-950); }
+  code{ font-family:var(--mono); background:var(--violet-100); padding:.1em .4em; border-radius:4px; font-size:.88em; color:var(--violet-800); }
+
+  /* ---------- Formula blocks ---------- */
+  .formula{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    background:var(--violet-950); color:#F4EEFC; border-radius:var(--radius);
+    padding:18px 22px; margin:18px 0 20px; font-family:var(--serif); font-size:1.15rem;
+  }
+  .formula .frac{ display:inline-flex; flex-direction:column; text-align:center; vertical-align:middle; margin:0 .15em; font-style:italic; }
+  .formula .frac .num{ padding:0 .25em .1em; border-bottom:1.5px solid #F4EEFC; }
+  .formula .frac .den{ padding:.1em .25em 0; }
+  .formula-note{ font-family:var(--sans); font-size:.86rem; color:var(--ink-faint); margin-top:-8px; }
+  dl.term-list{ margin:6px 0 20px; }
+  dl.term-list div{ display:flex; gap:10px; padding:4px 0; border-bottom:1px dashed var(--line); }
+  dl.term-list dt{ font-family:var(--mono); font-weight:700; color:var(--violet-700,var(--violet-600)); flex:0 0 auto; }
+  dl.term-list dd{ margin:0; color:var(--ink-soft); }
+
+  /* ---------- Callouts ---------- */
+  .callout{ border-radius:var(--radius); padding:18px 20px; margin:22px 0; border:1px solid var(--line); }
+  .callout.think{ background:var(--violet-100); border-color:var(--violet-300); }
+  .callout.think .callout-label{ color:var(--violet-800); }
+  .callout.stakes{ background:var(--magenta-150); border-color:var(--magenta-400); }
+  .callout.stakes .callout-label{ color:var(--magenta-700); }
+  .callout-label{ font-weight:700; font-size:.82rem; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+  .callout p:last-child{ margin-bottom:0; }
+
+  /* ---------- Panels / diagrams ---------- */
+  .panel{
+    background:var(--paper); border:1px solid var(--line); border-radius:14px;
+    padding:26px; margin:22px 0 28px;
+  }
+  .panel-title{ font-weight:700; color:var(--violet-950); margin:0 0 4px; font-size:1rem; }
+  .panel-sub{ color:var(--ink-faint); font-size:.85rem; margin:0 0 18px; }
+  .panel-grid{ display:grid; gap:22px; }
+  @media (min-width:760px){ .panel-grid.two{ grid-template-columns:1fr 1fr; } }
+
+  svg text{ font-family:var(--sans); }
+  .axis-line{ stroke:var(--ink-faint); stroke-width:1.2; }
+  .grid-line{ stroke:var(--line); stroke-width:1; }
+  .curve{ fill:none; stroke:var(--violet-600); stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+  .curve.alt{ stroke:var(--magenta-600); }
+  .diag{ stroke:var(--ink-faint); stroke-width:1.4; stroke-dasharray:4 4; }
+  .marker{ fill:var(--magenta-600); stroke:#fff; stroke-width:2; }
+
+  .slider-row{ display:flex; align-items:center; gap:14px; margin:14px 0 6px; }
+  input[type=range]{ flex:1; accent-color:var(--magenta-600); height:4px; }
+  .readout-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-top:16px; }
+  .readout{ background:var(--violet-100); border-radius:8px; padding:10px 14px; }
+  .readout .k{ font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); }
+  .readout .v{ font-family:var(--serif); font-size:1.5rem; color:var(--violet-800); }
+  .readout.danger{ background:var(--magenta-150); }
+  .readout.danger .v{ color:var(--magenta-700); }
+
+  /* ---------- Confusion matrix ---------- */
+  .cm-wrap{ display:grid; grid-template-columns:auto 1fr; gap:6px; max-width:520px; }
+  .cm-corner{ }
+  .cm-colhead{ display:grid; grid-template-columns:1fr 1fr; gap:6px; text-align:center; font-size:.78rem; color:var(--ink-faint); font-weight:600; }
+  .cm-rows{ display:grid; grid-template-rows:1fr 1fr; gap:6px; }
+  .cm-rowhead{ display:flex; align-items:center; justify-content:center; writing-mode:vertical-rl; transform:rotate(180deg); font-size:.78rem; color:var(--ink-faint); font-weight:600; }
+  .cm-body{ display:grid; grid-template-rows:1fr 1fr; gap:6px; }
+  .cm-row{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .cm-cell{ border-radius:8px; padding:12px 12px; min-height:92px; color:#fff; }
+  .cm-cell .tag{ font-weight:700; font-family:var(--mono); font-size:.86rem; display:block; }
+  .cm-cell .desc{ font-size:.8rem; opacity:.92; margin-top:4px; display:block; }
+  .cm-cell.tp{ background:var(--violet-600); }
+  .cm-cell.tn{ background:var(--violet-400); }
+  .cm-cell.fn{ background:var(--magenta-700); }
+  .cm-cell.fp{ background:var(--magenta-400); }
+
+  /* ---------- Pictogram ---------- */
+  .picto{ display:grid; grid-template-columns:repeat(20,1fr); gap:3px; max-width:460px; }
+  .picto span{ aspect-ratio:1; border-radius:2px; background:var(--violet-150); }
+  .picto span.hot{ background:var(--magenta-600); box-shadow:0 0 0 2px var(--magenta-150); }
+
+  /* ---------- Bars ---------- */
+  .bars{ display:flex; align-items:flex-end; gap:26px; height:170px; padding-top:10px; }
+  .bar-group{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; flex:1; }
+  .bar-group .bar{ width:56px; border-radius:6px 6px 0 0; position:relative; }
+  .bar-group .bar .val{ position:absolute; top:-22px; left:0; right:0; text-align:center; font-weight:700; font-size:.82rem; color:var(--violet-800); }
+  .bar-group .lbl{ margin-top:8px; font-size:.82rem; color:var(--ink-soft); text-align:center; }
+  .bar.nofire{ background:var(--violet-300); }
+  .bar.fire{ background:var(--magenta-600); }
+
+  /* ---------- Histogram ---------- */
+  .hist{ display:flex; align-items:flex-end; gap:10px; height:180px; }
+  .hist-bin{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; flex:1; gap:2px; height:100%; }
+  .hist-bin .stacky{ width:100%; display:flex; gap:3px; align-items:flex-end; height:100%; justify-content:center; }
+  .hist-bin .col{ width:40%; border-radius:3px 3px 0 0; }
+  .hist-bin .col.normal{ background:var(--violet-300); }
+  .hist-bin .col.fire{ background:var(--magenta-600); }
+  .hist-bin .lbl{ font-size:.68rem; color:var(--ink-faint); margin-top:6px; }
+  .legend{ display:flex; gap:18px; font-size:.82rem; color:var(--ink-soft); margin-bottom:10px; }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend i{ width:11px; height:11px; border-radius:3px; display:inline-block; }
+  .legend i.normal{ background:var(--violet-300); }
+  .legend i.fire{ background:var(--magenta-600); }
+
+  details.data-table{ margin-top:14px; }
+  details.data-table summary{ cursor:pointer; font-size:.82rem; color:var(--violet-700,var(--violet-600)); font-weight:600; }
+  details.data-table table{ border-collapse:collapse; margin-top:10px; font-size:.82rem; width:100%; }
+  details.data-table th, details.data-table td{ border:1px solid var(--line); padding:6px 8px; text-align:right; }
+  details.data-table th:first-child, details.data-table td:first-child{ text-align:left; }
+
+  /* ---------- Tabs ---------- */
+  .tabs{ margin:20px 0; }
+  .tab-buttons{ display:flex; gap:6px; flex-wrap:wrap; border-bottom:1px solid var(--line); margin-bottom:20px; }
+  .tab-buttons button{
+    font-family:var(--sans); font-size:.9rem; font-weight:600; color:var(--ink-soft);
+    background:none; border:none; padding:10px 4px; margin-right:18px; cursor:pointer;
+    border-bottom:2.5px solid transparent; margin-bottom:-1px;
+  }
+  .tab-buttons button.active{ color:var(--violet-800); border-bottom-color:var(--magenta-600); }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+  .tradeoff{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
+  @media (max-width:560px){ .tradeoff{ grid-template-columns:1fr; } }
+  .tradeoff .box{ border-radius:10px; padding:14px 16px; font-size:.9rem; }
+  .tradeoff .box.up{ background:var(--violet-100); }
+  .tradeoff .box.down{ background:var(--magenta-150); }
+  .tradeoff .box .h{ font-weight:700; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+  .tradeoff .box.up .h{ color:var(--violet-800); }
+  .tradeoff .box.down .h{ color:var(--magenta-700); }
+
+  /* ---------- SMOTE widget ---------- */
+  .smote-readout{ font-family:var(--mono); font-size:.95rem; background:var(--violet-950); color:#F4EEFC; border-radius:8px; padding:12px 16px; margin-top:14px; }
+  .smote-readout .lam{ color:var(--magenta-400); font-weight:700; }
+
+  /* ---------- Cards ---------- */
+  .card-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; margin:20px 0; }
+  .card{ background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:18px 18px 20px; }
+  .card h4{ font-family:var(--serif); font-size:1.05rem; color:var(--violet-800); margin:0 0 8px; }
+  .card p{ font-size:.92rem; color:var(--ink-soft); margin-bottom:0; }
+
+  /* ---------- Quiz ---------- */
+  .quiz{ background:var(--paper); border:1.5px solid var(--violet-300); border-radius:14px; padding:22px 22px 20px; margin:26px 0; }
+  .quiz-kicker{ font-size:.74rem; text-transform:uppercase; letter-spacing:.08em; color:var(--violet-600); font-weight:700; margin-bottom:8px; }
+  .quiz-q{ font-weight:600; color:var(--violet-950); margin-bottom:16px; }
+  .quiz-choices{ display:grid; gap:9px; }
+  .quiz-choice{
+    text-align:left; font-family:var(--sans); font-size:.92rem; color:var(--ink);
+    background:var(--bg); border:1px solid var(--line); border-radius:9px; padding:11px 14px;
+    cursor:pointer; transition:border-color .15s ease, background .15s ease;
+  }
+  .quiz-choice:hover:not(:disabled){ border-color:var(--violet-400); }
+  .quiz-choice:disabled{ cursor:default; }
+  .quiz-choice.is-correct{ background:var(--violet-100); border-color:var(--violet-600); font-weight:600; }
+  .quiz-choice.is-wrong{ background:var(--magenta-150); border-color:var(--magenta-600); }
+  .quiz-feedback{ margin-top:16px; padding-top:14px; border-top:1px dashed var(--line); }
+  .quiz-verdict{ font-weight:700; margin:0 0 6px; }
+  .quiz-verdict.good{ color:var(--violet-700,var(--violet-600)); }
+  .quiz-verdict.bad{ color:var(--magenta-700); }
+  .quiz-explain{ color:var(--ink-soft); font-size:.92rem; margin:0; }
+
+  /* ---------- Wrap up ---------- */
+  .takeaways{ list-style:none; padding:0; margin:0; display:grid; gap:10px; }
+  .takeaways li{ display:flex; gap:12px; align-items:flex-start; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .takeaways li .mark{ flex:none; width:22px; height:22px; border-radius:50%; background:var(--violet-600); color:#fff; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; margin-top:2px; }
+
+  footer{
+    border-top:1px solid var(--line); margin-top:40px; padding:34px 4px 60px; max-width:var(--wide-w);
+  }
+  footer .foot-title{ font-family:var(--serif); color:var(--violet-800); font-weight:600; font-size:1.05rem; }
+  footer p{ color:var(--ink-faint); font-size:.86rem; }
+  footer a{ color:var(--violet-700,var(--violet-600)); }
+
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML with AI 10 · Imbalanced data, ROC and AUC</span><span class="pn"><a href="../classification-metrics/" title="ML Foundations 6 · Classification metrics">← Prev</a><a href="../Model-evaluation-and-Intro-to-KNN/" title="ML Foundations 7 · Model evaluation and KNN">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip-link" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="brand"><span class="dot"></span><span>Handling Imbalanced Data — Post Read</span></div>
+    <details class="toc-mobile">
+      <summary>Contents</summary>
+      <nav aria-label="Table of contents (mobile)">
+        <p class="rail-label">On this page</p>
+        <ol id="tocMobile"></ol>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="rail" aria-label="Table of contents">
+    <p class="rail-label">On this page</p>
+    <ol id="tocDesktop"></ol>
+  </nav>
+
+  <main id="main">
+
+    <div class="hero">
+      <p class="eyebrow">Classification metrics &amp; imbalanced data</p>
+      <h1>Handling Imbalanced Data</h1>
+      <p class="kicker">Post Read</p>
+      <p class="lede">A model can be 99.5% accurate and still be useless for the one job it was built to do. This is the story of how a wildfire-detection system learns that lesson — and the tools that fix it.</p>
+      <div class="scene-strip">
+        <div class="scene-cell"><div class="big">~4,000</div><div class="lbl">forest sensors across Nimbus County</div></div>
+        <div class="scene-cell"><div class="big">6</div><div class="lbl">fire trucks to dispatch on every alert</div></div>
+        <div class="scene-cell"><div class="big">1 in 200</div><div class="lbl">real-world readings that are an actual fire</div></div>
+      </div>
+    </div>
+
+    <!-- ================= SCENE ================= -->
+    <section id="scene">
+      <p class="section-tag">The setting</p>
+      <h2>Nimbus County Fire Watch</h2>
+      <p>Nimbus County has spent the last year wiring its forests with roughly 4,000 low-cost sensors. Every few minutes, each one reports temperature, smoke density, and humidity back to a control room, where a classification model looks at each reading and predicts one of two things:</p>
+      <ul>
+        <li><strong>Class 1 — Fire:</strong> this reading looks like the start of a wildfire</li>
+        <li><strong>Class 0 — No Fire:</strong> this reading looks like a normal day in the forest</li>
+      </ul>
+      <p>The county owns exactly six fire trucks. Every "Fire" prediction sends one out to investigate — so every alert has a real cost, and every missed fire has a much bigger one.</p>
+      <p>The team's first test ran on a small pilot region where fire and no-fire readings were, by design, roughly balanced — enough of both to sanity-check the model quickly. That pilot is where this story begins, and it's also where the trouble starts, because the real county doesn't look anything like the pilot.</p>
+    </section>
+
+    <!-- ================= SENSITIVITY / SPECIFICITY ================= -->
+    <section id="sens-spec">
+      <p class="section-tag">Beyond accuracy</p>
+      <h2>Sensitivity and specificity</h2>
+      <p>Once the pilot model is trained, the control room asks one question: if we deploy this, how often will it actually catch a real fire, and how often will it send a truck out for nothing? Accuracy can't answer that — it treats "correctly ignoring a normal day" and "correctly catching a fire" as equally important, and for Nimbus County they clearly aren't.</p>
+
+      <h3>Sensitivity (Recall)</h3>
+      <p>Of all the readings that were actually fires, what fraction did the model correctly flag?</p>
+      <div class="formula">Sensitivity = <span class="frac"><span class="num">TP</span><span class="den">TP + FN</span></span></div>
+
+      <h3>Specificity</h3>
+      <p>The mirror question: of all the readings that were actually normal, what fraction did the model correctly leave alone?</p>
+      <div class="formula">Specificity = <span class="frac"><span class="num">TN</span><span class="den">TN + FP</span></span></div>
+
+      <div class="panel">
+        <p class="panel-title">The confusion matrix, in Nimbus County terms</p>
+        <p class="panel-sub">Every prediction lands in one of four boxes. Two of them are correct; two are costly in very different ways.</p>
+        <div class="cm-wrap" role="img" aria-label="Confusion matrix showing true positive, false negative, false positive and true negative outcomes for the fire model">
+          <div class="cm-corner"></div>
+          <div class="cm-colhead"><div>Predicted: Fire</div><div>Predicted: No Fire</div></div>
+          <div class="cm-rowhead">Actual: Fire</div>
+          <div class="cm-body"><div class="cm-row">
+            <div class="cm-cell tp"><span class="tag">TP</span><span class="desc">Real fire, truck dispatched — the system did its job.</span></div>
+            <div class="cm-cell fn"><span class="tag">FN</span><span class="desc">A real fire, missed entirely. It keeps growing unchecked.</span></div>
+          </div></div>
+          <div class="cm-rowhead">Actual: No Fire</div>
+          <div class="cm-body"><div class="cm-row">
+            <div class="cm-cell fp"><span class="tag">FP</span><span class="desc">Normal day, truck sent anyway — a wasted run.</span></div>
+            <div class="cm-cell tn"><span class="tag">TN</span><span class="desc">Normal day, correctly left alone.</span></div>
+          </div></div>
+        </div>
+      </div>
+
+      <p>For Nimbus County, a <strong>false negative is a fire that grows unchecked</strong> — sensitivity is what keeps the county safe. A <strong>false positive is a wasted truck run</strong> — specificity is what keeps the budget sane. Every decision about where to set the alarm threshold is really a decision about how much of one you're willing to trade for the other.</p>
+
+      <div class="quiz" data-answer="b">
+        <p class="quiz-kicker">Check yourself</p>
+        <p class="quiz-q">The fire chief says: "I don't care how many false alarms we get, I never want to miss a real fire." Which metric should the team prioritise when choosing a threshold?</p>
+        <div class="quiz-choices">
+          <button class="quiz-choice" data-key="a">Specificity, because false alarms waste truck resources</button>
+          <button class="quiz-choice" data-key="b">Sensitivity, because missing a real fire is the outcome the chief wants to avoid</button>
+          <button class="quiz-choice" data-key="c">Accuracy, because it summarises overall correctness</button>
+          <button class="quiz-choice" data-key="d">Specificity, because it is always the more important metric</button>
+        </div>
+        <div class="quiz-feedback" hidden>
+          <p class="quiz-verdict"></p>
+          <p class="quiz-explain">The chief's priority is entirely about false negatives — real fires the model fails to catch. Sensitivity is exactly the fraction of actual fires the model catches, so it directly reflects that priority. Specificity still matters as a secondary constraint (there are only six trucks), but no metric is "always" the most important one — it depends on the relative cost of each error type.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ROC ================= -->
+    <section id="roc">
+      <p class="section-tag">Sweeping the threshold</p>
+      <h2>The ROC curve</h2>
+      <p>The model doesn't output "Fire" or "No Fire" directly — it outputs a probability, and Nimbus County chooses where to draw the line. Lower the threshold and the system flags more readings (sensitivity rises, but so do false alarms); raise it and the opposite happens.</p>
+      <p>The <strong>ROC curve</strong> is what you get by sweeping the threshold from 1 down to 0 and, at every value, plotting the false positive rate against the true positive rate:</p>
+      <dl class="term-list">
+        <div><dt>x-axis</dt><dd>False Positive Rate = FP / (FP + TN) = 1 − Specificity</dd></div>
+        <div><dt>y-axis</dt><dd>True Positive Rate = TP / (TP + FN) = Sensitivity</dd></div>
+      </dl>
+      <p>At threshold 1, the model flags almost nothing (bottom-left corner). At threshold 0, it flags everything (top-right corner). A model no better than a coin flip traces the diagonal; a genuinely useful model bows up toward the top-left, where you get high sensitivity without paying much in false alarms.</p>
+
+      <div class="panel">
+        <p class="panel-title">Threshold explorer</p>
+        <p class="panel-sub">Drag the slider to move the operating threshold and watch the point travel along an illustrative ROC curve. (Shape only — not exact pilot-model numbers.)</p>
+        <svg viewBox="0 0 360 340" width="100%" style="max-width:400px;">
+          <line class="grid-line" x1="50" y1="30" x2="50" y2="310"></line>
+          <line class="grid-line" x1="50" y1="310" x2="330" y2="310"></line>
+          <line class="axis-line" x1="50" y1="310" x2="50" y2="30"></line>
+          <line class="axis-line" x1="50" y1="310" x2="330" y2="310"></line>
+          <line class="diag" x1="50" y1="310" x2="330" y2="30"></line>
+          <polyline class="curve" points="50,310 57,221.5 71.3,184.8 90.8,156.6 114.7,132.9 142.4,112 173.7,93.1 208.2,75.7 245.9,59.6 286.7,44.4 330,30"></polyline>
+          <circle id="rocMarker" class="marker" cx="142.4" cy="112" r="7"></circle>
+          <text x="6" y="175" font-size="11" fill="#63527D" transform="rotate(-90 6 175)">Sensitivity (TPR)</text>
+          <text x="150" y="330" font-size="11" fill="#63527D">False Positive Rate</text>
+        </svg>
+        <div class="slider-row">
+          <label for="rocSlider" style="font-size:.85rem;color:var(--ink-soft);">Threshold</label>
+          <input type="range" id="rocSlider" min="0" max="100" value="50" aria-describedby="rocValue">
+          <span id="rocValue" style="font-family:var(--mono);font-size:.9rem;min-width:3.2em;text-align:right;">0.50</span>
+        </div>
+        <div class="readout-grid">
+          <div class="readout"><div class="k">Sensitivity</div><div class="v" id="rocSens">70.7%</div></div>
+          <div class="readout"><div class="k">Specificity</div><div class="v" id="rocSpec">67.0%</div></div>
+          <div class="readout"><div class="k">False positive rate</div><div class="v" id="rocFpr">33.0%</div></div>
+        </div>
+      </div>
+
+      <div class="callout think">
+        <p class="callout-label">Think it through</p>
+        <p>A false alarm costs Nimbus County about $50 in truck fuel. A missed fire is estimated to cost $2 million in damage. Given that gap, where on the curve above would you set the operating threshold — closer to the bottom-left or the top-right — and why?</p>
+      </div>
+    </section>
+
+    <!-- ================= AUC ================= -->
+    <section id="auc">
+      <p class="section-tag">One number for the whole curve</p>
+      <h2>AUC — area under the ROC curve</h2>
+      <p>The ROC curve is a full picture of every trade-off, but the county still wants a single number to compare models before picking a threshold at all. <strong>AUC</strong> is exactly that: the area under the ROC curve, integrated over the false positive rate from 0 to 1.</p>
+      <p>An AUC of 1.0 means a perfect ranking — every real fire scores higher than every normal reading. An AUC of 0.5 means the model is no better than random. Put in words: <strong>AUC is the probability that, given one random fire reading and one random normal reading, the model scores the fire reading higher.</strong></p>
+
+      <div class="callout stakes">
+        <p class="callout-label">Where AUC falls short</p>
+        <p>AUC treats every threshold — including the ones nobody would ever use — as equally important. A model can post an excellent AUC by ranking things well overall, while still being mediocre at the one threshold the county will actually operate at. AUC also gets harder to interpret once one class is much rarer than the other, because the false positive rate's denominator (FP + TN) gets dominated by the huge number of normal readings — a problem this post comes back to shortly.</p>
+      </div>
+
+      <div class="quiz" data-answer="b">
+        <p class="quiz-kicker">Check yourself</p>
+        <p class="quiz-q">Model A has AUC = 0.92. Model B has AUC = 0.90, but at the specific threshold the county actually plans to operate at, Model B has noticeably higher sensitivity than Model A. Which model should the county deploy?</p>
+        <div class="quiz-choices">
+          <button class="quiz-choice" data-key="a">Model A, since a higher AUC always means a better model</button>
+          <button class="quiz-choice" data-key="b">Model B, since AUC alone doesn't tell you how a model performs at the threshold you'll actually use</button>
+          <button class="quiz-choice" data-key="c">It's impossible to decide without retraining both models</button>
+          <button class="quiz-choice" data-key="d">Model A, because AUC is a stricter metric than sensitivity</button>
+        </div>
+        <div class="quiz-feedback" hidden>
+          <p class="quiz-verdict"></p>
+          <p class="quiz-explain">AUC summarises performance across every possible threshold, but Nimbus County will only ever operate at one of them. A model with a slightly lower AUC can still be the better real-world choice if it performs better specifically at the threshold that matters — that's exactly AUC's limitation: great for comparing overall ranking ability, but it can hide the one number you actually care about.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PRECISION RECALL ================= -->
+    <section id="pr">
+      <p class="section-tag">A companion view</p>
+      <h2>The precision-recall curve</h2>
+      <p>Sensitivity tells the county what fraction of real fires get caught, but says nothing about how many of the alerts turn out to be real. That's <strong>precision</strong>:</p>
+      <div class="formula">Precision = <span class="frac"><span class="num">TP</span><span class="den">TP + FP</span></span></div>
+      <p>The precision-recall curve plots precision against recall (recall here is just another name for sensitivity) as the threshold sweeps from one extreme to the other — the same underlying sweep as the ROC curve, viewed from a different angle.</p>
+
+      <div class="panel">
+        <p class="panel-title">Illustrative precision-recall curve</p>
+        <p class="panel-sub">Precision starts high and only falls once the threshold is lowered enough to push recall up.</p>
+        <svg viewBox="0 0 360 340" width="100%" style="max-width:400px;">
+          <line class="grid-line" x1="50" y1="30" x2="50" y2="310"></line>
+          <line class="grid-line" x1="50" y1="310" x2="330" y2="310"></line>
+          <line class="axis-line" x1="50" y1="310" x2="50" y2="30"></line>
+          <line class="axis-line" x1="50" y1="310" x2="330" y2="310"></line>
+          <polyline class="curve alt" points="50,44 78,52.9 106,57.8 134,63.9 162,73.0 190,84.5 218,97.6 246,112.2 274,128.5 302,145.5 330,134"></polyline>
+          <text x="6" y="175" font-size="11" fill="#63527D" transform="rotate(-90 6 175)">Precision</text>
+          <text x="150" y="330" font-size="11" fill="#63527D">Recall (Sensitivity)</text>
+        </svg>
+      </div>
+
+      <div class="quiz" data-answer="b">
+        <p class="quiz-kicker">Check yourself</p>
+        <p class="quiz-q">Why might the precision-recall curve become more informative than the ROC curve once fires are very rare compared to normal readings?</p>
+        <div class="quiz-choices">
+          <button class="quiz-choice" data-key="a">Precision and recall are mathematically identical to TPR and FPR</button>
+          <button class="quiz-choice" data-key="b">The PR curve doesn't involve true negatives, so it isn't diluted by a huge number of normal readings the way FPR can be</button>
+          <button class="quiz-choice" data-key="c">The ROC curve can only be computed when classes are balanced</button>
+          <button class="quiz-choice" data-key="d">Precision always increases as recall increases</button>
+        </div>
+        <div class="quiz-feedback" hidden>
+          <p class="quiz-verdict"></p>
+          <p class="quiz-explain">FPR's denominator is FP + TN. When normal readings vastly outnumber fires, TN becomes huge, and FPR can look artificially small even with a lot of false alarms relative to how few real fires exist. Precision's denominator, TP + FP, never involves TN — so it stays sensitive to exactly the over-alerting that matters most once positives are rare.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= IMBALANCE ================= -->
+    <section id="imbalance">
+      <p class="section-tag">From pilot to full county</p>
+      <h2>What is imbalanced data?</h2>
+      <p>The pilot went well — but it was chosen specifically because it had a reasonable number of past fires to learn from. When the team rolls the model out across the full 4,000-sensor network, they discover something the pilot never warned them about: on any given day, roughly <strong>1 in every 200 readings</strong> is a real fire. The other 199 are just a normal day in the forest.</p>
+      <p>The model hasn't changed. The metrics above haven't changed. But the ground truth it's learning from looks completely different, and that changes everything about how the model behaves.</p>
+
+      <div class="panel">
+        <p class="panel-title">Pilot region vs. full county network</p>
+        <div class="panel-grid two">
+          <div>
+            <p class="panel-sub" style="margin-bottom:12px;">Pilot region — roughly balanced by design</p>
+            <div class="bars">
+              <div class="bar-group"><div class="bar nofire" style="height:124px;"><span class="val">55%</span></div><div class="lbl">No Fire</div></div>
+              <div class="bar-group"><div class="bar fire" style="height:101px;"><span class="val">45%</span></div><div class="lbl">Fire</div></div>
+            </div>
+          </div>
+          <div>
+            <p class="panel-sub" style="margin-bottom:12px;">Full county network — every square is one reading; one square is a fire</p>
+            <div class="picto" role="img" aria-label="Grid of 200 squares representing sensor readings; exactly one square is highlighted to represent a fire reading, the other 199 represent normal readings">
+              <span class="hot"></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p><strong>Imbalanced data</strong> is simply a dataset where one class occurs far more often than the other. Nimbus County's full network is a textbook example, but this pattern shows up constantly outside forests: fraudulent transactions among millions of legitimate ones, defective parts on a factory line, rare diseases in a screened population.</p>
+      <p>The core problem: a model trained on imbalanced data can achieve very high accuracy simply by leaning toward the majority class, without ever learning to recognise the minority class at all. If 199 out of 200 readings are "No Fire," a model that predicts "No Fire" every single time is already 99.5% accurate — and completely useless to Nimbus County.</p>
+
+      <div class="callout think">
+        <p class="callout-label">Think it through</p>
+        <p>Fraud, rare-disease screening, and manufacturing defects all share this shape: a rare, costly positive buried in routine negatives. What other domains fit the same pattern?</p>
+      </div>
+    </section>
+
+    <!-- ================= CONFIDENCE ================= -->
+    <section id="confidence">
+      <p class="section-tag">A subtler symptom</p>
+      <h2>Imbalance, logistic regression, and model confidence</h2>
+      <p>Training the same kind of logistic regression model on the full county's true 1-in-200 fire rate produces a model whose accuracy looks excellent — and that may be catching very few, or even none, of the actual fires. This is imbalance quietly breaking the model in exactly the way described above.</p>
+      <p>There's a second, subtler symptom worth naming: <strong>model confidence</strong>. Logistic regression outputs a predicted probability for each reading — how "confident" it is that a reading is a fire. When training data is this skewed, the model learns that predicting a low fire-probability is almost always correct, so it becomes systematically under-confident about the minority class. Even genuine fires often get scored with a low probability — not because the signal in the sensor readings is weak, but because the model was trained in a world where "probably not a fire" was the safe bet 199 times out of 200.</p>
+
+      <div class="panel">
+        <p class="panel-title">Model confidence, skewed toward the majority class</p>
+        <p class="panel-sub">Illustrative pattern: predicted fire-probability for readings that were actually normal vs. readings that were actually fires.</p>
+        <div class="legend"><span><i class="normal"></i>Actual normal readings</span><span><i class="fire"></i>Actual fires</span></div>
+        <div class="hist" role="img" aria-label="Histogram showing that most normal readings receive a very low predicted fire probability, while actual fires are spread across low-to-moderate predicted probabilities rather than clustering high">
+          <div class="hist-bin"><div class="stacky"><div class="col normal" style="height:100%;"></div><div class="col fire" style="height:43%;"></div></div><div class="lbl">0–.13</div></div>
+          <div class="hist-bin"><div class="stacky"><div class="col normal" style="height:26%;"></div><div class="col fire" style="height:31%;"></div></div><div class="lbl">.13–.25</div></div>
+          <div class="hist-bin"><div class="stacky"><div class="col normal" style="height:9%;"></div><div class="col fire" style="height:23%;"></div></div><div class="lbl">.25–.38</div></div>
+          <div class="hist-bin"><div class="stacky"><div class="col normal" style="height:4%;"></div><div class="col fire" style="height:17%;"></div></div><div class="lbl">.38–.50</div></div>
+          <div class="hist-bin"><div class="stacky"><div class="col normal" style="height:1.5%;"></div><div class="col fire" style="height:11%;"></div></div><div class="lbl">.50–.63</div></div>
+          <div class="hist-bin"><div class="stacky"><div class="col normal" style="height:1.5%;"></div><div class="col fire" style="height:9%;"></div></div><div class="lbl">.63–.75</div></div>
+          <div class="hist-bin"><div class="stacky"><div class="col normal" style="height:0.7%;"></div><div class="col fire" style="height:6%;"></div></div><div class="lbl">.75–.88</div></div>
+          <div class="hist-bin"><div class="stacky"><div class="col normal" style="height:0.7%;"></div><div class="col fire" style="height:3%;"></div></div><div class="lbl">.88–1</div></div>
+        </div>
+        <details class="data-table">
+          <summary>View bin values as a table</summary>
+          <table>
+            <thead><tr><th>Predicted probability bin</th><th>Actual normal (%)</th><th>Actual fire (%)</th></tr></thead>
+            <tbody>
+              <tr><td>0 – .13</td><td>70</td><td>30</td></tr>
+              <tr><td>.13 – .25</td><td>18</td><td>22</td></tr>
+              <tr><td>.25 – .38</td><td>6</td><td>16</td></tr>
+              <tr><td>.38 – .50</td><td>3</td><td>12</td></tr>
+              <tr><td>.50 – .63</td><td>1</td><td>8</td></tr>
+              <tr><td>.63 – .75</td><td>1</td><td>6</td></tr>
+              <tr><td>.75 – .88</td><td>0.5</td><td>4</td></tr>
+              <tr><td>.88 – 1</td><td>0.5</td><td>2</td></tr>
+            </tbody>
+          </table>
+        </details>
+      </div>
+
+      <div class="quiz" data-answer="b">
+        <p class="quiz-kicker">Check yourself</p>
+        <p class="quiz-q">A colleague looks at the full-county model above and says: "Accuracy is over 99%, this model is great." What's the strongest response?</p>
+        <div class="quiz-choices">
+          <button class="quiz-choice" data-key="a">They're right — accuracy above 99% is always a strong result</button>
+          <button class="quiz-choice" data-key="b">Accuracy alone is misleading here, because predicting the majority class almost every time already yields high accuracy, regardless of how few real fires are caught</button>
+          <button class="quiz-choice" data-key="c">The model should be judged only on AUC, never accuracy</button>
+          <button class="quiz-choice" data-key="d">The claim is only wrong if the dataset has more than two classes</button>
+        </div>
+        <div class="quiz-feedback" hidden>
+          <p class="quiz-verdict"></p>
+          <p class="quiz-explain">With roughly 1 in 200 readings being a real fire, a model that predicts "No Fire" for almost everything is guaranteed very high accuracy without doing the job Nimbus County actually needs. This is exactly why sensitivity, precision, and the ROC/PR curves matter so much more than accuracy once the classes are imbalanced.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HANDLING ================= -->
+    <section id="handling">
+      <p class="section-tag">Fixing it</p>
+      <h2>Handling imbalanced data</h2>
+      <p>Nimbus County's engineers have three standard strategies on the table, and each one changes a different part of the training process.</p>
+
+      <div class="tabs">
+        <div class="tab-buttons" role="tablist">
+          <button class="active" role="tab" data-tab="weights">Class weights</button>
+          <button role="tab" data-tab="under">Undersampling</button>
+          <button role="tab" data-tab="over">Oversampling</button>
+        </div>
+
+        <div class="tab-panel active" data-panel="weights">
+          <p>The simplest fix doesn't touch the data at all — it changes how much each training example is allowed to influence learning. Every minority-class (fire) example gets a larger weight, so getting it wrong is penalised more heavily.</p>
+          <div class="formula" style="font-size:1rem;">w<sub>i</sub> = <span class="frac"><span class="num">n<sub>samples</sub></span><span class="den">n<sub>classes</sub> × n<sub>samples,i</sub></span></span></div>
+          <p style="font-size:.9rem;color:var(--ink-soft);">Because the fire class is small, its weight comes out large — every fire example effectively "counts more" during training.</p>
+          <div class="tradeoff">
+            <div class="box up"><div class="h">Gains</div>Sensitivity typically improves a lot — the model becomes willing to raise more alarms in exchange for catching more real fires.</div>
+            <div class="box down"><div class="h">Costs</div>Overall accuracy often drops a little. That's expected, not a bug: it's the trade Nimbus County usually wants to make.</div>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="under">
+          <p>Change the training data itself: keep every minority-class (fire) example, but randomly drop some majority-class (normal) examples so the two classes are closer to balanced when training begins.</p>
+          <div class="tradeoff">
+            <div class="box up"><div class="h">Gains</div>Fast, simple, and directly rebalances the classes the model sees.</div>
+            <div class="box down"><div class="h">Costs</div>Nimbus County throws away the vast majority of its normal-day readings — data that might have held useful patterns about what a genuinely normal day looks like across different weather conditions. With only 20,000 readings in this example (and far more in reality), that's a lot of signal discarded.</div>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="over">
+          <p>Go the other direction: instead of discarding majority-class data, duplicate minority-class (fire) examples until the classes are closer to balanced.</p>
+          <div class="tradeoff">
+            <div class="box up"><div class="h">Gains</div>Keeps every original reading — no data is thrown away.</div>
+            <div class="box down"><div class="h">Costs</div>Because it's just copying existing fire examples rather than creating new information, the model can start to memorise those exact few fires rather than learning the general pattern of what a fire looks like — a classic overfitting risk.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SMOTE ================= -->
+    <section id="smote">
+      <p class="section-tag">A smarter kind of oversampling</p>
+      <h2>SMOTE — Synthetic Minority Oversampling Technique</h2>
+      <p>SMOTE addresses oversampling's weakness directly: instead of duplicating existing fire examples, it <strong>generates new, synthetic ones</strong>. For each real fire example, SMOTE looks at its nearest fire-example neighbours in the sensor-reading feature space, and creates a new synthetic point somewhere along the line segment between the original point and one of those neighbours.</p>
+      <div class="formula" style="font-size:1.05rem;">x<sub>new</sub> = x<sub>i</sub> + λ × (x<sub>neighbour</sub> − x<sub>i</sub>)</div>
+      <dl class="term-list">
+        <div><dt>x_i</dt><dd>an existing minority-class (fire) example</dd></div>
+        <div><dt>x_neighbour</dt><dd>one of its nearest minority-class neighbours</dd></div>
+        <div><dt>λ</dt><dd>a random number between 0 and 1</dd></div>
+        <div><dt>x_new</dt><dd>the new synthetic fire example, somewhere between the two</dd></div>
+      </dl>
+
+      <div class="panel">
+        <p class="panel-title">Drag λ to place the synthetic point</p>
+        <p class="panel-sub">The two violet points are real fire examples that are near neighbours in feature space. The magenta point is the synthetic example SMOTE generates between them.</p>
+        <svg viewBox="0 0 360 200" width="100%" style="max-width:420px;">
+          <circle cx="70" cy="150" r="8" fill="#6C3FA6"></circle>
+          <text x="70" y="176" font-size="11" fill="#63527D" text-anchor="middle">x_i</text>
+          <circle cx="290" cy="40" r="8" fill="#6C3FA6"></circle>
+          <text x="290" y="28" font-size="11" fill="#63527D" text-anchor="middle">x_neighbour</text>
+          <line x1="70" y1="150" x2="290" y2="40" stroke="#C9AEEA" stroke-width="2" stroke-dasharray="5 5"></line>
+          <circle id="smotePoint" class="marker" cx="180" cy="95" r="8"></circle>
+        </svg>
+        <div class="slider-row">
+          <label for="smoteSlider" style="font-size:.85rem;color:var(--ink-soft);">λ</label>
+          <input type="range" id="smoteSlider" min="0" max="100" value="50">
+        </div>
+        <div class="smote-readout">x_new = x_i + <span class="lam" id="smoteLam">0.50</span> × (x_neighbour − x_i)</div>
+      </div>
+
+      <p>The result is a set of new fire examples that are plausible variations rather than exact duplicates — giving the model more to learn from without literally repeating the same handful of past fires.</p>
+
+      <div class="quiz" data-answer="b">
+        <p class="quiz-kicker">Check yourself</p>
+        <p class="quiz-q">What is the key difference between naive random oversampling and SMOTE?</p>
+        <div class="quiz-choices">
+          <button class="quiz-choice" data-key="a">SMOTE removes majority-class examples, while oversampling does not</button>
+          <button class="quiz-choice" data-key="b">Oversampling duplicates existing minority-class examples; SMOTE generates new synthetic examples between existing minority-class neighbours</button>
+          <button class="quiz-choice" data-key="c">SMOTE only works when the dataset is already balanced</button>
+          <button class="quiz-choice" data-key="d">There is no real difference — they produce identical training sets</button>
+        </div>
+        <div class="quiz-feedback" hidden>
+          <p class="quiz-verdict"></p>
+          <p class="quiz-explain">Naive random oversampling literally copies existing minority-class rows, so the model can see the exact same fire examples multiple times, increasing overfitting risk. SMOTE instead constructs new, synthetic minority-class points along the line between real examples and their nearest neighbours — giving the model more varied information rather than repeating the same points.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= REAL WORLD ================= -->
+    <section id="real-world">
+      <p class="section-tag">Beyond Nimbus County</p>
+      <h2>Where this shows up in production systems</h2>
+      <p>Everything in this post generalises far beyond wildfire sensors.</p>
+      <h3>In production ML systems</h3>
+      <p>Fraud detection teams, medical-screening pipelines, and manufacturing quality-control systems all face the same shape of problem: a rare, high-cost positive class buried in a sea of routine negatives. None of these teams pick a threshold, or a class-weighting scheme, by intuition alone — they plot the same ROC and precision-recall curves covered here, weigh the real-world cost of a false negative against a false positive, and choose the operating point that fits their situation.</p>
+      <div class="card-grid">
+        <div class="card"><h4>Fraud detection</h4><p>Genuine fraud is a tiny fraction of all transactions, but missing one is far costlier than reviewing a false alarm.</p></div>
+        <div class="card"><h4>Medical screening</h4><p>A rare disease in a screened population — sensitivity to catch true cases matters more than raw accuracy.</p></div>
+        <div class="card"><h4>Quality control</h4><p>Defective parts are rare on a healthy production line, but a missed defect can be expensive downstream.</p></div>
+      </div>
+      <h3>In modern AI evaluation</h3>
+      <p>The same problem shows up when evaluating AI systems themselves. Safety classifiers and content-moderation "guardrail" models — the systems deciding whether a piece of text or an AI-generated response should be flagged — are trained on data where genuinely harmful content is a small minority, much like Nimbus County's fires. Teams building these guardrails track precision and recall rather than raw accuracy, reason about ROC/PR trade-offs when picking a flagging threshold, and apply the same class-weighting or resampling techniques used here when fine-tuning a classifier on skewed data.</p>
+      <div class="callout think">
+        <p class="callout-label">Think it through</p>
+        <p>If harmful examples make up less than 1% of a safety classifier's training data, which technique from this post — class weights, undersampling, oversampling, or SMOTE — would you reach for first, and why?</p>
+      </div>
+    </section>
+
+    <!-- ================= WRAP UP ================= -->
+    <section id="wrapup">
+      <p class="section-tag">Summary</p>
+      <h2>Wrap-up</h2>
+      <ul class="takeaways">
+        <li><span class="mark">1</span><span>Sensitivity and specificity describe two different kinds of correctness — which one matters more depends entirely on the cost of each error type.</span></li>
+        <li><span class="mark">2</span><span>The ROC curve shows every threshold's sensitivity/specificity trade-off at once; AUC summarises it into one number, but can hide performance at the one threshold you'll actually use.</span></li>
+        <li><span class="mark">3</span><span>The precision-recall curve becomes more informative than the ROC curve once the positive class is rare, because precision is never diluted by a large number of true negatives.</span></li>
+        <li><span class="mark">4</span><span>Imbalanced data is any dataset where one class heavily outnumbers the other — it can make accuracy look excellent while the model quietly fails at the one job that matters.</span></li>
+        <li><span class="mark">5</span><span>Under imbalance, a model's predicted probabilities skew toward the majority class, even for genuine minority-class examples.</span></li>
+        <li><span class="mark">6</span><span>Class weights, undersampling, oversampling, and SMOTE each correct for imbalance differently, trading off information loss, overfitting risk, and how much they shift model behaviour.</span></li>
+        <li><span class="mark">7</span><span>These exact techniques and trade-offs show up directly in production ML systems and in how modern AI safety and guardrail classifiers are built and evaluated.</span></li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <p class="foot-title">Handling Imbalanced Data post read</p>
+  <p>Built around the Nimbus County Fire Watch scenario — sensitivity, specificity, ROC/AUC, precision-recall, and four ways to correct for imbalanced classes.</p>
+</footer>
+
+<script>
+  // ---------- Build table of contents ----------
+  (function(){
+    var sections = document.querySelectorAll('main section[id]');
+    var desktop = document.getElementById('tocDesktop');
+    var mobile = document.getElementById('tocMobile');
+    var links = [];
+    sections.forEach(function(sec){
+      var h = sec.querySelector('h2');
+      if(!h) return;
+      var id = sec.id;
+      var li1 = document.createElement('li');
+      var a1 = document.createElement('a');
+      a1.href = '#' + id; a1.textContent = h.textContent;
+      li1.appendChild(a1); desktop.appendChild(li1);
+      links.push(a1);
+
+      var li2 = document.createElement('li');
+      var a2 = document.createElement('a');
+      a2.href = '#' + id; a2.textContent = h.textContent;
+      li2.appendChild(a2); mobile.appendChild(li2);
+    });
+
+    if('IntersectionObserver' in window){
+      var map = {};
+      links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+      var obs = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          var link = map[entry.target.id];
+          if(!link) return;
+          if(entry.isIntersecting){
+            links.forEach(function(a){ a.classList.remove('active'); });
+            link.classList.add('active');
+          }
+        });
+      }, { rootMargin: '-15% 0px -70% 0px', threshold: 0 });
+      sections.forEach(function(sec){ obs.observe(sec); });
+    }
+  })();
+
+  // ---------- Quizzes ----------
+  (function(){
+    document.querySelectorAll('.quiz').forEach(function(quiz){
+      var answer = quiz.dataset.answer;
+      var buttons = quiz.querySelectorAll('.quiz-choice');
+      var feedback = quiz.querySelector('.quiz-feedback');
+      var verdict = quiz.querySelector('.quiz-verdict');
+      var answered = false;
+      buttons.forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if(answered) return;
+          answered = true;
+          var chosen = btn.dataset.key;
+          buttons.forEach(function(b){
+            b.disabled = true;
+            if(b.dataset.key === answer) b.classList.add('is-correct');
+            else if(b.dataset.key === chosen) b.classList.add('is-wrong');
+          });
+          var correct = chosen === answer;
+          verdict.textContent = correct ? 'Correct.' : 'Not quite.';
+          verdict.className = 'quiz-verdict ' + (correct ? 'good' : 'bad');
+          feedback.hidden = false;
+        });
+      });
+    });
+  })();
+
+  // ---------- ROC threshold slider ----------
+  (function(){
+    var slider = document.getElementById('rocSlider');
+    var marker = document.getElementById('rocMarker');
+    var rocValue = document.getElementById('rocValue');
+    var sensOut = document.getElementById('rocSens');
+    var specOut = document.getElementById('rocSpec');
+    var fprOut = document.getElementById('rocFpr');
+    function update(){
+      var threshold = slider.value / 100;
+      var s = 1 - threshold;
+      var fpr = Math.pow(s, 1.6);
+      var tpr = Math.pow(s, 0.5);
+      var x = 50 + fpr * 280;
+      var y = 310 - tpr * 280;
+      marker.setAttribute('cx', x.toFixed(1));
+      marker.setAttribute('cy', y.toFixed(1));
+      rocValue.textContent = threshold.toFixed(2);
+      sensOut.textContent = (tpr * 100).toFixed(1) + '%';
+      specOut.textContent = ((1 - fpr) * 100).toFixed(1) + '%';
+      fprOut.textContent = (fpr * 100).toFixed(1) + '%';
+    }
+    slider.addEventListener('input', update);
+    update();
+  })();
+
+  // ---------- SMOTE lambda slider ----------
+  (function(){
+    var slider = document.getElementById('smoteSlider');
+    var point = document.getElementById('smotePoint');
+    var lamOut = document.getElementById('smoteLam');
+    var x1 = 70, y1 = 150, x2 = 290, y2 = 40;
+    function update(){
+      var lam = slider.value / 100;
+      var x = x1 + lam * (x2 - x1);
+      var y = y1 + lam * (y2 - y1);
+      point.setAttribute('cx', x.toFixed(1));
+      point.setAttribute('cy', y.toFixed(1));
+      lamOut.textContent = lam.toFixed(2);
+    }
+    slider.addEventListener('input', update);
+    update();
+  })();
+
+  // ---------- Tabs ----------
+  (function(){
+    var buttons = document.querySelectorAll('.tab-buttons button');
+    buttons.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var tabs = btn.closest('.tabs');
+        tabs.querySelectorAll('.tab-buttons button').forEach(function(b){ b.classList.remove('active'); });
+        tabs.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+        btn.classList.add('active');
+        tabs.querySelector('.tab-panel[data-panel="' + btn.dataset.tab + '"]').classList.add('active');
+      });
+    });
+  })();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/ML-with-AI-workflows-10" target="_blank" rel="noopener">github.com/scaler-content/ML-with-AI-workflows-10</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

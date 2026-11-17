@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Partitioning — How It Works</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #F9FFFE;
+  color: #0A1810;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HEADER */
+.hdr {
+  padding: 20px 40px 16px;
+  border-bottom: 1px solid #C8E8DC;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.hdr-title { font-family:'Lora',serif; font-size:20px; font-weight:600; }
+.hdr-query {
+  font-family:'DM Mono',monospace; font-size:12px;
+  background:#EDFAF3; border:1px solid #90D8B0; color:#1A6B3A;
+  padding:7px 14px; border-radius:8px;
+  transition: all 0.3s;
+}
+
+/* MAIN */
+.main { flex:1; display:flex; flex-direction:column; gap:20px; padding:24px 40px; }
+
+/* MODE TOGGLE */
+.mode-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.mode-label { font-size: 12px; font-weight: 600; color: #6A8A7A; letter-spacing: 0.06em; text-transform: uppercase; }
+.toggle-group { display: flex; border: 1.5px solid #C8E8DC; border-radius: 10px; overflow: hidden; }
+.toggle-opt {
+  padding: 9px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  font-family: 'DM Sans', sans-serif;
+  background: #fff;
+  color: #5A8A6A;
+}
+.toggle-opt.active { background: #1A7A50; color: #fff; }
+.toggle-opt:first-child { border-right: 1px solid #C8E8DC; }
+
+.month-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.month-selector label { font-size: 12px; color: #6A8A7A; font-weight: 500; }
+.month-selector select {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  padding: 7px 12px;
+  border: 1.5px solid #C8E8DC;
+  border-radius: 8px;
+  background: #fff;
+  color: #1A4030;
+  cursor: pointer;
+  outline: none;
+}
+.run-btn {
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid #1A7A50;
+  background: #EDFAF3;
+  color: #1A7A50;
+  transition: all 0.18s;
+  font-family: 'DM Sans', sans-serif;
+}
+.run-btn:hover { background:#1A7A50; color:#fff; }
+.run-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+/* PARTITION GRID */
+.grid-area { flex:1; display:flex; flex-direction:column; gap:14px; }
+.grid-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #6A8A7A;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.grid-label .total-rows {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  background: #EDFAF3;
+  color: #1A6B3A;
+  padding: 2px 10px;
+  border-radius: 4px;
+  border: 1px solid #90D8B0;
+}
+
+.partition-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  flex: 1;
+}
+
+.partition-card {
+  border-radius: 12px;
+  border: 1.5px solid #C8E8DC;
+  background: #fff;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+}
+
+/* Scanning animation overlay */
+.partition-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,240,200,0.7) 50%, transparent 100%);
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+.partition-card.scanning::after {
+  animation: sweep 0.5s ease forwards;
+}
+@keyframes sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.partition-card.active {
+  border-color: #22A06B;
+  background: #EDFAF3;
+  box-shadow: 0 4px 20px rgba(34,160,107,0.2);
+  transform: translateY(-3px) scale(1.03);
+}
+.partition-card.inactive {
+  opacity: 0.22;
+  transform: scale(0.97);
+}
+.partition-card.scanned {
+  border-color: #E0B870;
+  background: #FFFBF0;
+}
+
+.p-month {
+  font-family: 'Lora', serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1A4030;
+  transition: color 0.3s;
+}
+.partition-card.active .p-month { color: #1A6B3A; }
+.partition-card.scanned .p-month { color: #8A6020; }
+
+.p-rows {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #6A8A7A;
+  transition: color 0.3s;
+}
+.partition-card.active .p-rows { color: #2A9060; font-weight: 600; }
+
+.p-bar-wrap { height: 4px; background: #E0EEE8; border-radius: 2px; overflow: hidden; }
+.p-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: #90D8B0;
+  transition: all 0.3s;
+}
+.partition-card.active .p-bar { background: #22A06B; }
+.partition-card.scanned .p-bar { background: #E0B870; }
+
+.p-status {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: transparent;
+  transition: all 0.3s;
+  height: 14px;
+  line-height: 14px;
+}
+.partition-card.active .p-status { color: #1A6B3A; }
+.partition-card.scanned .p-status { color: #8A6020; }
+.partition-card.inactive .p-status { color: transparent; }
+
+/* LOCK OVERLAY */
+.lock-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(240,250,245,0.7);
+  border-radius: 11px;
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.lock-overlay.show { opacity: 1; }
+.lock-icon {
+  font-size: 20px;
+  color: #C0D8C8;
+  filter: none;
+}
+
+/* STATS BAR */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.stat-box {
+  background: #fff;
+  border: 1px solid #C8E8DC;
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-align: center;
+}
+.stat-box .s-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6A8A7A; margin-bottom: 4px; }
+.stat-box .s-val {
+  font-family: 'Lora', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: #1A4030;
+  transition: all 0.3s;
+}
+.stat-box .s-val.highlight { color: #1A7A50; }
+.stat-box .s-val.warn      { color: #C04A10; }
+.stat-box .s-unit { font-size: 11px; color: #8A9A8A; margin-top: 2px; }
+
+/* COMPARISON STRIP */
+.compare-strip {
+  display: none;
+  background: #fff;
+  border: 1px solid #C8E8DC;
+  border-radius: 10px;
+  padding: 14px 20px;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.compare-strip.show { display: flex; }
+.cs-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+.cs-no  { background: #FFF5EE; border-color: #F0B080; }
+.cs-yes { background: #EDFAF3; border-color: #90D8B0; }
+.cs-item .ci-label { font-size: 11px; font-weight: 600; color: #5A4030; }
+.cs-item .ci-val { font-family:'Lora',serif; font-size:20px; font-weight:600; }
+.cs-no .ci-val  { color: #C04A10; }
+.cs-yes .ci-val { color: #1A7A50; }
+.cs-item .ci-unit { font-size: 10px; color: #9A8070; }
+.cs-mid { font-size: 22px; color: #C0C8C0; }
+.cs-badge {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #EDFAF3;
+  color: #1A7A50;
+  border: 1px solid #90D8B0;
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· SQL Advanced · Indexing, partitioning and functions</span><a href="./">↑ Lesson page</a><span class="pn"><a href="../SQL-8-postread/" title="SQL 8 · JOINs 1: relationships and INNER JOIN">← Prev</a><a href="../MySQL---BigQuery-data-interconverter/" title="MySQL to BigQuery converter">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="hdr">
+  <div class="hdr-title">Partitioning — Partition Pruning in Action</div>
+  <div class="hdr-query" id="hdr-query">SELECT * FROM orders WHERE order_date IN [selected month]</div>
+</div>
+
+<div class="main">
+
+  <!-- CONTROLS -->
+  <div class="mode-row">
+    <div class="mode-label">Mode</div>
+    <div class="toggle-group">
+      <button class="toggle-opt active" id="tog-no"  onclick="setMode('no')">Without Partitioning</button>
+      <button class="toggle-opt"        id="tog-yes" onclick="setMode('yes')">With Partitioning</button>
+    </div>
+    <div class="month-selector">
+      <label>Query month:</label>
+      <select id="month-select" onchange="updateQuery()">
+        <option value="3">April 2024</option>
+        <option value="7">August 2024</option>
+        <option value="10">November 2024 ★ peak</option>
+        <option value="11" selected>December 2024</option>
+      </select>
+    </div>
+    <button class="run-btn" id="run-btn" onclick="runSimulation()">▶ Run Query</button>
+    <button class="run-btn" style="background:#F4F0EA;color:#6A7060;border-color:#C8C4B0" onclick="resetAll()">↺ Reset</button>
+  </div>
+
+  <!-- GRID -->
+  <div class="grid-area">
+    <div class="grid-label">
+      zomato.orders — partitioned by month
+      <span class="total-rows">500M total rows · 12 partitions</span>
+    </div>
+    <div class="partition-grid" id="part-grid"></div>
+  </div>
+
+  <!-- COMPARE -->
+  <div class="compare-strip" id="compare-strip">
+    <div class="cs-item cs-no">
+      <div><div class="ci-label">Without partitioning</div><div class="ci-val" id="c-no-rows">500M</div><div class="ci-unit">rows read · ~45 sec</div></div>
+    </div>
+    <div class="cs-mid">→</div>
+    <div class="cs-item cs-yes">
+      <div><div class="ci-label">With partitioning</div><div class="ci-val" id="c-yes-rows">—</div><div class="ci-unit" id="c-yes-unit">rows read · — sec</div></div>
+    </div>
+    <div class="cs-badge" id="speedup">—</div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-box">
+      <div class="s-label">Partitions Scanned</div>
+      <div class="s-val" id="s-parts">—</div>
+      <div class="s-unit">of 12</div>
+    </div>
+    <div class="stat-box">
+      <div class="s-label">Rows Read</div>
+      <div class="s-val" id="s-rows">—</div>
+      <div class="s-unit">million</div>
+    </div>
+    <div class="stat-box">
+      <div class="s-label">Rows Skipped</div>
+      <div class="s-val" id="s-skip">—</div>
+      <div class="s-unit">million</div>
+    </div>
+    <div class="stat-box">
+      <div class="s-label">Query Time</div>
+      <div class="s-val" id="s-time">—</div>
+      <div class="s-unit">seconds</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const MONTHS = [
+  { name:'Jan 2024', rows:8.1  },
+  { name:'Feb 2024', rows:7.4  },
+  { name:'Mar 2024', rows:8.8  },
+  { name:'Apr 2024', rows:7.9  },
+  { name:'May 2024', rows:8.3  },
+  { name:'Jun 2024', rows:9.1  },
+  { name:'Jul 2024', rows:8.6  },
+  { name:'Aug 2024', rows:9.4  },
+  { name:'Sep 2024', rows:8.2  },
+  { name:'Oct 2024', rows:10.1 },
+  { name:'Nov 2024', rows:11.2 },
+  { name:'Dec 2024', rows:8.0  },
+];
+
+const maxRows = Math.max(...MONTHS.map(m => m.rows));
+let mode = 'no';
+let targetIdx = 11;
+let running = false;
+
+function buildGrid() {
+  const grid = document.getElementById('part-grid');
+  grid.innerHTML = MONTHS.map((m, i) => {
+    const pct = Math.round((m.rows / maxRows) * 100);
+    return `
+      <div class="partition-card" id="pc-${i}">
+        <div class="p-month">${m.name}</div>
+        <div class="p-rows">${m.rows}M rows</div>
+        <div class="p-bar-wrap"><div class="p-bar" style="width:${pct}%"></div></div>
+        <div class="p-status" id="ps-${i}">—</div>
+        <div class="lock-overlay" id="lock-${i}"><span class="lock-icon">⊘</span></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('tog-no').className  = 'toggle-opt' + (m==='no'  ? ' active' : '');
+  document.getElementById('tog-yes').className = 'toggle-opt' + (m==='yes' ? ' active' : '');
+}
+
+function updateQuery() {
+  targetIdx = parseInt(document.getElementById('month-select').value);
+  const m = MONTHS[targetIdx];
+  document.getElementById('hdr-query').textContent =
+    `SELECT * FROM orders WHERE order_date BETWEEN '${m.name.replace(' ','01, ').replace('2024','2024').split(',')[0]} 2024-01' AND '${m.name}'`;
+}
+
+function resetAll() {
+  if (running) return;
+  MONTHS.forEach((_, i) => {
+    const card = document.getElementById('pc-'+i);
+    card.className = 'partition-card';
+    document.getElementById('ps-'+i).textContent = '—';
+    document.getElementById('lock-'+i).className = 'lock-overlay';
+  });
+  ['s-parts','s-rows','s-skip','s-time'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = '—';
+    el.className = 's-val';
+  });
+  document.getElementById('compare-strip').className = 'compare-strip';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r,ms)); }
+
+function setStats(parts, rows, skip, time, highlight) {
+  const sp = document.getElementById('s-parts');
+  const sr = document.getElementById('s-rows');
+  const ss = document.getElementById('s-skip');
+  const st = document.getElementById('s-time');
+  sp.textContent = parts;
+  sr.textContent = rows;
+  ss.textContent = skip;
+  st.textContent = time;
+  sp.className = 's-val' + (highlight ? ' highlight' : ' warn');
+  sr.className = 's-val' + (highlight ? ' highlight' : ' warn');
+  ss.className = 's-val' + (highlight ? ' highlight' : '');
+  st.className = 's-val' + (highlight ? ' highlight' : ' warn');
+}
+
+async function runSimulation() {
+  if (running) return;
+  running = true;
+  document.getElementById('run-btn').disabled = true;
+  resetAll();
+  await sleep(200);
+
+  if (mode === 'no') {
+    await runFullScan();
+  } else {
+    await runPartitioned();
+  }
+
+  running = false;
+  document.getElementById('run-btn').disabled = false;
+}
+
+async function runFullScan() {
+  let totalRows = 0;
+
+  document.getElementById('hdr-query').style.background = '#FFF5EE';
+  document.getElementById('hdr-query').style.borderColor = '#F0B080';
+  document.getElementById('hdr-query').style.color = '#C04A10';
+
+  for (let i = 0; i < MONTHS.length; i++) {
+    const card = document.getElementById('pc-'+i);
+    card.className = 'partition-card scanning';
+    document.getElementById('ps-'+i).textContent = 'scanning…';
+    await sleep(320);
+    card.className = i === targetIdx ? 'partition-card active' : 'partition-card scanned';
+    document.getElementById('ps-'+i).textContent = i === targetIdx ? '✓ match' : 'read';
+    totalRows += MONTHS[i].rows;
+    setStats(i+1, totalRows.toFixed(1), (totalRows - MONTHS[i].rows).toFixed(1), ((totalRows/500)*45).toFixed(1), false);
+    await sleep(80);
+  }
+
+  const targetRows = MONTHS[targetIdx].rows;
+  setStats(12, '500.0', (500 - targetRows).toFixed(1), '45.0', false);
+
+  document.getElementById('c-yes-rows').textContent = targetRows + 'M';
+  document.getElementById('c-yes-unit').textContent = `rows read · ${(targetRows/500*45).toFixed(1)} sec`;
+  const speedup = Math.round(500 / targetRows);
+  document.getElementById('speedup').textContent = `${speedup}× fewer rows with partitioning`;
+  document.getElementById('compare-strip').className = 'compare-strip show';
+}
+
+async function runPartitioned() {
+  document.getElementById('hdr-query').style.background = '#EDFAF3';
+  document.getElementById('hdr-query').style.borderColor = '#90D8B0';
+  document.getElementById('hdr-query').style.color = '#1A6B3A';
+
+  // First: lock all non-target partitions
+  for (let i = 0; i < MONTHS.length; i++) {
+    if (i !== targetIdx) {
+      document.getElementById('pc-'+i).className = 'partition-card inactive';
+      document.getElementById('lock-'+i).className = 'lock-overlay show';
+      document.getElementById('ps-'+i).textContent = 'pruned';
+    }
+  }
+  await sleep(600);
+
+  setStats(0, '0', '0', '0', true);
+
+  // Scan only the target
+  const card = document.getElementById('pc-'+targetIdx);
+  card.className = 'partition-card scanning';
+  document.getElementById('ps-'+targetIdx).textContent = 'scanning…';
+  document.getElementById('lock-'+targetIdx).className = 'lock-overlay';
+  await sleep(500);
+
+  const targetRows = MONTHS[targetIdx].rows;
+  const skipped = (500 - targetRows).toFixed(1);
+  const t = (targetRows / 500 * 45).toFixed(2);
+
+  card.className = 'partition-card active';
+  document.getElementById('ps-'+targetIdx).textContent = '✓ match found';
+  setStats(1, targetRows.toFixed(1), skipped, t, true);
+
+  document.getElementById('c-yes-rows').textContent = targetRows + 'M';
+  document.getElementById('c-yes-unit').textContent = `rows read · ${t} sec`;
+  const speedup = Math.round(500 / targetRows);
+  document.getElementById('speedup').textContent = `${speedup}× faster — ${skipped}M rows skipped`;
+  document.getElementById('compare-strip').className = 'compare-strip show';
+}
+
+buildGrid();
+updateQuery();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-2026" target="_blank" rel="noopener">github.com/scaler-content/DSML-2026</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

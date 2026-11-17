@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Principal Component Analysis post read</title>
+<meta name="description" content="An interactive read on Principal Component Analysis: why high-dimensional data is hard to see, how PCA builds new axes to capture variance, and how to read a scree plot.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,340;9..144,480;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink-950:#0b0c0d;
+  --ink-800:#1c1e21;
+  --ink-700:#2c2f33;
+  --ink-600:#3a3d42;
+  --ink-500:#63666c;
+  --ink-400:#8d9096;
+  --ink-300:#aeb1b6;
+  --ink-200:#c9cbce;
+  --ink-150:#dcdde0;
+  --ink-100:#eceef0;
+  --ink-50:#f6f6f7;
+  --paper:#f2f2f1;
+  --white:#ffffff;
+  --line:#c9cbce;
+  --line-soft:#dcdde0;
+  --focus:#1c1e21;
+  --marker-a:#1c1e21;
+  --marker-b:#8d9096;
+  --radius-s:6px;
+  --radius-m:10px;
+  --radius-l:16px;
+  --serif:'Fraunces', Georgia, 'Times New Roman', serif;
+  --sans:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono:'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+  --maxw:920px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto;}
+  *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink-700);
+  font-family:var(--sans);
+  font-size:17px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%; display:block;}
+a{color:var(--ink-800);}
+a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible{
+  outline:3px solid var(--focus);
+  outline-offset:3px;
+}
+
+::selection{ background:var(--ink-800); color:var(--white); }
+
+/* ---------- Layout helpers ---------- */
+.wrap{ max-width:var(--maxw); margin:0 auto; padding:0 24px; }
+.section{ padding:76px 0; border-top:1px solid var(--line-soft); }
+.section:first-of-type{ border-top:none; }
+.eyebrow{
+  font-family:var(--mono);
+  font-size:12.5px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--ink-500);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 14px;
+}
+.eyebrow::before{
+  content:"";
+  width:22px; height:1px; background:var(--ink-400);
+  display:inline-block;
+}
+h1,h2,h3,h4{ font-family:var(--serif); color:var(--ink-950); margin:0 0 0.5em; font-weight:600; letter-spacing:-0.01em;}
+h2{ font-size:clamp(28px, 3.6vw, 38px); font-weight:480; line-height:1.15; }
+h3{ font-size:22px; font-weight:600; margin-top:0.2em;}
+h4{ font-family:var(--sans); font-size:14px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-500); font-weight:600; margin-bottom:10px;}
+p{ margin:0 0 18px; color:var(--ink-600); }
+p.lede{ font-size:19px; color:var(--ink-700); }
+strong{ color:var(--ink-800); font-weight:600; }
+.section-head{ max-width:640px; margin-bottom:36px; }
+.small-caps{ font-variant:small-caps; }
+
+/* ---------- Hero ---------- */
+.hero{
+  position:relative;
+  padding:96px 0 60px;
+  overflow:hidden;
+  background:
+    radial-gradient(1100px 480px at 82% -10%, rgba(28,30,33,0.06), transparent 60%),
+    var(--paper);
+  border-bottom:1px solid var(--line-soft);
+}
+.hero-grid{
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size:44px 44px;
+  mask-image:linear-gradient(to bottom, rgba(0,0,0,0.55), transparent 78%);
+  opacity:0.7;
+  pointer-events:none;
+}
+.hero-inner{ position:relative; }
+.hero .kicker{
+  font-family:var(--mono); font-size:13px; letter-spacing:0.16em; text-transform:uppercase;
+  color:var(--ink-500); margin-bottom:22px; display:flex; align-items:center; gap:10px;
+}
+.dot-live{ width:8px; height:8px; border-radius:50%; background:var(--ink-800); display:inline-block; animation:pulse 2.4s ease-in-out infinite;}
+@keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+.hero h1{
+  font-size:clamp(38px, 6vw, 64px);
+  line-height:1.03;
+  max-width:920px;
+  font-weight:480;
+}
+.hero .dek{
+  font-size:19px; color:var(--ink-600); max-width:600px; margin-top:20px;
+}
+.hero-meta{
+  display:flex; gap:28px; margin-top:38px; flex-wrap:wrap;
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-500);
+}
+.hero-meta span b{ color:var(--ink-800); display:block; font-family:var(--sans); font-size:15px; font-weight:600; margin-bottom:2px;}
+
+.hero-stage{
+  margin-top:52px;
+  border:1px solid var(--ink-800);
+  border-radius:var(--radius-l);
+  background:var(--ink-950);
+  overflow:hidden;
+}
+.hero-stage-bar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:11px 18px;
+  border-bottom:1px solid rgba(255,255,255,0.12);
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-300); letter-spacing:0.08em; text-transform:uppercase;
+}
+.hero-stage-bar .rec{ display:flex; align-items:center; gap:8px; color:#e7e7e8;}
+.hero-stage-bar .rec i{ width:7px;height:7px;border-radius:50%; background:#e7e7e8; animation:pulse 1.6s ease-in-out infinite; }
+#heroCanvasWrap{ position:relative; width:100%; aspect-ratio:16/6; background:
+  radial-gradient(600px 260px at 20% 30%, rgba(255,255,255,0.05), transparent 60%),
+  #101215;
+}
+#heroCanvas{ width:100%; height:100%; display:block; }
+.hero-stage-foot{
+  padding:12px 18px 16px; font-family:var(--mono); font-size:12px; color:var(--ink-300);
+  border-top:1px solid rgba(255,255,255,0.12);
+}
+
+/* ---------- Table of contents chips ---------- */
+.toc{
+  display:flex; flex-wrap:wrap; gap:8px;
+  padding:22px 0 0;
+}
+.toc a{
+  font-family:var(--mono); font-size:12.5px; text-decoration:none;
+  color:var(--ink-600); background:var(--white); border:1px solid var(--line);
+  padding:7px 12px; border-radius:100px; transition:all .15s ease;
+}
+.toc a:hover{ background:var(--ink-800); color:var(--white); border-color:var(--ink-800); }
+
+/* ---------- Story / narrative card ---------- */
+.story{
+  background:var(--white); border:1px solid var(--line); border-radius:var(--radius-l);
+  padding:32px 34px; position:relative;
+}
+.story::before{
+  content:"CASE"; position:absolute; top:-11px; left:28px; background:var(--ink-950); color:var(--white);
+  font-family:var(--mono); font-size:11px; letter-spacing:0.12em; padding:3px 10px; border-radius:100px;
+}
+.story h3{ margin-top:4px; }
+.cast{ display:flex; gap:22px; margin-top:20px; flex-wrap:wrap; }
+.cast-member{ display:flex; align-items:center; gap:10px; }
+.cast-avatar{
+  width:38px; height:38px; border-radius:50%; background:var(--ink-100); border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-weight:600; color:var(--ink-800);
+}
+.cast-name{ font-size:14px; }
+.cast-name b{ display:block; color:var(--ink-800); font-weight:600;}
+.cast-name span{ color:var(--ink-500); font-size:12.5px; }
+
+/* ---------- Monitor / wall-screen chart frame (signature element) ---------- */
+.monitor{
+  border-radius:var(--radius-l);
+  border:1px solid var(--ink-800);
+  background:var(--ink-950);
+  padding:1px;
+  margin:28px 0;
+}
+.monitor-bar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 16px;
+  font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-300);
+}
+.monitor-bar .label{ display:flex; align-items:center; gap:8px; }
+.monitor-bar .label i{ width:6px;height:6px;border-radius:50%; background:#7cff9c; box-shadow:0 0 0 2px rgba(124,255,156,0.15); }
+.monitor-screen{
+  background:var(--white);
+  border-radius:calc(var(--radius-l) - 4px);
+  margin:0 6px 6px;
+  padding:20px;
+}
+.monitor-caption{
+  font-family:var(--mono); font-size:12px; color:var(--ink-300); padding:2px 16px 12px;
+}
+
+/* ---------- Cards / grids ---------- */
+.grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.grid-2{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+@media (max-width:760px){ .grid-3{grid-template-columns:1fr;} .grid-2{grid-template-columns:1fr;} }
+
+.card{
+  background:var(--white); border:1px solid var(--line); border-radius:var(--radius-m);
+  padding:22px;
+}
+.card h4{ margin-bottom:8px; }
+.card p{ margin-bottom:0; font-size:15px; }
+
+.compare{
+  display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line);
+  border:1px solid var(--line); border-radius:var(--radius-m); overflow:hidden; margin:22px 0;
+}
+.compare > div{ background:var(--white); padding:24px; }
+.compare h4{ display:flex; align-items:center; gap:8px; }
+.compare .tag{
+  font-family:var(--mono); font-size:10.5px; padding:2px 8px; border-radius:100px; border:1px solid var(--line);
+  text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-500);
+}
+.compare .no .tag{ color:#8d9096; }
+.compare .yes{ background:var(--ink-50); }
+@media (max-width:700px){ .compare{ grid-template-columns:1fr; } }
+
+.pull{
+  font-family:var(--serif); font-size:24px; line-height:1.4; color:var(--ink-950);
+  border-left:3px solid var(--ink-800); padding:4px 0 4px 24px; margin:30px 0;
+}
+.pull cite{ display:block; font-family:var(--mono); font-style:normal; font-size:12.5px; color:var(--ink-500); margin-top:10px; }
+
+.callout{
+  border:1px solid var(--line); border-left:3px solid var(--ink-800); background:var(--ink-50);
+  border-radius:0 var(--radius-m) var(--radius-m) 0; padding:18px 22px; margin:22px 0;
+}
+.callout h4{ color:var(--ink-800); }
+.callout p{ margin-bottom:0; font-size:15px; }
+
+.formula{
+  font-family:var(--mono); background:var(--ink-950); color:var(--ink-50);
+  border-radius:var(--radius-m); padding:18px 22px; font-size:16px; text-align:center;
+  letter-spacing:0.02em; margin:20px 0; overflow-x:auto;
+}
+.formula .op{ color:var(--ink-400); margin:0 8px; }
+
+table.datatable{ width:100%; border-collapse:collapse; font-size:14.5px; margin:20px 0; }
+table.datatable caption{ text-align:left; font-family:var(--mono); font-size:12px; color:var(--ink-500); margin-bottom:8px; }
+table.datatable th, table.datatable td{ text-align:right; padding:10px 12px; border-bottom:1px solid var(--line-soft); font-variant-numeric:tabular-nums; }
+table.datatable th:first-child, table.datatable td:first-child{ text-align:left; font-family:var(--mono); }
+table.datatable thead th{ font-family:var(--sans); font-weight:600; color:var(--ink-800); font-size:13px; text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--ink-700);}
+table.datatable tbody tr:last-child td{ border-bottom:none; }
+
+/* ---------- Steps ---------- */
+.steps{ counter-reset:step; margin:26px 0; }
+.step{ display:grid; grid-template-columns:44px 1fr; gap:16px; padding:18px 0; border-top:1px solid var(--line-soft); }
+.step:first-child{ border-top:none; }
+.step-num{
+  counter-increment:step; font-family:var(--mono); color:var(--ink-400); font-size:13px; padding-top:3px;
+}
+.step-num::before{ content: counter(step, decimal-leading-zero); }
+.step h4{ color:var(--ink-950); text-transform:none; letter-spacing:0; font-size:16.5px; font-family:var(--serif); font-weight:600;}
+.step p{ font-size:15px; margin-bottom:8px;}
+
+/* ---------- Quiz ---------- */
+.quiz{
+  border:1px solid var(--ink-800); border-radius:var(--radius-l); background:var(--white);
+  padding:26px 28px; margin:30px 0;
+}
+.quiz .qtag{
+  font-family:var(--mono); font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--white);
+  background:var(--ink-800); display:inline-block; padding:3px 10px; border-radius:100px; margin-bottom:14px;
+}
+.quiz p.q{ font-size:17px; color:var(--ink-950); font-weight:500; margin-bottom:18px; }
+.quiz .choices{ display:flex; flex-direction:column; gap:9px; }
+.quiz button.choice{
+  text-align:left; font-family:var(--sans); font-size:15px; color:var(--ink-700);
+  background:var(--white); border:1px solid var(--line); border-radius:var(--radius-s);
+  padding:12px 14px; cursor:pointer; transition:border-color .12s ease, background .12s ease;
+}
+.quiz button.choice:hover{ border-color:var(--ink-500); }
+.quiz button.choice.correct{ border-color:var(--ink-800); background:var(--ink-50); font-weight:600; color:var(--ink-950); }
+.quiz button.choice.correct::after{ content:" — correct"; font-weight:400; color:var(--ink-500); font-family:var(--mono); font-size:12.5px;}
+.quiz button.choice.incorrect{ border-color:var(--ink-300); color:var(--ink-400); text-decoration:line-through; }
+.quiz button.choice[disabled]{ cursor:default; }
+.quiz .explain{
+  margin-top:16px; padding-top:16px; border-top:1px dashed var(--line); font-size:14.5px; color:var(--ink-600);
+  display:none;
+}
+.quiz .explain.show{ display:block; }
+.quiz .explain b{ color:var(--ink-800); }
+
+/* ---------- Widget controls ---------- */
+.controls{ display:flex; flex-wrap:wrap; align-items:center; gap:22px; margin-bottom:16px; }
+.control{ display:flex; flex-direction:column; gap:6px; min-width:200px; flex:1; }
+.control label{ font-family:var(--mono); font-size:11.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-500); display:flex; justify-content:space-between; }
+.control label .val{ color:var(--ink-950); font-weight:600; }
+input[type=range]{
+  -webkit-appearance:none; width:100%; height:4px; background:var(--ink-200); border-radius:4px; outline-offset:6px;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--ink-950);
+  border:2px solid var(--white); box-shadow:0 0 0 1px var(--ink-950); cursor:pointer; margin-top:-6px;
+}
+input[type=range]::-moz-range-thumb{
+  width:14px; height:14px; border-radius:50%; background:var(--ink-950); border:2px solid var(--white); box-shadow:0 0 0 1px var(--ink-950); cursor:pointer;
+}
+.check{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12.5px; color:var(--ink-600); }
+.check input{ width:15px; height:15px; accent-color:var(--ink-950); }
+button.ghost{
+  font-family:var(--mono); font-size:12px; letter-spacing:0.04em; text-transform:uppercase;
+  background:var(--white); border:1px solid var(--ink-400); color:var(--ink-700); border-radius:100px;
+  padding:8px 16px; cursor:pointer;
+}
+button.ghost:hover{ border-color:var(--ink-800); color:var(--ink-950); }
+
+.readout-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+.readout{
+  border:1px solid var(--line); border-radius:var(--radius-s); padding:10px 14px; flex:1; min-width:130px;
+  background:var(--ink-50);
+}
+.readout .k{ font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-500); }
+.readout .v{ font-family:var(--serif); font-size:22px; color:var(--ink-950); font-weight:600; }
+.readout .v small{ font-family:var(--sans); font-size:13px; color:var(--ink-500); font-weight:400;}
+.feedback{
+  margin-top:14px; font-size:14.5px; padding:10px 14px; border-radius:var(--radius-s);
+  background:var(--ink-950); color:var(--ink-50); font-family:var(--mono);
+}
+
+.legend{ display:flex; gap:18px; flex-wrap:wrap; font-family:var(--mono); font-size:12px; color:var(--ink-600); margin-top:12px; }
+.legend .item{ display:flex; align-items:center; gap:7px; }
+.legend .swatch{ width:14px; height:14px; border-radius:4px; display:inline-block; flex:none; }
+.legend svg{ flex:none; }
+
+figure.imgfig{ margin:24px 0; }
+figure.imgfig img{ border-radius:var(--radius-m); border:1px solid var(--line); }
+figure.imgfig figcaption{ font-family:var(--mono); font-size:12.5px; color:var(--ink-500); margin-top:10px; }
+
+/* ---------- Rules of thumb ---------- */
+.rules{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:26px 0; }
+@media (max-width:700px){ .rules{ grid-template-columns:1fr; } }
+.rule-card{ border:1px solid var(--line); border-radius:var(--radius-m); padding:22px; background:var(--white); }
+.rule-card .num{ font-family:var(--serif); font-size:34px; color:var(--ink-300); line-height:1; margin-bottom:10px; }
+
+/* ---------- Wrap-up ---------- */
+.recap-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:30px; }
+@media (max-width:700px){ .recap-grid{grid-template-columns:1fr;} }
+.recap-item{ border:1px solid var(--line); border-radius:var(--radius-m); padding:18px 20px; background:var(--white); display:flex; gap:14px; }
+.recap-item .mark{ font-family:var(--serif); font-size:20px; color:var(--ink-300); flex:none; }
+.recap-item h4{ margin-bottom:4px; color:var(--ink-950); font-family:var(--serif); text-transform:none; letter-spacing:0; font-size:15.5px; font-weight:600;}
+.recap-item p{ font-size:14.5px; margin-bottom:0; }
+
+footer{
+  padding:48px 0 60px; text-align:center; border-top:1px solid var(--line-soft);
+}
+footer .fname{ font-family:var(--serif); font-size:15px; color:var(--ink-700); }
+footer .fmeta{ font-family:var(--mono); font-size:12px; color:var(--ink-400); margin-top:8px; }
+
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+  clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Dimensionality reduction · PCA for a wall-screen view</span><span class="pn"><a href="../Gaussian-Mixture-Models-/" title="Clustering · Gaussian mixture models with EM">← Prev</a><a href="../t-SNE-and-UMAP/" title="Dimensionality reduction · t-SNE and UMAP">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="sr-only" href="#main">Skip to content</a>
+
+<header class="hero">
+  <div class="hero-grid" aria-hidden="true"></div>
+  <div class="wrap hero-inner">
+    <p class="kicker"><span class="dot-live" aria-hidden="true"></span> Unsupervised Learning &middot; Reading time ~18 min</p>
+    <h1>Principal Component Analysis</h1>
+    <p class="dek">Thirty columns won't fit on a wall screen. This is the story of how you compress them into two — honestly, defensibly, and without throwing away the columns you didn't like.</p>
+    <div class="hero-meta">
+      <span><b>569</b>patients in the case study</span>
+      <span><b>30 → 2</b>dimensions kept</span>
+      <span><b>63.3%</b>of the variation preserved</span>
+    </div>
+
+    <div class="hero-stage">
+      <div class="hero-stage-bar">
+        <span class="rec"><i aria-hidden="true"></i> live</span>
+        <span>wall screen &middot; display 00</span>
+      </div>
+      <div id="heroCanvasWrap">
+        <canvas id="heroCanvas" role="img" aria-label="Animated scatter of points settling from a scattered cloud into two separated groups along a diagonal axis, illustrating what a principal component finds."></canvas>
+      </div>
+      <div class="hero-stage-foot">A cloud of points, and the one axis that explains most of how they differ. That axis is what this whole piece is about.</div>
+    </div>
+
+    <nav class="toc" aria-label="Table of contents">
+      <a href="#problem">The problem</a>
+      <a href="#promise">What PCA promises</a>
+      <a href="#variance">Variance is information</a>
+      <a href="#pc1">Building PC1</a>
+      <a href="#pc2">PC2 &amp; orthogonality</a>
+      <a href="#explained">Variance explained</a>
+      <a href="#scree">Scree plots</a>
+      <a href="#case-study">Case study</a>
+      <a href="#wrapup">Wrap-up</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<section class="section" id="setup">
+  <div class="wrap">
+    <p class="eyebrow">Before we start</p>
+    <div class="section-head">
+      <h2>Why this comes right after clustering</h2>
+      <p class="lede">GMM and DBSCAN both asked "which points belong together?" PCA asks a different question first: can we even see the data well enough to tell?</p>
+    </div>
+    <p>High-dimensional data reduces down to a few informative dimensions, which is what makes structure and clusters easier to visualize and interpret in the first place. It's the step that comes before — or alongside — clustering, not instead of it.</p>
+
+    <div class="story">
+      <h3>NovaCare Diagnostics</h3>
+      <p>A pathology lab chain with forty collection centres. The problem lands on the desk of a data scientist three weeks into the job, by way of her manager, who doesn't want a model — he wants a picture he can defend in a meeting.</p>
+      <div class="cast">
+        <div class="cast-member">
+          <div class="cast-avatar" aria-hidden="true">M</div>
+          <div class="cast-name"><b>Meera</b><span>Data scientist, 3 weeks in</span></div>
+        </div>
+        <div class="cast-member">
+          <div class="cast-avatar" aria-hidden="true">R</div>
+          <div class="cast-name"><b>Rohit</b><span>Her manager</span></div>
+        </div>
+      </div>
+      <p style="margin-top:18px; margin-bottom:0;">Rohit wants one chart, for a wall screen, showing whether biopsy samples cluster into benign and malignant. That's the brief we'll follow through the rest of this piece.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="problem">
+  <div class="wrap">
+    <p class="eyebrow">01 &middot; The problem</p>
+    <div class="section-head">
+      <h2>The wall screen that can't be drawn</h2>
+      <p class="lede">Meera's dataset has 569 patients and 30 tumour measurements per patient. Her first instinct is to plot pairs of columns and see what turns up.</p>
+    </div>
+
+    <p>Column 1 against column 2. Fine. Column 1 against column 3. Also fine. Then the arithmetic catches up with her: with 30 columns, there are <strong>435</strong> possible two-column scatter plots. Nowhere near a wall screen's worth.</p>
+
+    <p>Her first instinct is that this is just tedious. It's worse than tedious — the extra columns are actively working against her. And here is the frame for everything that follows: <strong>the goal isn't to model anything. It's to see.</strong></p>
+
+    <h3 style="margin-top:44px;">The curse of dimensionality</h3>
+    <p>Here's the idea everything else rests on: <strong>as the number of dimensions grows, everything becomes equally far from everything else.</strong> Distance stops discriminating between points.</p>
+
+    <p>Picture a friend who is exactly one kilometre away. On a road, that's trivial to search — walk either direction and you'll find them. Put that same friend, same one kilometre away, in a one-kilometre square field, and now you have an area to search instead of a line. Put them in a one-kilometre cube — a multi-storey car park — and it's nearly hopeless to search by feel. Nothing about the friend changed. Nothing about the distance changed. Only the space around them got emptier, level by level.</p>
+
+    <div class="grid-3" role="group" aria-label="Three illustrations of the same one-kilometre distance in growing dimensions">
+      <div class="card" id="analogyRoad"></div>
+      <div class="card" id="analogyField"></div>
+      <div class="card" id="analogyCarpark"></div>
+    </div>
+
+    <p style="margin-top:24px;">That's what happens inside NovaCare's 30-dimensional dataset. The consequences are concrete: data gets sparse, compute cost inflates, and models start memorising noise instead of pattern — which shows up later as poor generalisation to new patients.</p>
+
+    <div class="monitor">
+      <div class="monitor-bar">
+        <span class="label"><i aria-hidden="true"></i> display &mdash; 01</span>
+        <span>farthest / nearest distance ratio</span>
+      </div>
+      <div class="monitor-screen">
+        <div id="distChart" role="img" aria-label="Line chart showing that as the number of dimensions grows from 2 to 300, the ratio of the farthest to the nearest distance between random points drops from 217 to 1.3, meaning points become almost equally distant from each other."></div>
+        <div class="legend">
+          <span class="item"><span class="swatch" style="background:var(--ink-800);"></span> Ratio of farthest / nearest pairwise distance, 200 random points per dimension</span>
+        </div>
+      </div>
+      <div class="monitor-caption">Hover a point for the exact ratio at that dimension count.</div>
+    </div>
+
+    <p>At 2 dimensions the ratio is 217 — some points are dramatically closer than others, so distance is a meaningful signal. By 100 dimensions it has collapsed to 1.6. By 300, it's 1.32: the nearest and farthest points are almost equally distant. This is why distance-based methods like k-NN and clustering lose their footing as columns pile up.</p>
+
+    <p>So more columns cost something real, measurably. The obvious fix is to delete some of them. But which ones does Meera drop? She can't tell a pathologist she dropped concavity on a hunch. What's needed is a principled way to shrink the data — and deleting columns turns out not to be the only option.</p>
+  </div>
+</section>
+<section class="section" id="promise">
+  <div class="wrap">
+    <p class="eyebrow">02 &middot; What PCA actually promises</p>
+    <div class="section-head">
+      <h2>Selecting vs. combining</h2>
+      <p class="lede">There are two fundamentally different moves available here, and separating them cleanly is the conceptual hinge for everything that follows.</p>
+    </div>
+
+    <div class="compare">
+      <div class="no">
+        <h4><span class="tag">Not this</span> Selecting</h4>
+        <p>Keep 2 of the 30 original columns. Throw the other 28 away entirely, along with anything useful they carried.</p>
+      </div>
+      <div class="yes">
+        <h4><span class="tag">PCA does this</span> Combining</h4>
+        <p>Build 2 brand-new columns, each one a blend that carries a little bit of information from all 30 original columns.</p>
+      </div>
+    </div>
+
+    <p>PCA doesn't pick favourites among existing columns — it builds new ones.</p>
+
+    <div class="pull">
+      Think of the 30-column dataset as a 1,000-page book. Selecting is tearing out three pages at random and calling that a summary. Combining — what PCA does — is writing an actual 3-page summary. You lose the subplots. You keep the plot.
+      <cite>And the detail that matters: you cannot write that summary without reading all 1,000 pages first. PCA reads every column before it compresses anything. Nothing is ignored on the way in — only on the way out.</cite>
+    </div>
+
+    <p>Be honest about the trade being made here, because a manager like Rohit will ask: this is trading some accuracy for a large gain in simplicity, deliberately. That's not a flaw to hide — it's the whole point, and the next few sections work out exactly how to quantify what gets given up.</p>
+
+    <div class="quiz" data-quiz>
+      <span class="qtag">Check yourself</span>
+      <p class="q">Meera drops 28 of the 30 columns and keeps only the two with the widest numeric range. What has she done that PCA would not have done?</p>
+      <div class="choices">
+        <button class="choice" data-correct="true">She selected existing columns instead of combining information from all of them.</button>
+        <button class="choice">She reduced dimensionality, which is something only PCA can do.</button>
+        <button class="choice">She scaled her features before reducing them.</button>
+        <button class="choice">She removed noise from the dataset.</button>
+      </div>
+      <div class="explain"><b>Why:</b> This is selection, not combination — it discards the 28 dropped columns entirely, even if they held useful shared variance. PCA reads all 30 columns and builds new axes from combinations of them. Numeric range alone also has nothing to do with how much true variance a column carries, which is the trap this question sets.</div>
+    </div>
+  </div>
+</section>
+<section class="section" id="variance">
+  <div class="wrap">
+    <p class="eyebrow">03 &middot; Variance is information</p>
+    <div class="section-head">
+      <h2>If it never changes, it can't tell you anything</h2>
+      <p class="lede">Consider a diagnostic question: if a column has the exact same value for every single patient, is it useful?</p>
+    </div>
+
+    <div class="monitor">
+      <div class="monitor-bar">
+        <span class="label"><i aria-hidden="true"></i> display &mdash; 02</span>
+        <span>flat feature vs. spread feature</span>
+      </div>
+      <div class="monitor-screen">
+        <div class="grid-2" id="flatSpreadChart"></div>
+      </div>
+      <div class="monitor-caption" id="flatSpreadCaption">A column that never changes carries zero information.</div>
+    </div>
+
+    <p>The feature on the left never changes — every patient lands at the same value. It cannot possibly help tell one patient apart from another: zero variance, zero information. The feature on the right spreads out, and that spread is exactly where the signal lives.</p>
+
+    <p>Push that one step further and the entire objective of PCA falls out, before any maths: if flat is useless and spread is useful, then spread — <strong>variance</strong> — is the thing worth preserving. That's the whole goal.</p>
+
+    <h3 style="margin-top:44px;">The cars example</h3>
+    <p>Take two features: engine power and max speed. Plot the cars, then project every point onto just the power axis — collapse it to 1D. Do the same onto just the max-speed axis. Max speed keeps more spread — it "wins" — but look at how much gets lost either way.</p>
+
+    <div class="monitor">
+      <div class="monitor-bar">
+        <span class="label"><i aria-hidden="true"></i> display &mdash; 03</span>
+        <span>projecting onto a single existing axis</span>
+      </div>
+      <div class="monitor-screen">
+        <div class="grid-2" id="carsProjChart"></div>
+      </div>
+      <div class="monitor-caption">Both single-axis views throw information away — one just throws away less.</div>
+    </div>
+
+    <p>Both of those axes are bad choices. But notice — the choice was only ever between the axes already on hand. What if, instead of picking one of the axes we were handed, we could draw a brand-new one, angled exactly to catch the most spread? That question — can we draw our own axis — is the entire idea of a principal component.</p>
+  </div>
+</section>
+<section class="section" id="pc1">
+  <div class="wrap">
+    <p class="eyebrow">04 &middot; Building PC1 by hand</p>
+    <div class="section-head">
+      <h2>Rotate a line through the cloud</h2>
+      <p class="lede"><strong>PC1</strong> is the direction in which the data varies the most. If this 2D cloud had to be represented with just one line, PC1 is the line that preserves the maximum possible spread — and therefore loses the least information.</p>
+    </div>
+
+    <p>Take that same cloud of points and rotate a candidate line through it, like a clock hand sweeping across the data. For every angle, drop a perpendicular from each point onto the line — that's the projection of each point onto that candidate direction.</p>
+
+    <p>Pick any single point. Its distance from the origin, call it <em>A</em>, is fixed — it doesn't change as the line rotates. But <em>A</em> splits into two pieces depending on the line's angle: the part that lands on the line (the projection) and the part left over, perpendicular to the line (the error). By Pythagoras:</p>
+
+    <div class="formula">A<sup>2</sup> <span class="op">=</span> projection<sup>2</sup> <span class="op">+</span> error<sup>2</sup></div>
+
+    <p>Since <em>A</em> is constant, the two pieces trade off exactly. Maximise the projected part, and the leftover error part is automatically minimised. So finding the direction that captures the most spread is exactly the same as finding the direction that loses the least information — the candidate line with the largest total squared projected distance is PC1.</p>
+
+    <div class="monitor">
+      <div class="monitor-bar">
+        <span class="label"><i aria-hidden="true"></i> display &mdash; 04</span>
+        <span>PC1 angle sweep &amp; variance capture</span>
+      </div>
+      <div class="monitor-screen">
+        <div class="controls">
+          <div class="control">
+            <label for="angleSlider">Candidate line angle <span class="val" id="angleVal">35°</span></label>
+            <input type="range" id="angleSlider" min="0" max="180" step="1" value="35" aria-describedby="pc1ReadoutDesc">
+          </div>
+          <label class="check"><input type="checkbox" id="showProj" checked> show projections</label>
+          <button class="ghost" id="resetCloud" type="button">new sample</button>
+        </div>
+
+        <div class="grid-2" id="pc1Widget" style="align-items:start;">
+          <div id="pc1Cloud"></div>
+          <div id="pc1Sweep"></div>
+        </div>
+
+        <p id="pc1ReadoutDesc" class="sr-only">Live readout of variance captured by the candidate line at the chosen angle.</p>
+        <div class="readout-row">
+          <div class="readout"><div class="k">Variance captured</div><div class="v" id="roCaptured">–%</div></div>
+          <div class="readout"><div class="k">Variance discarded</div><div class="v" id="roDiscarded">–%</div></div>
+          <div class="readout"><div class="k">Best angle found</div><div class="v" id="roBest">–°</div></div>
+        </div>
+        <div class="feedback" id="pc1Feedback" role="status">Drag the slider to find the direction of maximum spread.</div>
+      </div>
+      <div class="monitor-caption">Left: the candidate line rotating through the cloud. Right: total squared projected distance at every angle — the peak marks PC1.</div>
+    </div>
+
+    <p>Rotate to roughly 0° and the line is nearly horizontal — a low score. Rotate to roughly 90° and it's nearly vertical — also low. Somewhere around a third of the way through the sweep, angled right through the long axis of the cloud, the score peaks by a wide margin. That angle is PC1.</p>
+
+    <p>Name what was just built properly, because it matters for everything that follows: <strong>PC1 is not a column you already had.</strong> It's a linear combination — a recipe, something like <code>0.81 × power + 0.59 × max_speed</code>. A new column, built out of old ones. This is the book analogy's 3-page summary, and it only exists because both original pages — both axes — were read to build it.</p>
+
+    <div class="quiz" data-quiz>
+      <span class="qtag">Check yourself</span>
+      <p class="q">Two candidate lines are drawn through the same cloud of points. Line A gives a larger sum of squared projected distances than Line B. What is simultaneously true of Line A?</p>
+      <div class="choices">
+        <button class="choice" data-correct="true">Line A also has a smaller total projection error (perpendicular distance) than Line B.</button>
+        <button class="choice">Line A must be perpendicular to Line B.</button>
+        <button class="choice">Line A explains less variance than Line B.</button>
+        <button class="choice">Line A is the correct choice only if the data has already been scaled.</button>
+      </div>
+      <div class="explain"><b>Why:</b> Because each point's total distance from the origin is fixed, projected distance and perpendicular error trade off exactly by Pythagoras. A line that maximises projected spread simultaneously minimises leftover error — they're the same optimum, not two separate ones to balance. Perpendicularity describes the relationship between PC1 and PC2, not between two arbitrary candidate lines.</div>
+    </div>
+  </div>
+</section>
+<section class="section" id="pc2">
+  <div class="wrap">
+    <p class="eyebrow">05 &middot; PC2 and orthogonality</p>
+    <div class="section-head">
+      <h2>What's left over, at a right angle</h2>
+      <p class="lede">PC1 gives the single direction that captures the most variation. But the original data was 2D, and reducing it to just PC1 throws some information away. What happens to the variation PC1 couldn't capture?</p>
+    </div>
+
+    <p>That's the job of <strong>PC2</strong>: the direction that captures the maximum <em>remaining</em> variation after PC1 has taken as much as it can. But PC2 can't point in any direction it likes — <strong>it must be perpendicular (orthogonal) to PC1.</strong></p>
+
+    <p>If PC2 pointed even partly along PC1, it would capture some of the same variation PC1 already captured, and the two components would overlap in what they represent. Forcing PC2 to be perpendicular guarantees it captures a genuinely new, non-redundant direction — exactly the variation PC1 missed. In two dimensions, once PC1 is fixed, there is only one perpendicular direction left (up to sign). That direction becomes PC2.</p>
+
+    <div class="grid-2">
+      <div class="card"><h4>PC1</h4><p>Captures the maximum possible variation.</p></div>
+      <div class="card"><h4>PC2</h4><p>Captures the maximum remaining variation, while staying perpendicular to PC1.</p></div>
+    </div>
+
+    <div class="monitor">
+      <div class="monitor-bar">
+        <span class="label"><i aria-hidden="true"></i> display &mdash; 05</span>
+        <span>PC1 and PC2 on the same cloud</span>
+      </div>
+      <div class="monitor-screen">
+        <div id="pc2Chart"></div>
+        <div class="legend">
+          <span class="item"><svg width="18" height="18" aria-hidden="true"><line x1="1" y1="9" x2="17" y2="9" stroke="#1c1e21" stroke-width="3"/></svg> PC1 — maximum variance</span>
+          <span class="item"><svg width="18" height="18" aria-hidden="true"><line x1="1" y1="9" x2="17" y2="9" stroke="#8d9096" stroke-width="3" stroke-dasharray="3 3"/></svg> PC2 — perpendicular to PC1</span>
+        </div>
+        <div class="readout-row">
+          <div class="readout"><div class="k">PC1 variance (this sample)</div><div class="v" id="pc2VarA">–%</div></div>
+          <div class="readout"><div class="k">PC2 variance (this sample)</div><div class="v" id="pc2VarB">–%</div></div>
+        </div>
+      </div>
+      <div class="monitor-caption">In the source case study, PC1 explained 96.2% of the variance on this pair of features and PC2 explained the remaining 3.8%.</div>
+    </div>
+
+    <p>Together, PC1 and PC2 form a new coordinate system for the data, with axes ordered by how much variation they explain. In two dimensions there's only one possible choice for PC2 once PC1 is fixed. In NovaCare's real 30-dimensional dataset there are 30 possible components — each one forced to be perpendicular to every component before it, and each one capturing strictly less variance than the one before.</p>
+  </div>
+</section>
+
+<section class="section" id="explained">
+  <div class="wrap">
+    <p class="eyebrow">06 &middot; Variance explained</p>
+    <div class="section-head">
+      <h2>Turning PCA into a number Rohit can use</h2>
+      <p class="lede">Each principal component captures a certain amount of the data's variation. Here's how that turns into a simple percentage a manager can act on.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num"></div>
+        <div>
+          <h4>Variance captured by each component</h4>
+          <p>Divide the sum of squared projections by (n&nbsp;&minus;&nbsp;1). Say there are 31 patients, so n&nbsp;&minus;&nbsp;1&nbsp;=&nbsp;30.</p>
+          <div class="formula">PC1: 300 / 30 <span class="op">=</span> 10 &nbsp;&nbsp;&nbsp; PC2: 60 / 30 <span class="op">=</span> 2</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div>
+          <h4>Total variance</h4>
+          <p>Add the components together.</p>
+          <div class="formula">10 <span class="op">+</span> 2 <span class="op">=</span> 12</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div>
+          <h4>Explained variance ratio</h4>
+          <p>Each component's variance, divided by the total.</p>
+          <div class="formula">PC1: 10 / 12 <span class="op">≈</span> 83% &nbsp;&nbsp;&nbsp; PC2: 2 / 12 <span class="op">≈</span> 17%</div>
+        </div>
+      </div>
+    </div>
+
+    <p>Instead of saying "we reduced the data to one dimension," Meera can now tell Rohit something specific and defensible:</p>
+    <div class="pull">"Our one-dimensional representation using PC1 preserves 83% of the original variation in the data."</div>
+    <p>That's the payoff of explained variance: it tells you how much information survives when you keep a given number of principal components.</p>
+  </div>
+</section>
+<section class="section" id="scree">
+  <div class="wrap">
+    <p class="eyebrow">07 &middot; Reading a scree plot</p>
+    <div class="section-head">
+      <h2>How many components are worth keeping</h2>
+      <p class="lede">With more than two features, PCA hands back several principal components — usually more than you need. A scree plot helps decide how many are worth keeping.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card"><h4>The bars</h4><p>Variance explained by each individual component. PC1 captures the most, PC2 the next most, and PC3 onward generally contribute less and less.</p></div>
+      <div class="card"><h4>The line</h4><p>Cumulative variance explained. It answers: "if I keep the first k components, how much of the original variation have I preserved?"</p></div>
+    </div>
+
+    <p>For example, if the cumulative line reaches 90% at PC3, keeping PC1, PC2, and PC3 preserves about 90% of the variation in the original data.</p>
+
+    <h3 style="margin-top:40px;">The elbow</h3>
+    <p>Read the bars left to right. Initially there's a large drop in variance explained; eventually the bars shrink and flatten out. That bend is the <strong>elbow</strong>. Before it, each additional component adds meaningful new information. After it, additional components add relatively little.</p>
+
+    <div class="monitor">
+      <div class="monitor-bar">
+        <span class="label"><i aria-hidden="true"></i> display &mdash; 06</span>
+        <span>elbow selection on a scree plot</span>
+      </div>
+      <div class="monitor-screen">
+        <div class="controls">
+          <div class="control">
+            <label for="kSlider">Components kept (k) <span class="val" id="kVal">6</span></label>
+            <input type="range" id="kSlider" min="1" max="6" step="1" value="6">
+          </div>
+        </div>
+        <div id="screeToy"></div>
+        <div class="legend">
+          <span class="item"><span class="swatch" style="background:var(--ink-800);"></span> individual variance explained</span>
+          <span class="item"><svg width="18" height="18" aria-hidden="true"><line x1="1" y1="9" x2="17" y2="9" stroke="#8d9096" stroke-width="2.5"/></svg> cumulative variance</span>
+        </div>
+        <div class="readout-row">
+          <div class="readout"><div class="k">Cumulative at k</div><div class="v" id="screeCum">–%</div></div>
+          <div class="readout"><div class="k">Elbow (steepest bend)</div><div class="v">PC3 <small>~92%</small></div></div>
+        </div>
+      </div>
+      <div class="monitor-caption">A synthetic 6-feature dataset, built so early components carry most of the signal.</div>
+    </div>
+
+    <p>This is why the scree plot earns its keep in dimensionality reduction: it turns "how many dimensions should I keep" into something you can actually see and reason about, rather than guess at.</p>
+
+    <div class="quiz" data-quiz>
+      <span class="qtag">Check yourself</span>
+      <p class="q">In a dataset, PC1 explains 62% of the variance, PC2 explains 20%, and PC3 explains 9%. What does the scree plot's cumulative line read at the PC3 bar?</p>
+      <div class="choices">
+        <button class="choice" data-correct="true">91%</button>
+        <button class="choice">9%</button>
+        <button class="choice">62%</button>
+        <button class="choice">31%</button>
+      </div>
+      <div class="explain"><b>Why:</b> The cumulative line sums each component's individual share moving left to right: 62 + 20 + 9 = 91%. A common mix-up is reading the individual bar height at PC3 (9%) instead of the running total — the cumulative line and the bar chart show two different things on the same axes.</div>
+    </div>
+
+    <h3 style="margin-top:8px;">How many components are enough</h3>
+    <p>Picture a dataset with 100 columns where the components explain 80%, then 10%, then 1%, then 0.6%, trailing off. How many do you keep? There is no single correct answer — that's the point. This is a business decision about acceptable loss, not a maths problem with one right solution.</p>
+
+    <div class="rules">
+      <div class="rule-card">
+        <div class="num">01</div>
+        <h4>Look for the elbow</h4>
+        <p>The point where the cumulative line stops climbing steeply and flattens out. Keep components up to that bend.</p>
+      </div>
+      <div class="rule-card">
+        <div class="num">02</div>
+        <h4>Set a fixed threshold</h4>
+        <p>Decide up front how much information you're willing to lose — commonly a 95% cumulative variance target — and keep however many components it takes to reach it.</p>
+      </div>
+    </div>
+
+    <p>For Meera, the decision is forced by the medium: she needs a chart for a wall screen, so she's taking exactly two components, whatever the cost. Her job isn't to find the "best" number — it's to report honestly what those two components cost her in lost information.</p>
+  </div>
+</section>
+<section class="section" id="case-study">
+  <div class="wrap">
+    <p class="eyebrow">08 &middot; Case study</p>
+    <div class="section-head">
+      <h2>The tumour triage board</h2>
+      <p class="lede">Everything built by hand up to this point becomes about eight lines of code on the real data: 569 patients, 30 tumour measurements, from the Wisconsin breast cancer dataset.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num"></div>
+        <div>
+          <h4>Load and clean</h4>
+          <p>Drop columns that don't describe the tumour itself — an ID column, say, or an empty column. An identifier is just a label for a patient; it has no meaningful relationship to tumour characteristics and therefore no useful variation for PCA to discover. After cleaning, 30 numerical tumour measurements remain.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div>
+          <h4>Separate features from the diagnosis</h4>
+          <p>Split the data into <code>X</code> — the 30 tumour measurements PCA will actually analyse — and <code>y</code>, the benign/malignant label. <code>y</code> stays completely out of the process because PCA is unsupervised: it never sees the diagnosis, only the patterns and variation inside <code>X</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div>
+          <h4>Standardise the features</h4>
+          <p>The most important step, and the most common place to make a mistake. The 30 measurements aren't on the same scale — <code>area</code> runs into the hundreds or thousands, <code>smoothness</code> sits around 0.1. Because PCA is built on variance, an unscaled feature with a larger numeric spread can dominate the calculation regardless of its real-world importance.</p>
+          <div class="formula">z <span class="op">=</span> (x &minus; μ) / σ</div>
+          <p>After standardising, every feature has mean ≈ 0 and standard deviation ≈ 1, so PCA compares features fairly and finds directions of genuine variation — not directions dominated by measurement units.</p>
+        </div>
+      </div>
+    </div>
+
+    <table class="datatable">
+      <caption>Feature ranges before and after scaling (first 5 of 30 features)</caption>
+      <thead><tr><th>Feature</th><th>Min (raw)</th><th>Max (raw)</th></tr></thead>
+      <tbody>
+        <tr><td>mean radius</td><td>6.98</td><td>28.11</td></tr>
+        <tr><td>mean texture</td><td>9.71</td><td>39.28</td></tr>
+        <tr><td>mean perimeter</td><td>43.79</td><td>188.50</td></tr>
+        <tr><td>mean area</td><td>143.50</td><td>2501.00</td></tr>
+        <tr><td>mean smoothness</td><td>0.05</td><td>0.16</td></tr>
+      </tbody>
+    </table>
+    <p style="font-family:var(--mono); font-size:13.5px; color:var(--ink-500); margin-top:-8px;">After <code>StandardScaler</code>: mean ≈ &minus;0.0000, std ≈ 1.0000, for every one of the 30 features.</p>
+
+    <div class="quiz" data-quiz>
+      <span class="qtag">Check yourself</span>
+      <p class="q">Meera skips <code>StandardScaler</code> and runs PCA directly on the raw data. The <code>area</code> column, with values in the hundreds, ends up dominating PC1. Why does this happen?</p>
+      <div class="choices">
+        <button class="choice" data-correct="true">PCA maximises variance, and unscaled area has a much larger numeric spread due to its units, so it dominates the variance calculation regardless of its real-world importance.</button>
+        <button class="choice">PCA always weights the first column in the dataset most heavily.</button>
+        <button class="choice"><code>area</code> is genuinely the single most medically important feature for diagnosis.</button>
+        <button class="choice">PCA cannot run at all without scaling, so the model would have thrown an error.</button>
+      </div>
+      <div class="explain"><b>Why:</b> PCA has no concept of medical importance — only numeric variance. A column measured in the hundreds will show far larger raw spread than one measured in the hundredths, regardless of which one actually distinguishes benign from malignant tissue. Scaling puts every feature on the same footing before variance is compared; without it, units — not biology — decide the outcome.</div>
+    </div>
+
+    <h3 style="margin-top:40px;">The pipeline, in code</h3>
+    <p>Everything above — load, split, scale — sets up the one line that actually does the reduction:</p>
+    <div class="monitor">
+      <div class="monitor-bar">
+        <span class="label"><i aria-hidden="true"></i> pipeline</span>
+        <span>scikit-learn</span>
+      </div>
+      <div class="monitor-screen" style="background:var(--ink-950);">
+        <pre style="margin:0; font-family:var(--mono); font-size:13.5px; line-height:1.75; color:#d7e0d9; overflow-x:auto;"><code>X_scaled = StandardScaler().fit_transform(X)
+
+pca = PCA(n_components=2)
+X2  = pca.fit_transform(X_scaled)
+
+evr = pca.explained_variance_ratio_
+print(f"PC1 explains {evr[0]*100:.1f}% of variance")
+print(f"PC2 explains {evr[1]*100:.1f}% of variance")</code></pre>
+      </div>
+      <div class="monitor-caption">The entire dimensionality-reduction step — because everything before it did the real work.</div>
+    </div>
+
+    <h3 style="margin-top:40px;">The live scree plot for the scaled breast cancer data</h3>
+    <div class="monitor">
+      <div class="monitor-bar">
+        <span class="label"><i aria-hidden="true"></i> display &mdash; 07</span>
+        <span>30 scaled features, first 10 components</span>
+      </div>
+      <div class="monitor-screen">
+        <div id="screeReal"></div>
+        <div class="legend">
+          <span class="item"><span class="swatch" style="background:var(--ink-800);"></span> individual variance explained</span>
+          <span class="item"><svg width="18" height="18" aria-hidden="true"><line x1="1" y1="9" x2="17" y2="9" stroke="#8d9096" stroke-width="2.5"/></svg> cumulative variance</span>
+          <span class="item"><svg width="18" height="18" aria-hidden="true"><line x1="1" y1="9" x2="17" y2="9" stroke="#aeb1b6" stroke-width="2" stroke-dasharray="2 3"/></svg> 95% threshold</span>
+        </div>
+      </div>
+      <div class="monitor-caption">PC1 explains 44.3%, PC2 explains 19.0% &mdash; ten components together reach 96.3%.</div>
+    </div>
+
+    <h3 style="margin-top:40px;">The finished wall-screen chart</h3>
+    <p>PC1 against PC2, coloured by diagnosis, on the real 569-patient dataset:</p>
+
+    <div class="readout-row" style="margin-bottom:4px;">
+      <div class="readout"><div class="k">PC1 explains</div><div class="v">44.3%</div></div>
+      <div class="readout"><div class="k">PC2 explains</div><div class="v">19.0%</div></div>
+      <div class="readout"><div class="k">Together preserve</div><div class="v">63.3%</div></div>
+    </div>
+
+    <figure class="imgfig">
+      <img id="finalImg" src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/218/813/original/Screenshot_2026-08-18_173127.png?1787054496" alt="Scatter plot of the 569 breast-cancer patients projected onto PC1 and PC2, with malignant cases marked as crosses and benign cases as circles. The two groups separate visibly along the PC1 axis." loading="lazy" onerror="this.style.display='none'; document.getElementById('finalImgFallback').style.display='block';">
+      <div id="finalImgFallback" style="display:none;" role="img" aria-label="Scatter plot of the 569 breast-cancer patients projected onto PC1 and PC2, with malignant cases marked as crosses and benign cases as circles. The two groups separate visibly along the PC1 axis."></div>
+      <figcaption>30 columns → 2 columns, retaining 63.3% of the original variance. Malignant samples marked ✕, benign samples marked ●.</figcaption>
+    </figure>
+
+    <p>Benign and malignant separate visibly along PC1. Meera never told the algorithm which patients were malignant — PCA is unsupervised. It found this structure purely from variance, with no access to the labels at all.</p>
+  </div>
+</section>
+<section class="section" id="wrapup">
+  <div class="wrap">
+    <p class="eyebrow">Wrap-up</p>
+    <div class="section-head">
+      <h2>What to carry forward</h2>
+    </div>
+    <div class="recap-grid">
+      <div class="recap-item"><span class="mark">—</span><div><h4>High dimensions</h4><p>Visualisation becomes difficult, and distances become less meaningful.</p></div></div>
+      <div class="recap-item"><span class="mark">—</span><div><h4>PCA</h4><p>Combines features instead of simply dropping them.</p></div></div>
+      <div class="recap-item"><span class="mark">—</span><div><h4>Variance</h4><p>PCA preserves the directions with the most variation.</p></div></div>
+      <div class="recap-item"><span class="mark">—</span><div><h4>PC1</h4><p>Captures the maximum possible variance.</p></div></div>
+      <div class="recap-item"><span class="mark">—</span><div><h4>PC2</h4><p>Captures the next most variance while staying perpendicular to PC1.</p></div></div>
+      <div class="recap-item"><span class="mark">—</span><div><h4>Variance explained</h4><p>Measures how much information each component retains.</p></div></div>
+      <div class="recap-item"><span class="mark">—</span><div><h4>Number of components</h4><p>Choose based on acceptable information loss — an elbow or a fixed threshold.</p></div></div>
+      <div class="recap-item"><span class="mark">—</span><div><h4>Standardisation</h4><p>Scale features first whenever they have different units or ranges.</p></div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="fname">Principal Component Analysis post read</div>
+    <div class="fmeta">Unsupervised Learning &middot; Interactive read</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ utilities ============ */
+function mulberry32(seed){
+  let s = seed >>> 0;
+  return function(){
+    s |= 0; s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function randNormal(rng, mean, std){
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  return mean + z * std;
+}
+const SVGNS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs){
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function svgRoot(vbw, vbh, extraStyle){
+  const s = el('svg', {viewBox:`0 0 ${vbw} ${vbh}`, width:'100%', role:'img'});
+  s.style.display = 'block';
+  s.style.height = 'auto';
+  s.style.overflow = 'visible';
+  if (extraStyle) Object.assign(s.style, extraStyle);
+  return s;
+}
+
+/* shared floating tooltip */
+const tip = document.createElement('div');
+Object.assign(tip.style, {
+  position:'fixed', background:'#0b0c0d', color:'#f6f6f7', font:'11.5px "IBM Plex Mono", monospace',
+  padding:'6px 10px', borderRadius:'6px', pointerEvents:'none', opacity:'0', transition:'opacity .1s ease',
+  zIndex:'999', whiteSpace:'nowrap', letterSpacing:'0.01em'
+});
+document.body.appendChild(tip);
+function bindTip(node, textFn){
+  node.addEventListener('mousemove', function(evt){
+    tip.textContent = typeof textFn === 'function' ? textFn() : textFn;
+    tip.style.left = (evt.clientX + 14) + 'px';
+    tip.style.top = (evt.clientY + 14) + 'px';
+    tip.style.opacity = '1';
+  });
+  node.addEventListener('mouseleave', function(){ tip.style.opacity = '0'; });
+}
+
+function fmt(n, d){ return n.toFixed(d===undefined?1:d); }
+
+/* ============ hero canvas ============ */
+(function heroCanvas(){
+  const wrap = document.getElementById('heroCanvasWrap');
+  const canvas = document.getElementById('heroCanvas');
+  if (!wrap || !canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rng = mulberry32(7);
+  const N = 130;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W = 0, H = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
+  function size(){
+    const r = wrap.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  size();
+  window.addEventListener('resize', size);
+
+  const angle = -0.32; // radians, orientation of the emergent axis
+  const ux = Math.cos(angle), uy = Math.sin(angle);
+  const points = [];
+  for (let i=0;i<N;i++){
+    const group = i % 2 === 0 ? -1 : 1;
+    const along = (rng()-0.5) * 0.72 + group*0.24; // position along axis, two loose clusters
+    const across = (rng()-0.5) * 0.16; // jitter perpendicular
+    points.push({
+      sx: rng(), sy: rng(), // start (normalized 0..1 random cloud)
+      along, across, group
+    });
+  }
+
+  function targetXY(p, cx, cy, scale){
+    const ax = p.along * scale, ac = p.across * scale;
+    return { x: cx + ax*ux - ac*uy, y: cy + ax*uy + ac*ux };
+  }
+
+  function draw(t){
+    ctx.clearRect(0,0,W,H);
+    const cx = W*0.52, cy = H*0.52, scale = Math.min(W,H)*0.92;
+
+    // axis line, fades in
+    const axisAlpha = Math.min(1, t*1.4) * 0.55;
+    if (axisAlpha > 0.01){
+      ctx.strokeStyle = `rgba(255,255,255,${axisAlpha})`;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2,4]);
+      const p0 = targetXY({along:-0.62,across:0}, cx,cy,scale);
+      const p1 = targetXY({along:0.62,across:0}, cx,cy,scale);
+      ctx.beginPath(); ctx.moveTo(p0.x,p0.y); ctx.lineTo(p1.x,p1.y); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    for (const p of points){
+      const sx = p.sx*W, sy = p.sy*H;
+      const tgt = targetXY(p, cx, cy, scale);
+      const e = 1 - Math.pow(1-t, 3);
+      const x = sx + (tgt.x - sx)*e;
+      const y = sy + (tgt.y - sy)*e;
+      ctx.beginPath();
+      if (p.group === -1){
+        ctx.fillStyle = 'rgba(231,231,232,0.92)';
+        ctx.arc(x,y,2.6,0,Math.PI*2);
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = 'rgba(151,155,161,0.95)';
+        ctx.lineWidth = 1.4;
+        ctx.arc(x,y,3.1,0,Math.PI*2);
+        ctx.stroke();
+      }
+    }
+  }
+
+  if (reduced){
+    draw(1);
+    return;
+  }
+  const dur = 2200;
+  let start = null;
+  function frame(ts){
+    if (!start) start = ts;
+    const t = Math.min(1, (ts-start)/dur);
+    draw(t);
+    if (t < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* ============ curse-of-dimensionality analogy panels ============ */
+(function analogyPanels(){
+  const rng = mulberry32(11);
+
+  function panel(id, title, build){
+    const host = document.getElementById(id);
+    if (!host) return;
+    const label = document.createElement('h4');
+    label.textContent = title;
+    host.appendChild(label);
+    const svg = svgRoot(200, 140);
+    build(svg);
+    host.appendChild(svg);
+  }
+
+  // 1D road
+  panel('analogyRoad', '1 km road — 1D', function(svg){
+    svg.appendChild(el('line',{x1:14,y1:70,x2:186,y2:70,stroke:'#1c1e21','stroke-width':3,'stroke-linecap':'round'}));
+    svg.appendChild(el('circle',{cx:34,cy:70,r:6,fill:'#1c1e21'}));
+    svg.appendChild(el('circle',{cx:166,cy:70,r:6,fill:'none',stroke:'#63666c','stroke-width':2.5}));
+    const t1 = el('text',{x:34,y:52,'text-anchor':'middle',class:'lbl'}); t1.textContent='you'; svg.appendChild(t1);
+    const t2 = el('text',{x:166,y:52,'text-anchor':'middle',class:'lbl'}); t2.textContent='friend'; svg.appendChild(t2);
+  });
+
+  // 2D field
+  panel('analogyField', '1 km² field — 2D', function(svg){
+    for(let i=0;i<26;i++){
+      svg.appendChild(el('circle',{cx: 20+rng()*160, cy: 20+rng()*100, r:2, fill:'#c9cbce'}));
+    }
+    svg.appendChild(el('circle',{cx:46,cy:82,r:6,fill:'#1c1e21'}));
+    svg.appendChild(el('circle',{cx:150,cy:34,r:6,fill:'none',stroke:'#63666c','stroke-width':2.5}));
+    const t1 = el('text',{x:46,y:100,'text-anchor':'middle',class:'lbl'}); t1.textContent='you'; svg.appendChild(t1);
+    const t2 = el('text',{x:150,y:20,'text-anchor':'middle',class:'lbl'}); t2.textContent='friend'; svg.appendChild(t2);
+  });
+
+  // 3D car park
+  panel('analogyCarpark', '1 km³ car park — 3D', function(svg){
+    for (let layer=0; layer<4; layer++){
+      const off = layer*10;
+      const op = 0.22 + layer*0.16;
+      for(let i=0;i<14;i++){
+        svg.appendChild(el('circle',{cx: 24+off+rng()*130, cy: 14+off*0.6+rng()*70, r:1.8, fill:'#c9cbce', opacity:op}));
+      }
+    }
+    svg.appendChild(el('circle',{cx:44,cy:96,r:6,fill:'#1c1e21'}));
+    svg.appendChild(el('circle',{cx:168,cy:40,r:6,fill:'none',stroke:'#63666c','stroke-width':2.5}));
+    const t1 = el('text',{x:44,y:114,'text-anchor':'middle',class:'lbl'}); t1.textContent='you'; svg.appendChild(t1);
+    const t2 = el('text',{x:168,y:26,'text-anchor':'middle',class:'lbl'}); t2.textContent='friend'; svg.appendChild(t2);
+  });
+
+  document.querySelectorAll('#analogyRoad text.lbl, #analogyField text.lbl, #analogyCarpark text.lbl').forEach(function(t){
+    t.setAttribute('font-family','IBM Plex Mono, monospace');
+    t.setAttribute('font-size','10');
+    t.setAttribute('fill','#63666c');
+  });
+})();
+
+/* ============ distance ratio chart (curse of dimensionality, exact data) ============ */
+(function distChart(){
+  const host = document.getElementById('distChart');
+  if (!host) return;
+  const dims = [2,5,10,30,100,300];
+  const ratios = [217.18,10.37,5.57,2.64,1.60,1.32];
+
+  const W=680,H=280, padL=48,padR=20,padT=18,padB=40;
+  const plotW = W-padL-padR, plotH = H-padT-padB;
+
+  const xMin=Math.log10(2), xMax=Math.log10(300);
+  const yMin=Math.log10(1), yMax=Math.log10(250);
+  function X(d){ return padL + (Math.log10(d)-xMin)/(xMax-xMin)*plotW; }
+  function Y(r){ return padT + (1-(Math.log10(r)-yMin)/(yMax-yMin))*plotH; }
+
+  const svg = svgRoot(W,H);
+
+  // gridlines
+  const yTicks=[1,2,5,10,50,200];
+  yTicks.forEach(function(v){
+    const y=Y(v);
+    svg.appendChild(el('line',{x1:padL,y1:y,x2:W-padR,y2:y,stroke:'#dcdde0','stroke-width':1}));
+    const t=el('text',{x:padL-8,y:y+4,'text-anchor':'end','font-family':'IBM Plex Mono, monospace','font-size':11,fill:'#8d9096'}); t.textContent=v; svg.appendChild(t);
+  });
+  dims.forEach(function(d){
+    const x=X(d);
+    const t=el('text',{x:x,y:H-14,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':11,fill:'#8d9096'}); t.textContent=d; svg.appendChild(t);
+  });
+  const xlab = el('text',{x:(padL+W-padR)/2,y:H-1,'text-anchor':'middle','font-family':'Inter, sans-serif','font-size':11,fill:'#63666c'});
+  xlab.textContent = 'dimensions (log scale)'; svg.appendChild(xlab);
+
+  // line path
+  let d='';
+  dims.forEach(function(dim,i){ d += (i===0?'M':'L') + X(dim)+','+Y(ratios[i])+' '; });
+  svg.appendChild(el('path',{d:d, fill:'none', stroke:'#1c1e21','stroke-width':2.25}));
+
+  dims.forEach(function(dim,i){
+    const c = el('circle',{cx:X(dim), cy:Y(ratios[i]), r:5, fill:'#fff', stroke:'#1c1e21','stroke-width':2.25, style:'cursor:pointer;'});
+    bindTip(c, function(){ return `dims=${dim}  →  ratio=${ratios[i].toFixed(2)}`; });
+    svg.appendChild(c);
+  });
+
+  host.appendChild(svg);
+})();
+
+/* ============ flat vs spread demo ============ */
+(function flatSpread(){
+  const host = document.getElementById('flatSpreadChart');
+  const capEl = document.getElementById('flatSpreadCaption');
+  if (!host) return;
+  const rng = mulberry32(21);
+  const n = 25;
+  const flat = [], spread = [];
+  for (let i=0;i<n;i++){ flat.push(5 + randNormal(rng,0,0.05)); }
+  for (let i=0;i<n;i++){ spread.push(randNormal(rng,5,2.2)); }
+  function variance(arr){
+    const m = arr.reduce((a,b)=>a+b,0)/arr.length;
+    return arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length;
+  }
+  const vFlat = variance(flat), vSpread = variance(spread);
+
+  function miniPanel(title, data, colorFill, colorStroke, varLabel){
+    const box = document.createElement('div');
+    const h = document.createElement('h4'); h.textContent = title; box.appendChild(h);
+    const W=300,H=170,padL=28,padR=14,padT=10,padB=10;
+    const svg = svgRoot(W,H);
+    svg.appendChild(el('line',{x1:padL,y1:H/2,x2:W-padR,y2:H/2,stroke:'#dcdde0','stroke-width':1}));
+    [0,5,10].forEach(function(v){
+      const y = padT + (1-v/10)*(H-padT-padB);
+      svg.appendChild(el('line',{x1:padL,y1:y,x2:W-padR,y2:y,stroke:'#eceef0','stroke-width':1}));
+      const t=el('text',{x:padL-6,y:y+3,'text-anchor':'end','font-family':'IBM Plex Mono, monospace','font-size':9.5,fill:'#8d9096'}); t.textContent=v; svg.appendChild(t);
+    });
+    data.forEach(function(v,i){
+      const x = padL + (i+0.5)/data.length*(W-padL-padR);
+      const y = padT + (1-Math.max(0,Math.min(10,v))/10)*(H-padT-padB);
+      const c = el('circle',{cx:x,cy:y,r:3.4,fill:colorFill,stroke:colorStroke,'stroke-width':1.2});
+      svg.appendChild(c);
+    });
+    box.appendChild(svg);
+    const cap = document.createElement('div');
+    cap.style.fontFamily = 'IBM Plex Mono, monospace'; cap.style.fontSize='12px'; cap.style.color='#63666c'; cap.style.marginTop='4px';
+    cap.textContent = varLabel;
+    box.appendChild(cap);
+    return box;
+  }
+
+  host.appendChild(miniPanel('feature f2 — zero variance', flat, '#eceef0', '#8d9096', 'variance ≈ ' + vFlat.toFixed(4)));
+  host.appendChild(miniPanel('feature f1 — real variance', spread, '#1c1e21', '#1c1e21', 'variance ≈ ' + vSpread.toFixed(3)));
+})();
+
+/* ============ shared "cars" dataset: power vs max_speed ============ */
+let carsData = null;
+function generateCars(seed){
+  const rng = mulberry32(seed);
+  const n = 60;
+  const angleTrue = 35 * Math.PI/180;
+  const power=[], maxSpeed=[];
+  for (let i=0;i<n;i++){
+    const t = randNormal(rng,0,2.6);
+    const noise = randNormal(rng,0,0.6);
+    power.push(t*Math.cos(angleTrue) - noise*Math.sin(angleTrue) + 5);
+    maxSpeed.push(t*Math.sin(angleTrue) + noise*Math.cos(angleTrue) + 5);
+  }
+  return {power, maxSpeed};
+}
+carsData = generateCars(42);
+
+function variance(arr){
+  const m = arr.reduce((a,b)=>a+b,0)/arr.length;
+  return arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length;
+}
+
+/* ============ cars projection demo (project onto a single existing axis) ============ */
+function renderCarsProjection(){
+  const host = document.getElementById('carsProjChart');
+  if (!host) return;
+  host.innerHTML = '';
+  const {power, maxSpeed} = carsData;
+  const vp = variance(power), vm = variance(maxSpeed);
+
+  function panel(title, mode, keptVar){
+    const box = document.createElement('div');
+    const h = document.createElement('h4'); h.textContent = title; box.appendChild(h);
+    const W=300,H=230,pad=26;
+    const svg = svgRoot(W,H);
+    const pMin=Math.min(...power)-0.6, pMax=Math.max(...power)+0.6;
+    const mMin=Math.min(...maxSpeed)-0.6, mMax=Math.max(...maxSpeed)+0.6;
+    function X(v){ return pad + (v-pMin)/(pMax-pMin)*(W-2*pad); }
+    function Y(v){ return H-pad - (v-mMin)/(mMax-mMin)*(H-2*pad); }
+
+    // faint original cloud
+    for (let i=0;i<power.length;i++){
+      svg.appendChild(el('circle',{cx:X(power[i]),cy:Y(maxSpeed[i]),r:2.4,fill:'#c9cbce',opacity:0.55}));
+    }
+    if (mode==='power'){
+      const yAxis = Y(mMin);
+      svg.appendChild(el('line',{x1:pad,y1:yAxis,x2:W-pad,y2:yAxis,stroke:'#1c1e21','stroke-width':2}));
+      for (let i=0;i<power.length;i++){
+        svg.appendChild(el('circle',{cx:X(power[i]),cy:yAxis,r:3,fill:'#1c1e21'}));
+      }
+    } else {
+      const xAxis = X(pMin);
+      svg.appendChild(el('line',{x1:xAxis,y1:pad,x2:xAxis,y2:H-pad,stroke:'#3a3d42','stroke-width':2}));
+      for (let i=0;i<maxSpeed.length;i++){
+        svg.appendChild(el('circle',{cx:xAxis,cy:Y(maxSpeed[i]),r:3,fill:'#3a3d42'}));
+      }
+    }
+    box.appendChild(svg);
+    const cap = document.createElement('div');
+    cap.style.fontFamily='IBM Plex Mono, monospace'; cap.style.fontSize='12px'; cap.style.color='#63666c'; cap.style.marginTop='4px';
+    cap.textContent = 'variance kept ≈ ' + keptVar.toFixed(2);
+    box.appendChild(cap);
+    return box;
+  }
+
+  host.appendChild(panel('project onto "power" only', 'power', vp));
+  host.appendChild(panel('project onto "max_speed" only', 'speed', vm));
+}
+renderCarsProjection();
+
+/* ============ PC1 builder widget (centerpiece) ============ */
+function ssProjection(power, maxSpeed, angleRad){
+  const cp = power.reduce((a,b)=>a+b,0)/power.length;
+  const cm = maxSpeed.reduce((a,b)=>a+b,0)/maxSpeed.length;
+  const ux = Math.cos(angleRad), uy = Math.sin(angleRad);
+  let ss = 0;
+  const proj = [];
+  for (let i=0;i<power.length;i++){
+    const p = (power[i]-cp)*ux + (maxSpeed[i]-cm)*uy;
+    proj.push(p);
+    ss += p*p;
+  }
+  return {ss, proj, cp, cm};
+}
+function totalSS(power, maxSpeed){
+  const cp = power.reduce((a,b)=>a+b,0)/power.length;
+  const cm = maxSpeed.reduce((a,b)=>a+b,0)/maxSpeed.length;
+  let s = 0;
+  for (let i=0;i<power.length;i++) s += (power[i]-cp)*(power[i]-cp) + (maxSpeed[i]-cm)*(maxSpeed[i]-cm);
+  return s;
+}
+function sweepBest(power, maxSpeed){
+  let best = {angle:0, ss:-1};
+  const curve = [];
+  for (let a=0;a<=180;a+=1){
+    const rad = a*Math.PI/180;
+    const ss = ssProjection(power, maxSpeed, rad).ss;
+    curve.push({angle:a, ss});
+    if (ss > best.ss) best = {angle:a, ss};
+  }
+  return {best, curve};
+}
+function dataBounds(power, maxSpeed){
+  const pMin=Math.min(...power), pMax=Math.max(...power);
+  const mMin=Math.min(...maxSpeed), mMax=Math.max(...maxSpeed);
+  const cx=(pMin+pMax)/2, cy=(mMin+mMax)/2;
+  const range = Math.max(pMax-pMin, mMax-mMin) * 1.35;
+  return {cx,cy,range};
+}
+
+const pc1 = (function(){
+  const cloudHost = document.getElementById('pc1Cloud');
+  const sweepHost = document.getElementById('pc1Sweep');
+  const slider = document.getElementById('angleSlider');
+  const angleVal = document.getElementById('angleVal');
+  const showProjChk = document.getElementById('showProj');
+  const resetBtn = document.getElementById('resetCloud');
+  const roCaptured = document.getElementById('roCaptured');
+  const roDiscarded = document.getElementById('roDiscarded');
+  const roBest = document.getElementById('roBest');
+  const feedback = document.getElementById('pc1Feedback');
+  if (!cloudHost || !sweepHost || !slider) return null;
+
+  let curve = [], best = {angle:35, ss:0}, tss = 1, bounds = null;
+
+  function recompute(){
+    const r = sweepBest(carsData.power, carsData.maxSpeed);
+    curve = r.curve; best = r.best;
+    tss = totalSS(carsData.power, carsData.maxSpeed);
+    bounds = dataBounds(carsData.power, carsData.maxSpeed);
+  }
+
+  function S_(v,axis,S,p){
+    const lo = (axis==='x'? bounds.cx : bounds.cy) - bounds.range/2;
+    const px = p + (v-lo)/bounds.range*(S-2*p);
+    return axis==='x' ? px : S-2*p+2*p-px; // placeholder, real Y computed below
+  }
+  function X(v,S,p){ const lo = bounds.cx-bounds.range/2; return p + (v-lo)/bounds.range*(S-2*p); }
+  function Y(v,S,p){ const lo = bounds.cy-bounds.range/2; return S-p - (v-lo)/bounds.range*(S-2*p); }
+
+  function drawCloud(angleDeg, showProj){
+    cloudHost.innerHTML = '';
+    const S=320, p=26;
+    const svg = svgRoot(S,S);
+    const angleRad = angleDeg*Math.PI/180;
+    const {power, maxSpeed} = carsData;
+    const {ss, proj, cp, cm} = ssProjection(power, maxSpeed, angleRad);
+    const ux = Math.cos(angleRad), uy = Math.sin(angleRad);
+
+    // border
+    svg.appendChild(el('rect',{x:1,y:1,width:S-2,height:S-2,fill:'none',stroke:'#eceef0','stroke-width':1}));
+
+    // candidate line
+    const half = bounds.range*0.62;
+    const lx1 = X(cp-half*ux,S,p), ly1 = Y(cm-half*uy,S,p);
+    const lx2 = X(cp+half*ux,S,p), ly2 = Y(cm+half*uy,S,p);
+    svg.appendChild(el('line',{x1:lx1,y1:ly1,x2:lx2,y2:ly2,stroke:'#1c1e21','stroke-width':2.5}));
+
+    if (showProj){
+      for (let i=0;i<power.length;i++){
+        const projP = cp + proj[i]*ux, projM = cm + proj[i]*uy;
+        svg.appendChild(el('line',{
+          x1:X(power[i],S,p), y1:Y(maxSpeed[i],S,p),
+          x2:X(projP,S,p), y2:Y(projM,S,p),
+          stroke:'#b7b9bd','stroke-width':1
+        }));
+        svg.appendChild(el('circle',{cx:X(projP,S,p),cy:Y(projM,S,p),r:2.4,fill:'#8d9096'}));
+      }
+    }
+    // original points
+    for (let i=0;i<power.length;i++){
+      svg.appendChild(el('circle',{cx:X(power[i],S,p),cy:Y(maxSpeed[i],S,p),r:3.6,fill:'#1c1e21',opacity:0.82}));
+    }
+    // centroid
+    const cxp=X(cp,S,p), cyp=Y(cm,S,p);
+    svg.appendChild(el('line',{x1:cxp-7,y1:cyp-7,x2:cxp+7,y2:cyp+7,stroke:'#63666c','stroke-width':2}));
+    svg.appendChild(el('line',{x1:cxp-7,y1:cyp+7,x2:cxp+7,y2:cyp-7,stroke:'#63666c','stroke-width':2}));
+
+    const lbl = el('text',{x:10,y:20,'font-family':'IBM Plex Mono, monospace','font-size':10.5,fill:'#8d9096'});
+    lbl.textContent = 'power  ×  max_speed';
+    svg.appendChild(lbl);
+
+    cloudHost.appendChild(svg);
+  }
+
+  function drawSweep(angleDeg){
+    sweepHost.innerHTML = '';
+    const W=320,H=320,padL=40,padR=16,padT=18,padB=34;
+    const svg = svgRoot(W,H);
+    const maxSS = Math.max(...curve.map(c=>c.ss)) * 1.08;
+    function X(a){ return padL + a/180*(W-padL-padR); }
+    function Y(s){ return H-padB - s/maxSS*(H-padT-padB); }
+
+    [0,45,90,135,180].forEach(function(a){
+      const x=X(a);
+      svg.appendChild(el('line',{x1:x,y1:padT,x2:x,y2:H-padB,stroke:'#eceef0','stroke-width':1}));
+      const t=el('text',{x:x,y:H-16,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':10,fill:'#8d9096'}); t.textContent=a+'°'; svg.appendChild(t);
+    });
+    const ylab = el('text',{x:10,y:padT+2,'font-family':'IBM Plex Mono, monospace','font-size':9.5,fill:'#8d9096'});
+    ylab.textContent='Σ(dist)²'; svg.appendChild(ylab);
+
+    let d='';
+    curve.forEach(function(c,i){ d += (i===0?'M':'L') + X(c.angle)+','+Y(c.ss)+' '; });
+    svg.appendChild(el('path',{d:d,fill:'none',stroke:'#3a3d42','stroke-width':2}));
+
+    // peak marker
+    const px = X(best.angle), py = Y(best.ss);
+    svg.appendChild(el('line',{x1:px,y1:padT,x2:px,y2:H-padB,stroke:'#aeb1b6','stroke-width':1.4,'stroke-dasharray':'3 3'}));
+    const peakLbl = el('text',{x:px,y:padT-4,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':10,fill:'#63666c'});
+    peakLbl.textContent = 'peak ≈ '+best.angle+'°';
+    svg.appendChild(peakLbl);
+
+    // current marker
+    const curSS = ssProjection(carsData.power, carsData.maxSpeed, angleDeg*Math.PI/180).ss;
+    const cxp = X(angleDeg), cyp = Y(curSS);
+    svg.appendChild(el('circle',{cx:cxp,cy:cyp,r:5.5,fill:'#fff',stroke:'#1c1e21','stroke-width':2.4}));
+
+    sweepHost.appendChild(svg);
+  }
+
+  function update(){
+    const angleDeg = parseInt(slider.value,10);
+    angleVal.textContent = angleDeg+'°';
+    const showProj = showProjChk.checked;
+    drawCloud(angleDeg, showProj);
+    drawSweep(angleDeg);
+
+    const ss = ssProjection(carsData.power, carsData.maxSpeed, angleDeg*Math.PI/180).ss;
+    const captured = ss/tss*100;
+    roCaptured.textContent = fmt(captured,1)+'%';
+    roDiscarded.textContent = fmt(100-captured,1)+'%';
+    roBest.textContent = best.angle+'°';
+
+    let msg;
+    if (captured > 90) msg = 'Excellent — this direction captures most of the variation. That\u2019s effectively PC1.';
+    else if (captured > 70) msg = 'A good direction, but some variation is still being lost. Keep turning toward the peak.';
+    else msg = 'A lot of variation is being missed by this direction.';
+    feedback.textContent = msg;
+  }
+
+  slider.addEventListener('input', update);
+  showProjChk.addEventListener('change', update);
+  if (resetBtn) resetBtn.addEventListener('click', function(){
+    carsData = generateCars(Math.floor(Math.random()*100000));
+    recompute();
+    slider.value = 35;
+    renderCarsProjection();
+    update();
+    renderPC2();
+  });
+
+  recompute();
+  return { update, recompute };
+})();
+if (pc1) pc1.update();
+
+/* ============ PC2 orthogonality widget ============ */
+function renderPC2(){
+  const host = document.getElementById('pc2Chart');
+  const varAEl = document.getElementById('pc2VarA');
+  const varBEl = document.getElementById('pc2VarB');
+  if (!host) return;
+  host.innerHTML = '';
+  const {power, maxSpeed} = carsData;
+  const {best} = sweepBest(power, maxSpeed);
+  const tss = totalSS(power, maxSpeed);
+  const bounds = dataBounds(power, maxSpeed);
+
+  const S=480, p=32;
+  const svg = svgRoot(S, S*0.66);
+  const H = S*0.66;
+  function X(v){ const lo = bounds.cx-bounds.range/2; return p + (v-lo)/bounds.range*(S-2*p); }
+  function Y(v){ const lo = bounds.cy-bounds.range/2; return H-p*0.66 - (v-lo)/bounds.range*(H-2*p*0.66); }
+
+  const a1 = best.angle*Math.PI/180, a2 = a1+Math.PI/2;
+  const r1 = ssProjection(power,maxSpeed,a1);
+  const r2 = ssProjection(power,maxSpeed,a2);
+  const cp=r1.cp, cm=r1.cm;
+
+  for (let i=0;i<power.length;i++){
+    svg.appendChild(el('circle',{cx:X(power[i]),cy:Y(maxSpeed[i]),r:3.2,fill:'#63666c',opacity:0.7}));
+  }
+  const half = bounds.range*0.5;
+  [ [a1,'#1c1e21','0'], [a2,'#8d9096','4 3'] ].forEach(function(spec){
+    const ux=Math.cos(spec[0]), uy=Math.sin(spec[0]);
+    svg.appendChild(el('line',{
+      x1:X(cp-half*ux), y1:Y(cm-half*uy), x2:X(cp+half*ux), y2:Y(cm+half*uy),
+      stroke:spec[1], 'stroke-width':2.6, 'stroke-dasharray':spec[2]
+    }));
+  });
+  svg.appendChild(el('circle',{cx:X(cp),cy:Y(cm),r:3,fill:'#fff',stroke:'#1c1e21','stroke-width':1.6}));
+
+  host.appendChild(svg);
+  if (varAEl) varAEl.textContent = fmt(r1.ss/tss*100,1)+'%';
+  if (varBEl) varBEl.textContent = fmt(r2.ss/tss*100,1)+'%';
+}
+renderPC2();
+
+/* ============ generic scree chart ============ */
+function renderScree(hostId, data, opts){
+  opts = opts || {};
+  const host = document.getElementById(hostId);
+  if (!host) return;
+  host.innerHTML = '';
+  const cum = [];
+  data.reduce(function(acc,d,i){ const c = acc + d.pct; cum.push(c); return c; }, 0);
+
+  const n = data.length;
+  const W = 640, H = 300, padL = 46, padR = 46, padT = 16, padB = 40;
+  const plotW = W-padL-padR, plotH = H-padT-padB;
+  const barW = plotW/n * 0.56;
+  function Xc(i){ return padL + (i+0.5)/n*plotW; }
+  function Ybar(v){ return padT + (1 - v/Math.max(60,Math.max(...data.map(d=>d.pct))*1.15))*plotH; }
+  function Ycum(v){ return padT + (1 - v/100)*plotH; }
+
+  const svg = svgRoot(W,H);
+
+  [0,25,50,75,100].forEach(function(v){
+    const y = Ycum(v);
+    svg.appendChild(el('line',{x1:padL,y1:y,x2:W-padR,y2:y,stroke:'#eceef0','stroke-width':1}));
+    const t = el('text',{x:W-padR+8,y:y+3,'font-family':'IBM Plex Mono, monospace','font-size':10,fill:'#8d9096'}); t.textContent=v+'%'; svg.appendChild(t);
+  });
+
+  if (opts.threshold){
+    const y = Ycum(opts.threshold);
+    svg.appendChild(el('line',{x1:padL,y1:y,x2:W-padR,y2:y,stroke:'#aeb1b6','stroke-width':1.4,'stroke-dasharray':'2 3'}));
+  }
+
+  data.forEach(function(d,i){
+    const included = opts.k===undefined ? true : (i < opts.k);
+    const x = Xc(i)-barW/2;
+    const y = Ybar(d.pct);
+    const bar = el('rect',{x:x,y:y,width:barW,height:(padT+plotH)-y,fill:included?'#1c1e21':'#dcdde0',rx:2});
+    bindTip(bar, function(){ return d.label+': '+d.pct.toFixed(2)+'% individual, '+cum[i].toFixed(2)+'% cumulative'; });
+    svg.appendChild(bar);
+    const t = el('text',{x:Xc(i),y:H-16,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':10.5,fill:'#8d9096'}); t.textContent=d.label; svg.appendChild(t);
+  });
+
+  let dpath='';
+  data.forEach(function(d,i){ dpath += (i===0?'M':'L') + Xc(i)+','+Ycum(cum[i])+' '; });
+  svg.appendChild(el('path',{d:dpath, fill:'none', stroke:'#8d9096','stroke-width':2.25}));
+  data.forEach(function(d,i){
+    const c = el('circle',{cx:Xc(i),cy:Ycum(cum[i]),r:4,fill:'#fff',stroke:'#8d9096','stroke-width':2.25,style:'cursor:pointer;'});
+    bindTip(c, function(){ return 'cumulative through '+d.label+': '+cum[i].toFixed(2)+'%'; });
+    svg.appendChild(c);
+  });
+
+  host.appendChild(svg);
+  return cum;
+}
+
+const screeToyData = [
+  {label:'PC1', pct:56.40}, {label:'PC2', pct:24.58}, {label:'PC3', pct:11.23},
+  {label:'PC4', pct:5.00}, {label:'PC5', pct:2.21}, {label:'PC6', pct:0.58}
+];
+const screeRealData = [
+  {label:'PC1',pct:44.3},{label:'PC2',pct:19.0},{label:'PC3',pct:9.4},{label:'PC4',pct:6.6},
+  {label:'PC5',pct:5.5},{label:'PC6',pct:4.1},{label:'PC7',pct:2.4},{label:'PC8',pct:2.1},
+  {label:'PC9',pct:1.6},{label:'PC10',pct:1.4}
+];
+
+(function(){
+  const kSlider = document.getElementById('kSlider');
+  const kVal = document.getElementById('kVal');
+  const screeCum = document.getElementById('screeCum');
+  function update(){
+    const k = parseInt(kSlider.value,10);
+    kVal.textContent = k;
+    const cum = renderScree('screeToy', screeToyData, {k:k});
+    screeCum.textContent = cum[k-1].toFixed(1)+'%';
+  }
+  if (kSlider){
+    kSlider.addEventListener('input', update);
+    update();
+  }
+  renderScree('screeReal', screeRealData, {threshold:95});
+})();
+
+window.addEventListener('resize', function(){
+  // SVGs are viewBox-based and scale automatically; no reflow needed.
+});
+
+/* ============ fallback illustration for the final case-study image ============ */
+(function finalImgFallback(){
+  const host = document.getElementById('finalImgFallback');
+  if (!host) return;
+  Object.assign(host.style, {
+    border:'1px solid var(--line)', borderRadius:'10px', background:'#ffffff', padding:'18px'
+  });
+  const rng = mulberry32(99);
+  const W=640,H=380,pad=30;
+  const svg = svgRoot(W,H);
+  svg.appendChild(el('line',{x1:pad,y1:H-pad,x2:W-pad,y2:H-pad,stroke:'#dcdde0','stroke-width':1}));
+  svg.appendChild(el('line',{x1:pad,y1:pad,x2:pad,y2:H-pad,stroke:'#dcdde0','stroke-width':1}));
+  const xl = el('text',{x:(W)/2,y:H-6,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':11,fill:'#8d9096'}); xl.textContent='PC1 (44.3% of variance)'; svg.appendChild(xl);
+  const yl = el('text',{x:14,y:H/2,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':11,fill:'#8d9096','transform':`rotate(-90 14 ${H/2})`}); yl.textContent='PC2 (19.0% of variance)'; svg.appendChild(yl);
+
+  function cluster(n, cx, cy, spreadX, spreadY, marker){
+    for (let i=0;i<n;i++){
+      const x = cx + randNormal(rng,0,spreadX);
+      const y = cy + randNormal(rng,0,spreadY);
+      if (marker === 'x'){
+        const s=4;
+        const g = el('g',{stroke:'#3a3d42','stroke-width':1.4});
+        g.appendChild(el('line',{x1:x-s,y1:y-s,x2:x+s,y2:y+s}));
+        g.appendChild(el('line',{x1:x-s,y1:y+s,x2:x+s,y2:y-s}));
+        svg.appendChild(g);
+      } else {
+        svg.appendChild(el('circle',{cx:x,cy:y,r:3.4,fill:'none',stroke:'#8d9096','stroke-width':1.4}));
+      }
+    }
+  }
+  cluster(212, pad+140, H/2+30, 46, 52, 'x');
+  cluster(357, W-pad-180, H/2-10, 78, 58, 'o');
+
+  const note = el('text',{x:W/2,y:20,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':10.5,fill:'#aeb1b6'});
+  note.textContent = 'illustrative reconstruction — original chart image unavailable';
+  svg.appendChild(note);
+
+  const legend1 = el('text',{x:W-pad-8,y:pad+16,'text-anchor':'end','font-family':'IBM Plex Mono, monospace','font-size':11,fill:'#63666c'});
+  legend1.textContent = '● benign';
+  svg.appendChild(legend1);
+  const legend2 = el('text',{x:W-pad-8,y:pad+34,'text-anchor':'end','font-family':'IBM Plex Mono, monospace','font-size':11,fill:'#3a3d42'});
+  legend2.textContent = '✕ malignant';
+  svg.appendChild(legend2);
+
+  host.appendChild(svg);
+})();
+
+/* ============ quizzes ============ */
+document.querySelectorAll('[data-quiz]').forEach(function(quiz){
+  const buttons = quiz.querySelectorAll('.choice');
+  const explain = quiz.querySelector('.explain');
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (quiz.dataset.answered) return;
+      quiz.dataset.answered = '1';
+      buttons.forEach(function(b){
+        b.disabled = true;
+        if (b.dataset.correct === 'true') b.classList.add('correct');
+        else if (b === btn) b.classList.add('incorrect');
+        else b.style.opacity = '0.55';
+      });
+      if (explain) explain.classList.add('show');
+    });
+  });
+});
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Principal-Component-Analysis" target="_blank" rel="noopener">github.com/scaler-content/Principal-Component-Analysis</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

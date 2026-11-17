@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NumPy 1 · Foundations — Storing and Accessing Data</title>
+<style>
+  :root {
+    --bg: #0d0f1a;
+    --surface: #131627;
+    --surface2: #1a1e35;
+    --border: #252a45;
+    --text: #e2e8f0;
+    --muted: #8892b0;
+    --blue: #4f6ef7;
+    --green: #34d399;
+    --red: #f87171;
+    --yellow: #f0c24b;
+    --purple: #a78bfa;
+    --orange: #fb923c;
+    --cyan: #22d3ee;
+    --radius: 10px;
+    --mono: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 20px 100px;
+  }
+
+  /* ── HEADER ── */
+  .hero {
+    background: linear-gradient(135deg, #0f1535 0%, #1a1050 50%, #0d0f1a 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 32px 28px;
+    margin-bottom: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(79,110,247,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hero-label svg { opacity: 0.8; }
+  .hero h1 { font-size: 26px; font-weight: 700; line-height: 1.25; margin-bottom: 10px; }
+  .hero h1 span { color: var(--blue); }
+  .hero p { color: var(--muted); font-size: 14px; max-width: 580px; }
+  .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .tag {
+    font-size: 11px; font-weight: 600; padding: 3px 10px;
+    border-radius: 20px; border: 1px solid;
+  }
+  .tag-blue  { color: var(--blue);   border-color: rgba(79,110,247,0.35); background: rgba(79,110,247,0.08); }
+  .tag-green { color: var(--green);  border-color: rgba(52,211,153,0.35); background: rgba(52,211,153,0.08); }
+  .tag-purple{ color: var(--purple); border-color: rgba(167,139,250,0.35);background: rgba(167,139,250,0.08);}
+  .tag-yellow{ color: var(--yellow); border-color: rgba(240,194,75,0.35); background: rgba(240,194,75,0.08); }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar {
+    position: fixed; top: 0; left: 0; width: 0%;
+    height: 3px; background: linear-gradient(90deg, var(--blue), var(--purple));
+    z-index: 999; transition: width 0.1s;
+  }
+
+  /* ── SECTION CARDS ── */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 28px 24px;
+    margin-bottom: 24px;
+  }
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .section-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--blue);
+    background: rgba(79,110,247,0.12);
+    border: 1px solid rgba(79,110,247,0.3);
+    border-radius: 6px;
+    padding: 3px 8px;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+  .section-title { font-size: 17px; font-weight: 700; line-height: 1.3; }
+  .section-title span { color: var(--blue); }
+
+  /* ── TYPOGRAPHY ── */
+  h3 { font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin: 20px 0 10px; }
+  p  { color: var(--text); margin-bottom: 12px; }
+  strong { color: var(--yellow); font-weight: 600; }
+  em { color: var(--green); font-style: normal; font-weight: 600; }
+
+  /* ── CODE BLOCKS ── */
+  pre {
+    background: #080a14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.65;
+    overflow-x: auto;
+    margin: 12px 0;
+    position: relative;
+  }
+  code { font-family: var(--mono); }
+  .hl-kw  { color: #ff79c6; }
+  .hl-fn  { color: var(--blue); }
+  .hl-str { color: var(--green); }
+  .hl-num { color: var(--orange); }
+  .hl-cmt { color: #6272a4; font-style: italic; }
+  .hl-cls { color: var(--yellow); }
+  .hl-op  { color: var(--muted); }
+  .output {
+    background: #0a0c18;
+    border: 1px solid #1e2440;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--green);
+    margin: 6px 0 12px;
+  }
+  .output-label { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-bottom: 4px; letter-spacing: 1px; }
+
+  /* ── CALLOUTS ── */
+  .callout {
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 14px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .callout-body { flex: 1; }
+  .callout-body strong { display: block; margin-bottom: 4px; font-size: 13px; }
+  .callout-body p { margin: 0; font-size: 13.5px; color: var(--text); }
+  .callout-blue   { background: rgba(79,110,247,0.1);  border-left: 3px solid var(--blue);  }
+  .callout-green  { background: rgba(52,211,153,0.1);  border-left: 3px solid var(--green); }
+  .callout-yellow { background: rgba(240,194,75,0.1);  border-left: 3px solid var(--yellow);}
+  .callout-red    { background: rgba(248,113,113,0.1); border-left: 3px solid var(--red);   }
+  .callout-purple { background: rgba(167,139,250,0.1); border-left: 3px solid var(--purple);}
+
+  /* ── CONCEPT DIAGRAMS ── */
+  .concept-diagram {
+    background: #090b16;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 16px 0;
+    text-align: center;
+  }
+  .concept-diagram figcaption {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 12px;
+    font-style: italic;
+  }
+
+  /* ── INTERACTIVE DEMOS ── */
+  .demo {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+  .demo-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .demo-title::before { content: '⚡'; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-blue   { background: var(--blue);   color: #fff; }
+  .btn-green  { background: var(--green);  color: #000; }
+  .btn-purple { background: var(--purple); color: #fff; }
+  .btn-yellow { background: var(--yellow); color: #000; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .demo-output {
+    background: #060810;
+    border: 1px solid #1a1e35;
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 13px;
+    min-height: 40px;
+    margin-top: 10px;
+    color: var(--green);
+    white-space: pre-wrap;
+  }
+  input[type=range] { accent-color: var(--blue); width: 100%; }
+  input[type=text], input[type=number], select {
+    background: #0a0c18;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus {
+    outline: none; border-color: var(--blue);
+  }
+  label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; }
+
+  /* ── COMPARISON TABLE ── */
+  .cmp-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; }
+  .cmp-table th {
+    background: var(--surface2);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    border-bottom: 2px solid var(--border);
+  }
+  .cmp-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .cmp-table tr:last-child td { border-bottom: none; }
+  .cmp-table tr:hover td { background: rgba(79,110,247,0.04); }
+  .cmp-table code { font-family: var(--mono); font-size: 12px; color: var(--cyan); }
+  .yes { color: var(--green); font-weight: 600; }
+  .no  { color: var(--red);   font-weight: 600; }
+
+  /* ── QUIZ ── */
+  .quiz-q {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .quiz-q .q-text { font-weight: 600; margin-bottom: 12px; }
+  .quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 6px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    font-size: 13.5px;
+  }
+  .quiz-option:hover { background: rgba(79,110,247,0.08); border-color: rgba(79,110,247,0.3); }
+  .quiz-option input { accent-color: var(--blue); }
+  .quiz-option.correct  { background: rgba(52,211,153,0.12); border-color: var(--green); }
+  .quiz-option.wrong    { background: rgba(248,113,113,0.1);  border-color: var(--red); }
+  .q-feedback { font-size: 13px; padding: 10px 12px; border-radius: 6px; margin-top: 10px; display: none; }
+  .q-feedback.show { display: block; }
+  .q-feedback.ok  { background: rgba(52,211,153,0.12);  color: var(--green); }
+  .q-feedback.err { background: rgba(248,113,113,0.1);  color: var(--red); }
+
+  /* ── SQL ANALOGY BOX ── */
+  .sql-box {
+    background: rgba(167,139,250,0.07);
+    border: 1px solid rgba(167,139,250,0.3);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 12px 0;
+    font-size: 13.5px;
+  }
+  .sql-box-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--purple);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  /* ── SUMMARY TABLE ── */
+  .summary-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-q { flex: 0 0 220px; font-size: 13px; color: var(--muted); }
+  .summary-code { flex: 1; font-family: var(--mono); font-size: 12px; color: var(--cyan); background: #080a14; border-radius: 4px; padding: 4px 8px; }
+
+  /* ── FLOATING BUTTONS ── */
+  .fab-group {
+    position: fixed;
+    bottom: 28px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 100;
+  }
+  .fab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .fab:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.6); }
+  .fab-green { background: var(--green); color: #000; }
+  .fab-blue  { background: var(--blue);  color: #fff; }
+
+  /* ── STORY CARD ── */
+  .story-card {
+    background: linear-gradient(135deg, #101530, #1a1050);
+    border: 1px solid rgba(167,139,250,0.3);
+    border-radius: 12px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+  }
+  .story-card-title { font-size: 12px; font-weight: 700; color: var(--purple); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+
+  /* ── 2-COL GRID ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── STEP LIST ── */
+  .step-list { counter-reset: step; margin: 10px 0; }
+  .step-item {
+    counter-increment: step;
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step-item:last-child { border-bottom: none; }
+  .step-num {
+    flex-shrink: 0;
+    width: 24px; height: 24px;
+    background: var(--blue);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    margin-top: 2px;
+  }
+  .step-num::before { content: counter(step); }
+  .step-content { flex: 1; font-size: 13.5px; }
+
+  /* scroll arrow */
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+  .toc a {
+    font-size: 12px; font-weight: 600; padding: 4px 10px;
+    border-radius: 20px; background: rgba(79,110,247,0.1);
+    color: var(--blue); text-decoration: none; border: 1px solid rgba(79,110,247,0.25);
+    transition: background 0.15s;
+  }
+  .toc a:hover { background: rgba(79,110,247,0.2); }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/maths/">Maths &amp; NumPy</a><span class="t">· NumPy 1 · Storing and accessing data</span><span class="p"><a href="../NumPy-1-Preread/">Pre-read</a><b>Post-read</b></span><span class="pn"><a href="../NumPy-2-Preread/" title="NumPy 2 · Vectorised analysis, masks and sorting">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="progress-bar" id="progressBar"></div>
+
+<!-- ━━ HERO ━━ -->
+<div class="hero">
+  <div class="hero-label">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="6" cy="6" r="5"/></svg>
+    NumPy · Lecture 1 of 3
+  </div>
+  <h1>Foundations — <span>Storing &amp; Accessing Data</span></h1>
+  <p>From a plain Python list that breaks on <code>+5</code> to a full 2D marksheet you can slice any way in a single line. This is where arrays begin.</p>
+  <div class="hero-tags">
+    <span class="tag tag-blue">ndarray</span>
+    <span class="tag tag-green">Indexing &amp; Slicing</span>
+    <span class="tag tag-purple">dtype &amp; astype</span>
+    <span class="tag tag-yellow">reshape &amp; transpose</span>
+    <span class="tag tag-blue">Vectorization</span>
+    <span class="tag tag-green">Why NumPy is Faster</span>
+  </div>
+  <div class="toc">
+    <a href="#s00">00 Story</a>
+    <a href="#s01">01 What is NumPy</a>
+    <a href="#s02">02 Creating Arrays</a>
+    <a href="#s03">03 Lists vs Arrays</a>
+    <a href="#s04">04 Why Faster</a>
+    <a href="#s05">05 Shape &amp; Dims</a>
+    <a href="#s06">06 dtype &amp; astype</a>
+    <a href="#s07">07 1D Indexing</a>
+    <a href="#s08">08 2D Arrays</a>
+    <a href="#s09">09 Quiz</a>
+  </div>
+</div>
+
+<!-- ━━ 00 STORY ━━ -->
+<div class="section" id="s00">
+  <div class="section-header">
+    <span class="section-num">00</span>
+    <div>
+      <div class="section-title">🏫 Parent-Teacher Meeting — Greenfield High</div>
+    </div>
+  </div>
+
+  <div class="story-card">
+    <div class="story-card-title">📌 Scene — The Problem</div>
+    <p>It's parent-teacher day at Greenfield High. <strong>Mr. Arjun</strong>, the class teacher, needs to analyze the whole class's subject scores tonight. He's stored them as a plain Python list — but the moment he tries any math, Python throws errors or gives nonsense.</p>
+  </div>
+
+  <p>Mr. Arjun calls his student <strong>Riya</strong> for help. She shows him why a list fails — and fixes everything with NumPy.</p>
+
+  <pre><code><span class="hl-cmt"># Mr. Arjun's data — 8 students' Maths scores</span>
+maths = [<span class="hl-num">78</span>, <span class="hl-num">45</span>, <span class="hl-num">92</span>, <span class="hl-num">34</span>, <span class="hl-num">67</span>, <span class="hl-num">88</span>, <span class="hl-num">56</span>, <span class="hl-num">91</span>]
+
+<span class="hl-cmt"># Try: add 5 bonus marks to everyone</span>
+maths + <span class="hl-num">5</span>        <span class="hl-cmt"># ❌ TypeError: can only concatenate list to list</span>
+
+<span class="hl-cmt"># Try: double all scores</span>
+maths * <span class="hl-num">2</span>        <span class="hl-cmt"># 😬 [78,45,92,...,78,45,92,...] — repeats the list!</span></code></pre>
+
+  <p>The list treats <code>+5</code> as "append the number 5" (which fails) and <code>*2</code> as "duplicate the list" — both completely wrong for math. The only workaround is a loop, which is slow and verbose.</p>
+
+  <pre><code><span class="hl-cmt"># Old way — loop over every student</span>
+bonuses = []
+<span class="hl-kw">for</span> m <span class="hl-kw">in</span> maths:
+    bonuses.append(m + <span class="hl-num">5</span>)
+<span class="hl-cmt"># Works... but slow at scale & ugly every time</span></code></pre>
+
+  <div class="callout callout-blue">
+    <span class="callout-icon">💡</span>
+    <div class="callout-body">
+      <strong>The 11 questions Mr. Arjun needs to answer tonight</strong>
+      <p>What's the class average? Who passed? Top 3 students? Scores by subject? Give 5-mark grace to everyone — these are the real tasks NumPy will solve.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ 01 WHAT IS NUMPY ━━ -->
+<div class="section" id="s01">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <div class="section-title">What is NumPy?</div>
+  </div>
+
+  <p>NumPy is Python's core numerical computing library. Its star feature is the <strong>ndarray</strong> — a typed, contiguous block of numbers in memory that makes math on entire datasets as simple as math on a single variable.</p>
+
+  <pre><code><span class="hl-kw">import</span> numpy <span class="hl-kw">as</span> np
+
+<span class="hl-cmt"># Convert the Python list to a NumPy array</span>
+marks = np.<span class="hl-fn">array</span>(maths)
+<span class="hl-fn">print</span>(marks)</code></pre>
+  <div class="output">
+    <div class="output-label">▶ OUTPUT</div>
+    array([78, 45, 92, 34, 67, 88, 56, 91])
+  </div>
+
+  <p>Now every arithmetic operation works element-wise — no loops needed:</p>
+
+  <pre><code>marks + <span class="hl-num">5</span>   <span class="hl-cmt"># [83, 50, 97, 39, 72, 93, 61, 96]  ✅ bonus marks</span>
+marks * <span class="hl-num">2</span>   <span class="hl-cmt"># [156, 90, 184, ...]               ✅ double (not repeat!)</span></code></pre>
+
+  <!-- CONCEPT DIAGRAM: School bag vs geometry box -->
+  <figure class="concept-diagram">
+    <svg viewBox="0 0 600 200" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="12">
+      <!-- Python list: school bag -->
+      <rect x="20" y="20" width="250" height="160" rx="12" fill="#1a1035" stroke="#a78bfa" stroke-width="1.5"/>
+      <text x="145" y="45" fill="#a78bfa" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="1">PYTHON LIST — School Bag</text>
+      <!-- items of different types -->
+      <rect x="40" y="60" width="50" height="30" rx="5" fill="#2d1b4e" stroke="#a78bfa" stroke-width="1"/>
+      <text x="65" y="80" fill="#f0c24b" text-anchor="middle">78</text>
+      <rect x="100" y="58" width="55" height="34" rx="5" fill="#2d1b4e" stroke="#a78bfa" stroke-width="1"/>
+      <text x="127" y="80" fill="#fb923c" text-anchor="middle">"hey"</text>
+      <rect x="165" y="55" width="40" height="40" rx="5" fill="#2d1b4e" stroke="#a78bfa" stroke-width="1"/>
+      <text x="185" y="80" fill="#34d399" text-anchor="middle">3.14</text>
+      <rect x="215" y="62" width="40" height="28" rx="5" fill="#2d1b4e" stroke="#a78bfa" stroke-width="1"/>
+      <text x="235" y="80" fill="#f87171" text-anchor="middle">True</text>
+      <!-- pointers (scattered) -->
+      <line x1="65" y1="96" x2="65" y2="130" stroke="#6272a4" stroke-width="1" stroke-dasharray="3,2"/>
+      <line x1="127" y1="98" x2="145" y2="135" stroke="#6272a4" stroke-width="1" stroke-dasharray="3,2"/>
+      <line x1="185" y1="99" x2="175" y2="136" stroke="#6272a4" stroke-width="1" stroke-dasharray="3,2"/>
+      <line x1="235" y1="94" x2="235" y2="132" stroke="#6272a4" stroke-width="1" stroke-dasharray="3,2"/>
+      <text x="145" y="158" fill="#6272a4" font-size="10" text-anchor="middle">each item at a different memory address</text>
+      <text x="145" y="172" fill="#f87171" font-size="10" text-anchor="middle">mixed types → no bulk math</text>
+
+      <!-- NumPy array: geometry box -->
+      <rect x="330" y="20" width="250" height="160" rx="12" fill="#0a1030" stroke="#4f6ef7" stroke-width="1.5"/>
+      <text x="455" y="45" fill="#4f6ef7" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="1">NUMPY ARRAY — Geometry Box</text>
+      <!-- uniform slots -->
+      <rect x="345" y="58" width="34" height="34" rx="4" fill="#0d1a3a" stroke="#4f6ef7" stroke-width="1"/>
+      <text x="362" y="80" fill="#f0c24b" text-anchor="middle">78</text>
+      <rect x="383" y="58" width="34" height="34" rx="4" fill="#0d1a3a" stroke="#4f6ef7" stroke-width="1"/>
+      <text x="400" y="80" fill="#f0c24b" text-anchor="middle">45</text>
+      <rect x="421" y="58" width="34" height="34" rx="4" fill="#0d1a3a" stroke="#4f6ef7" stroke-width="1"/>
+      <text x="438" y="80" fill="#f0c24b" text-anchor="middle">92</text>
+      <rect x="459" y="58" width="34" height="34" rx="4" fill="#0d1a3a" stroke="#4f6ef7" stroke-width="1"/>
+      <text x="476" y="80" fill="#f0c24b" text-anchor="middle">34</text>
+      <rect x="497" y="58" width="34" height="34" rx="4" fill="#0d1a3a" stroke="#4f6ef7" stroke-width="1"/>
+      <text x="514" y="80" fill="#f0c24b" text-anchor="middle">67</text>
+      <!-- continuous memory line -->
+      <line x1="345" y1="102" x2="531" y2="102" stroke="#4f6ef7" stroke-width="2"/>
+      <text x="438" y="118" fill="#4f6ef7" font-size="10" text-anchor="middle">contiguous memory block</text>
+      <text x="438" y="130" fill="#34d399" font-size="10" text-anchor="middle">one dtype → bulk math in C</text>
+      <text x="438" y="158" fill="#34d399" font-size="11" font-weight="600" text-anchor="middle">marks + 5 = [83, 50, 97, 39, 72…] ✅</text>
+      <text x="438" y="172" fill="#34d399" font-size="10" text-anchor="middle">element-wise, instant, no loop</text>
+    </svg>
+    <figcaption>Python list = school bag (mixed types, scattered pointers). NumPy array = geometry box (one type, uniform slots, contiguous memory).</figcaption>
+  </figure>
+</div>
+
+<!-- ━━ 02 CREATING ARRAYS ━━ -->
+<div class="section" id="s02">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <div class="section-title">Creating Arrays — 5 Ways</div>
+  </div>
+
+  <p>NumPy gives you five array constructors. Each solves a different problem:</p>
+
+  <pre><code><span class="hl-kw">import</span> numpy <span class="hl-kw">as</span> np
+
+<span class="hl-cmt"># 1. From a list — convert existing data</span>
+marks = np.<span class="hl-fn">array</span>([<span class="hl-num">78</span>, <span class="hl-num">45</span>, <span class="hl-num">92</span>, <span class="hl-num">34</span>, <span class="hl-num">67</span>, <span class="hl-num">88</span>, <span class="hl-num">56</span>, <span class="hl-num">91</span>])
+
+<span class="hl-cmt"># 2. arange — evenly-spaced integers (stop is EXCLUDED)</span>
+roll_numbers = np.<span class="hl-fn">arange</span>(<span class="hl-num">1</span>, <span class="hl-num">9</span>)         <span class="hl-cmt"># [1 2 3 4 5 6 7 8]</span>
+
+<span class="hl-cmt"># 3. zeros — placeholder / initialise blank</span>
+remedial = np.<span class="hl-fn">zeros</span>(<span class="hl-num">8</span>)                <span class="hl-cmt"># [0. 0. 0. 0. 0. 0. 0. 0.]</span>
+
+<span class="hl-cmt"># 4. ones — flag / binary initialise</span>
+attendance = np.<span class="hl-fn">ones</span>(<span class="hl-num">8</span>, dtype=<span class="hl-cls">int</span>)   <span class="hl-cmt"># [1 1 1 1 1 1 1 1]</span>
+
+<span class="hl-cmt"># 5. linspace — n evenly-spaced floats (stop IS included)</span>
+grade_bands = np.<span class="hl-fn">linspace</span>(<span class="hl-num">0</span>, <span class="hl-num">100</span>, <span class="hl-num">5</span>) <span class="hl-cmt"># [  0.  25.  50.  75. 100.]</span></code></pre>
+
+  <!-- CONCEPT DIAGRAM: arange vs linspace -->
+  <figure class="concept-diagram">
+    <svg viewBox="0 0 580 160" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="12">
+      <!-- arange -->
+      <text x="20" y="28" fill="#4f6ef7" font-size="11" font-weight="700">np.arange(1, 9)   — step by 1, stop EXCLUDED</text>
+      <line x1="20" y1="55" x2="400" y2="55" stroke="#252a45" stroke-width="2"/>
+      <!-- tick at each integer -->
+      <line x1="20"  y1="48" x2="20"  y2="62" stroke="#4f6ef7" stroke-width="2"/>
+      <line x1="70"  y1="48" x2="70"  y2="62" stroke="#4f6ef7" stroke-width="2"/>
+      <line x1="120" y1="48" x2="120" y2="62" stroke="#4f6ef7" stroke-width="2"/>
+      <line x1="170" y1="48" x2="170" y2="62" stroke="#4f6ef7" stroke-width="2"/>
+      <line x1="220" y1="48" x2="220" y2="62" stroke="#4f6ef7" stroke-width="2"/>
+      <line x1="270" y1="48" x2="270" y2="62" stroke="#4f6ef7" stroke-width="2"/>
+      <line x1="320" y1="48" x2="320" y2="62" stroke="#4f6ef7" stroke-width="2"/>
+      <line x1="370" y1="48" x2="370" y2="62" stroke="#4f6ef7" stroke-width="2"/>
+      <!-- stop marker (excluded) -->
+      <line x1="420" y1="45" x2="420" y2="65" stroke="#f87171" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <text x="20"  y="76" fill="#34d399" text-anchor="middle">1</text>
+      <text x="70"  y="76" fill="#34d399" text-anchor="middle">2</text>
+      <text x="120" y="76" fill="#34d399" text-anchor="middle">3</text>
+      <text x="170" y="76" fill="#34d399" text-anchor="middle">4</text>
+      <text x="220" y="76" fill="#34d399" text-anchor="middle">5</text>
+      <text x="270" y="76" fill="#34d399" text-anchor="middle">6</text>
+      <text x="320" y="76" fill="#34d399" text-anchor="middle">7</text>
+      <text x="370" y="76" fill="#34d399" text-anchor="middle">8</text>
+      <text x="420" y="76" fill="#f87171" text-anchor="middle">9✗</text>
+
+      <!-- linspace -->
+      <text x="20" y="110" fill="#f0c24b" font-size="11" font-weight="700">np.linspace(0, 100, 5) — 5 points, stop INCLUDED</text>
+      <line x1="20" y1="135" x2="500" y2="135" stroke="#252a45" stroke-width="2"/>
+      <line x1="20"  y1="128" x2="20"  y2="142" stroke="#f0c24b" stroke-width="2"/>
+      <line x1="140" y1="128" x2="140" y2="142" stroke="#f0c24b" stroke-width="2"/>
+      <line x1="260" y1="128" x2="260" y2="142" stroke="#f0c24b" stroke-width="2"/>
+      <line x1="380" y1="128" x2="380" y2="142" stroke="#f0c24b" stroke-width="2"/>
+      <line x1="500" y1="128" x2="500" y2="142" stroke="#f0c24b" stroke-width="2"/>
+      <text x="20"  y="156" fill="#f0c24b" text-anchor="middle">0</text>
+      <text x="140" y="156" fill="#f0c24b" text-anchor="middle">25</text>
+      <text x="260" y="156" fill="#f0c24b" text-anchor="middle">50</text>
+      <text x="380" y="156" fill="#f0c24b" text-anchor="middle">75</text>
+      <text x="500" y="156" fill="#f0c24b" text-anchor="middle">100✅</text>
+    </svg>
+    <figcaption>arange: step-based, stop excluded (like Python range). linspace: count-based, stop included. Use arange when you know the step; linspace when you know how many points.</figcaption>
+  </figure>
+
+  <!-- DEMO: Array Builder -->
+  <div class="demo" id="demo-builder">
+    <div class="demo-title">Array Constructor Explorer</div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+      <div>
+        <label>Constructor</label>
+        <select id="builder-type" style="width:100%" onchange="runBuilder()">
+          <option value="arange">np.arange(start, stop, step)</option>
+          <option value="linspace">np.linspace(start, stop, num)</option>
+          <option value="zeros">np.zeros(n)</option>
+          <option value="ones">np.ones(n)</option>
+        </select>
+      </div>
+      <div>
+        <label>Params (comma-separated)</label>
+        <input type="text" id="builder-params" value="1,9" style="width:100%" oninput="runBuilder()">
+      </div>
+    </div>
+    <div class="demo-output" id="builder-out">[ 1  2  3  4  5  6  7  8 ]</div>
+  </div>
+</div>
+
+<!-- ━━ 03 LISTS VS ARRAYS ━━ -->
+<div class="section" id="s03">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <div class="section-title">Lists vs Arrays — Vectorization</div>
+  </div>
+
+  <p>The same operator does completely different things depending on whether you're using a list or a NumPy array:</p>
+
+  <table class="cmp-table">
+    <thead>
+      <tr><th>Operation</th><th>Python List</th><th>NumPy Array</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>+ 5</code></td>
+        <td class="no">❌ TypeError</td>
+        <td class="yes">✅ adds 5 to every element</td>
+      </tr>
+      <tr>
+        <td><code>* 2</code></td>
+        <td class="no">😬 duplicates the list</td>
+        <td class="yes">✅ doubles every element</td>
+      </tr>
+      <tr>
+        <td><code>+ another_list</code></td>
+        <td><span style="color:var(--yellow)">concatenates</span></td>
+        <td class="yes">✅ element-wise addition</td>
+      </tr>
+      <tr>
+        <td><code>&gt; 60</code></td>
+        <td class="no">❌ TypeError</td>
+        <td class="yes">✅ boolean mask per element</td>
+      </tr>
+      <tr>
+        <td>Math in bulk</td>
+        <td><span style="color:var(--muted)">need a for-loop</span></td>
+        <td class="yes">✅ one expression</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>This is <strong>vectorization</strong> — applying an operation to every element at once, with no Python loop in your code (the loop runs in optimized C under the hood).</p>
+
+  <div class="callout callout-yellow">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-body">
+      <strong>Type Promotion — the silent gotcha</strong>
+      <p>NumPy silently upgrades the whole array to the "highest" type to fit all values: <code>bool → int → float → string</code>. Put a single string in an int array and every number becomes a string.</p>
+    </div>
+  </div>
+
+  <!-- DEMO: Vectorization Explorer -->
+  <div class="demo" id="demo-vec">
+    <div class="demo-title">List vs Array Explorer</div>
+    <label>Maths scores (comma-separated)</label>
+    <input type="text" id="vec-scores" value="78,45,92,34,67,88,56,91" style="width:100%;margin-bottom:10px" oninput="runVec()">
+    <label>Operation to apply</label>
+    <div class="btn-group">
+      <button class="btn btn-blue btn-sm" onclick="setVecOp('add5')">+ 5 bonus</button>
+      <button class="btn btn-green btn-sm" onclick="setVecOp('times2')">× 2</button>
+      <button class="btn btn-purple btn-sm" onclick="setVecOp('gt60')">Pass? (&gt; 60)</button>
+      <button class="btn btn-yellow btn-sm" onclick="setVecOp('pct')">% of 100</button>
+    </div>
+    <div class="demo-output" id="vec-out">Select an operation above</div>
+  </div>
+</div>
+
+<!-- ━━ 04 WHY FASTER ━━ -->
+<div class="section" id="s04">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <div class="section-title">Why NumPy is Faster</div>
+  </div>
+
+  <p>The speed difference is dramatic. For <strong>10 lakh marks</strong> (1 million values), Python loop takes ~52 ms while NumPy takes ~623 µs — about <em>85×</em> faster.</p>
+
+  <pre><code><span class="hl-cmt"># Timing comparison on 10 lakh (1M) values</span>
+%%timeit
+<span class="hl-fn">sum</span>([x + <span class="hl-num">5</span> <span class="hl-kw">for</span> x <span class="hl-kw">in</span> big_list])  <span class="hl-cmt"># ~52 ms</span>
+
+%%timeit
+big_array + <span class="hl-num">5</span>                     <span class="hl-cmt"># ~623 µs  (~85× faster)</span></code></pre>
+
+  <p>Three reasons:</p>
+
+  <!-- CONCEPT DIAGRAM: memory layout -->
+  <figure class="concept-diagram">
+    <svg viewBox="0 0 600 220" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="12">
+      <!-- reason 1 label -->
+      <text x="20" y="22" fill="#4f6ef7" font-size="11" font-weight="700">① Contiguous Memory</text>
+      <!-- list: scattered blocks -->
+      <text x="20" y="42" fill="#8892b0" font-size="10">Python list — pointers scattered across RAM</text>
+      <rect x="20" y="52" width="30" height="22" rx="3" fill="#1a1035" stroke="#6272a4" stroke-width="1"/>
+      <text x="35" y="68" fill="#8892b0" text-anchor="middle" font-size="10">ptr</text>
+      <rect x="60" y="52" width="30" height="22" rx="3" fill="#1a1035" stroke="#6272a4" stroke-width="1"/>
+      <text x="75" y="68" fill="#8892b0" text-anchor="middle" font-size="10">ptr</text>
+      <rect x="100" y="52" width="30" height="22" rx="3" fill="#1a1035" stroke="#6272a4" stroke-width="1"/>
+      <text x="115" y="68" fill="#8892b0" text-anchor="middle" font-size="10">ptr</text>
+      <!-- arrows going to random places -->
+      <line x1="35" y1="74" x2="20" y2="104" stroke="#6272a4" stroke-width="1" stroke-dasharray="3,2"/>
+      <line x1="75" y1="74" x2="120" y2="104" stroke="#6272a4" stroke-width="1" stroke-dasharray="3,2"/>
+      <line x1="115" y1="74" x2="70" y2="104" stroke="#6272a4" stroke-width="1" stroke-dasharray="3,2"/>
+      <rect x="10"  y="104" width="30" height="22" rx="3" fill="#2d1b4e" stroke="#a78bfa" stroke-width="1"/>
+      <text x="25"  y="120" fill="#f0c24b" text-anchor="middle">78</text>
+      <rect x="60"  y="104" width="30" height="22" rx="3" fill="#2d1b4e" stroke="#a78bfa" stroke-width="1"/>
+      <text x="75"  y="120" fill="#f0c24b" text-anchor="middle">45</text>
+      <rect x="110" y="104" width="30" height="22" rx="3" fill="#2d1b4e" stroke="#a78bfa" stroke-width="1"/>
+      <text x="125" y="120" fill="#f0c24b" text-anchor="middle">92</text>
+
+      <!-- numpy: contiguous -->
+      <text x="300" y="22" fill="#34d399" font-size="11" font-weight="700">NumPy — one block, known stride</text>
+      <text x="300" y="42" fill="#8892b0" font-size="10">values packed side-by-side — CPU prefetches ahead</text>
+      <rect x="300" y="52" width="40" height="22" rx="3" fill="#0d1a3a" stroke="#4f6ef7" stroke-width="1.5"/>
+      <text x="320" y="68" fill="#34d399" text-anchor="middle">78</text>
+      <rect x="342" y="52" width="40" height="22" rx="3" fill="#0d1a3a" stroke="#4f6ef7" stroke-width="1.5"/>
+      <text x="362" y="68" fill="#34d399" text-anchor="middle">45</text>
+      <rect x="384" y="52" width="40" height="22" rx="3" fill="#0d1a3a" stroke="#4f6ef7" stroke-width="1.5"/>
+      <text x="404" y="68" fill="#34d399" text-anchor="middle">92</text>
+      <rect x="426" y="52" width="40" height="22" rx="3" fill="#0d1a3a" stroke="#4f6ef7" stroke-width="1.5"/>
+      <text x="446" y="68" fill="#34d399" text-anchor="middle">34</text>
+      <rect x="468" y="52" width="40" height="22" rx="3" fill="#0d1a3a" stroke="#4f6ef7" stroke-width="1.5"/>
+      <text x="488" y="68" fill="#34d399" text-anchor="middle">67</text>
+      <line x1="300" y1="80" x2="508" y2="80" stroke="#4f6ef7" stroke-width="1.5"/>
+      <text x="404" y="94" fill="#4f6ef7" font-size="10" text-anchor="middle">stride = 8 bytes, predictable</text>
+
+      <!-- reason labels bottom -->
+      <text x="20"  y="150" fill="#f0c24b" font-size="11" font-weight="700">② One dtype</text>
+      <text x="20"  y="166" fill="#8892b0" font-size="10">No type-check per element.</text>
+      <text x="20"  y="180" fill="#8892b0" font-size="10">Compiler knows the type upfront.</text>
+
+      <text x="220" y="150" fill="#fb923c" font-size="11" font-weight="700">③ C core</text>
+      <text x="220" y="166" fill="#8892b0" font-size="10">Loops run in compiled C,</text>
+      <text x="220" y="180" fill="#8892b0" font-size="10">not interpreted Python.</text>
+
+      <text x="420" y="150" fill="#a78bfa" font-size="11" font-weight="700">Result</text>
+      <text x="420" y="166" fill="#34d399" font-size="11">~85× faster</text>
+      <text x="420" y="180" fill="#8892b0" font-size="10">52 ms → 623 µs</text>
+      <text x="420" y="194" fill="#8892b0" font-size="10">on 1 million values</text>
+    </svg>
+    <figcaption>Three reasons NumPy is fast: contiguous memory (CPU prefetch), single dtype (no type overhead), C core (no Python interpreter overhead per element).</figcaption>
+  </figure>
+
+  <div class="sql-box">
+    <div class="sql-box-title">🗄️ SQL Analogy</div>
+    <p>A SQL table column is similarly typed and contiguous — that's why <code>SUM(score)</code> over a million rows is instant. NumPy brings the same column-store efficiency to Python in-memory.</p>
+  </div>
+</div>
+
+<!-- ━━ 05 SHAPE & DIMS ━━ -->
+<div class="section" id="s05">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <div class="section-title">Dimensions, Shape &amp; Size</div>
+  </div>
+
+  <p>Three attributes tell you everything about an array's structure:</p>
+
+  <pre><code>export = np.<span class="hl-fn">array</span>([<span class="hl-str">'78'</span>, <span class="hl-str">'45'</span>, <span class="hl-str">'92'</span>, ...])  <span class="hl-cmt"># 24 string elements</span>
+
+export.ndim   <span class="hl-cmt"># 1   → 1-dimensional (a single row)</span>
+export.shape  <span class="hl-cmt"># (24,) → 24 elements, no second axis</span>
+export.size   <span class="hl-cmt"># 24  → total element count</span></code></pre>
+
+  <div class="two-col">
+    <div class="callout callout-blue" style="margin:0">
+      <span class="callout-icon">📐</span>
+      <div class="callout-body">
+        <strong>shape = (rows, cols)</strong>
+        <p>For a 2D array <code>(8,3)</code>: 8 rows, 3 columns. For 1D: <code>(24,)</code> — the trailing comma means "1 dimension".</p>
+      </div>
+    </div>
+    <div class="callout callout-green" style="margin:0">
+      <span class="callout-icon">🔢</span>
+      <div class="callout-body">
+        <strong>size = rows × cols</strong>
+        <p>Always the total element count. For <code>(8,3)</code>: size = 24. For <code>(24,)</code>: size = 24.</p>
+      </div>
+    </div>
+  </div>
+
+  <pre><code><span class="hl-cmt"># 2D example — two students, three subjects</span>
+two_students = np.<span class="hl-fn">array</span>([[<span class="hl-num">78</span>,<span class="hl-num">45</span>,<span class="hl-num">92</span>],[<span class="hl-num">34</span>,<span class="hl-num">67</span>,<span class="hl-num">88</span>]])
+two_students.shape   <span class="hl-cmt"># (2, 3)</span>
+two_students.ndim    <span class="hl-cmt"># 2</span>
+two_students.size    <span class="hl-cmt"># 6</span></code></pre>
+
+  <div class="sql-box">
+    <div class="sql-box-title">🗄️ SQL Analogy</div>
+    <p><strong>shape</strong> ↔ table dimensions (rows, cols). <strong>ndim</strong> ↔ always 2 for a table (rows + columns). <strong>size</strong> ↔ <code>SELECT COUNT(*) FROM table</code> × number of columns.</p>
+  </div>
+</div>
+
+<!-- ━━ 06 DTYPE & ASTYPE ━━ -->
+<div class="section" id="s06">
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <div class="section-title">dtype &amp; astype — Type Conversion</div>
+  </div>
+
+  <p>NumPy's silent type promotion can bite you. The <code>export</code> array came from a CSV where every value was read as a string:</p>
+
+  <pre><code>export.dtype       <span class="hl-cmt"># dtype('&lt;U2')  → Unicode string, max 2 chars</span>
+
+<span class="hl-cmt"># Trying to add: string + string = concatenation!</span>
+export + <span class="hl-str">"5"</span>       <span class="hl-cmt"># ['785', '455', '925', ...]  😱 WRONG</span>
+<span class="hl-cmt"># '78' + '5' = '785' — the number 78 became 785 !</span></code></pre>
+
+  <div class="callout callout-red">
+    <span class="callout-icon">🚨</span>
+    <div class="callout-body">
+      <strong>Silent wrong answer — no error, just garbage</strong>
+      <p>Python doesn't complain when you add strings — it concatenates them. <code>'78' + '5' = '785'</code> looks like 783 at a glance but is completely wrong.</p>
+    </div>
+  </div>
+
+  <p>Fix: convert to int with <strong>astype</strong>:</p>
+
+  <pre><code>marks_all = export.<span class="hl-fn">astype</span>(<span class="hl-cls">int</span>)   <span class="hl-cmt"># '78' → 78  ✅</span>
+marks_all.dtype                   <span class="hl-cmt"># dtype('int64')</span>
+
+<span class="hl-cmt"># ⚠️ Gotcha: astype(int) TRUNCATES floats, not rounds!</span>
+np.<span class="hl-fn">array</span>([<span class="hl-str">'3.7'</span>]).<span class="hl-fn">astype</span>(<span class="hl-cls">int</span>)  <span class="hl-cmt"># Error — go via float first</span>
+np.<span class="hl-fn">array</span>([<span class="hl-str">'3.7'</span>]).<span class="hl-fn">astype</span>(<span class="hl-cls">float</span>).<span class="hl-fn">astype</span>(<span class="hl-cls">int</span>)  <span class="hl-cmt"># 3 (truncated!)</span></code></pre>
+
+  <!-- CONCEPT DIAGRAM: dtype promotion chain -->
+  <figure class="concept-diagram">
+    <svg viewBox="0 0 540 80" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="12">
+      <text x="20" y="20" fill="#8892b0" font-size="11" font-weight="700">Type Promotion Chain (from lowest to highest)</text>
+      <!-- boxes -->
+      <rect x="20"  y="34" width="70" height="28" rx="6" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="55"  y="53" fill="#34d399" text-anchor="middle" font-weight="700">bool</text>
+      <text x="96"  y="52" fill="#8892b0">→</text>
+      <rect x="108" y="34" width="70" height="28" rx="6" fill="rgba(79,110,247,0.15)" stroke="#4f6ef7" stroke-width="1.5"/>
+      <text x="143" y="53" fill="#4f6ef7" text-anchor="middle" font-weight="700">int</text>
+      <text x="184" y="52" fill="#8892b0">→</text>
+      <rect x="196" y="34" width="70" height="28" rx="6" fill="rgba(240,194,75,0.15)" stroke="#f0c24b" stroke-width="1.5"/>
+      <text x="231" y="53" fill="#f0c24b" text-anchor="middle" font-weight="700">float</text>
+      <text x="272" y="52" fill="#8892b0">→</text>
+      <rect x="284" y="34" width="90" height="28" rx="6" fill="rgba(248,113,113,0.15)" stroke="#f87171" stroke-width="1.5"/>
+      <text x="329" y="53" fill="#f87171" text-anchor="middle" font-weight="700">string</text>
+      <text x="400" y="52" fill="#8892b0" font-size="11">← "black hole" of types</text>
+      <text x="284" y="78" fill="#f87171" font-size="10" text-anchor="middle">everything becomes string if one string is added</text>
+    </svg>
+    <figcaption>Add a string to an int array → the whole array silently becomes strings. Use astype() to convert back.</figcaption>
+  </figure>
+
+  <!-- DEMO: dtype Explorer -->
+  <div class="demo" id="demo-dtype">
+    <div class="demo-title">dtype &amp; astype Demo</div>
+    <label>Enter values (comma-separated, mix types to see promotion)</label>
+    <input type="text" id="dtype-vals" value="78,45,92,34" style="width:100%;margin-bottom:10px" oninput="runDtype()">
+    <div class="btn-group">
+      <button class="btn btn-blue btn-sm" onclick="setDtypeOp('asint')">astype(int)</button>
+      <button class="btn btn-green btn-sm" onclick="setDtypeOp('asfloat')">astype(float)</button>
+      <button class="btn btn-purple btn-sm" onclick="setDtypeOp('asstr')">astype(str)</button>
+      <button class="btn btn-yellow btn-sm" onclick="setDtypeOp('info')">Show dtype info</button>
+    </div>
+    <div class="demo-output" id="dtype-out">Type values above and select a conversion</div>
+  </div>
+</div>
+
+<!-- ━━ 07 1D INDEXING ━━ -->
+<div class="section" id="s07">
+  <div class="section-header">
+    <span class="section-num">07</span>
+    <div class="section-title">1D Indexing &amp; Slicing</div>
+  </div>
+
+  <p>Once you have a valid array, you can pull out any element or range in one expression.</p>
+
+  <pre><code>marks = np.<span class="hl-fn">array</span>([<span class="hl-num">78</span>, <span class="hl-num">45</span>, <span class="hl-num">92</span>, <span class="hl-num">34</span>, <span class="hl-num">67</span>, <span class="hl-num">88</span>, <span class="hl-num">56</span>, <span class="hl-num">91</span>])
+<span class="hl-cmt">#  idx:   0    1    2    3    4    5    6    7</span>
+<span class="hl-cmt">#  neg:  -8   -7   -6   -5   -4   -3   -2   -1</span>
+
+marks[<span class="hl-num">0</span>]           <span class="hl-cmt"># 78  — first student</span>
+marks[-<span class="hl-num">1</span>]          <span class="hl-cmt"># 91  — last student</span>
+
+<span class="hl-cmt"># Fancy indexing — pick multiple by position (double brackets!)</span>
+marks[[<span class="hl-num">2</span>, <span class="hl-num">5</span>, <span class="hl-num">7</span>]]  <span class="hl-cmt"># [92 88 91] — top 3 students</span>
+
+<span class="hl-cmt"># Slicing — start:stop (stop excluded)</span>
+marks[<span class="hl-num">2</span>:<span class="hl-num">6</span>]         <span class="hl-cmt"># [92 34 67 88] — students 3–6</span>
+marks[::<span class="hl-num">2</span>]         <span class="hl-cmt"># [78 92 67 56] — every other student</span>
+marks[::-<span class="hl-num">1</span>]        <span class="hl-cmt"># [91 56 88 67 34 92 45 78] — reverse</span></code></pre>
+
+  <div class="callout callout-yellow">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-body">
+      <strong>Fancy indexing needs double brackets <code>[[]]</code></strong>
+      <p><code>marks[2,5,7]</code> would try to index a 3D array. <code>marks[[2,5,7]]</code> passes a list of indices — the outer <code>[]</code> is the index operator, the inner is a Python list.</p>
+    </div>
+  </div>
+
+  <!-- DEMO: 1D Slice Explorer -->
+  <div class="demo" id="demo-slice1d">
+    <div class="demo-title">1D Slice Explorer</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <label>Start (blank = 0)</label>
+        <input type="text" id="sl-start" placeholder="0" style="width:100%" oninput="runSlice1d()">
+      </div>
+      <div>
+        <label>Stop (blank = end)</label>
+        <input type="text" id="sl-stop" placeholder="8" style="width:100%" oninput="runSlice1d()">
+      </div>
+      <div>
+        <label>Step (blank = 1)</label>
+        <input type="text" id="sl-step" placeholder="1" style="width:100%" oninput="runSlice1d()">
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:8px">marks = [78 45 92 34 67 88 56 91] — indices 0–7, negatives work too (try step=-1)</p>
+    <div class="demo-output" id="slice1d-out">marks[0:8:1]  →  [78 45 92 34 67 88 56 91]</div>
+  </div>
+
+  <!-- DEMO: Fancy Indexing -->
+  <div class="demo" id="demo-fancy">
+    <div class="demo-title">Fancy Indexing — Pick Students by Roll Number</div>
+    <label>Indices to pick (comma-separated, negatives ok)</label>
+    <input type="text" id="fancy-idx" value="2,5,7" style="width:100%;margin-bottom:10px" oninput="runFancy()">
+    <div class="demo-output" id="fancy-out">marks[[2, 5, 7]]  →  [92 88 91]</div>
+  </div>
+</div>
+
+<!-- ━━ 08 2D ARRAYS ━━ -->
+<div class="section" id="s08">
+  <div class="section-header">
+    <span class="section-num">08</span>
+    <div class="section-title">2D Arrays — reshape, Indexing, Slicing, Transpose</div>
+  </div>
+
+  <p>The 24-element string array becomes an 8×3 marks table with one reshape:</p>
+
+  <pre><code>marks_all = export.<span class="hl-fn">astype</span>(<span class="hl-cls">int</span>)         <span class="hl-cmt"># shape (24,)</span>
+report    = marks_all.<span class="hl-fn">reshape</span>(<span class="hl-num">8</span>, <span class="hl-num">3</span>)    <span class="hl-cmt"># shape (8, 3)</span>
+<span class="hl-cmt"># 8 students × 3 subjects = 24 total ✓</span>
+
+<span class="hl-cmt"># Use -1 to let NumPy compute one dimension automatically</span>
+marks_all.<span class="hl-fn">reshape</span>(<span class="hl-num">8</span>, -<span class="hl-num">1</span>)   <span class="hl-cmt"># same as (8, 3)</span>
+marks_all.<span class="hl-fn">reshape</span>(-<span class="hl-num">1</span>, <span class="hl-num">3</span>)   <span class="hl-cmt"># same as (8, 3)</span></code></pre>
+
+  <h3>2D Indexing</h3>
+  <pre><code>report[<span class="hl-num">4</span>, <span class="hl-num">1</span>]     <span class="hl-cmt"># row 4, col 1 — preferred single-step access</span>
+report[<span class="hl-num">4</span>][<span class="hl-num">1</span>]    <span class="hl-cmt"># same result — but two separate index operations</span></code></pre>
+
+  <div class="callout callout-red">
+    <span class="callout-icon">🚨</span>
+    <div class="callout-body">
+      <strong>Critical Gotcha — <code>[:, 1]</code> vs <code>[:][1]</code></strong>
+      <p><code>report[:, 1]</code> → all rows, column 1 — the entire second-subject column ✅<br>
+      <code>report[:][1]</code> → <code>report[:]</code> returns the whole array, then <code>[1]</code> picks row 1 — completely different result ❌</p>
+    </div>
+  </div>
+
+  <h3>2D Slicing</h3>
+  <pre><code>report[:<span class="hl-num">4</span>, :<span class="hl-num">2</span>]   <span class="hl-cmt"># first 4 students, first 2 subjects</span>
+report[:, <span class="hl-num">1</span>]    <span class="hl-cmt"># ALL students' second subject scores (column slice)</span>
+report[<span class="hl-num">0</span>, :]    <span class="hl-cmt"># student 1's all subjects (row slice)</span></code></pre>
+
+  <h3>Transpose</h3>
+  <pre><code>report.T         <span class="hl-cmt"># shape (3, 8) — subjects become rows, students become cols</span>
+report.T.shape   <span class="hl-cmt"># (3, 8)</span></code></pre>
+
+  <!-- CONCEPT DIAGRAM: 2D indexing grid -->
+  <figure class="concept-diagram">
+    <svg viewBox="0 0 540 220" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="11">
+      <!-- title -->
+      <text x="20" y="20" fill="#8892b0" font-size="11" font-weight="700">report  shape (8, 3)  — 8 students × 3 subjects</text>
+      <!-- column headers -->
+      <text x="128" y="40" fill="#f0c24b" text-anchor="middle" font-size="10">col 0 (Maths)</text>
+      <text x="208" y="40" fill="#f0c24b" text-anchor="middle" font-size="10">col 1 (Science)</text>
+      <text x="288" y="40" fill="#f0c24b" text-anchor="middle" font-size="10">col 2 (English)</text>
+      <!-- rows -->
+      <text x="30" y="62" fill="#8892b0" font-size="10">row 0</text>
+      <text x="30" y="90" fill="#8892b0" font-size="10">row 1</text>
+      <text x="30" y="118" fill="#8892b0" font-size="10">row 2</text>
+      <text x="30" y="146" fill="#8892b0" font-size="10">row 3</text>
+      <text x="30" y="174" fill="#8892b0" font-size="10">row 4</text>
+      <!-- cells -->
+      <rect x="88" y="48" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="128" y="63" fill="#34d399" text-anchor="middle">78</text>
+      <rect x="168" y="48" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="208" y="63" fill="#34d399" text-anchor="middle">45</text>
+      <rect x="248" y="48" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="288" y="63" fill="#34d399" text-anchor="middle">92</text>
+
+      <rect x="88" y="76" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="128" y="91" fill="#34d399" text-anchor="middle">34</text>
+      <rect x="168" y="76" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="208" y="91" fill="#34d399" text-anchor="middle">67</text>
+      <rect x="248" y="76" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="288" y="91" fill="#34d399" text-anchor="middle">88</text>
+
+      <rect x="88" y="104" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="128" y="119" fill="#34d399" text-anchor="middle">56</text>
+      <rect x="168" y="104" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="208" y="119" fill="#34d399" text-anchor="middle">91</text>
+      <rect x="248" y="104" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="288" y="119" fill="#34d399" text-anchor="middle">73</text>
+
+      <rect x="88" y="132" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="128" y="147" fill="#34d399" text-anchor="middle">62</text>
+      <rect x="168" y="132" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="208" y="147" fill="#34d399" text-anchor="middle">88</text>
+      <rect x="248" y="132" width="80" height="22" rx="3" fill="#0d1a3a" stroke="#252a45"/>
+      <text x="288" y="147" fill="#34d399" text-anchor="middle">45</text>
+
+      <!-- highlight report[4,1] -->
+      <rect x="168" y="160" width="80" height="22" rx="3" fill="rgba(79,110,247,0.3)" stroke="#4f6ef7" stroke-width="2"/>
+      <text x="208" y="175" fill="#4f6ef7" text-anchor="middle" font-weight="700">??</text>
+
+      <!-- highlight column 1 -->
+      <rect x="168" y="48" width="80" height="22" rx="3" fill="rgba(240,194,75,0.15)" stroke="#f0c24b" stroke-width="1.5"/>
+      <rect x="168" y="76" width="80" height="22" rx="3" fill="rgba(240,194,75,0.15)" stroke="#f0c24b" stroke-width="1.5"/>
+      <rect x="168" y="104" width="80" height="22" rx="3" fill="rgba(240,194,75,0.15)" stroke="#f0c24b" stroke-width="1.5"/>
+      <rect x="168" y="132" width="80" height="22" rx="3" fill="rgba(240,194,75,0.15)" stroke="#f0c24b" stroke-width="1.5"/>
+      <rect x="168" y="160" width="80" height="22" rx="3" fill="rgba(79,110,247,0.3)" stroke="#4f6ef7" stroke-width="2"/>
+
+      <!-- annotations -->
+      <text x="380" y="68" fill="#4f6ef7" font-size="10">report[0, 0] = 78</text>
+      <text x="380" y="92" fill="#4f6ef7" font-size="10">report[1, 2] = 88</text>
+      <text x="380" y="116" fill="#f0c24b" font-size="10">report[:, 1] = yellow col</text>
+      <text x="380" y="140" fill="#f0c24b" font-size="10">ALL Science scores</text>
+      <text x="380" y="164" fill="#4f6ef7" font-size="10">report[4, 1] = blue cell</text>
+      <text x="380" y="184" fill="#f87171" font-size="10">≠ report[:][1] (= row 1!)</text>
+
+      <!-- transpose arrow -->
+      <text x="20" y="210" fill="#a78bfa" font-size="11">report.T  →  shape (3, 8)  — rows ⟺ cols</text>
+    </svg>
+    <figcaption>2D grid: report[row, col]. Yellow column = report[:, 1] (all Science scores). Blue cell = report[4, 1]. Transpose flips rows ↔ cols: shape (8,3) → (3,8).</figcaption>
+  </figure>
+
+  <!-- DEMO: 2D Slice Visualizer -->
+  <div class="demo" id="demo-2d">
+    <div class="demo-title">2D Slice Visualizer — report (8×3)</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Enter a slice in NumPy format. Row then col, comma-separated. Examples: <code>:4, :2</code> &nbsp;|&nbsp; <code>:, 1</code> &nbsp;|&nbsp; <code>0, :</code></p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <label>Row slice (e.g. :4 or 2 or :)</label>
+        <input type="text" id="sl2d-row" value=":" style="width:100%" oninput="run2d()">
+      </div>
+      <div>
+        <label>Col slice (e.g. 1 or :2 or :)</label>
+        <input type="text" id="sl2d-col" value="1" style="width:100%" oninput="run2d()">
+      </div>
+    </div>
+    <div class="demo-output" id="slice2d-out"></div>
+  </div>
+</div>
+
+<!-- ━━ 09 QUIZ ━━ -->
+<div class="section" id="s09">
+  <div class="section-header">
+    <span class="section-num">09</span>
+    <div class="section-title">🧠 Quick Quiz</div>
+  </div>
+
+  <div class="quiz-q" id="q1">
+    <div class="q-text">1. What does <code>np.arange(1, 9)</code> produce?</div>
+    <label class="quiz-option"><input type="radio" name="q1" value="a"> <span>[1, 2, 3, 4, 5, 6, 7, 8, 9]</span></label>
+    <label class="quiz-option"><input type="radio" name="q1" value="b"> <span>[1, 2, 3, 4, 5, 6, 7, 8]</span></label>
+    <label class="quiz-option"><input type="radio" name="q1" value="c"> <span>[0, 1, 2, 3, 4, 5, 6, 7, 8]</span></label>
+    <label class="quiz-option"><input type="radio" name="q1" value="d"> <span>[1, 3, 5, 7, 9]</span></label>
+    <div class="q-feedback" id="f1"></div>
+  </div>
+
+  <div class="quiz-q" id="q2">
+    <div class="q-text">2. <code>marks = np.array(['78','45','92'])</code>. What is <code>marks + '5'</code>?</div>
+    <label class="quiz-option"><input type="radio" name="q2" value="a"> <span>[83, 50, 97]</span></label>
+    <label class="quiz-option"><input type="radio" name="q2" value="b"> <span>TypeError: unsupported operand</span></label>
+    <label class="quiz-option"><input type="radio" name="q2" value="c"> <span>['785', '455', '925'] — string concatenation!</span></label>
+    <label class="quiz-option"><input type="radio" name="q2" value="d"> <span>['78 5', '45 5', '92 5']</span></label>
+    <div class="q-feedback" id="f2"></div>
+  </div>
+
+  <div class="quiz-q" id="q3">
+    <div class="q-text">3. <code>report = np.zeros(24).reshape(8, 3)</code>. What is <code>report[:][1]</code>?</div>
+    <label class="quiz-option"><input type="radio" name="q3" value="a"> <span>All values in column 1 (8 values)</span></label>
+    <label class="quiz-option"><input type="radio" name="q3" value="b"> <span>Row 1 of the report (3 values)</span></label>
+    <label class="quiz-option"><input type="radio" name="q3" value="c"> <span>The single element at row 0, col 1</span></label>
+    <label class="quiz-option"><input type="radio" name="q3" value="d"> <span>A TypeError</span></label>
+    <div class="q-feedback" id="f3"></div>
+  </div>
+
+  <div class="quiz-q" id="q4">
+    <div class="q-text">4. You have <code>marks = np.array([78,45,92,34,67,88,56,91])</code>. How do you get marks of students at positions 2, 5, and 7?</div>
+    <label class="quiz-option"><input type="radio" name="q4" value="a"> <span><code>marks[2, 5, 7]</code></span></label>
+    <label class="quiz-option"><input type="radio" name="q4" value="b"> <span><code>marks[2:7]</code></span></label>
+    <label class="quiz-option"><input type="radio" name="q4" value="c"> <span><code>marks[[2, 5, 7]]</code></span></label>
+    <label class="quiz-option"><input type="radio" name="q4" value="d"> <span><code>marks[2][5][7]</code></span></label>
+    <div class="q-feedback" id="f4"></div>
+  </div>
+
+  <div class="quiz-q" id="q5">
+    <div class="q-text">5. <code>arr = np.arange(24).reshape(8, 3)</code>. What is <code>arr.T.shape</code>?</div>
+    <label class="quiz-option"><input type="radio" name="q5" value="a"> <span>(8, 3)</span></label>
+    <label class="quiz-option"><input type="radio" name="q5" value="b"> <span>(3, 8)</span></label>
+    <label class="quiz-option"><input type="radio" name="q5" value="c"> <span>(24,)</span></label>
+    <label class="quiz-option"><input type="radio" name="q5" value="d"> <span>(1, 24)</span></label>
+    <div class="q-feedback" id="f5"></div>
+  </div>
+
+  <div style="text-align:center;margin-top:20px">
+    <button class="btn btn-blue" onclick="checkQuiz()">Check Answers</button>
+    <button class="btn btn-purple" style="margin-left:10px" onclick="resetQuiz()">Reset</button>
+  </div>
+  <div id="quiz-score" style="text-align:center;margin-top:16px;font-size:16px;font-weight:700;display:none"></div>
+</div>
+
+<!-- ━━ SUMMARY ━━ -->
+<div class="section" id="s10">
+  <div class="section-header">
+    <span class="section-num">∑</span>
+    <div class="section-title">Summary — 11 Business Questions &amp; SQL Equivalents</div>
+  </div>
+
+  <div class="summary-row" style="font-size:11px;font-weight:700;color:var(--muted);border-bottom:2px solid var(--border);">
+    <div class="summary-q">Question</div>
+    <div class="summary-code" style="background:none;padding:0">NumPy code</div>
+  </div>
+  <div class="summary-row"><div class="summary-q">1. Convert list to array</div><div class="summary-code">np.array(maths)</div></div>
+  <div class="summary-row"><div class="summary-q">2. Roll numbers 1–8</div><div class="summary-code">np.arange(1, 9)</div></div>
+  <div class="summary-row"><div class="summary-q">3. Add 5 bonus marks</div><div class="summary-code">marks + 5</div></div>
+  <div class="summary-row"><div class="summary-q">4. Total marks per student</div><div class="summary-code">report.sum(axis=1)  # (NumPy 2)</div></div>
+  <div class="summary-row"><div class="summary-q">5. All Maths scores</div><div class="summary-code">report[:, 0]</div></div>
+  <div class="summary-row"><div class="summary-q">6. Convert string array</div><div class="summary-code">export.astype(int)</div></div>
+  <div class="summary-row"><div class="summary-q">7. Reshape to marksheet</div><div class="summary-code">marks_all.reshape(8, 3)</div></div>
+  <div class="summary-row"><div class="summary-q">8. First 4 students, 2 subjects</div><div class="summary-code">report[:4, :2]</div></div>
+  <div class="summary-row"><div class="summary-q">9. Subject averages</div><div class="summary-code">report.mean(axis=0)  # (NumPy 2)</div></div>
+  <div class="summary-row"><div class="summary-q">10. Reverse scores (rank)</div><div class="summary-code">marks[::-1]</div></div>
+  <div class="summary-row"><div class="summary-q">11. Transpose marksheet</div><div class="summary-code">report.T  → shape (3,8)</div></div>
+
+  <div class="sql-box" style="margin-top:16px">
+    <div class="sql-box-title">🗄️ The Full SQL → NumPy Map</div>
+    <table class="cmp-table" style="margin:0">
+      <thead><tr><th>SQL Concept</th><th>NumPy Equivalent</th></tr></thead>
+      <tbody>
+        <tr><td><code>SELECT *</code></td><td><code>report[:]</code> or just <code>report</code></td></tr>
+        <tr><td><code>SELECT col</code></td><td><code>report[:, col_idx]</code></td></tr>
+        <tr><td><code>SELECT TOP n</code></td><td><code>report[:n]</code></td></tr>
+        <tr><td><code>CAST(col AS INT)</code></td><td><code>arr.astype(int)</code></td></tr>
+        <tr><td><code>DESCRIBE</code></td><td><code>arr.shape, arr.dtype, arr.ndim</code></td></tr>
+        <tr><td>Column store speed</td><td>contiguous dtype array</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ━━ FABs ━━ -->
+<div class="fab-group">
+  <a class="fab fab-green" href="https://numpylive.onrender.com/" target="_blank">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="7" r="6"/></svg>
+    NumPy Live
+  </a>
+  <a class="fab fab-blue" href="https://claude.ai" target="_blank">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="10" height="10" rx="2"/><path d="M5 7h4M7 5v4"/></svg>
+    Playground
+  </a>
+</div>
+
+<!-- ━━ SCRIPTS ━━ -->
+<script>
+(function() {
+  // Progress bar
+  window.addEventListener('scroll', function() {
+    var el = document.getElementById('progressBar');
+    var scrolled = window.scrollY;
+    var total = document.documentElement.scrollHeight - window.innerHeight;
+    el.style.width = (scrolled / total * 100) + '%';
+  });
+
+  // ── BUILDER DEMO ──
+  window.runBuilder = function() {
+    var type = document.getElementById('builder-type').value;
+    var params = document.getElementById('builder-params').value.split(',').map(s => s.trim());
+    var out = document.getElementById('builder-out');
+    try {
+      var result;
+      if (type === 'arange') {
+        var start = parseFloat(params[0])||0, stop = parseFloat(params[1])||8, step = parseFloat(params[2])||1;
+        result = [];
+        for (var v = start; v < stop; v += step) result.push(v);
+        if (result.length > 50) { out.textContent = '[too many values — stop exceeded 50 elements]'; return; }
+        out.textContent = 'np.arange(' + params.slice(0,3).join(', ') + ')  →\n[ ' + result.join('  ') + ' ]\nlength: ' + result.length;
+      } else if (type === 'linspace') {
+        var ls = parseFloat(params[0])||0, le = parseFloat(params[1])||100, ln = parseInt(params[2])||5;
+        if (ln > 50) { out.textContent = '[reduce num points to ≤ 50]'; return; }
+        result = [];
+        for (var i = 0; i < ln; i++) result.push(+(ls + i*(le-ls)/(ln-1)).toFixed(4));
+        out.textContent = 'np.linspace(' + ls + ', ' + le + ', ' + ln + ')  →\n[ ' + result.join('  ') + ' ]\nlength: ' + ln;
+      } else if (type === 'zeros') {
+        var zn = parseInt(params[0])||8;
+        if (zn > 50) { out.textContent = '[reduce n to ≤ 50]'; return; }
+        result = new Array(zn).fill(0);
+        out.textContent = 'np.zeros(' + zn + ')  →\n[ ' + result.join('  ') + ' ]\ndtype: float64';
+      } else if (type === 'ones') {
+        var on = parseInt(params[0])||8;
+        if (on > 50) { out.textContent = '[reduce n to ≤ 50]'; return; }
+        result = new Array(on).fill(1);
+        out.textContent = 'np.ones(' + on + ')  →\n[ ' + result.join('  ') + ' ]\ndtype: float64 (use dtype=int for integers)';
+      }
+    } catch(e) { out.textContent = 'Error: ' + e.message; }
+  };
+  runBuilder();
+
+  // ── VECTORIZATION DEMO ──
+  var vecOp = 'add5';
+  window.setVecOp = function(op) { vecOp = op; runVec(); };
+  window.runVec = function() {
+    var raw = document.getElementById('vec-scores').value;
+    var out = document.getElementById('vec-out');
+    var vals = raw.split(',').map(s => s.trim()).filter(Boolean);
+    var nums = vals.map(v => parseFloat(v));
+    if (nums.some(isNaN)) { out.textContent = 'Enter valid numbers'; return; }
+    var opName, opFn;
+    if (vecOp === 'add5') {
+      opName = 'marks + 5'; opFn = x => x + 5;
+    } else if (vecOp === 'times2') {
+      opName = 'marks * 2'; opFn = x => x * 2;
+    } else if (vecOp === 'gt60') {
+      opName = 'marks > 60 (pass?)'; opFn = x => x > 60;
+    } else {
+      opName = '(marks / 100 * 100)%'; opFn = x => +(x/100*100).toFixed(1);
+    }
+    var result = nums.map(opFn);
+    out.textContent = opName + '\nInput:   [ ' + nums.join('  ') + ' ]\nResult:  [ ' + result.join('  ') + ' ]';
+  };
+
+  // ── DTYPE DEMO ──
+  var dtypeOp = 'info';
+  window.setDtypeOp = function(op) { dtypeOp = op; runDtype(); };
+  window.runDtype = function() {
+    var raw = document.getElementById('dtype-vals').value;
+    var out = document.getElementById('dtype-out');
+    var vals = raw.split(',').map(s => s.trim()).filter(Boolean);
+    var nums = vals.map(parseFloat);
+    var hasNaN = nums.some(isNaN);
+    var allInt = vals.every(v => /^-?\d+$/.test(v));
+    var allNum = !hasNaN;
+    var inferred = hasNaN ? '<U..  (string)' : allInt ? 'int64' : 'float64';
+    if (dtypeOp === 'info') {
+      out.textContent = 'Values:    [ ' + vals.join(', ') + ' ]\nInferred dtype:  ' + inferred + '\nndim: 1   shape: (' + vals.length + ',)   size: ' + vals.length;
+    } else if (dtypeOp === 'asint') {
+      var result = vals.map(v => { var n = parseFloat(v); return isNaN(n) ? '⚠️ ValueError' : Math.trunc(n); });
+      out.textContent = 'astype(int)  →  [ ' + result.join('  ') + ' ]\nnote: truncates floats (3.9 → 3), errors on non-numeric strings';
+    } else if (dtypeOp === 'asfloat') {
+      var rf = vals.map(v => { var n = parseFloat(v); return isNaN(n) ? '⚠️ ValueError' : n; });
+      out.textContent = 'astype(float)  →  [ ' + rf.join('  ') + ' ]\ndtype: float64';
+    } else if (dtypeOp === 'asstr') {
+      out.textContent = 'astype(str)  →  [ "' + vals.join('"  "') + '" ]\ndtype: <U..  (now doing + "5" = concatenation!)\n"78" + "5" = "785"  ← silent wrong answer ⚠️';
+    }
+  };
+  runDtype();
+
+  // ── 1D SLICE ──
+  var MARKS = [78, 45, 92, 34, 67, 88, 56, 91];
+  window.runSlice1d = function() {
+    var out = document.getElementById('slice1d-out');
+    var startRaw = document.getElementById('sl-start').value.trim();
+    var stopRaw  = document.getElementById('sl-stop').value.trim();
+    var stepRaw  = document.getElementById('sl-step').value.trim();
+    var n = MARKS.length;
+    function parseIdx(v, def, len) {
+      if (v === '' || v === undefined) return def;
+      var i = parseInt(v);
+      if (isNaN(i)) return def;
+      if (i < 0) i = Math.max(0, len + i);
+      return i;
+    }
+    var step = stepRaw === '' ? 1 : parseInt(stepRaw);
+    if (isNaN(step) || step === 0) { out.textContent = 'Step cannot be 0'; return; }
+    var result = [];
+    if (step > 0) {
+      var start = parseIdx(startRaw, 0, n);
+      var stop  = parseIdx(stopRaw, n, n);
+      for (var i = start; i < stop; i += step) if (i >= 0 && i < n) result.push(MARKS[i]);
+    } else {
+      var start2 = startRaw === '' ? n-1 : (function(){ var x=parseInt(startRaw); return x<0?n+x:x; })();
+      var stop2  = stopRaw  === '' ? -1  : (function(){ var x=parseInt(stopRaw);  return x<0?n+x-1:x; })();
+      for (var j = start2; j > stop2; j += step) if (j >= 0 && j < n) result.push(MARKS[j]);
+    }
+    var sliceStr = (startRaw||'') + ':' + (stopRaw||'') + (stepRaw ? ':'+stepRaw : '');
+    out.textContent = 'marks[' + sliceStr + ']  →  [ ' + result.join('  ') + ' ]';
+  };
+  runSlice1d();
+
+  // ── FANCY INDEXING ──
+  window.runFancy = function() {
+    var out = document.getElementById('fancy-out');
+    var raw = document.getElementById('fancy-idx').value;
+    var n = MARKS.length;
+    var idxs = raw.split(',').map(s => s.trim()).filter(Boolean).map(s => {
+      var i = parseInt(s); return i < 0 ? n + i : i;
+    });
+    if (idxs.some(isNaN)) { out.textContent = 'Enter valid integers'; return; }
+    var result = idxs.map(i => (i >= 0 && i < n) ? MARKS[i] : '⚠️ OOB');
+    out.textContent = 'marks[' + JSON.stringify(idxs.map((v,k)=>parseInt(raw.split(',')[k]))).replace(/\[/,'[').replace(/\]/,']') + ']  →  [ ' + result.join('  ') + ' ]';
+  };
+  runFancy();
+
+  // ── 2D SLICE ──
+  var REPORT = [
+    [78,45,92],[34,67,88],[56,91,73],[62,88,45],
+    [80,72,65],[91,55,78],[44,88,90],[73,61,82]
+  ];
+  window.run2d = function() {
+    var out = document.getElementById('slice2d-out');
+    var rowRaw = document.getElementById('sl2d-row').value.trim() || ':';
+    var colRaw = document.getElementById('sl2d-col').value.trim() || ':';
+    function parseSlice(str, maxLen) {
+      if (str === ':') return {all:true};
+      if (/^-?\d+$/.test(str)) {
+        var i = parseInt(str);
+        if (i < 0) i = maxLen + i;
+        return {single:i};
+      }
+      var parts = str.split(':');
+      var s = parts[0]===''?0:parseInt(parts[0])||0;
+      var e = parts[1]===''?maxLen:parseInt(parts[1]);
+      if (isNaN(e)) e = maxLen;
+      if (s < 0) s = maxLen + s;
+      if (e < 0) e = maxLen + e;
+      return {start:s, end:e};
+    }
+    try {
+      var rSlice = parseSlice(rowRaw, 8);
+      var cSlice = parseSlice(colRaw, 3);
+      // get rows
+      var rows;
+      if (rSlice.all) rows = REPORT;
+      else if (rSlice.single !== undefined) rows = [REPORT[rSlice.single]];
+      else rows = REPORT.slice(rSlice.start, rSlice.end);
+      // get cols from each row
+      var result = rows.map(r => {
+        if (cSlice.all) return r;
+        if (cSlice.single !== undefined) return [r[cSlice.single]];
+        return r.slice(cSlice.start, cSlice.end);
+      });
+      var flat = result.map(r => '[ ' + r.join('  ') + ' ]').join('\n');
+      var shape = result.length + '×' + (result[0]||[]).length;
+      out.textContent = 'report[' + rowRaw + ', ' + colRaw + ']  →  shape ' + shape + '\n\n' + flat;
+    } catch(e) { out.textContent = 'Error: ' + e.message; }
+  };
+  run2d();
+
+  // ── QUIZ ──
+  var answers = {q1:'b', q2:'c', q3:'b', q4:'c', q5:'b'};
+  var explanations = {
+    q1: '✅ Correct! arange(1, 9) starts at 1 and stops BEFORE 9. The stop value is never included — same rule as Python range().',
+    q2: '✅ Correct! String arrays do string concatenation. \'78\' + \'5\' = \'785\' — no error, just a silent wrong answer. Always astype(int) first!',
+    q3: '✅ Correct! report[:] returns the full 8×3 array. Then [1] picks row 1 (the second row). NOT column 1! Use report[:, 1] for a column.',
+    q4: '✅ Correct! Fancy indexing uses double brackets — the outer [] is the index operator, the inner [] is the Python list of positions.',
+    q5: '✅ Correct! Transpose swaps rows and cols. (8,3).T → (3,8). The first dimension becomes the second and vice versa.'
+  };
+  var wrongs = {
+    q1: 'The stop value 9 is EXCLUDED in arange — just like Python range(). arange(1,9) = [1,2,3,4,5,6,7,8].',
+    q2: 'The array dtype is <U2 (string). Adding a string concatenates it. \'78\' + \'5\' = \'785\'. No error — just wrong. Use astype(int) first.',
+    q3: 'report[:] returns the full array (all rows). Then [1] indexes into it, getting ROW 1, not column 1. For column 1: report[:, 1].',
+    q4: 'marks[2,5,7] tries to index a 3D array (3 indices). marks[[2,5,7]] passes a LIST of positions — double brackets.',
+    q5: 'Transpose flips axes. (8,3).T = (3,8). Rows become columns and columns become rows.'
+  };
+
+  window.checkQuiz = function() {
+    var score = 0;
+    for (var i = 1; i <= 5; i++) {
+      var sel = document.querySelector('input[name="q' + i + '"]:checked');
+      var fb = document.getElementById('f' + i);
+      var opts = document.querySelectorAll('#q' + i + ' .quiz-option');
+      opts.forEach(function(o) { o.classList.remove('correct','wrong'); });
+      if (!sel) { fb.className = 'q-feedback show err'; fb.textContent = 'Pick an answer!'; continue; }
+      var correct = answers['q' + i];
+      var allOpts = document.querySelectorAll('input[name="q' + i + '"]');
+      allOpts.forEach(function(o) {
+        if (o.value === correct) o.closest('.quiz-option').classList.add('correct');
+        else if (o === sel && o.value !== correct) o.closest('.quiz-option').classList.add('wrong');
+      });
+      if (sel.value === correct) {
+        score++;
+        fb.className = 'q-feedback show ok';
+        fb.textContent = explanations['q' + i];
+      } else {
+        fb.className = 'q-feedback show err';
+        fb.textContent = '❌ ' + wrongs['q' + i];
+      }
+    }
+    var sc = document.getElementById('quiz-score');
+    sc.style.display = 'block';
+    var pct = Math.round(score/5*100);
+    sc.style.color = pct>=80?'var(--green)':pct>=60?'var(--yellow)':'var(--red)';
+    sc.textContent = score + ' / 5 (' + pct + '%) — ' + (pct>=80?'🏆 Excellent! You\'ve got arrays locked in.':pct>=60?'👍 Good start — review the gotchas.':'📚 Review sections 06–08 carefully.');
+  };
+
+  window.resetQuiz = function() {
+    for (var i = 1; i <= 5; i++) {
+      document.querySelectorAll('input[name="q'+i+'"]').forEach(function(r){r.checked=false;});
+      var fb = document.getElementById('f'+i);
+      fb.className = 'q-feedback';
+      document.querySelectorAll('#q'+i+' .quiz-option').forEach(function(o){o.classList.remove('correct','wrong');});
+    }
+    var sc = document.getElementById('quiz-score');
+    sc.style.display = 'none';
+  };
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/NumPy-1-Postread" target="_blank" rel="noopener">github.com/scaler-content/NumPy-1-Postread</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

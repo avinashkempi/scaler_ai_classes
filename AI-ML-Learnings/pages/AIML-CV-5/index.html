@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Computer Vision 5 post read</title>
+<style>
+
+:root{
+  --bg:#F3ECD9; --paper:#FBF7EB; --sand:#E7DBBE; --sand-d:#CDBE96; --line:#D5C7A3;
+  --ink:#18261F; --muted:#47574D;
+  --g900:#12392A; --g700:#1D5A41; --g500:#3A8660; --g200:#BCD9C4; --g100:#DDEBDD;
+  --clay:#9A5F33; --clay-100:#EBD5BC;
+  --serif:Georgia,"Iowan Old Style","Palatino Linotype",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.7 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--g700)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+:focus-visible{outline:3px solid var(--g500);outline-offset:2px;border-radius:4px}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:50;background:rgba(243,236,217,.95);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:18px;padding:8px 20px}
+.brand{font:700 .95rem var(--serif);color:var(--g900);white-space:nowrap}
+.toc{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;flex:1}
+.toc a{white-space:nowrap;text-decoration:none;font-size:.82rem;font-weight:600;color:var(--muted);padding:5px 10px;border-radius:999px}
+.toc a:hover{background:var(--sand)}
+.toc a.on{background:var(--g700);color:#fff}
+.bar{height:3px;background:transparent}
+.bar i{display:block;height:100%;width:0;background:var(--g500)}
+
+/* hero */
+.hero{background:var(--g900);color:var(--paper);padding:72px 20px 64px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:0;background:
+  linear-gradient(90deg,rgba(243,236,217,.06) 1px,transparent 1px) 0 0/28px 28px,
+  linear-gradient(0deg,rgba(243,236,217,.06) 1px,transparent 1px) 0 0/28px 28px;pointer-events:none}
+.hero-in{max-width:860px;margin:0 auto;position:relative;z-index:1}
+.kicker{font:700 .78rem var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--g200)}
+.hero h1{font:700 clamp(2.2rem,5.5vw,3.6rem)/1.1 var(--serif);margin:.3em 0 .35em}
+.hero p.lede{font-size:1.2rem;max-width:36em;color:#E9E2CD;margin:0 0 30px}
+.obj{background:rgba(243,236,217,.1);border:1px solid rgba(243,236,217,.25);border-radius:14px;padding:20px 24px}
+.obj h2{font:700 .78rem var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--g200);margin:0 0 10px}
+.obj ol{margin:0;padding-left:1.3em}
+.obj li{margin:.3em 0}
+
+/* layout */
+main{max-width:860px;margin:0 auto;padding:0 20px 40px}
+section.sec{padding-top:64px}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px}
+.num{font:700 .9rem var(--mono);color:var(--paper);background:var(--g700);border-radius:6px;padding:2px 8px}
+h2.t{font:700 clamp(1.6rem,3.4vw,2.2rem)/1.2 var(--serif);color:var(--g900);margin:0}
+h3{font:700 1.2rem/1.3 var(--serif);color:var(--g900);margin:1.8em 0 .4em}
+p{margin:.7em 0}
+ul,ol{padding-left:1.3em}
+li{margin:.3em 0}
+code{font:.88em var(--mono);background:var(--sand);padding:.1em .35em;border-radius:4px}
+pre{background:var(--g900);color:#EFE9D4;padding:16px 18px;border-radius:12px;overflow-x:auto;font:.85rem/1.55 var(--mono);margin:10px 0}
+pre code{background:none;padding:0;color:inherit;font-size:inherit}
+pre .out{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(243,236,217,.3);color:var(--g200)}
+details.code{margin:12px 0}
+details.code>summary{cursor:pointer;font-weight:600;color:var(--g700);padding:4px 0}
+
+/* callouts */
+.callout{border-left:5px solid var(--g500);background:var(--g100);border-radius:0 12px 12px 0;padding:12px 18px;margin:18px 0}
+.callout b.lab{display:block;font:700 .75rem var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--g700)}
+.callout.warm{border-color:var(--clay);background:var(--clay-100)}
+.callout.warm b.lab{color:var(--clay)}
+.callout p{margin:.3em 0}
+
+/* tables */
+.tw{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;background:var(--paper);font-size:.95rem}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--g700);color:#fff;font-weight:600}
+td.k{font-weight:700;color:var(--g900)}
+tbody tr:hover td{background:var(--g100)}
+
+/* widget shell */
+.viz{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px 20px 20px;margin:22px 0;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+.viz>.vt{font:700 .78rem var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--g700);margin:0 0 4px}
+.viz>.vd{margin:0 0 14px;color:var(--muted);font-size:.95rem}
+.row{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.col{flex:1 1 260px;min-width:0}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0 12px}
+.controls label{font-size:.9rem;font-weight:600;color:var(--muted)}
+.btn,.seg button,.chip{font:600 .88rem var(--sans);border:1.5px solid var(--g700);background:transparent;color:var(--g700);padding:6px 13px;border-radius:999px;cursor:pointer}
+.btn:hover,.seg button:hover,.chip:hover{background:var(--g100)}
+.btn.solid,.seg button[aria-pressed=true],.chip[aria-pressed=true]{background:var(--g700);color:#fff}
+.seg{display:inline-flex;gap:6px;flex-wrap:wrap}
+input[type=number],select{font:600 .95rem var(--mono);padding:6px 8px;border:1.5px solid var(--sand-d);border-radius:8px;background:#fff;color:var(--ink);width:5.2em}
+select{width:auto;font-family:var(--sans)}
+input[type=range]{accent-color:var(--g700);width:100%;max-width:300px}
+.readout{background:var(--g100);border-radius:10px;padding:10px 14px;font-size:.95rem;margin-top:10px}
+.readout b{font-family:var(--mono)}
+.big{font:700 clamp(1.8rem,5vw,2.6rem)/1.1 var(--serif);color:var(--g900)}
+.sw{display:inline-block;width:1.4em;height:1.4em;border-radius:5px;border:1.5px solid rgba(0,0,0,.35);vertical-align:-.3em;margin-right:.4em}
+.cap{font-size:.85rem;color:var(--muted);margin:6px 0 0}
+.mono{font-family:var(--mono)}
+
+/* grids */
+.g{display:grid;gap:2px;grid-template-columns:repeat(var(--cols),1fr)}
+.g .c{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font:600 .8rem/1 var(--mono);border-radius:3px;background:var(--sand);color:var(--ink);overflow:hidden}
+.g.tight{gap:1px}
+.px{font-size:.6rem!important}
+.c.sel{outline:3px solid var(--ink);outline-offset:-3px;z-index:1}
+#pix-grid{max-width:480px;cursor:crosshair;border:2px solid var(--g900);border-radius:6px;padding:0;background:var(--g900)}
+#pix-grid:focus-visible{outline:3px solid var(--g500);outline-offset:3px}
+.mat{max-width:260px}
+.mat .c{font-size:1rem;aspect-ratio:1.15}
+.hl{background:var(--g200)!important;outline:2px solid var(--g700);outline-offset:-2px}
+.obj-c{background:var(--g500)!important;color:#fff}
+.w-c{box-shadow:inset 0 0 0 2px var(--clay)}
+.pad-c{background:repeating-linear-gradient(45deg,var(--sand),var(--sand) 3px,var(--sand-d) 3px,var(--sand-d) 5px)!important}
+.lbl{font:700 .78rem var(--sans);color:var(--muted);margin:0 0 6px;text-transform:uppercase;letter-spacing:.06em}
+button.c{border:0;cursor:pointer;font:inherit}
+.filt{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-width:200px}
+.filt input{width:100%;text-align:center;padding:8px 2px}
+.sumline{font:.9rem/1.5 var(--mono);background:var(--g900);color:#EFE9D4;border-radius:10px;padding:10px 14px;overflow-x:auto;margin-top:10px}
+.arrow{align-self:center;font-size:1.6rem;color:var(--g700);padding:0 4px}
+
+/* pills */
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.pill{min-width:64px;text-align:center;border-radius:10px;padding:6px 10px;color:#fff;font-weight:700;line-height:1.2}
+.pill small{display:block;font:600 .72rem var(--sans);opacity:.9}
+.pill span{font:700 1.3rem var(--mono)}
+.p-H{background:var(--g700)}.p-W{background:var(--g500)}.p-C{background:var(--clay)}.p-B{background:var(--g900)}
+
+/* math */
+.math{font:1.1rem var(--serif);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 18px;margin:14px 0;overflow-x:auto;text-align:center}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .25em;font-size:.95em}
+.frac>span:first-child{border-bottom:1.5px solid currentColor;padding:0 .3em}
+.frac>span:last-child{padding:0 .3em}
+sub{font-size:.7em}
+
+/* pipeline */
+.pipe{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.node{font:700 .9rem var(--sans);padding:10px 14px;border-radius:12px;border:2px solid var(--g700);background:var(--paper);color:var(--g900);cursor:pointer}
+.node[aria-pressed=true]{background:var(--g700);color:#fff}
+.node.io{border-style:dashed;cursor:default;border-color:var(--sand-d);color:var(--muted)}
+.grp{border:2px dashed var(--g500);border-radius:16px;padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px}
+.grp>.gl{font:700 .72rem var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--g700)}
+.grp>.ns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sep{color:var(--g700);font-weight:700}
+
+/* bars */
+.bars .br{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:center;margin:8px 0;font-size:.92rem}
+.bars .tr{background:var(--sand);border-radius:8px;height:26px;overflow:hidden;position:relative}
+.bars .fl{height:100%;background:var(--g700);min-width:3px;border-radius:8px 0 0 8px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;color:#fff;font:700 .78rem var(--mono);white-space:nowrap}
+.bars .fl.alt{background:var(--clay)}
+.bars .vl{margin-left:8px;font:700 .85rem var(--mono);color:var(--ink)}
+
+/* layer ribbon */
+.layers{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.layer{text-align:left;border:2px solid var(--g700);background:var(--paper);border-radius:12px;padding:10px;cursor:pointer;font:inherit;color:var(--ink)}
+.layer[aria-pressed=true]{background:var(--g700);color:#fff}
+.layer b{display:block;font-size:.85rem}
+.layer span{display:block;font:.78rem var(--mono);margin-top:4px;word-break:break-all}
+
+/* strip (stride/padding) */
+.strip{display:flex;gap:2px;overflow-x:auto;padding:4px 0}
+.strip .s{flex:0 0 auto;width:16px;height:30px;border-radius:3px;background:var(--g200)}
+.strip .s.p{background:repeating-linear-gradient(45deg,var(--sand),var(--sand) 3px,var(--sand-d) 3px,var(--sand-d) 5px)}
+.strip .s.w{background:var(--g700)}
+.strip .o{background:var(--g500);opacity:.35}
+.strip .o.cur{opacity:1;background:var(--clay)}
+
+/* quiz */
+.quiz{background:var(--g100);border:1px solid var(--g200);border-radius:14px;padding:16px 20px;margin:20px 0}
+.quiz .ql{font:700 .75rem var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--g700);margin:0}
+.quiz .qt{font-weight:600;margin:.3em 0 .6em}
+.quiz fieldset{border:0;padding:0;margin:0}
+.qo{margin:6px 0}
+.qo input{position:absolute;opacity:0}
+.qo label{display:block;border:2px solid var(--g200);background:var(--paper);padding:9px 14px;border-radius:10px;cursor:pointer}
+.qo label:hover{border-color:var(--g500)}
+.qo input:focus-visible+label{outline:3px solid var(--g500);outline-offset:2px}
+.qo.right label{border-color:var(--g700);background:#fff;box-shadow:inset 6px 0 0 var(--g700)}
+.qo.wrong label{border-color:var(--clay);background:var(--clay-100);box-shadow:inset 6px 0 0 var(--clay)}
+.qfb{margin-top:10px;font-size:.95rem}
+
+/* details / flashcards */
+details.dq{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:2px 16px;margin:10px 0}
+details.dq summary{cursor:pointer;font-weight:600;padding:10px 0;color:var(--g900)}
+.fcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.fc{text-align:left;font:inherit;color:var(--ink);background:var(--paper);border:2px solid var(--g700);border-radius:14px;padding:16px;cursor:pointer;min-height:150px}
+.fc .q{font-weight:700;color:var(--g900)}
+.fc .a{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--g500)}
+.fc[aria-expanded=true]{background:var(--g100)}
+.fc[aria-expanded=true] .a{display:block}
+.fc .hint{display:block;margin-top:10px;font-size:.8rem;color:var(--g700);font-weight:600}
+.fc[aria-expanded=true] .hint{display:none}
+.take{counter-reset:t;list-style:none;padding:0}
+.take li{counter-increment:t;display:flex;gap:14px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:8px 0}
+.take li::before{content:counter(t);flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:var(--g700);color:#fff;font:700 .9rem var(--sans);display:grid;place-items:center}
+
+footer{background:var(--g900);color:var(--g200);text-align:center;padding:28px 20px;font:600 .95rem var(--serif);margin-top:40px}
+
+@media (max-width:600px){
+  body{font-size:16px}
+  .hero{padding:48px 16px 44px}
+  .viz{padding:14px}
+  .brand{display:none}
+  .bars .br{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+.chart{width:100%;height:auto;display:block;touch-action:pan-y}
+.chart text{font-family:var(--sans);fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:6px 0 4px;font-size:.85rem;font-weight:600}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend svg{width:34px;height:12px}
+.tag{display:inline-block;font:700 .75rem var(--sans);background:var(--g100);color:var(--g700);border:1px solid var(--g200);border-radius:999px;padding:1px 10px;margin:2px 3px 2px 0}
+.cards3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0}
+.mini{background:var(--paper);border:1px solid var(--line);border-top:5px solid var(--g500);border-radius:12px;padding:12px 16px}
+.mini.c2{border-top-color:var(--clay)}.mini.c3{border-top-color:var(--g900)}
+.mini b{display:block;font:700 .78rem var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--g700)}
+.unit{aspect-ratio:1;border-radius:50%;background:var(--g500);display:flex;align-items:center;justify-content:center;color:#fff;font:700 .8rem var(--mono)}
+.unit.off{background:repeating-linear-gradient(45deg,var(--sand),var(--sand) 3px,var(--sand-d) 3px,var(--sand-d) 5px);color:var(--ink);border:2px dashed var(--clay)}
+.frame{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font:700 .78rem var(--mono);color:#fff;border:3px solid transparent}
+.frame.tr{background:var(--g700)}.frame.va{background:var(--clay)}
+.frame.dup{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset}
+.flow{display:flex;flex-direction:column;gap:6px;max-width:420px;margin:14px auto}
+.flow div{background:var(--g700);color:#fff;border-radius:10px;padding:10px 16px;text-align:center;font-weight:600}
+.flow div:nth-child(even){background:transparent;color:var(--g700);padding:0;font-size:1.3rem;line-height:1}
+.flow div:last-child{background:var(--g900)}
+.ex{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:8px 0}
+.ex .nums{font:.95rem/1.6 var(--mono);background:var(--g900);color:#EFE9D4;border-radius:8px;padding:8px 12px;margin:6px 0;white-space:pre-wrap}
+.step6{counter-reset:s;list-style:none;padding:0}
+.step6 li{counter-increment:s;display:flex;gap:12px;margin:6px 0}
+.step6 li::before{content:counter(s);flex:0 0 28px;height:28px;border-radius:50%;background:var(--g700);color:#fff;font:700 .85rem var(--sans);display:grid;place-items:center}
+
+.stat{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 16px;text-align:center}
+.stat b{display:block;font:700 1.7rem var(--serif);color:var(--g900)}
+.stat span{font-size:.82rem;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.phase{border:2px dashed var(--g500);border-radius:16px;padding:12px 14px;margin:10px 0}
+.phase>.gl{font:700 .75rem var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--g700);margin-bottom:6px}
+.nb{display:inline-flex;align-items:center;justify-content:center;min-width:64px;padding:8px 10px;margin:3px;border-radius:10px;border:3px solid var(--g700);background:var(--g100);font:700 .85rem var(--mono);cursor:pointer;color:var(--ink)}
+.nb.no{border-color:var(--clay);background:var(--clay-100)}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/cv/">Computer vision</a><span class="t">· Computer Vision 5 · Visual search with ResNet-50 embeddings</span><span class="pn"><a href="../AIML-CV-4/" title="Computer Vision 4 · Image similarity and embeddings">← Prev</a><a href="../DSML-CV-1/" title="Computer Vision 1 · Why CNNs suit images">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><header class="topbar">
+  <div class="topbar-in">
+    <span class="brand">Computer Vision 5 post read</span>
+    <nav class="toc" aria-label="Sections" id="toc"></nav>
+  </div>
+  <div class="bar" aria-hidden="true"><i id="prog"></i></div>
+</header>
+
+<div class="hero">
+  <div class="hero-in">
+    <div class="kicker">Computer Vision · Image similarity, the whole pipeline</div>
+    <h1>Computer Vision 5 post read</h1>
+    <p class="lede">Build and evaluate a visual search system: extract embeddings with ResNet-50, retrieve nearest neighbors, measure the results honestly, visualize the space, and make search fast.</p>
+    <div class="obj">
+      <h2>Learning path</h2>
+      <ol>
+        <li>ResNet-50 as an embedding extractor</li>
+        <li>Embeddings in practice, then nearest-neighbor search</li>
+        <li>Evaluation: numbers and failures</li>
+        <li>Visualization with PCA and t-SNE</li>
+        <li>Fast search: compression and approximate neighbors</li>
+        <li>An end-to-end system</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<main>
+
+<!-- 1 OVERVIEW -->
+<section class="sec" id="overview" aria-labelledby="h-ov" data-nav="The pipeline">
+  <div class="sec-head"><span class="num">01</span><h2 class="t" id="h-ov">The whole pipeline at a glance</h2></div>
+  <p>The takeaway of this post fits in one sentence: <b>extract a vector with a pretrained CNN, normalize it, and retrieve images with nearby vectors, using the same model and preprocessing for indexed images and queries.</b> A real system has two phases.</p>
+  <div class="viz" id="pipe-viz">
+    <p class="vt">Visualizer · Offline and online phases</p>
+    <p class="vd">Select a step to see what it does. Toggle “mismatch” to see what breaks search.</p>
+    <div class="phase"><div class="gl">Offline · once, ahead of time</div><div class="pipe" id="pp-off"></div></div>
+    <div class="phase"><div class="gl">Online · for every query</div><div class="pipe" id="pp-on"></div></div>
+    <div class="controls"><label class="chk" style="margin:0"><input type="checkbox" id="pp-mm"> Use a different model or settings online</label></div>
+    <div class="readout" id="pp-read" aria-live="polite"></div>
+  </div>
+  <p>The dataset used throughout is Caltech-101. Labels exist, but we use them <b>only to check results</b>, never to build the embeddings. Nothing is trained: we only run inference.</p>
+</section>
+
+<!-- 2 EXTRACTOR -->
+<section class="sec" id="extractor" aria-labelledby="h-ex" data-nav="Extractor">
+  <div class="sec-head"><span class="num">02</span><h2 class="t" id="h-ex">Build the embedding extractor with ResNet-50</h2></div>
+  <p>Our choice is <b>ResNet-50 pretrained on ImageNet</b>, because it is accurate, about 5× smaller than VGG16, and produces a compact 2048-number embedding.</p>
+  <div class="viz" id="rec-viz">
+    <p class="vt">Visualizer · The four-step recipe</p>
+    <div class="pipe" id="rc-pipe" style="align-items:stretch"></div>
+    <div class="readout" id="rc-read" aria-live="polite"></div>
+  </div>
+  <details class="code"><summary>Code and output</summary>
+<pre><code>from torchvision.models import ResNet50_Weights
+
+weights = ResNet50_Weights.IMAGENET1K_V1
+preprocess = weights.transforms()
+
+model = models.resnet50(weights=weights)
+model.fc = nn.Identity()          # remove the 1000-class head: the output is now the 2048-number embedding
+model.eval().to(device)
+<span class="out">ImageClassification(
+    crop_size=[224]
+    resize_size=[256]
+    mean=[0.485, 0.456, 0.406]
+    std=[0.229, 0.224, 0.225]
+    interpolation=InterpolationMode.BILINEAR
+)
+Trainable parameters we will update today: 0 (we only run inference)</span></code></pre></details>
+  <div class="quiz" data-quiz="q7"></div>
+</section>
+
+<!-- 3 DATASET -->
+<section class="sec" id="dataset" aria-labelledby="h-ds" data-nav="Dataset">
+  <div class="sec-head"><span class="num">03</span><h2 class="t" id="h-ds">The dataset: Caltech-101</h2></div>
+  <p>Caltech-101 has about 9,000 photos of objects in <b>101 classes</b> (animals, vehicles, instruments, faces, …), plus a background class that we skip. Classes range from about 40 to 800 images.</p>
+  <div class="stats">
+    <div class="stat"><b>101</b><span>classes used</span></div>
+    <div class="stat"><b>8,677</b><span>images used (GPU run)</span></div>
+    <div class="stat"><b>40–800</b><span>images per class</span></div>
+    <div class="stat"><b>0</b><span>labels used to build embeddings</span></div>
+  </div>
+  <p>On a CPU the notebook caps the sample at 40 images per class so extraction finishes quickly; on a GPU it uses everything.</p>
+</section>
+
+<!-- 4 EMBED -->
+<section class="sec" id="embed" aria-labelledby="h-em" data-nav="Embed images">
+  <div class="sec-head"><span class="num">04</span><h2 class="t" id="h-em">Embed one image, then the whole dataset</h2></div>
+  <p>Before processing thousands of images, look at what one image becomes. The vector is L2-normalized right after extraction.</p>
+  <div class="viz" id="one-viz">
+    <p class="vt">Visualizer · One image’s embedding</p>
+    <p class="vd">The first 8 of the 2048 numbers recorded for the first image, drawn as a small barcode.</p>
+    <div class="bars" id="one-bars"></div>
+    <div class="readout">Shape <b>(2048,)</b> · length after L2 normalization <b>1.0</b> · first call took 2326 ms (it includes warm-up).</div>
+  </div>
+  <p>Now run the extractor over every image in <b>batches</b> (groups of images processed together, much faster on a GPU), and save the result so the slow step is never repeated.</p>
+  <div class="viz" id="mat-viz">
+    <p class="vt">Visualizer · The embedding matrix</p>
+    <div class="controls"><label>Images <input type="number" id="mt-n" value="8677" min="1" style="width:6.5em"></label><label>Dimensions <input type="number" id="mt-d" value="2048" min="1" style="width:6.5em"></label></div>
+    <div class="readout" id="mt-read" aria-live="polite"></div>
+    <p class="cap">One row per image, one column per feature, float32. Recorded: matrix (8677, 2048), 71.1 MB, extraction 0.6 min, all rows have length 1.</p>
+  </div>
+  <details class="code"><summary>Code</summary>
+<pre><code>def embed_image(path_or_img):
+    img = Image.open(path_or_img).convert("RGB") if isinstance(path_or_img, str) else path_or_img.convert("RGB")
+    x = preprocess(img).unsqueeze(0).to(device)
+    with torch.no_grad():
+        v = model(x).cpu().numpy().ravel()
+    return v / np.linalg.norm(v)
+
+with torch.no_grad():
+    for xb, _ in tqdm(loader, desc="Extracting embeddings"):
+        feats.append(model(xb.to(device)).cpu().numpy())
+feature_list = np.concatenate(feats)
+feature_list /= np.linalg.norm(feature_list, axis=1, keepdims=True)      # L2 normalize every row</code></pre></details>
+</section>
+
+<!-- 5 KNN -->
+<section class="sec" id="knn" aria-labelledby="h-kn" data-nav="k-NN search">
+  <div class="sec-head"><span class="num">05</span><h2 class="t" id="h-kn">Similarity search with k-nearest neighbors</h2></div>
+  <ol class="step6">
+    <li>Embed the query image the same way.</li>
+    <li>Measure the distance from the query vector to <b>every</b> stored vector.</li>
+    <li>Return the <b>k</b> images with the smallest distances. This is <b>k-nearest neighbors (k-NN)</b>.</li>
+  </ol>
+  <p>Comparing against every stored vector is <b>brute force</b>: simple and exact, but the work grows with the number of images. A k-NN “model” does no training: fitting just stores the vectors (9.5 ms in the recorded run) and all the work happens at query time, which is why it is called <b>lazy learning</b>. The query itself is always its own nearest neighbor, so it is dropped.</p>
+  <div class="viz" id="knn-viz">
+    <p class="vt">Visualizer · Brute-force k-NN on a toy space</p>
+    <p class="vd">Illustrative 2-D points in three classes. Click a point to query; neighbours get a green ✓ if they share the query’s class, red ✗ if not.</p>
+    <div class="controls"><label for="kn-k">k</label><input type="range" id="kn-k" min="1" max="8" value="4" style="max-width:180px"> <b class="mono" id="kn-kv"></b></div>
+    <div class="row"><div class="col" style="flex-basis:340px"><div id="kn-plot"></div></div><div class="col" style="flex-basis:230px"><div class="lbl">Ranked neighbours</div><ol id="kn-list" style="margin:0;padding-left:1.3em"></ol></div></div>
+    <div class="readout" id="kn-read" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 6 EVALUATION -->
+<section class="sec" id="eval" aria-labelledby="h-ev" data-nav="Evaluation">
+  <div class="sec-head"><span class="num">06</span><h2 class="t" id="h-ev">How good is it? A fair measure</h2></div>
+  <p>Looking at a few examples is not evidence. We need a number, and we have labels we have not used yet. <b>Neighbor accuracy</b> is a <i>proxy</i> metric: for every image, look at its 4 nearest neighbors (not counting itself) and count the fraction that share its class label. It is a proxy because “same class” is only one idea of “similar”: a red car and a blue car are similar, and so are two very different-looking dogs.</p>
+  <div class="viz" id="na-viz">
+    <p class="vt">Visualizer · Neighbor accuracy for one query</p>
+    <p class="vd">Click each of the 4 neighbours to flip it between same class and different class.</p>
+    <div id="na-nbs"></div>
+    <div class="readout" id="na-read" aria-live="polite"></div>
+  </div>
+
+  <h3>Two baselines</h3>
+  <ul>
+    <li><b>Chance:</b> guess a random neighbor. The expected accuracy is the sum of squared class proportions.</li>
+    <li><b>Raw pixels:</b> shrink every image to 32×32 grayscale and use those 1,024 values as the “embedding”.</li>
+  </ul>
+  <div class="viz" id="chance-viz">
+    <p class="vt">Visualizer · Chance = Σ p²</p>
+    <p class="vd">Enter image counts for four example classes. With imbalanced classes, chance is higher than 1 / number of classes.</p>
+    <div class="controls" id="ch-pre"></div>
+    <div class="controls"><label>A <input type="number" id="ch0" min="0"></label><label>B <input type="number" id="ch1" min="0"></label><label>C <input type="number" id="ch2" min="0"></label><label>D <input type="number" id="ch3" min="0"></label></div>
+    <div class="readout" id="ch-read" aria-live="polite"></div>
+  </div>
+
+  <div class="viz" id="base-viz">
+    <p class="vt">Visualizer · Top-4 neighbor accuracy, recorded results</p>
+    <div class="bars" id="base-bars"></div>
+  </div>
+  <h3>Reading the results</h3>
+  <ul>
+    <li>Embeddings are far above both chance and raw pixels, even though <b>we never trained anything on these images</b>: transfer learning at work.</li>
+    <li>The hardest classes and the confusions are informative: many “errors” are categories that really are close (faces versus a near-duplicate faces class, a whole animal versus its head), so a label-based metric is <b>pessimistic</b> for them.</li>
+    <li>The metric measures <i>class agreement</i>, not human-perceived similarity. Always pair a number with a look at actual results.</li>
+  </ul>
+  <div class="callout"><b class="lab">Does the distance choice matter?</b><p>On the real normalized embeddings, Euclidean and cosine gave the same top-6 neighbor set for <b>100.0% of 500 queries</b>. This matches the earlier result: after L2 normalization their rankings are equivalent. Tiny differences, if any, come from ties and floating-point rounding.</p></div>
+  <div class="quiz" data-quiz="q8"></div>
+  <details class="code"><summary>Code</summary>
+<pre><code>def evaluate_neighbors(feats, k=4):
+    nnm = NearestNeighbors(n_neighbors=k + 1, algorithm="brute", metric="euclidean").fit(feats)
+    _, idx = nnm.kneighbors(feats)
+    nb = np.stack([row[row != r][:k] for r, row in enumerate(idx)])      # drop self from each row
+    same = labels[nb] == labels[:, None]
+    return float(same.mean()), same.mean(axis=1), nb
+
+p = np.bincount(labels) / len(labels); acc_chance = float((p ** 2).sum())
+<span class="out">Chance                    :   2.9 %
+Raw pixels (1024 numbers) :  37.2 %
+ResNet-50 embedding (2048): 87.2 %</span></code></pre></details>
+</section>
+
+<!-- 7 VIS -->
+<section class="sec" id="vis" aria-labelledby="h-vi" data-nav="PCA and t-SNE">
+  <div class="sec-head"><span class="num">07</span><h2 class="t" id="h-vi">Seeing the embedding space: PCA and t-SNE</h2></div>
+  <p>Our embeddings live in 2048 dimensions and we cannot draw that. <b>Dimensionality reduction</b> squeezes long vectors into a few numbers while keeping as much structure as possible. <b>Variance</b> is how spread out the data is along a direction; PCA reports how much of the total variance each component keeps.</p>
+  <div class="viz" id="cmp-viz">
+    <p class="vt">Visualizer · PCA vs. t-SNE</p>
+    <div class="controls"><div class="seg" id="vs-seg" role="group" aria-label="Method"></div></div>
+    <div class="readout" id="vs-read" aria-live="polite"></div>
+  </div>
+  <div class="callout warm"><b class="lab">Reading the maps, and what not to read</b><p>t-SNE separates the classes into visible clusters: nearby photos look alike. PCA with 2 components keeps only a sliver of the information, so classes overlap far more. In t-SNE, the <i>distance between clusters</i> and the <i>size of clusters</i> are <b>not</b> reliable, and the picture changes with the random seed and the <code>perplexity</code> setting. Trust local neighborhoods, not global layout. A 2-D plot is for looking, not a retrieval metric.</p></div>
+</section>
+
+<!-- 8 PCA -->
+<section class="sec" id="pca" aria-labelledby="h-pc" data-nav="Shorter vectors">
+  <div class="sec-head"><span class="num">08</span><h2 class="t" id="h-pc">Making search fast, lever 1: shorter vectors</h2></div>
+  <p>Brute force compares the query against <b>every</b> vector, so time grows with both the number of images and the vector length. Each 2048-dimension float32 embedding takes about 8 KB; a million images need about 8 GB. The number of PCA dimensions is a <b>hyperparameter</b>: a setting we choose, not one the model learns. We pick it by measuring the trade-off between accuracy and time.</p>
+  <div class="viz" id="pca-viz">
+    <p class="vt">Visualizer · How many PCA dimensions?</p>
+    <p class="vd">Recorded sweep on 8,677 images. Move the slider to choose a size and read the trade-off.</p>
+    <div class="controls"><label for="pc-r">Dimensions kept</label><input type="range" id="pc-r" min="0" max="8" value="6" style="max-width:260px"> <b class="mono" id="pc-v"></b></div>
+    <div id="pc-ch1"></div>
+    <div id="pc-ch2"></div>
+    <div class="readout" id="pc-read" aria-live="polite"></div>
+  </div>
+  <p>Each extra dimension keeps a little less new information (<b>diminishing returns</b>) but costs memory and time. On Caltech-101 the accuracy flattens long before 2048 dimensions, so <b>150 dimensions</b> is a sensible choice here: roughly 14× smaller, with little loss. Back any choice with your own sweep, and repeat it on new data.</p>
+  <details class="code"><summary>Code and output</summary>
+<pre><code>pca_sweep = PCA(n_components=200, svd_solver="full", random_state=0).fit(feature_list)
+Z_all = pca_sweep.transform(feature_list)          # Z_all[:, :d] = PCA with d components
+<span class="out">PCA dims =   2 | neighbor accuracy =  28.5 % | search time for all queries =  0.38 s
+PCA dims =   5 | neighbor accuracy =  45.4 % | search time for all queries =  0.33 s
+PCA dims =  10 | neighbor accuracy =  66.5 % | search time for all queries =  0.35 s
+PCA dims =  20 | neighbor accuracy =  78.6 % | search time for all queries =  0.93 s
+PCA dims =  50 | neighbor accuracy =  85.3 % | search time for all queries =  0.47 s
+PCA dims = 100 | neighbor accuracy =  87.1 % | search time for all queries =  0.65 s
+PCA dims = 150 | neighbor accuracy =  87.2 % | search time for all queries =  0.82 s
+PCA dims = 200 | neighbor accuracy =  87.3 % | search time for all queries =  1.00 s
+Full 2048 dims          | neighbor accuracy =  87.2 % | search time for all queries =  7.77 s
+
+Memory for 1 million images (float32): 2048 dims = 8.19 GB, 300 dims = 1.20 GB, 150 dims = 0.60 GB, 100 dims = 0.40 GB</span></code></pre></details>
+</section>
+
+<!-- 9 ANN -->
+<section class="sec" id="ann" aria-labelledby="h-an" data-nav="Approximate search">
+  <div class="sec-head"><span class="num">09</span><h2 class="t" id="h-an">Lever 2: approximate nearest neighbors</h2></div>
+  <p>Even with short vectors, brute force still touches every item. <b>Approximate nearest neighbors (ANN)</b> algorithms build an <b>index</b> in advance so a query looks at only a small, promising part of the data. The price: the answer may <b>miss some true neighbors</b>. We measure that price as <b>recall</b>: of the true top-k neighbors (from brute force), what fraction did the approximate search return?</p>
+  <div class="viz" id="rec2-viz">
+    <p class="vt">Visualizer · Recall@5</p>
+    <p class="vd">The five true neighbours are fixed. Click one to mark it as missed by the approximate search.</p>
+    <div id="rc2-nbs"></div>
+    <div class="readout" id="rc2-read" aria-live="polite"></div>
+  </div>
+  <p><b>Annoy</b> (“Approximate Nearest Neighbors Oh Yeah”, from Spotify) builds many random-projection <b>trees</b>; more trees give better recall but a bigger index and slower build. The number of trees is another hyperparameter. Other well-known libraries are Faiss (Meta) and ScaNN (Google).</p>
+  <div class="viz" id="annoy-viz">
+    <p class="vt">Visualizer · Annoy on 150-dimensional vectors</p>
+    <p class="vd">Recorded results. Brute force took 16.60 ms per query on the same vectors.</p>
+    <div class="controls"><label for="an-r">Number of trees</label><div class="seg" id="an-seg" role="group" aria-label="Trees"></div></div>
+    <div id="an-ch"></div>
+    <div class="readout" id="an-read" aria-live="polite"></div>
+  </div>
+  <div class="callout warm"><b class="lab">Which metric not to sacrifice blindly</b><p>Recall (and the retrieval quality behind it): a faster answer that misses true neighbors is only a good trade if you have measured how much it misses.</p></div>
+  <details class="code"><summary>Code and output</summary>
+<pre><code>FINAL_DIMS = min(150, pca_max)
+pca_final = PCA(n_components=FINAL_DIMS, svd_solver="full", random_state=0).fit(feature_list)
+Z = pca_final.transform(feature_list).astype("float32")
+
+for n_trees in [1, 5, 20, 50]:
+    idx_ann = AnnoyIndex(FINAL_DIMS, "angular")
+    for i, v in enumerate(Z): idx_ann.add_item(i, v)
+    idx_ann.build(n_trees)
+<span class="out">Compressed embeddings: (8677, 150)  (from 2048 to 150 numbers per image)
+Brute force on 150-dim vectors: 16.60 ms per query
+Annoy trees =  1 | recall@5 = 0.627 |    49.9 microseconds per query | build 0.63 s
+Annoy trees =  5 | recall@5 = 0.761 |    58.8 microseconds per query | build 0.55 s
+Annoy trees = 20 | recall@5 = 0.886 |    67.5 microseconds per query | build 0.78 s
+Annoy trees = 50 | recall@5 = 0.965 |   259.5 microseconds per query | build 0.90 s</span></code></pre></details>
+</section>
+
+<!-- 10 E2E -->
+<section class="sec" id="e2e" aria-labelledby="h-e2" data-nav="End to end">
+  <div class="sec-head"><span class="num">10</span><h2 class="t" id="h-e2">Putting it together: an end-to-end search function</h2></div>
+  <p>The offline phase embeds every image, compresses with PCA, and builds the index. The online phase embeds the query with the <b>same model and preprocessing</b>, applies the <b>same PCA</b>, and looks it up in the index. Use the diagram in section 1 to replay it, including what happens when settings are mixed: vectors from different models are not comparable, and search silently returns nonsense without raising an error.</p>
+  <div class="callout"><b class="lab">Test: a flipped photo</b><p>Querying with a horizontally <b>flipped</b> copy of image #7041 (a revolver) returned the original at <b>rank 1</b> of the top-5. Raw pixels would see a very different image; the embedding still recognises the content.</p></div>
+  <p>Your own photos work too, but the index only contains Caltech-101 classes, so results are the nearest of <i>those</i> images.</p>
+  <div class="quiz" data-quiz="q11"></div>
+  <h3>What a real system still needs</h3>
+  <div class="cards3">
+    <div class="mini"><b>Versioning</b>If you change the model or preprocessing, re-embed everything and rebuild the index.</div>
+    <div class="mini c2"><b>Domain fit</b>An ImageNet-pretrained embedding is a strong start, but for a special domain (fashion, medical) you may fine-tune it for similarity with labelled or paired data.</div>
+    <div class="mini c3"><b>Quality loop</b>Monitor recall, latency and real user behaviour, and keep failure examples for review.</div>
+  </div>
+</section>
+
+<!-- 11 RECAP -->
+<section class="sec" id="recap" aria-labelledby="h-rc" data-nav="Recap">
+  <div class="sec-head"><span class="num">11</span><h2 class="t" id="h-rc">Recap and interview checkpoints</h2></div>
+  <p>The full pipeline: pretrained model → embeddings → nearest-neighbor index → evaluation → optional compression/approximate search → query results. Answer each question in your own words, then flip the card.</p>
+  <div class="fcs" id="fcs"></div>
+</section>
+
+</main>
+
+<footer>Computer Vision 5 post read</footer>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const fmt=n=>Number(n).toLocaleString('en-US');
+function h(tag,attrs,...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs||{})){if(k==='class')e.className=v;else if(k==='style')e.style.cssText=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(v!==false&&v!=null)e.setAttribute(k,v);}
+  kids.flat().forEach(c=>{if(c==null||c===false)return;e.append(c.nodeType?c:document.createTextNode(c));});return e;}
+function seg(host,items,cur,cb){host.innerHTML='';items.forEach(([v,l])=>{const b=h('button',{type:'button','aria-pressed':String(v===cur)},l);b.addEventListener('click',()=>{$$('button',host).forEach((x,i)=>x.setAttribute('aria-pressed',String(items[i][0]===v)));cb(v);});host.append(b);});}
+function mkGrid(host,rows,cols,fn){host.innerHTML='';host.style.setProperty('--cols',cols);const cells=[];for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const d=h('div',{class:'c'});fn&&fn(d,r,c);host.append(d);cells.push(d);}return cells;}
+
+/* nav */
+(function(){const toc=$('#toc');$$('section.sec').forEach(s=>toc.append(h('a',{href:'#'+s.id},s.dataset.nav)));const links=$$('a',toc);
+ const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.toggle('on',l.getAttribute('href')==='#'+e.target.id));const on=$('a.on',toc);if(on)on.scrollIntoView({block:'nearest',inline:'center'});}}),{rootMargin:'-30% 0px -60% 0px'});
+ $$('section.sec').forEach(s=>io.observe(s));const prog=$('#prog');const upd=()=>{const d=document.documentElement;prog.style.width=(100*d.scrollTop/(d.scrollHeight-d.clientHeight||1))+'%';};addEventListener('scroll',upd,{passive:true});upd();})();
+
+/* ---------- line chart ---------- */
+function lineChart(host,o){
+  host.innerHTML='';
+  const W=640,H=300,m={l:56,r:16,t:14,b:44},n=o.xs.length,dec=o.dec??3;
+  const all=o.series.flatMap(s=>s.vals);let lo=o.ymin??Math.min(...all),hi=o.ymax??Math.max(...all);if(o.ymin==null||o.ymax==null){const p=(hi-lo)*.08||.1;if(o.ymin==null)lo-=p;if(o.ymax==null)hi+=p;}
+  const x=i=>m.l+(n===1?0:i*(W-m.l-m.r)/(n-1)),y=v=>m.t+(hi-v)*(H-m.t-m.b)/(hi-lo||1);
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" tabindex="0" role="img" aria-label="${o.aria||'Line chart'}. Use left and right arrow keys to read values.">`;
+  for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,yy=y(v);s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}" stroke="#D5C7A3" stroke-width="1"/><text x="${m.l-8}" y="${yy+4}" font-size="11" text-anchor="end">${(+v.toFixed(2)).toString()}</text>`;}
+  const step=Math.ceil(n/12);o.xs.forEach((l,i)=>{if(i%step===0||i===n-1)s+=`<text x="${x(i)}" y="${H-m.b+16}" font-size="11" text-anchor="middle">${l}</text>`;});
+  s+=`<text x="${(W+m.l)/2}" y="${H-6}" font-size="12" text-anchor="middle">${o.xTitle||'Epoch'}</text><text x="14" y="${H/2}" font-size="12" text-anchor="middle" transform="rotate(-90 14 ${H/2})">${o.yTitle||''}</text>`;
+  if(o.zero!==false&&lo<0&&hi>0)s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(0)}" y2="${y(0)}" stroke="#18261F" stroke-width="1.5"/>`;
+  o.series.forEach(se=>{const pts=se.vals.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+    s+=`<polyline points="${pts}" fill="none" stroke="${se.color}" stroke-width="${se.w||2.5}" ${se.dash?`stroke-dasharray="${se.dash}"`:''} stroke-linejoin="round"/>`;
+    if(n<=30)se.vals.forEach((v,i)=>{s+=se.shape==='sq'?`<rect x="${x(i)-3.5}" y="${y(v)-3.5}" width="7" height="7" fill="${se.color}"/>`:se.shape==='tri'?`<path d="M${x(i)},${y(v)-4.5}l4.5,8h-9z" fill="${se.color}"/>`:`<circle cx="${x(i)}" cy="${y(v)}" r="3.3" fill="${se.color}"/>`;});});
+  (o.marks||[]).forEach(mk=>{s+=`<line x1="${x(mk.i)}" x2="${x(mk.i)}" y1="${m.t}" y2="${H-m.b}" stroke="${mk.color||'#18261F'}" stroke-width="2" stroke-dasharray="3 3"/><text x="${x(mk.i)+4}" y="${m.t+12}" font-size="11" font-weight="700" style="fill:#18261F">${mk.label}</text>`;});
+  s+=`<g id="hv" style="display:none"><line id="hl" y1="${m.t}" y2="${H-m.b}" stroke="#18261F" stroke-width="1.5"/></g></svg>`;
+  const leg=h('div',{class:'legend'});o.series.forEach(se=>leg.append(h('span',{},(()=>{const e=document.createElementNS('http://www.w3.org/2000/svg','svg');e.setAttribute('viewBox','0 0 34 12');e.innerHTML=`<line x1="2" x2="32" y1="6" y2="6" stroke="${se.color}" stroke-width="3" ${se.dash?`stroke-dasharray="${se.dash}"`:''}/>`+(se.shape==='sq'?`<rect x="13" y="2" width="8" height="8" fill="${se.color}"/>`:se.shape==='tri'?`<path d="M17,1l5,10h-10z" fill="${se.color}"/>`:`<circle cx="17" cy="6" r="4" fill="${se.color}"/>`);return e;})(),se.name)));
+  const box=h('div');box.innerHTML=s;const svg=box.firstChild;const rd=h('div',{class:'readout','aria-live':'polite'},o.hint||'Hover the chart, or focus it and use ← → keys, to read exact values.');
+  host.append(leg,box,rd);
+  const hv=$('#hv',svg),hl=$('#hl',svg);let idx=0;
+  function show(i){idx=Math.max(0,Math.min(n-1,i));hv.style.display='';hl.setAttribute('x1',x(idx));hl.setAttribute('x2',x(idx));
+    rd.innerHTML=`<b>${o.xName||'Epoch'} ${o.xs[idx]}</b> — `+o.series.map(se=>`${se.name}: <b>${se.vals[idx].toFixed(dec)}</b>`).join(' · ');}
+  svg.addEventListener('mousemove',e=>{const r=svg.getBoundingClientRect(),px=(e.clientX-r.left)*W/r.width;show(Math.round((px-m.l)/((W-m.l-m.r)/(n-1||1))));});
+  svg.addEventListener('touchmove',e=>{const t=e.touches[0],r=svg.getBoundingClientRect(),px=(t.clientX-r.left)*W/r.width;show(Math.round((px-m.l)/((W-m.l-m.r)/(n-1||1))));},{passive:true});
+  svg.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();show(idx+1);}if(e.key==='ArrowLeft'){e.preventDefault();show(idx-1);}});
+}
+const C={tr:'#1D5A41',va:'#9A5F33'};
+
+function barRows(host,rows){rows.forEach(([l,pct,txt,alt])=>host.append(h('div',{class:'br'},h('span',{},l),h('div',{style:'display:flex;align-items:center'},h('div',{class:'tr',style:'flex:1'},h('div',{class:'fl'+(alt?' alt':''),style:`width:${Math.max(pct,.4)}%`})),h('span',{class:'vl'},txt)))));}
+
+/* ---------- 1 pipeline ---------- */
+(function(){
+  const off=[['Embed every image','Run the pretrained extractor over the whole collection in batches.'],['Compress with PCA','Shorten each vector (for example 2048 → 150 numbers).'],['Build the index','Store the vectors in an index (brute force or an approximate one such as Annoy).']];
+  const on=[['Embed the query','Use the same model and the same preprocessing.'],['Apply the same PCA','Project the query with the PCA that was fitted offline.'],['Look it up in the index','Return the k nearest images.']];
+  let cur=['off',0];const mk=(host,arr,key)=>{arr.forEach((s,i)=>{if(i)host.append(h('span',{class:'sep'},'→'));const b=h('button',{type:'button',class:'node','aria-pressed':'false','data-k':key+i},s[0]);b.addEventListener('click',()=>{cur=[key,i];u();});host.append(b);});};
+  mk($('#pp-off'),off,'off');mk($('#pp-on'),on,'on');
+  function u(){$$('.node').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.k===cur[0]+cur[1])));const s=(cur[0]==='off'?off:on)[cur[1]];const mm=$('#pp-mm').checked;
+    $('#pp-read').innerHTML=`<b>${s[0]}.</b> ${s[1]}`+(mm?'<br><b style="color:var(--clay)">Mismatch:</b> vectors from different models or settings live in different spaces, so distances between them are meaningless and search returns nonsense with no error.':'');}
+  $('#pp-mm').addEventListener('change',u);u();
+})();
+
+/* ---------- 2 recipe ---------- */
+(function(){
+  const S=[['1 · Load weights','Load ResNet-50 with ImageNet weights.'],['2 · Remove the head','Replace the final fully connected layer <code>fc</code> with <code>nn.Identity()</code>, which passes its input through unchanged. The output is now the 2048-number vector from global average pooling.'],['3 · Evaluation mode','<code>model.eval()</code> turns off training-only behaviour (batch normalization uses its stored statistics). <code>torch.no_grad()</code> stops PyTorch tracking gradients, saving memory and time. This is pure inference.'],['4 · Preprocess','Use the preprocessing that ships with the weights: resize, center-crop to 224×224, convert to tensor, normalize with the ImageNet mean and standard deviation.'],['5 · L2-normalize','Divide the output by its length so every vector has length 1 and distances are comparable.']];
+  let cur=1;const p=$('#rc-pipe');S.forEach((s,i)=>{const b=h('button',{type:'button',class:'node','aria-pressed':'false'},s[0]);b.addEventListener('click',()=>{cur=i;u();});p.append(b);});
+  function u(){$$('.node',p).forEach((b,i)=>b.setAttribute('aria-pressed',String(i===cur)));$('#rc-read').innerHTML=S[cur][1];}u();
+})();
+
+/* ---------- 4 embedding ---------- */
+(function(){
+  const v=[0.01,0.064,0.003,0.002,0.017,0.031,0.038,0.001];const mx=Math.max(...v);
+  barRows($('#one-bars'),v.map((x,i)=>['number '+(i+1),x/mx*100,x.toFixed(3),x===mx]));
+  function m(){const n=+$('#mt-n').value||0,d=+$('#mt-d').value||0,b=n*d*4;$('#mt-read').innerHTML=`${fmt(n)} × ${fmt(d)} × 4 bytes = <b>${b>=1e9?(b/1e9).toFixed(2)+' GB':(b/1e6).toFixed(1)+' MB'}</b>`;}
+  $('#mt-n').addEventListener('input',m);$('#mt-d').addEventListener('input',m);m();
+})();
+
+/* ---------- 5 kNN toy ---------- */
+(function(){
+  let s=7;const rnd=()=>{s=(s*16807)%2147483647;return s/2147483647;};const g=()=>(rnd()+rnd()+rnd()-1.5)*1.6;
+  const C=[['A',2.2,2.4],['B',7,2.6],['C',4.6,6.2]];const P=[];C.forEach(([c,x,y])=>{for(let i=0;i<8;i++)P.push([c,Math.min(9.3,Math.max(.4,x+g()*1.2)),Math.min(8.3,Math.max(.4,y+g()*1.2))]);});
+  const col={A:'#1D5A41',B:'#9A5F33',C:'#12392A'};let q=0;const K=$('#kn-k');
+  function draw(){const k=+K.value;$('#kn-kv').textContent=k;const W=340,H=300,sx=x=>25+x*(W-40)/9.5,sy=y=>H-25-y*(H-40)/8.5;
+    const ord=P.map((_,i)=>i).filter(i=>i!==q).sort((a,b)=>Math.hypot(P[a][1]-P[q][1],P[a][2]-P[q][2])-Math.hypot(P[b][1]-P[q][1],P[b][2]-P[q][2]));const nb=ord.slice(0,k),set=new Set(nb);
+    let sv=`<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Toy 2-D embedding with 24 points in three classes">`;
+    nb.forEach(i=>sv+=`<line x1="${sx(P[q][1])}" y1="${sy(P[q][2])}" x2="${sx(P[i][1])}" y2="${sy(P[i][2])}" stroke="#3A8660" stroke-width="1.5" stroke-dasharray="4 3"/>`);
+    P.forEach((p,i)=>{const nbr=set.has(i),same=p[0]===P[q][0];sv+=`<g tabindex="0" role="button" aria-label="Point ${i+1}, class ${p[0]}" data-i="${i}" style="cursor:pointer"><circle cx="${sx(p[1])}" cy="${sy(p[2])}" r="${i===q?12:9}" fill="${col[p[0]]}" stroke="${i===q?'#18261F':nbr?(same?'#3A8660':'#B5452B'):'#FBF7EB'}" stroke-width="${i===q?4:nbr?4:2}"/><text x="${sx(p[1])}" y="${sy(p[2])+4}" font-size="10" font-weight="700" text-anchor="middle" style="fill:#fff">${p[0]}</text></g>`;});
+    sv+='</svg>';$('#kn-plot').innerHTML=sv;
+    $$('#kn-plot g').forEach(el=>{const go=()=>{q=+el.dataset.i;draw();};el.addEventListener('click',go);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});});
+    const L=$('#kn-list');L.innerHTML='';nb.forEach(i=>{const same=P[i][0]===P[q][0];L.append(h('li',{},`class ${P[i][0]} · dist ${Math.hypot(P[i][1]-P[q][1],P[i][2]-P[q][2]).toFixed(2)} `,h('b',{style:`color:${same?'var(--g700)':'var(--clay)'}`},same?'✓ same':'✗ different')));});
+    const ok=nb.filter(i=>P[i][0]===P[q][0]).length;$('#kn-read').innerHTML=`Query: a class <b>${P[q][0]}</b> point (outlined black). Its ${k} nearest neighbours: <b>${ok} of ${k}</b> share its class → ${(ok/k*100).toFixed(0)}%. The query itself is dropped from its own results.`;}
+  K.addEventListener('input',draw);draw();
+})();
+
+/* ---------- 6 evaluation ---------- */
+(function(){
+  const same=[true,true,false,true];const box=$('#na-nbs');
+  function d(){box.innerHTML='';same.forEach((s,i)=>{const b=h('button',{type:'button',class:'nb'+(s?'':' no'),'aria-pressed':String(s)},`Neighbor ${i+1} · ${s?'✓ same':'✗ different'}`);b.addEventListener('click',()=>{same[i]=!same[i];d();});box.append(b);});
+    const n=same.filter(Boolean).length;$('#na-read').innerHTML=`<b>${n} of 4</b> neighbors share the query's class → this query scores <b>${n/4*100}%</b>. Neighbor accuracy is the average of this fraction over every image.`;}d();
+  const P={bal:['Balanced (4 equal classes)',[100,100,100,100]],imb:['Imbalanced',[700,100,100,100]]};const ins=[0,1,2,3].map(i=>$('#ch'+i));
+  function c(){const v=ins.map(i=>+i.value||0),t=v.reduce((a,b)=>a+b,0)||1,p=v.map(x=>x/t),s=p.reduce((a,b)=>a+b*b,0);$('#ch-read').innerHTML=`Proportions: ${p.map(x=>x.toFixed(2)).join(', ')} → Σ p² = <b>${s.toFixed(3)}</b> (${(s*100).toFixed(1)}%). If the classes were perfectly balanced it would be 1/4 = 0.250.`;}
+  Object.values(P).forEach(([l,v])=>{const b=h('button',{type:'button',class:'chip'},l);b.addEventListener('click',()=>{v.forEach((x,i)=>ins[i].value=x);c();});$('#ch-pre').append(b);});
+  ins.forEach((i,k)=>{i.value=P.bal[1][k];i.addEventListener('input',c);});c();
+  barRows($('#base-bars'),[['Chance',2.9,'2.9 %'],['Raw pixels (1,024 numbers)',37.2,'37.2 %'],['ResNet-50 embedding (2,048)',87.2,'87.2 %',true]]);
+})();
+
+/* ---------- 7 PCA vs t-SNE ---------- */
+(function(){
+  const M={pca:'<b>PCA (Principal Component Analysis)</b> finds new directions (components) along which the data varies the most, and keeps the first few. It is <b>linear</b> and fast, and it is what we use to <i>compress</i> embeddings. With only 2 components classes overlap far more.',tsne:'<b>t-SNE</b> is a <b>non-linear</b> method that places points on a 2-D map so points close in the original space stay close on the map. It is for <i>drawing</i>, not compressing. It separates classes into visible clusters, but cluster distances and sizes are not reliable and the map changes with seed and perplexity.'};
+  let m='pca';const d=()=>$('#vs-read').innerHTML=M[m];seg($('#vs-seg'),[['pca','PCA'],['tsne','t-SNE']],'pca',v=>{m=v;d();});d();
+})();
+
+/* ---------- 8 PCA sweep ---------- */
+(function(){
+  const D=[2,5,10,20,50,100,150,200,2048],A=[28.5,45.4,66.5,78.6,85.3,87.1,87.2,87.3,87.2],T=[.38,.33,.35,.93,.47,.65,.82,1.00,7.77];
+  const r=$('#pc-r');
+  function draw(){const i=+r.value,d=D[i];$('#pc-v').textContent=d===2048?'2048 (full)':d;
+    const xs=D.map(x=>x===2048?'full':String(x));
+    lineChart($('#pc-ch1'),{xs,xName:'Dims',xTitle:'PCA dimensions kept',yTitle:'Neighbor accuracy (%)',dec:1,ymin:20,ymax:92,aria:'Accuracy vs PCA dimensions',marks:[{i,label:'selected'}],series:[{name:'neighbor accuracy (%)',vals:A,color:C.tr,shape:'circle'}]});
+    lineChart($('#pc-ch2'),{xs,xName:'Dims',xTitle:'PCA dimensions kept',yTitle:'Seconds (all queries)',dec:2,ymin:0,ymax:8.5,aria:'Search time vs PCA dimensions',marks:[{i,label:'selected'}],series:[{name:'search time (s)',vals:T,color:C.va,dash:'7 4',shape:'sq'}]});
+    const gb=d*4*1e6/1e9;$('#pc-read').innerHTML=`<b>${d===2048?'Full 2048':d} dims:</b> accuracy <b>${A[i].toFixed(1)}%</b> (full: 87.2%), search time <b>${T[i].toFixed(2)} s</b> (full: 7.77 s), memory for 1 million images <b>${gb.toFixed(2)} GB</b>, <b>${(2048/d).toFixed(1)}×</b> smaller than 2048.`;}
+  r.addEventListener('input',draw);draw();
+})();
+
+/* ---------- 9 recall + annoy ---------- */
+(function(){
+  const miss=new Set([]);const box=$('#rc2-nbs');
+  function d(){box.innerHTML='';for(let i=0;i<5;i++){const m=miss.has(i);const b=h('button',{type:'button',class:'nb'+(m?' no':''),'aria-pressed':String(m)},`True neighbor ${i+1} · ${m?'✗ missed':'✓ found'}`);b.addEventListener('click',()=>{m?miss.delete(i):miss.add(i);d();});box.append(b);}
+    const f=5-miss.size;$('#rc2-read').innerHTML=`Found <b>${f} of 5</b> true neighbors → recall@5 = <b>${(f/5).toFixed(2)}</b>.`;}d();
+  const T=[1,5,20,50],R=[.627,.761,.886,.965],US=[49.9,58.8,67.5,259.5],B=[.63,.55,.78,.90],BR=16.60;let cur=3;
+  function a(){$('#an-ch').innerHTML='';const c1=h('div'),c2=h('div');$('#an-ch').append(c1,c2);
+    lineChart(c1,{xs:T.map(String),xName:'Trees',xTitle:'Number of trees',yTitle:'recall@5',dec:3,ymin:.5,ymax:1,marks:[{i:cur,label:'selected'}],series:[{name:'recall@5',vals:R,color:C.tr,shape:'circle'}]});
+    lineChart(c2,{xs:T.map(String),xName:'Trees',xTitle:'Number of trees',yTitle:'µs per query',dec:1,ymin:0,ymax:300,marks:[{i:cur,label:'selected'}],series:[{name:'µs per query',vals:US,color:C.va,dash:'7 4',shape:'sq'}]});
+    $('#an-read').innerHTML=`<b>${T[cur]} tree${T[cur]>1?'s':''}:</b> recall@5 <b>${R[cur].toFixed(3)}</b>, <b>${US[cur]} µs</b> per query (brute force: ${BR*1000} µs → about <b>${Math.round(BR*1000/US[cur])}×</b> faster), build ${B[cur]} s.`;}
+  seg($('#an-seg'),T.map((t,i)=>[i,t+' tree'+(t>1?'s':'')]),3,v=>{cur=v;a();});a();
+})();
+
+/* ---------- quizzes ---------- */
+const QZ={
+ q7:{q:'Which set of steps correctly turns a pretrained ResNet-50 into an embedding extractor?',o:['Keep the 1000-class head, train for 50 epochs, then use the class scores.','Replace the final fc layer with Identity, call model.eval(), run under torch.no_grad(), apply the weights\' preprocessing, and L2-normalize the output.','Delete the backbone and keep only the head.','Use random weights so the model has no bias.'],a:1,e:'Removing the head exposes the 2048-number vector. eval() and no_grad() make this pure inference. The weights\' preprocessing matches what the model expects, and L2 normalization makes distances comparable.'},
+ q8:{q:'A search system scores 85% neighbor accuracy on a labelled test collection, but a reviewer notices many “wrong” neighbors that look visually correct. What is the best interpretation?',o:['The metric is meaningless and should be ignored.','The metric measures class agreement, a proxy for similarity, so it can undercount results that are visually similar but labelled differently; combine it with visual inspection.','The embedding must be retrained from scratch.','85% means exactly 85% of users will be satisfied.'],a:1,e:'Neighbor accuracy is a useful, cheap proxy but not the goal itself. Failure analysis shows when mistakes reflect label definitions rather than model errors.'},
+ q11:{q:'Why must the online query use exactly the same model, preprocessing and PCA as the offline index?',o:['It does not matter; any model gives comparable vectors.','Vectors from different models or settings live in different spaces, so distances between them are meaningless.','It saves disk space.','It makes the index build faster.'],a:1,e:'An embedding is only meaningful relative to the model that produced it. Mixing models or projections gives vectors that cannot be compared, so search returns nonsense without raising an error.'}
+};
+$$('[data-quiz]').forEach(host=>{const q=QZ[host.dataset.quiz],name='qz-'+host.dataset.quiz;const fb=h('div',{class:'qfb',role:'status','aria-live':'polite'}),fs=h('fieldset',{},h('legend',{class:'sr'},q.q));
+  q.o.forEach((t,i)=>{const id=name+i,inp=h('input',{type:'radio',name,id}),row=h('div',{class:'qo'},inp,h('label',{for:id},t));
+    inp.addEventListener('change',()=>{$$('.qo',fs).forEach(r=>r.classList.remove('right','wrong'));if(i===q.a){row.classList.add('right');fb.innerHTML='<b>Correct.</b> '+q.e;$$('input',fs).forEach(x=>x.disabled=true);}else{row.classList.add('wrong');fb.innerHTML='<b>Not quite.</b> Try another option.';}});fs.append(row);});
+  host.append(h('p',{class:'ql'},'Check yourself'),h('p',{class:'qt'},q.q),fs,fb);});
+
+/* ---------- flashcards ---------- */
+[['Why remove the pretrained classifier head, why must preprocessing match, and why L2-normalize?','The head outputs ImageNet class scores, but we want the richer 2048-number vector before it. Preprocessing must match what the weights were trained with, or the input distribution shifts. L2 normalization makes distances comparable (Euclidean and cosine then rank identically).'],
+ ['What does PCA preserve, and what can it lose?','It preserves the directions of greatest variance. Dropping components can lose finer information, so accuracy falls if too few dimensions are kept (28.5% at 2 dims vs 87.2% at 150 here).'],
+ ['Why is t-SNE useful for visualization but risky as a search representation?','It keeps local neighborhoods for drawing, but cluster distances and sizes are unreliable and the map changes with seed and perplexity.'],
+ ['Why should a 2-D plot not be treated as a retrieval metric?','It is a lossy picture for looking at. Retrieval quality must be measured on the real vectors, for example with neighbor accuracy and recall.'],
+ ['Design a visual search service for a photo library.','Offline: embed every image, compress with PCA, build the index. Online: embed the query with the same model and preprocessing, apply the same PCA, look it up. Version the model and preprocessing, re-embed and rebuild if they change, evaluate with a metric plus visual inspection, and add new images by embedding them the same way and adding them to the index.'],
+ ['Why do pixels fail for image search, and what do embeddings capture instead?','Pixels compare positions, so small shifts change almost everything. Embeddings capture the content and meaning of the image.'],
+ ['What trade-off does PCA / approximate nearest-neighbor search introduce?','Less memory and lower latency in exchange for possible accuracy loss (PCA) or missed true neighbors (ANN, measured as recall).']
+].forEach(([q,a])=>{const b=h('button',{type:'button',class:'fc','aria-expanded':'false',style:'min-height:110px'},h('div',{class:'q'},q),h('span',{class:'hint'},'Click to reveal'),h('div',{class:'a'},a));b.addEventListener('click',()=>b.setAttribute('aria-expanded',String(b.getAttribute('aria-expanded')!=='true')));$('#fcs').append(b);});
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/AIML-CV-5" target="_blank" rel="noopener">github.com/scaler-content/AIML-CV-5</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

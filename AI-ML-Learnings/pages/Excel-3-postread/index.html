@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sheets 03 — Lookups + Reporting</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --paper:#FAFAF8;
+    --paper-dim:#F1F2ED;
+    --ink:#1B1F23;
+    --ink-soft:#5F6368;
+    --grid:#D7DBDD;
+    --grid-strong:#B8BEC2;
+    --sheet-green:#0F9D58;
+    --sheet-green-dark:#0B7A44;
+    --sheet-green-pale:#E6F4EA;
+    --formula-blue:#1A73E8;
+    --formula-blue-pale:#E8F0FE;
+    --bad-red:#D93025;
+    --bad-red-pale:#FCE8E6;
+    --amber:#E8710A;
+    --amber-pale:#FEF3E0;
+    --violet:#7C4DFF;
+    --violet-pale:#EDE7F6;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--sheet-green); color:#fff;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  .colframe{position:sticky; top:0; z-index:50; display:flex; background:var(--paper-dim); border-bottom:1px solid var(--grid); font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); letter-spacing:0.04em;}
+  .colframe > div{flex:1; text-align:center; padding:6px 0; border-right:1px solid var(--grid);}
+  .colframe .corner{flex:0 0 46px; background:var(--paper-dim);}
+
+  .wrap{max-width:1000px; margin:0 auto; padding:0 24px;}
+
+  .hero{padding:56px 0 40px; border-bottom:1px solid var(--grid);}
+  .fbar{display:flex; align-items:center; border:1px solid var(--grid-strong); background:#fff; border-radius:4px; overflow:hidden; margin-bottom:28px; box-shadow:0 1px 2px rgba(0,0,0,0.04);}
+  .fbar .cellref{font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:var(--ink-soft); padding:9px 14px; border-right:1px solid var(--grid); background:var(--paper-dim); white-space:nowrap;}
+  .fbar .fx{font-style:italic; color:var(--ink-soft); padding:9px 10px; font-family:Georgia,serif; border-right:1px solid var(--grid);}
+  .fbar .formula{padding:9px 14px; font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--formula-blue); white-space:nowrap; overflow:hidden;}
+  .fbar .formula .typed::after{content:''; display:inline-block; width:2px; height:14px; background:var(--formula-blue); margin-left:2px; vertical-align:-2px; animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--sheet-green-dark); background:var(--sheet-green-pale); padding:5px 10px; border-radius:3px; margin-bottom:18px;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--sheet-green);}
+
+  h1.title{font-size:clamp(32px,5vw,48px); font-weight:800; letter-spacing:-0.02em; margin:0 0 14px; color:var(--ink);}
+  .subtitle{font-size:17px; color:var(--ink-soft); max-width:680px; margin:0;}
+
+  .pipeline{display:grid; grid-template-columns:1fr auto 1fr auto 1fr; align-items:center; gap:8px; margin-top:36px;}
+  .pipeline .stage{border:1px solid var(--grid); background:#fff; border-radius:6px; padding:14px 12px; text-align:center;}
+  .pipeline .stage.active{border-color:var(--sheet-green); background:var(--sheet-green-pale);}
+  .pipeline .stage .label{font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft);}
+  .pipeline .stage.active .label{color:var(--sheet-green-dark); font-weight:700;}
+  .pipeline .arrow{color:var(--grid-strong); font-size:18px;}
+
+  section{padding:52px 0; border-bottom:1px solid var(--grid);}
+  .kicker{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink-soft); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:8px;}
+  h2.h{font-size:26px; font-weight:700; letter-spacing:-0.01em; margin:0 0 10px; display:flex; align-items:baseline; gap:10px;}
+  h2.h .rowno{font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; color:#fff; background:var(--sheet-green); padding:2px 8px; border-radius:3px;}
+  .lede{color:var(--ink-soft); font-size:15.5px; max-width:720px; margin:0 0 28px;}
+
+  table.sheet{width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:12.5px;}
+  table.sheet th{background:var(--paper-dim); text-align:left; padding:7px 10px; border:1px solid var(--grid); font-weight:600; color:var(--ink-soft); font-size:11px; text-transform:uppercase; letter-spacing:0.03em;}
+  table.sheet td{padding:7px 10px; border:1px solid var(--grid); white-space:nowrap;}
+  table.sheet td[contenteditable="true"]{background:#FFFDF5; cursor:text;}
+  table.sheet td[contenteditable="true"]:focus{outline:2px solid var(--formula-blue); outline-offset:-2px; background:#fff;}
+  .flag{font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:2px 6px; border-radius:3px; background:var(--bad-red-pale); color:var(--bad-red);}
+  .flag.ok{background:var(--sheet-green-pale); color:var(--sheet-green-dark);}
+  .flag.neutral{background:#E8EAED; color:#3C4043;}
+
+  .impact{margin-top:12px; font-size:13px; background:var(--amber-pale); border-left:3px solid var(--amber); padding:10px 12px; border-radius:0 5px 5px 0;}
+  .impact b{color:#8A4300;}
+  .impact.green{background:var(--sheet-green-pale); border-left-color:var(--sheet-green);}
+  .impact.green b{color:var(--sheet-green-dark);}
+  .impact.red{background:var(--bad-red-pale); border-left-color:var(--bad-red);}
+  .impact.red b{color:var(--bad-red);}
+
+  .card{border:1px solid var(--grid); border-radius:8px; background:#fff; padding:18px;}
+  .card + .card{margin-top:16px;}
+  .sheet-tab{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:700;
+    padding:5px 12px; border-radius:5px 5px 0 0; background:var(--paper-dim);
+    border:1px solid var(--grid); border-bottom:none; color:var(--ink-soft); margin-bottom:-1px;
+  }
+  .sheet-tab.orders{color:var(--formula-blue); background:var(--formula-blue-pale); border-color:var(--formula-blue);}
+  .sheet-tab.customer{color:var(--violet); background:var(--violet-pale); border-color:var(--violet);}
+
+  .pg-input, .pg-select{font-family:'IBM Plex Mono',monospace; font-size:14px; padding:9px 12px; border:1.5px solid var(--grid-strong); border-radius:6px; color:var(--formula-blue); font-weight:600;}
+  .pg-input{width:100%;}
+  .pg-hint{font-size:12px; color:var(--ink-soft); margin:8px 0 0;}
+  .pg-hint code{background:var(--paper-dim); padding:1px 5px; border-radius:3px;}
+
+  .btnrow{display:flex; gap:8px; flex-wrap:wrap; margin:14px 0;}
+  .pill-btn{font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:600; padding:8px 14px; border-radius:20px; border:1px solid var(--grid-strong); background:#fff; cursor:pointer;}
+  .pill-btn.active{background:var(--formula-blue-pale); border-color:var(--formula-blue); color:var(--formula-blue);}
+  .pill-btn:hover{border-color:var(--ink);}
+  .pill-btn.toggle-danger.active{background:var(--bad-red-pale); border-color:var(--bad-red); color:var(--bad-red);}
+  .pill-btn.toggle-safe.active{background:var(--sheet-green-pale); border-color:var(--sheet-green); color:var(--sheet-green-dark);}
+
+  .syntax-card{border:1px solid var(--grid-strong); border-radius:8px; padding:14px 16px; background:var(--formula-blue-pale); margin-bottom:14px;}
+  .syntax-card .stitle{font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:13px; color:var(--formula-blue); margin-bottom:6px;}
+  .syntax-card code{font-family:'IBM Plex Mono',monospace; font-size:13px;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr;}}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  @media(max-width:760px){.grid3{grid-template-columns:1fr;}}
+
+  .result-cell{border:1px solid var(--grid); border-radius:6px; padding:12px 14px; background:var(--paper-dim);}
+  .result-cell .rlabel{display:block; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); text-transform:uppercase; margin-bottom:4px;}
+  .result-cell .rval{font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:700;}
+  .result-cell .rval.err{color:var(--bad-red); font-size:13px; font-weight:600;}
+
+  .helper-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  .helper-table th{text-align:left; padding:8px 12px; background:var(--paper-dim); border:1px solid var(--grid); font-size:12px; text-transform:uppercase; color:var(--ink-soft);}
+  .helper-table td{padding:8px 12px; border:1px solid var(--grid);}
+  .helper-table code{font-family:'IBM Plex Mono',monospace; color:var(--formula-blue); font-size:12.5px;}
+
+  .compare-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .compare-table th{text-align:left; padding:9px 12px; background:var(--ink); color:#fff; font-size:11.5px; text-transform:uppercase;}
+  .compare-table td{padding:9px 12px; border:1px solid var(--grid);}
+  .compare-table td.win{color:var(--sheet-green-dark); font-weight:600;}
+  .compare-table td.lose{color:var(--bad-red);}
+
+  .quiz{border:1px solid var(--grid); border-radius:8px; background:#fff; padding:18px 20px; margin-bottom:14px;}
+  .quiz .q-head{font-weight:700; font-size:14.5px; margin-bottom:12px;}
+  .qopt{display:block; width:100%; text-align:left; border:1px solid var(--grid-strong); background:#fff; padding:10px 12px; border-radius:6px; margin-bottom:8px; cursor:pointer; font-size:13.5px; font-family:'Inter',sans-serif;}
+  .qopt:hover{border-color:var(--ink);}
+  .qopt.correct{background:var(--sheet-green-pale); border-color:var(--sheet-green); color:var(--sheet-green-dark); font-weight:600;}
+  .qopt.wrong{background:var(--bad-red-pale); border-color:var(--bad-red); color:var(--bad-red);}
+  .qexplain{font-size:13px; color:var(--ink-soft); background:var(--paper-dim); padding:10px 12px; border-radius:6px; margin-top:8px; display:none;}
+  .qexplain.show{display:block;}
+
+  .addrow-btn{font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--sheet-green-dark); background:var(--sheet-green-pale); border:1px solid var(--sheet-green); border-radius:5px; padding:7px 12px; cursor:pointer; margin-top:10px;}
+  .addrow-btn:hover{background:var(--sheet-green); color:#fff;}
+
+  footer{padding:40px 0 60px; text-align:center;}
+  footer .next{display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--ink-soft); border:1px dashed var(--grid-strong); padding:10px 16px; border-radius:20px;}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important;}}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· Excel 3 · Lookups and reporting</span><span class="pn"><a href="../Excel-2-postread/" title="Excel 2 · Core formulas">← Prev</a><a href="../Excel-4-postread/" title="Excel 4 · Pivot tables and a mini dashboard">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="colframe">
+  <div class="corner"></div>
+  <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div><div>G</div><div>H</div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <div class="hero">
+    <div class="eyebrow"><span class="dot"></span> Sheets · Lecture 03 · Post-Read</div>
+    <h1 class="title">Lookups + Reporting</h1>
+    <p class="subtitle">Storage layer, then logic layer — now the retrieval layer. Data almost never lives in one table. Two editable sheets below, <span class="mono" style="color:var(--formula-blue);">Orders_Info</span> and <span class="mono" style="color:var(--violet);">Customer_Info</span>, carry you through VLOOKUP, IFERROR, INDEX &amp; MATCH, XLOOKUP, UNIQUE + FILTER, and ARRAYFORMULA.</p>
+
+    <div class="fbar">
+      <div class="cellref">J2</div>
+      <div class="fx"><i>fx</i></div>
+      <div class="formula mono"><span id="typedFormula" class="typed"></span></div>
+    </div>
+
+    <div class="pipeline">
+      <div class="stage"><div class="label">Storage Layer</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="label">Logic Layer</div></div>
+      <div class="arrow">→</div>
+      <div class="stage active"><div class="label">Retrieval Layer</div></div>
+    </div>
+  </div>
+
+  <!-- ============ LOOKUP OVERVIEW ============ -->
+  <section id="overview">
+    <div class="kicker">The Big Idea</div>
+    <h2 class="h"><span class="rowno">00</span> The lookup family</h2>
+    <p class="lede">Every lookup function answers the same question — "I have a known key, find it in a list, return the matching detail." They differ only in how flexible that search can be.</p>
+    <div class="impact" style="margin-bottom:20px;"><b>Why not just search manually?</b> The manual method — press Ctrl+F, search for an Order ID, locate the row, read off the Ship Mode — works fine for one lookup. But if a manager asks for the same detail across 50 Order IDs, manually searching 50 times doesn't scale. Instead of searching by hand every time, a lookup function makes the sheet search for you — and in SQL terms, a lookup across two tables is exactly what a <code class="mono">JOIN</code> does.</div>
+    <table class="helper-table">
+      <thead><tr><th>Function</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>LOOKUP</code></td><td>Searches a single row or column. Limited, rarely used today.</td></tr>
+        <tr><td><code>VLOOKUP</code></td><td>Searches a table vertically, top to bottom. Most common. Leftmost-column only.</td></tr>
+        <tr><td><code>INDEX &amp; MATCH</code></td><td>Two-step lookup. Searches and returns in any direction.</td></tr>
+        <tr><td><code>XLOOKUP</code></td><td>Modern replacement for both. Any direction, built-in error handling.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ SHARED SHEETS ============ -->
+  <section id="dataset">
+    <div class="kicker">The Working Sheets</div>
+    <h2 class="h"><span class="rowno">01</span> Your two live sheets</h2>
+    <p class="lede">Edit anything here — every demo below reads from these tables live, exactly like real cross-sheet formulas would.</p>
+
+    <div class="card">
+      <div class="sheet-tab orders">Orders_Info</div>
+      <table class="sheet" id="ordersTable">
+        <thead><tr><th>A · Order Date</th><th>B · Order ID</th><th>C · Customer ID</th><th>D · City</th><th>E · Region</th><th>F · Sales</th><th>G · Quantity</th></tr></thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+      <button class="addrow-btn" id="addOrderRow">+ Add order row</button>
+    </div>
+
+    <div class="card" style="margin-top:24px;">
+      <div class="sheet-tab customer">Customer_Info</div>
+      <table class="sheet" id="customerTable">
+        <thead><tr><th>A · Customer ID</th><th>B · Customer Name</th><th>C · Segment</th><th>D · Country</th><th>E · State</th></tr></thead>
+        <tbody id="customerBody"></tbody>
+      </table>
+      <button class="addrow-btn" id="addCustomerRow">+ Add customer row</button>
+    </div>
+  </section>
+
+  <!-- ============ VLOOKUP WITHIN SHEET ============ -->
+  <section id="vlookup">
+    <div class="kicker">Within Sheet</div>
+    <h2 class="h"><span class="rowno">02</span> VLOOKUP</h2>
+    <p class="lede">Search the leftmost column of a range, then jump right to fetch an answer from the same row. Think of it as "search the left column → find the row → go right to get the answer."</p>
+    <div class="syntax-card">
+      <div class="stitle">SYNTAX</div>
+      <code>=VLOOKUP(lookup_value, table_range, col_index, FALSE)</code>
+    </div>
+    <div class="card">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
+        <div style="flex:1; min-width:200px;">
+          <label style="font-size:12px;color:var(--ink-soft); display:block; margin-bottom:4px;">Order ID to look up</label>
+          <input id="vlookupId" class="pg-input" list="orderIdOptions">
+          <datalist id="orderIdOptions"></datalist>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--ink-soft); display:block; margin-bottom:4px;">Return column</label>
+          <select id="vlookupCol" class="pg-select">
+            <option value="0">A · Order Date</option>
+            <option value="2">C · Customer ID</option>
+            <option value="3" selected>D · City</option>
+            <option value="4">E · Region</option>
+            <option value="5">F · Sales</option>
+            <option value="6">G · Quantity</option>
+          </select>
+        </div>
+      </div>
+      <div class="result-cell" style="margin-top:14px;">
+        <span class="rlabel" id="vlookupFormulaLabel">=VLOOKUP(...)</span>
+        <span class="rval" id="vlookupResult"></span>
+      </div>
+      <p class="pg-hint">match_type: <code>FALSE</code> = exact match — always use FALSE for IDs, never TRUE. And always lock <code>table_range</code> with <code>$</code> (e.g. <code>$A$1:$H$20</code>) so it doesn't shift when the formula is dragged down to other rows.</p>
+    </div>
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>Domain</th><th>Real-world use case</th></tr></thead>
+      <tbody>
+        <tr><td>E-commerce</td><td>Look up a product name from its Product ID</td></tr>
+        <tr><td>HR</td><td>Retrieve an employee's department from their Employee ID</td></tr>
+        <tr><td>Finance</td><td>Fetch the account manager's name from an Account Number</td></tr>
+        <tr><td>Logistics</td><td>Pull delivery status from a tracking code</td></tr>
+        <tr><td>Sales</td><td>Get customer contact details from a Customer ID</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ IFERROR ============ -->
+  <section id="iferror">
+    <div class="kicker">Error Handling</div>
+    <h2 class="h"><span class="rowno">03</span> IFERROR</h2>
+    <p class="lede">Type an Order ID that does not exist above, and the raw VLOOKUP breaks. Wrap it in IFERROR for a clean fallback message instead.</p>
+    <div class="syntax-card">
+      <div class="stitle">SYNTAX</div>
+      <code>=IFERROR(value, value_if_error)</code>
+    </div>
+    <div class="card">
+      <label style="font-size:12px;color:var(--ink-soft); display:block; margin-bottom:4px;">Order ID (try one that does not exist above)</label>
+      <input id="iferrorId" class="pg-input" value="ZZ-9999" style="max-width:280px;">
+      <div class="grid2" style="margin-top:14px;">
+        <div class="result-cell">
+          <span class="rlabel">Without IFERROR</span>
+          <span class="rval" id="withoutIferror"></span>
+        </div>
+        <div class="result-cell">
+          <span class="rlabel">With IFERROR</span>
+          <span class="rval" id="withIferror"></span>
+        </div>
+      </div>
+    </div>
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>Error IFERROR catches</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>#N/A</code></td><td>Value not found — the most common error with VLOOKUP</td></tr>
+        <tr><td><code>#DIV/0!</code></td><td>Division by zero</td></tr>
+        <tr><td><code>#REF!</code></td><td>Invalid cell reference</td></tr>
+        <tr><td><code>#VALUE!</code></td><td>Wrong data type used in the formula</td></tr>
+      </tbody>
+    </table>
+    <div class="impact green" style="margin-top:12px;"><b>Rule of thumb:</b> always wrap VLOOKUP — and every lookup function — with IFERROR in a production dashboard. The custom message can be anything: "Not Found," "Check ID," an em dash, or even an empty string <code class="mono">""</code>, which returns a blank cell instead of any visible message — useful when you don't want the absence of a match to draw attention at all.</div>
+  </section>
+  <section id="crosssheet">
+    <div class="kicker">Across Sheets</div>
+    <h2 class="h"><span class="rowno">04</span> VLOOKUP across sheets — the JOIN</h2>
+    <p class="lede">In the real world, data is rarely one flat table — orders live in one sheet, customer details in another, just like separate tables in a SQL database. The Segment column lives only in Customer_Info. Reference it with <code class="mono">SheetName!Range</code> — the formula shape never changes, only the table_range does.</p>
+    <div class="syntax-card">
+      <div class="stitle">SQL</div>
+      <code>SELECT orders.*, customers.Segment FROM orders JOIN customers ON orders.Customer_ID = customers.Customer_ID</code>
+    </div>
+    <div class="syntax-card">
+      <div class="stitle">GSHEETS</div>
+      <code>=VLOOKUP(C2, Customer_Info!$A$1:$E, 3, FALSE)</code>
+    </div>
+    <div class="card">
+      <label style="font-size:12px;color:var(--ink-soft); display:block; margin-bottom:4px;">Customer ID</label>
+      <input id="crossId" class="pg-input" list="customerIdOptions" style="max-width:280px;">
+      <datalist id="customerIdOptions"></datalist>
+      <div class="result-cell" style="margin-top:14px;">
+        <span class="rlabel">Segment (from Customer_Info)</span>
+        <span class="rval" id="crossResult"></span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h4 style="margin:0 0 10px;">Revenue by segment — SUMIF on the joined column</h4>
+      <table class="helper-table" id="segmentReportBody"></table>
+    </div>
+
+    <div class="impact red" style="margin-top:16px;">
+      <b>VLOOKUP's three limitations</b> — (1) always returns the FIRST match if a key repeats, (2) can only search the LEFTMOST column of the range, (3) the column index is a hardcoded number that breaks if a column gets inserted or deleted. These three problems are exactly why INDEX &amp; MATCH and XLOOKUP exist.
+    </div>
+  </section>
+
+  <!-- ============ INDEX & MATCH ============ -->
+  <section id="indexmatch">
+    <div class="kicker">Any Direction</div>
+    <h2 class="h"><span class="rowno">05</span> INDEX &amp; MATCH</h2>
+    <p class="lede">In Orders_Info, Order Date sits to the LEFT of Order ID — VLOOKUP cannot fetch it. Frame it as a two-step process: MATCH finds the ROW number, INDEX fetches the VALUE from that row. Understand each half separately before combining them.</p>
+    <table class="helper-table" style="margin-bottom:16px;">
+      <thead><tr><th>Step</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>=MATCH(lookup_value, lookup_array, 0)</code></td><td>Does NOT return the value — it returns the POSITION. <code>match_type</code> 0 = exact match; always use 0 for IDs.</td></tr>
+        <tr><td><code>=INDEX(array, row_number)</code></td><td>Does NOT search — it fetches whatever sits at a specific row position inside <code>array</code>.</td></tr>
+      </tbody>
+    </table>
+    <div class="syntax-card">
+      <div class="stitle">SYNTAX — COMBINED</div>
+      <code>=INDEX(return_range, MATCH(lookup_value, lookup_range, 0))</code>
+    </div>
+    <div class="card">
+      <label style="font-size:12px;color:var(--ink-soft); display:block; margin-bottom:4px;">Order ID</label>
+      <input id="imId" class="pg-input" list="orderIdOptions2" style="max-width:280px;">
+      <datalist id="orderIdOptions2"></datalist>
+      <div class="grid2" style="margin-top:14px;">
+        <div class="result-cell">
+          <span class="rlabel" id="matchFormulaLabel">=MATCH(...)</span>
+          <span class="rval" id="matchResult"></span>
+        </div>
+        <div class="result-cell">
+          <span class="rlabel" id="indexFormulaLabel">=INDEX(...)</span>
+          <span class="rval" id="indexResult"></span>
+        </div>
+      </div>
+      <div class="impact" style="margin-top:12px;"><b>Key insight:</b> the return range (Order Date, column A) and the search range (Order ID, column B) are different columns — something VLOOKUP simply cannot do.</div>
+    </div>
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>Domain</th><th>Real-world use case</th></tr></thead>
+      <tbody>
+        <tr><td>Finance</td><td>Look up an account holder's name from an account number when the name column sits to the left</td></tr>
+        <tr><td>HR</td><td>Retrieve a joining date for an employee ID when the date column precedes the ID column</td></tr>
+        <tr><td>Inventory</td><td>Fetch a supplier name where the supplier table is ordered differently than expected</td></tr>
+        <tr><td>Sales</td><td>Return a previous quarter's data by matching on a key sitting in the middle of the table</td></tr>
+      </tbody>
+    </table>
+    <div class="impact green" style="margin-top:12px;"><b>Why it survives change:</b> INDEX &amp; MATCH doesn't depend on a hardcoded column number — it uses actual ranges, so inserting or deleting a column elsewhere in the sheet never breaks it. That resilience, plus the ability to search in any direction, is why analysts prefer it over VLOOKUP in large production dashboards, even though it takes two functions instead of one.</div>
+  </section>
+
+  <!-- ============ XLOOKUP ============ -->
+  <section id="xlookup">
+    <div class="kicker">Modern Replacement</div>
+    <h2 class="h"><span class="rowno">06</span> XLOOKUP</h2>
+    <p class="lede">The flexibility of INDEX &amp; MATCH with the simplicity of VLOOKUP — plus a built-in "not found" message, no separate IFERROR required.</p>
+    <div class="syntax-card">
+      <div class="stitle">SYNTAX</div>
+      <code>=XLOOKUP(lookup_value, lookup_array, return_array, [if_not_found])</code>
+    </div>
+    <div class="card">
+      <label style="font-size:12px;color:var(--ink-soft); display:block; margin-bottom:4px;">Order ID (try a real one, then a fake one)</label>
+      <input id="xlookupId" class="pg-input" list="orderIdOptions3" style="max-width:280px;">
+      <datalist id="orderIdOptions3"></datalist>
+      <div class="grid2" style="margin-top:14px;">
+        <div class="result-cell">
+          <span class="rlabel">Order Date (left of Order ID)</span>
+          <span class="rval" id="xlookupDate"></span>
+        </div>
+        <div class="result-cell">
+          <span class="rlabel">Sales (right of Order ID)</span>
+          <span class="rval" id="xlookupSales"></span>
+        </div>
+      </div>
+      <p class="pg-hint">Both lookups search the SAME Order ID column but return from opposite directions — identical, readable syntax either way, and "Order ID not found" is built in.</p>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <table class="compare-table">
+        <thead><tr><th>Feature</th><th>VLOOKUP</th><th>INDEX &amp; MATCH</th><th>XLOOKUP</th></tr></thead>
+        <tbody>
+          <tr><td>Search direction</td><td class="lose">Right only</td><td class="win">Any</td><td class="win">Any</td></tr>
+          <tr><td>Lookup column</td><td class="lose">Must be leftmost</td><td class="win">Any column</td><td class="win">Any column</td></tr>
+          <tr><td>Built-in error handling</td><td class="lose">No — needs IFERROR</td><td class="lose">No — needs IFERROR</td><td class="win">Yes — if_not_found</td></tr>
+          <tr><td>Column index required</td><td class="lose">Yes, hardcoded</td><td class="win">No</td><td class="win">No</td></tr>
+          <tr><td>Survives column inserts</td><td class="lose">No, breaks</td><td class="win">Yes</td><td class="win">Yes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="impact" style="margin-top:16px;"><b>Two extra arguments worth knowing:</b> <code class="mono">match_mode</code> (0 = exact default, -1 = next smaller, 1 = next larger, 2 = wildcard) and <code class="mono">search_mode</code> (1 = first-to-last default, -1 = last-to-first, useful when you want the most recent matching row instead of the first one). Both are optional, but they're what let XLOOKUP absorb edge cases that would otherwise need a separate formula.</div>
+  </section>
+
+  <!-- ============ UNIQUE + FILTER ============ -->
+  <section id="uniquefilter">
+    <div class="kicker">Dynamic Extraction</div>
+    <h2 class="h"><span class="rowno">07</span> UNIQUE + FILTER</h2>
+    <p class="lede">The manual approach to "give me the unique Customer IDs from the South region" is to apply a filter, copy the column, paste it elsewhere, then run Remove Duplicates. That works once — but if the region needs to change, or the data updates daily, you'd be repeating those three steps every time. FILTER and UNIQUE replace that entire manual routine with one formula that never goes stale.</p>
+    <table class="helper-table" style="margin-bottom:16px;">
+      <thead><tr><th>Function</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>FILTER(range, condition1, ...)</code></td><td>Returns only the rows or columns that satisfy the condition — the result is a "spill range" that automatically fills as many rows as needed.</td></tr>
+        <tr><td><code>UNIQUE(range, [by_column], [exactly_once])</code></td><td>Returns distinct values from a range, removing duplicate entries.</td></tr>
+      </tbody>
+    </table>
+    <div class="syntax-card">
+      <div class="stitle">SQL EQUIVALENT</div>
+      <code>SELECT DISTINCT Customer_ID FROM orders WHERE Region = 'South'</code>
+    </div>
+    <div class="syntax-card">
+      <div class="stitle">GSHEETS</div>
+      <code>=UNIQUE(FILTER(range, condition))</code>
+    </div>
+    <div class="card">
+      <label style="font-size:12px;color:var(--ink-soft); display:block; margin-bottom:4px;">Region</label>
+      <select id="filterRegion" class="pg-select" style="max-width:220px;"></select>
+      <div class="result-cell" style="margin-top:14px;">
+        <span class="rlabel" id="filterFormulaLabel">=UNIQUE(FILTER(...))</span>
+        <div id="filterResultList" style="margin-top:6px; font-family:'IBM Plex Mono',monospace; font-size:14px;"></div>
+      </div>
+      <p class="pg-hint">Step by step: FILTER runs first and selects every Customer ID where Region matches — this may still contain duplicates. UNIQUE then wraps that result and removes them. The formula auto-updates whenever the underlying data changes, with no manual steps required.</p>
+    </div>
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>Domain</th><th>Real-world use case</th></tr></thead>
+      <tbody>
+        <tr><td>Sales</td><td>Get a unique list of customers who placed orders in a specific region or month</td></tr>
+        <tr><td>HR</td><td>List the distinct job titles in a department that changes monthly</td></tr>
+        <tr><td>Finance</td><td>Extract unique vendor names from a transactions log</td></tr>
+        <tr><td>Operations</td><td>Identify distinct product categories from a live inventory feed</td></tr>
+        <tr><td>Marketing</td><td>Pull unique campaign IDs that met a conversion threshold</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ ARRAYFORMULA ============ -->
+  <section id="arrayformula">
+    <div class="kicker">Scale</div>
+    <h2 class="h"><span class="rowno">08</span> ARRAYFORMULA</h2>
+    <p class="lede">The normal approach — write <code class="mono">=F2*G2</code>, then drag it down to row 9,994 — has two hidden problems: if 500 new rows are added tomorrow, you have to drag again, and if someone deletes a row in the middle, the formulas below it can break. ARRAYFORMULA lets a single formula apply to an entire range at once, so it scales with the data instead of needing maintenance. Toggle the method below, then add a row to Orders_Info above and watch what happens to Revenue.</p>
+    <div class="syntax-card">
+      <div class="stitle">SYNTAX</div>
+      <code>=ARRAYFORMULA(F2:F * G2:G)</code>
+    </div>
+    <div class="card">
+      <div class="btnrow">
+        <button class="pill-btn toggle-danger" id="modeRowByRow">Row-by-row (drag down)</button>
+        <button class="pill-btn toggle-safe active" id="modeArray">ARRAYFORMULA (one cell)</button>
+      </div>
+      <table class="sheet">
+        <thead><tr><th>Order ID</th><th>Sales</th><th>Quantity</th><th id="revenueHead">Revenue</th></tr></thead>
+        <tbody id="revenueBody"></tbody>
+      </table>
+      <div class="impact" id="arrayImpact" style="margin-top:12px;"></div>
+    </div>
+    <div class="impact green" style="margin-top:16px;"><b>Handling empty rows:</b> wrap it as <code class="mono">=ARRAYFORMULA(IFERROR(G2:G * H2:H, ""))</code> to prevent <code class="mono">#VALUE!</code> errors from appearing in rows that don't have data yet.</div>
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>When to use</th><th>When NOT to use</th></tr></thead>
+      <tbody>
+        <tr><td>The formula needs to apply to a whole column and scale automatically with new data</td><td>Individual rows need to reference their own row differently — array logic assumes the same pattern everywhere</td></tr>
+        <tr><td>You want one cell to maintain, not hundreds of dragged copies</td><td>FILTER and UNIQUE are already array-based — wrapping them in ARRAYFORMULA is unnecessary</td></tr>
+      </tbody>
+    </table>
+    <p class="pg-hint">Keyboard shortcut: <code>Ctrl + Shift + Enter</code> wraps whatever you just typed in ARRAYFORMULA automatically.</p>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section id="quiz">
+    <div class="kicker">Check Yourself</div>
+    <h2 class="h"><span class="rowno">09</span> Quick quiz</h2>
+
+    <div class="quiz" data-answer="C">
+      <div class="q-head">1. A dataset has Customer_ID | Customer_Name | Segment. You need to search using Segment and return Customer_ID. Why will VLOOKUP fail?</div>
+      <button class="qopt" data-v="A">VLOOKUP cannot work with text values</button>
+      <button class="qopt" data-v="B">VLOOKUP can only return numeric columns</button>
+      <button class="qopt" data-v="C">VLOOKUP can only search from left to right</button>
+      <button class="qopt" data-v="D">VLOOKUP works only on sorted data</button>
+      <div class="qexplain">VLOOKUP always searches the leftmost column of the range and can only return values to its right — it cannot look backward at Customer_ID once Segment is the search column.</div>
+    </div>
+
+    <div class="quiz" data-answer="B">
+      <div class="q-head">2. Why do analysts prefer INDEX &amp; MATCH over VLOOKUP in large production dashboards?</div>
+      <button class="qopt" data-v="A">INDEX &amp; MATCH supports only numeric data</button>
+      <button class="qopt" data-v="B">INDEX &amp; MATCH can look in any direction and does not break when columns shift</button>
+      <button class="qopt" data-v="C">INDEX &amp; MATCH is shorter than VLOOKUP</button>
+      <button class="qopt" data-v="D">INDEX &amp; MATCH automatically removes duplicates</button>
+      <div class="qexplain">INDEX &amp; MATCH supports left lookups, is more flexible, doesn't depend on a hardcoded column number, and survives column insertions or deletions.</div>
+    </div>
+
+    <div class="quiz" data-answer="B">
+      <div class="q-head">3. Which statements about XLOOKUP are correct? (1) can search left and right, (2) requires a hardcoded column index, (3) has built-in if_not_found error handling, (4) can replace most VLOOKUP/INDEX&amp;MATCH use cases.</div>
+      <button class="qopt" data-v="A">1, 2, 3</button>
+      <button class="qopt" data-v="B">1, 3, 4</button>
+      <button class="qopt" data-v="C">2, 3, 4</button>
+      <button class="qopt" data-v="D">1, 2, 4</button>
+      <div class="qexplain">XLOOKUP searches either direction (1) and has built-in if_not_found handling (3), and is a modern replacement for VLOOKUP and most INDEX &amp; MATCH cases (4) — but unlike VLOOKUP it does NOT need a hardcoded column index (2 is false).</div>
+    </div>
+
+    <div class="quiz" data-answer="A">
+      <div class="q-head">4. Why is ARRAYFORMULA considered more scalable than dragging formulas row by row?</div>
+      <button class="qopt" data-v="A">It automatically applies a formula across an entire range and includes future rows</button>
+      <button class="qopt" data-v="B">It only works for text columns</button>
+      <button class="qopt" data-v="C">It improves formatting and chart colors automatically</button>
+      <button class="qopt" data-v="D">It converts formulas into pivot tables</button>
+      <div class="qexplain">ARRAYFORMULA lets one formula process an entire column or range at once, dynamically expanding when new data is added — no dragging, no maintenance.</div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="next mono">Next lecture → Pivot Tables &amp; Dashboards</div>
+  </footer>
+
+</div>
+
+<script>
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// =====================================================================
+// Hero typewriter
+// =====================================================================
+const heroFormulas = ['=VLOOKUP(I2,$A$1:$H$20,4,FALSE)', '=INDEX(A2:A20,MATCH(G2,B2:B20,0))', '=XLOOKUP(H2,B:B,A:A,"Not found")'];
+let fIdx = 0, cIdx = 0, typingEl = document.getElementById('typedFormula');
+function typeLoop(){
+  const word = heroFormulas[fIdx];
+  if(cIdx <= word.length){ typingEl.textContent = word.slice(0,cIdx); cIdx++; setTimeout(typeLoop,42); }
+  else { setTimeout(()=>{ cIdx=0; fIdx=(fIdx+1)%heroFormulas.length; typeLoop(); }, 1500); }
+}
+typeLoop();
+
+// =====================================================================
+// Shared datasets
+// =====================================================================
+let orders = [
+  {date:'11/8/2016', id:'CA-2016-152156', customerId:'CG-12520', city:'Henderson',      region:'South', sales:731.94, qty:3},
+  {date:'12/6/2016', id:'CA-2016-138688', customerId:'DV-13045', city:'Los Angeles',    region:'West',  sales:14.62,  qty:2},
+  {date:'10/11/2015',id:'US-2015-108966', customerId:'SO-20335', city:'Fort Lauderdale',region:'South', sales:957.57, qty:5},
+  {date:'9/6/2014',  id:'CA-2014-115812', customerId:'BH-11710', city:'Los Angeles',    region:'West',  sales:48.86,  qty:7},
+  {date:'13/5/2014', id:'CA-2014-167164', customerId:'AA-10315', city:'Concord',        region:'South', sales:15.55, qty:2},
+  {date:'7/16/2017', id:'CA-2017-141077', customerId:'AA-10315', city:'Unknown',        region:'South', sales:2.52,  qty:1},
+  {date:'22/11/2015',id:'US-2015-118983', customerId:'HP-14815', city:'Fort Worth',     region:'Central',sales:2.54, qty:3},
+  {date:'11/11/2014',id:'CA-2014-105893', customerId:'PK-19075', city:'Madison',        region:'Central',sales:615.58,qty:2},
+  {date:'12/5/2014', id:'CA-2014-161389', customerId:'IM-15070', city:'New York City',  region:'East',  sales:21.05, qty:7},
+];
+
+let customers = [
+  {id:'CG-12520', name:'Claire Gute',     segment:'Consumer',    country:'United States', state:'Kentucky'},
+  {id:'DV-13045', name:'Darren Van Huff', segment:'Corporate',   country:'United States', state:'California'},
+  {id:'SO-20335', name:'Sean O\u2019Donnell', segment:'Consumer', country:'United States', state:'Florida'},
+  {id:'BH-11710', name:'Brian Holt',      segment:'Home Office', country:'United States', state:'California'},
+  {id:'AA-10315', name:'Alex Avila',      segment:'Consumer',    country:'United States', state:'North Carolina'},
+  {id:'HP-14815', name:'Harold Pawlan',   segment:'Home Office', country:'United States', state:'Texas'},
+  {id:'PK-19075', name:'Pete Kriz',       segment:'Home Office', country:'United States', state:'Wisconsin'},
+  {id:'IM-15070', name:'Irene Maddox',    segment:'Home Office', country:'United States', state:'New York'},
+];
+
+// =====================================================================
+// Render editable sheets
+// =====================================================================
+function renderOrdersTable(){
+  const body = document.getElementById('ordersBody');
+  body.innerHTML = orders.map((r,i) => `<tr data-idx="${i}">
+    <td contenteditable="true" data-field="date">${escapeHtml(r.date)}</td>
+    <td contenteditable="true" data-field="id">${escapeHtml(r.id)}</td>
+    <td contenteditable="true" data-field="customerId">${escapeHtml(r.customerId)}</td>
+    <td contenteditable="true" data-field="city">${escapeHtml(r.city)}</td>
+    <td contenteditable="true" data-field="region">${escapeHtml(r.region)}</td>
+    <td contenteditable="true" data-field="sales">${r.sales}</td>
+    <td contenteditable="true" data-field="qty">${r.qty}</td>
+  </tr>`).join('');
+  body.querySelectorAll('td[contenteditable]').forEach(td => {
+    td.addEventListener('blur', onOrderEdit);
+    td.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); td.blur(); } });
+  });
+  refreshAll();
+}
+function onOrderEdit(e){
+  const td = e.target, tr = td.closest('tr'), idx = parseInt(tr.dataset.idx,10), field = td.dataset.field;
+  let val = td.textContent.trim();
+  if(field==='sales' || field==='qty'){ const n = parseFloat(val.replace(/[^0-9.\-]/g,'')); val = isNaN(n)?0:n; }
+  orders[idx][field] = val;
+  renderOrdersTable();
+}
+document.getElementById('addOrderRow').addEventListener('click', () => {
+  orders.push({date:'1/1/2018', id:'NEW-ORDER-'+(orders.length+1), customerId:orders[0].customerId, city:'New City', region:'West', sales:100, qty:1});
+  renderOrdersTable();
+});
+
+function renderCustomerTable(){
+  const body = document.getElementById('customerBody');
+  body.innerHTML = customers.map((r,i) => `<tr data-idx="${i}">
+    <td contenteditable="true" data-field="id">${escapeHtml(r.id)}</td>
+    <td contenteditable="true" data-field="name">${escapeHtml(r.name)}</td>
+    <td contenteditable="true" data-field="segment">${escapeHtml(r.segment)}</td>
+    <td contenteditable="true" data-field="country">${escapeHtml(r.country)}</td>
+    <td contenteditable="true" data-field="state">${escapeHtml(r.state)}</td>
+  </tr>`).join('');
+  body.querySelectorAll('td[contenteditable]').forEach(td => {
+    td.addEventListener('blur', onCustomerEdit);
+    td.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); td.blur(); } });
+  });
+  refreshAll();
+}
+function onCustomerEdit(e){
+  const td = e.target, tr = td.closest('tr'), idx = parseInt(tr.dataset.idx,10), field = td.dataset.field;
+  customers[idx][field] = td.textContent.trim();
+  renderCustomerTable();
+}
+document.getElementById('addCustomerRow').addEventListener('click', () => {
+  customers.push({id:'NEW-CUST-'+(customers.length+1), name:'New Customer', segment:'Consumer', country:'United States', state:'Texas'});
+  renderCustomerTable();
+});
+
+// =====================================================================
+// VLOOKUP demo
+// =====================================================================
+const vlookupFields = ['date','id','customerId','city','region','sales','qty'];
+const vlookupColLetters = ['A','B','C','D','E','F','G'];
+function renderVlookup(){
+  const id = document.getElementById('vlookupId').value.trim();
+  const colIdx = parseInt(document.getElementById('vlookupCol').value, 10);
+  const colNum = colIdx + 1;
+  document.getElementById('vlookupFormulaLabel').textContent = `=VLOOKUP("${id}", Orders_Info!A2:G, ${colNum}, FALSE)`;
+  const row = orders.find(r => r.id === id);
+  const out = document.getElementById('vlookupResult');
+  if(!row){ out.textContent = '#N/A'; out.classList.add('err'); return; }
+  out.classList.remove('err');
+  out.textContent = row[vlookupFields[colIdx]];
+}
+
+// =====================================================================
+// IFERROR demo
+// =====================================================================
+function renderIferror(){
+  const id = document.getElementById('iferrorId').value.trim();
+  const row = orders.find(r => r.id === id);
+  const without = document.getElementById('withoutIferror');
+  const withEl = document.getElementById('withIferror');
+  if(!row){
+    without.textContent = '#N/A'; without.classList.add('err');
+    withEl.textContent = 'Order ID not found'; withEl.classList.remove('err'); withEl.style.color = 'var(--sheet-green-dark)';
+  } else {
+    without.textContent = row.city; without.classList.remove('err');
+    withEl.textContent = row.city; withEl.style.color = 'var(--ink)';
+  }
+}
+
+// =====================================================================
+// Cross-sheet VLOOKUP + segment report
+// =====================================================================
+function renderCross(){
+  const id = document.getElementById('crossId').value.trim();
+  const cust = customers.find(c => c.id === id);
+  const out = document.getElementById('crossResult');
+  if(!cust){ out.textContent = '#N/A'; out.classList.add('err'); }
+  else { out.classList.remove('err'); out.textContent = cust.segment; }
+
+  // joined segment per order, then sumif
+  const joined = orders.map(o => {
+    const c = customers.find(c => c.id === o.customerId);
+    return {sales:o.sales, segment: c ? c.segment : 'Unknown'};
+  });
+  const segments = [...new Set(joined.map(j=>j.segment))];
+  const rows = segments.map(seg => {
+    const total = joined.filter(j=>j.segment===seg).reduce((a,j)=>a+j.sales,0);
+    return `<tr><td>${escapeHtml(seg)}</td><td class="mono" style="font-weight:700;">₹${total.toFixed(2)}</td></tr>`;
+  }).join('');
+  document.getElementById('segmentReportBody').innerHTML =
+    `<thead><tr><th>Segment</th><th>Total Sales</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+// =====================================================================
+// INDEX & MATCH demo
+// =====================================================================
+function renderIndexMatch(){
+  const id = document.getElementById('imId').value.trim();
+  const idx = orders.findIndex(r => r.id === id);
+  document.getElementById('matchFormulaLabel').textContent = `=MATCH("${id}", Orders_Info!B2:B, 0)`;
+  document.getElementById('indexFormulaLabel').textContent = `=INDEX(Orders_Info!A2:A, MATCH("${id}", Orders_Info!B2:B, 0))`;
+  const matchOut = document.getElementById('matchResult');
+  const indexOut = document.getElementById('indexResult');
+  if(idx === -1){
+    matchOut.textContent = '#N/A'; matchOut.classList.add('err');
+    indexOut.textContent = '#N/A'; indexOut.classList.add('err');
+    return;
+  }
+  matchOut.classList.remove('err'); indexOut.classList.remove('err');
+  matchOut.textContent = 'row ' + (idx + 2) + ' (position ' + (idx + 1) + ' in range)';
+  indexOut.textContent = orders[idx].date;
+}
+
+// =====================================================================
+// XLOOKUP demo
+// =====================================================================
+function renderXlookup(){
+  const id = document.getElementById('xlookupId').value.trim();
+  const row = orders.find(r => r.id === id);
+  const dateOut = document.getElementById('xlookupDate');
+  const salesOut = document.getElementById('xlookupSales');
+  if(!row){
+    dateOut.textContent = 'Order ID not found'; dateOut.classList.remove('err'); dateOut.style.color = 'var(--sheet-green-dark)';
+    salesOut.textContent = 'Order ID not found'; salesOut.classList.remove('err'); salesOut.style.color = 'var(--sheet-green-dark)';
+    return;
+  }
+  dateOut.style.color = 'var(--ink)'; salesOut.style.color = 'var(--ink)';
+  dateOut.textContent = row.date;
+  salesOut.textContent = row.sales;
+}
+
+// =====================================================================
+// UNIQUE + FILTER demo
+// =====================================================================
+function populateRegionSelect(){
+  const regions = [...new Set(orders.map(o=>o.region))];
+  const sel = document.getElementById('filterRegion');
+  const current = sel.value;
+  sel.innerHTML = regions.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+  if(regions.includes(current)) sel.value = current;
+}
+function renderFilter(){
+  const region = document.getElementById('filterRegion').value;
+  document.getElementById('filterFormulaLabel').textContent = `=UNIQUE(FILTER(Orders_Info!C2:C, Orders_Info!E2:E="${region}"))`;
+  const matches = orders.filter(o => o.region === region).map(o => o.customerId);
+  const unique = [...new Set(matches)];
+  document.getElementById('filterResultList').innerHTML = unique.length
+    ? unique.map(id => `<div>${escapeHtml(id)}</div>`).join('')
+    : '<span style="color:var(--ink-soft); font-family:Inter,sans-serif; font-size:13px;">No matching rows</span>';
+}
+
+// =====================================================================
+// ARRAYFORMULA demo
+// =====================================================================
+let arrayMode = true; // true = arrayformula, false = row-by-row
+function renderRevenue(){
+  const body = document.getElementById('revenueBody');
+  const head = document.getElementById('revenueHead');
+  head.textContent = arrayMode ? 'Revenue (one formula)' : 'Revenue (dragged)';
+  body.innerHTML = orders.map((r,i) => {
+    const formula = arrayMode
+      ? (i===0 ? '=ARRAYFORMULA(F2:F*G2:G)' : '')
+      : `=F${i+2}*G${i+2}`;
+    return `<tr><td>${escapeHtml(r.id)}</td><td>${r.sales}</td><td>${r.qty}</td><td class="mono">${(r.sales*r.qty).toFixed(2)} <span style="color:var(--ink-soft); font-size:11px;">${formula}</span></td></tr>`;
+  }).join('');
+  const impact = document.getElementById('arrayImpact');
+  if(arrayMode){
+    impact.className = 'impact green';
+    impact.innerHTML = '<b>Scalable:</b> one formula in the first cell covers every row. Add a new order row above and Revenue appears instantly — no dragging.';
+  } else {
+    impact.className = 'impact red';
+    impact.innerHTML = '<b>Not scalable:</b> every row needs its own formula. Add a new order row above and its Revenue cell stays blank until someone drags the formula down again.';
+  }
+}
+document.getElementById('modeArray').addEventListener('click', () => {
+  arrayMode = true;
+  document.getElementById('modeArray').classList.add('active');
+  document.getElementById('modeRowByRow').classList.remove('active');
+  renderRevenue();
+});
+document.getElementById('modeRowByRow').addEventListener('click', () => {
+  arrayMode = false;
+  document.getElementById('modeRowByRow').classList.add('active');
+  document.getElementById('modeArray').classList.remove('active');
+  renderRevenue();
+});
+
+// =====================================================================
+// Datalists + master refresh
+// =====================================================================
+function populateDatalists(){
+  const orderOptions = orders.map(o => `<option value="${escapeHtml(o.id)}">`).join('');
+  document.getElementById('orderIdOptions').innerHTML = orderOptions;
+  document.getElementById('orderIdOptions2').innerHTML = orderOptions;
+  document.getElementById('orderIdOptions3').innerHTML = orderOptions;
+  document.getElementById('customerIdOptions').innerHTML = customers.map(c => `<option value="${escapeHtml(c.id)}">`).join('');
+}
+
+function refreshAll(){
+  populateDatalists();
+  populateRegionSelect();
+  renderVlookup();
+  renderIferror();
+  renderCross();
+  renderIndexMatch();
+  renderXlookup();
+  renderFilter();
+  renderRevenue();
+}
+
+['vlookupId','vlookupCol'].forEach(id => { document.getElementById(id).addEventListener('input', renderVlookup); document.getElementById(id).addEventListener('change', renderVlookup); });
+document.getElementById('iferrorId').addEventListener('input', renderIferror);
+document.getElementById('crossId').addEventListener('input', renderCross);
+document.getElementById('imId').addEventListener('input', renderIndexMatch);
+document.getElementById('xlookupId').addEventListener('input', renderXlookup);
+document.getElementById('filterRegion').addEventListener('change', renderFilter);
+
+// =====================================================================
+// Init
+// =====================================================================
+renderOrdersTable();
+renderCustomerTable();
+document.getElementById('vlookupId').value = orders[0].id;
+document.getElementById('crossId').value = orders[0].customerId;
+document.getElementById('imId').value = orders[0].id;
+document.getElementById('xlookupId').value = orders[0].id;
+refreshAll();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Excel-3-postread" target="_blank" rel="noopener">github.com/scaler-content/Excel-3-postread</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

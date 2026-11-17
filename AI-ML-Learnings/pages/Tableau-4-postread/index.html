@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Table Calculations &amp; Analytics — Tableau 4</title>
+<style>
+  :root{
+    --canvas:#F2F2F0;
+    --surface:#FFFFFF;
+    --surface-alt:#ECEDEB;
+    --ink:#22282F;
+    --ink-soft:#5B6470;
+    --ink-faint:#8992A0;
+    --border:#DBDCD8;
+    --border-strong:#C6C8C3;
+    --blue:#1F77B4;
+    --blue-dark:#12507D;
+    --blue-tint:#E4F0F9;
+    --green:#59A14F;
+    --green-dark:#3D7536;
+    --green-tint:#E7F3E5;
+    --orange:#E8762C;
+    --orange-dark:#B85A1C;
+    --orange-tint:#FCE9DB;
+    --navy:#16232F;
+    --navy-soft:#20313F;
+    --t1:#4E79A7; --t2:#F28E2B; --t3:#E15759; --t4:#76B7B2; --t5:#59A14F;
+    --t6:#EDC948; --t7:#B07AA1; --t8:#FF9DA7; --t9:#9C755F; --t10:#BAB0AC;
+    --radius:6px;
+    --shadow:0 1px 2px rgba(20,25,30,.06), 0 4px 14px rgba(20,25,30,.05);
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:.01ms !important; transition-duration:.01ms !important;}
+  }
+  body{
+    margin:0;
+    font-family:var(--sans);
+    background:var(--canvas);
+    color:var(--ink);
+    line-height:1.55;
+    padding-bottom:64px;
+  }
+  h1,h2,h3,h4{font-family:var(--sans); font-weight:700; letter-spacing:-.01em; color:var(--ink); margin:0 0 .4em;}
+  p{margin:0 0 1em; color:var(--ink-soft);}
+  a{color:var(--blue-dark);}
+  code, .code{font-family:var(--mono); font-size:.88em; background:var(--surface-alt); border:1px solid var(--border); border-radius:4px; padding:.1em .4em;}
+
+  /* ============ Tableau chrome ============ */
+  .tb-menu{
+    background:var(--navy);
+    color:#B9C2CC;
+    font-size:12px;
+    display:flex; align-items:center; gap:18px;
+    padding:5px 16px;
+    border-bottom:1px solid #0D151C;
+    overflow-x:auto;
+    white-space:nowrap;
+  }
+  .tb-menu .brand{
+    display:flex; align-items:center; gap:6px;
+    color:#fff; font-weight:700; margin-right:12px;
+  }
+  .brand-mark{display:flex; gap:2px; align-items:flex-end;}
+  .brand-mark span{width:3px; display:inline-block; background:var(--orange); border-radius:1px;}
+  .brand-mark span:nth-child(1){height:8px; background:var(--t1);}
+  .brand-mark span:nth-child(2){height:13px; background:var(--t2);}
+  .brand-mark span:nth-child(3){height:6px; background:var(--t3);}
+  .brand-mark span:nth-child(4){height:11px; background:var(--t5);}
+  .brand-mark span:nth-child(5){height:9px; background:var(--t7);}
+  .tb-menu span.item{opacity:.85;}
+  .tb-toolbar{
+    background:#2B3B49;
+    border-bottom:1px solid #17222C;
+    display:flex; align-items:center; gap:10px;
+    padding:6px 16px;
+    overflow-x:auto;
+  }
+  .tb-toolbar .ic{
+    width:26px; height:22px; border-radius:3px;
+    display:flex; align-items:center; justify-content:center;
+    color:#CBD4DC; font-size:12px; flex:0 0 auto;
+    border:1px solid transparent;
+  }
+  .tb-toolbar .ic:hover{background:#3A4E5E; border-color:#4A6072;}
+  .tb-toolbar .sep{width:1px; height:18px; background:#425468; flex:0 0 auto;}
+
+  .titlebar{
+    background:var(--surface);
+    border-bottom:1px solid var(--border-strong);
+    padding:18px 24px 16px;
+  }
+  .titlebar-inner{max-width:1040px; margin:0 auto;}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--orange-dark); background:var(--orange-tint);
+    padding:3px 9px; border-radius:20px; margin-bottom:10px;
+  }
+  .titlebar h1{font-size:clamp(24px,4vw,34px); line-height:1.15; margin-bottom:6px;}
+  .titlebar .sub{color:var(--ink-soft); font-size:15px; max-width:640px; margin:0;}
+  .dataset-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--ink-soft); margin-top:12px;
+    border:1px solid var(--border-strong); background:var(--surface-alt);
+    padding:4px 10px 4px 6px; border-radius:20px;
+  }
+  .dataset-chip .dot{width:8px; height:8px; border-radius:50%; background:var(--blue);}
+
+  main{max-width:1040px; margin:0 auto; padding:0 24px;}
+  section{padding:44px 0; border-bottom:1px dashed var(--border-strong); scroll-margin-top:16px;}
+  section:last-of-type{border-bottom:none;}
+  section .kicker{
+    font-size:12px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--blue-dark);
+    margin-bottom:6px; display:flex; align-items:center; gap:8px;
+  }
+  section .kicker .num{
+    background:var(--blue); color:#fff; width:20px; height:20px; border-radius:4px;
+    display:inline-flex; align-items:center; justify-content:center; font-size:11px;
+  }
+  section h2{font-size:clamp(20px,3vw,26px);}
+  section > .lede{font-size:15.5px; max-width:720px;}
+
+  /* ============ Shelf / pill motif (signature element) ============ */
+  .shelf{
+    display:flex; flex-wrap:wrap; gap:10px 8px; align-items:center;
+    background:var(--surface-alt); border:1px solid var(--border);
+    border-radius:var(--radius); padding:9px 12px; margin:14px 0 20px;
+  }
+  .shelf .shelf-label{font-size:11px; font-weight:700; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em; margin-right:2px;}
+  .pill{
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:12.5px; font-weight:600; color:#fff;
+    padding:4px 10px 4px 8px; border-radius:16px; white-space:nowrap;
+    box-shadow:0 1px 1px rgba(0,0,0,.08) inset, 0 1px 2px rgba(0,0,0,.12);
+  }
+  .pill::before{content:""; width:8px; height:8px; border-radius:2px; background:rgba(255,255,255,.85); flex:0 0 auto;}
+  .pill.dim{background:var(--blue);}
+  .pill.dim::before{border-radius:50%;}
+  .pill.mea{background:var(--green);}
+  .pill.mea::before{border-radius:2px;}
+  .pill-key{display:flex; gap:16px; font-size:12px; color:var(--ink-faint); align-items:center; flex-wrap:wrap; margin-top:6px;}
+  .pill-key .k{display:inline-flex; align-items:center; gap:5px;}
+  .pill-key .sw{width:9px; height:9px; display:inline-block;}
+  .pill-key .sw.dim{background:var(--blue); border-radius:50%;}
+  .pill-key .sw.mea{background:var(--green); border-radius:2px;}
+
+  /* ============ Cards / grids ============ */
+  .card{
+    background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:20px;
+  }
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+  .grid-4{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+  @media (max-width:760px){
+    .grid-2, .grid-3, .grid-4{grid-template-columns:1fr;}
+  }
+
+  .callout{
+    border-left:3px solid var(--orange); background:var(--orange-tint);
+    border-radius:0 var(--radius) var(--radius) 0; padding:14px 16px; margin:18px 0;
+    font-size:14.5px; color:#5C3E22;
+  }
+  .callout strong{color:#8A4A16;}
+  .callout.blue{border-left-color:var(--blue); background:var(--blue-tint); color:#1E3E56;}
+  .callout.blue strong{color:var(--blue-dark);}
+  .callout.green{border-left-color:var(--green); background:var(--green-tint); color:#2E4B29;}
+
+  .analogy{
+    display:flex; gap:16px; align-items:flex-start;
+    background:linear-gradient(135deg,#fff, var(--blue-tint) 140%);
+    border:1px solid var(--border-strong); border-radius:var(--radius);
+    padding:18px; margin:18px 0;
+  }
+  .analogy .ic{font-size:26px; flex:0 0 auto;}
+  .analogy p{margin:0; color:var(--ink); font-size:14.5px;}
+
+  /* ============ Worksheet frame wrapper for widgets ============ */
+  .worksheet{
+    background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius);
+    box-shadow:var(--shadow); overflow:hidden; margin:18px 0;
+  }
+  .worksheet-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    background:var(--surface-alt); border-bottom:1px solid var(--border);
+    padding:9px 14px;
+  }
+  .worksheet-head .name{font-size:12.5px; font-weight:700; color:var(--ink-soft); display:flex; align-items:center; gap:7px;}
+  .worksheet-head .name .sheet-ic{width:14px;height:14px;border-radius:2px;background:var(--blue);display:inline-block;}
+  .worksheet-body{padding:18px;}
+  select.control, button.ctl-btn{
+    font-family:var(--sans); font-size:12.5px; border:1px solid var(--border-strong);
+    background:#fff; color:var(--ink); border-radius:4px; padding:6px 10px; cursor:pointer;
+  }
+  select.control:focus, button.ctl-btn:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible{
+    outline:2px solid var(--orange); outline-offset:2px;
+  }
+  .toggle-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .toggle-row button{
+    font-family:var(--sans); font-size:12.5px; font-weight:600; cursor:pointer;
+    border:1px solid var(--border-strong); background:#fff; color:var(--ink-soft);
+    padding:7px 14px; border-radius:20px; transition:background .15s, color .15s, border-color .15s;
+  }
+  .toggle-row button.active{background:var(--blue); border-color:var(--blue); color:#fff;}
+  .toggle-row button:hover:not(.active){border-color:var(--blue); color:var(--blue-dark);}
+
+  /* index grid */
+  .grid-scroll{overflow:auto; max-height:420px; border:1px solid var(--border); border-radius:4px;}
+  table.idxtable{border-collapse:collapse; font-size:11.5px; min-width:100%;}
+  table.idxtable th, table.idxtable td{
+    border:1px solid var(--border); padding:4px 6px; text-align:center; white-space:nowrap;
+  }
+  table.idxtable thead th{position:sticky; top:0; background:var(--surface-alt); z-index:2; font-weight:700; color:var(--ink-soft);}
+  table.idxtable thead tr.regions th{background:#E1E7EC; color:var(--blue-dark);}
+  table.idxtable tbody th{position:sticky; left:0; background:var(--surface-alt); z-index:1; font-weight:700; color:var(--ink-soft);}
+  table.idxtable tbody th.yr{left:0; min-width:44px;}
+  table.idxtable tbody th.qr{left:44px; min-width:36px;}
+  table.idxtable td{cursor:default; color:var(--ink); font-variant-numeric:tabular-nums;}
+  table.idxtable td.pane-edge{border-left:2px solid var(--blue-dark);}
+  table.idxtable td:hover{background:var(--orange-tint); outline:1px solid var(--orange);}
+  .idx-info{
+    margin-top:10px; font-size:12.5px; color:var(--ink-soft);
+    background:var(--surface-alt); border:1px solid var(--border); border-radius:4px; padding:8px 12px;
+    min-height:36px; display:flex; align-items:center;
+  }
+  .idx-info b{color:var(--ink);}
+
+  /* data table */
+  table.datatable{border-collapse:collapse; width:100%; font-size:13px;}
+  table.datatable th, table.datatable td{border:1px solid var(--border); padding:6px 9px; text-align:right;}
+  table.datatable th{background:var(--surface-alt); font-weight:700; color:var(--ink-soft); text-align:center;}
+  table.datatable td.rowlabel, table.datatable th.rowlabel{text-align:left; font-weight:600; color:var(--ink);}
+  table.datatable td.qlabel{background:var(--blue-tint); font-weight:700; color:var(--blue-dark); text-align:center; writing-mode:vertical-rl; transform:rotate(180deg);}
+  table.datatable tbody tr:hover td{background:#FAFAF8;}
+  table.datatable td.hi{background:var(--orange-tint); font-weight:700; color:var(--orange-dark); position:relative;}
+  table.datatable td.hi::after{content:"★"; font-size:10px; margin-left:4px;}
+  .scroll-x{overflow-x:auto;}
+
+  .insight-box{
+    margin-top:14px; display:flex; gap:10px; align-items:flex-start;
+    background:var(--green-tint); border:1px solid #BFE0BA; border-radius:4px; padding:10px 14px;
+    font-size:13.5px; color:#2E4B29;
+  }
+
+  /* calc type cards */
+  .type-group{margin-bottom:22px;}
+  .type-group-title{
+    font-size:12px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+    color:#fff; display:inline-block; padding:4px 10px; border-radius:4px; margin-bottom:10px;
+  }
+  .tg-comparison{background:var(--t1);}
+  .tg-percentage{background:var(--orange);}
+  .tg-ranking{background:var(--green-dark);}
+  .tg-aggregation{background:var(--t7);}
+  .type-card{
+    border:1px solid var(--border-strong); border-radius:var(--radius); background:var(--surface);
+    padding:14px; cursor:pointer; box-shadow:var(--shadow);
+  }
+  .type-card h4{font-size:14.5px; margin-bottom:4px;}
+  .type-card p{font-size:12.8px; margin-bottom:10px;}
+  .type-card .mini{display:none; font-size:11.5px;}
+  .type-card.open .mini{display:block;}
+  .type-card .expand-hint{font-size:11px; color:var(--blue-dark); font-weight:700;}
+  table.mini{border-collapse:collapse; width:100%; margin-top:6px;}
+  table.mini th, table.mini td{border:1px solid var(--border); padding:3px 6px; text-align:center;}
+  table.mini th{background:var(--surface-alt);}
+
+  /* knowledge check */
+  .quiz{
+    background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:20px; margin-top:22px;
+  }
+  .quiz .qtag{
+    font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--blue-dark);
+    background:var(--blue-tint); display:inline-block; padding:3px 9px; border-radius:20px; margin-bottom:10px;
+  }
+  .quiz h4{font-size:15.5px; margin-bottom:12px;}
+  .quiz .opts{display:flex; flex-direction:column; gap:8px;}
+  .quiz .opt{
+    text-align:left; font-family:var(--sans); font-size:13.5px;
+    border:1px solid var(--border-strong); background:#fff; border-radius:4px;
+    padding:10px 12px; cursor:pointer; color:var(--ink);
+  }
+  .quiz .opt:hover{border-color:var(--blue);}
+  .quiz .opt.correct{border-color:var(--green-dark); background:var(--green-tint); font-weight:600;}
+  .quiz .opt.incorrect{border-color:#C6403F; background:#FBEAEA;}
+  .quiz .explain{
+    margin-top:12px; font-size:13.5px; background:var(--surface-alt); border-radius:4px; padding:10px 12px;
+    display:none; color:var(--ink-soft); border-left:3px solid var(--green-dark);
+  }
+  .quiz .explain.show{display:block;}
+
+  /* index vs rank */
+  .avr-cards{display:flex; gap:16px; flex-wrap:wrap;}
+  .avr-card{flex:1 1 240px; border:1px solid var(--border-strong); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow);}
+  .avr-card h4{font-size:14px; display:flex; align-items:center; gap:8px;}
+  .avr-card .tagdot{width:10px; height:10px; border-radius:50%;}
+  .avr-card.idx .tagdot{background:var(--blue);}
+  .avr-card.rnk .tagdot{background:var(--orange);}
+  .avr-card ul{margin:8px 0 0; padding-left:18px; font-size:12.8px; color:var(--ink-soft);}
+  .avr-card li{margin-bottom:4px;}
+
+  /* tie demo */
+  .tie-values{display:flex; gap:8px; margin:12px 0; flex-wrap:wrap;}
+  .tie-val{
+    background:var(--surface-alt); border:1px solid var(--border-strong); border-radius:4px;
+    padding:6px 10px; font-family:var(--mono); font-size:13px; min-width:56px; text-align:center;
+  }
+  .tie-rank{display:block; font-size:10.5px; color:var(--orange-dark); font-weight:700; margin-top:3px;}
+
+  /* tooltip demo */
+  .tt-wrap{display:flex; gap:14px; flex-wrap:wrap;}
+  .tt-state{
+    position:relative; border:1px solid var(--border-strong); border-radius:var(--radius);
+    background:var(--surface); padding:14px 18px; cursor:pointer; text-align:left; font-family:var(--sans);
+    box-shadow:var(--shadow); min-width:150px;
+  }
+  .tt-state:hover, .tt-state:focus-visible{border-color:var(--blue);}
+  .tt-state .st-name{font-weight:700; font-size:14px;}
+  .tt-state .st-profit{font-size:12.5px; margin-top:2px;}
+  .tt-state .st-profit.neg{color:#C6403F;}
+  .tt-state .st-profit.pos{color:var(--green-dark);}
+  .tt-popover{
+    display:none; position:absolute; z-index:20; top:calc(100% + 8px); left:0;
+    width:230px; background:#fff; border:1px solid var(--border-strong); border-radius:6px;
+    box-shadow:0 8px 24px rgba(0,0,0,.16); padding:12px;
+  }
+  .tt-state.open .tt-popover{display:block;}
+  .tt-popover .tp-title{font-size:11.5px; font-weight:700; color:var(--ink-faint); text-transform:uppercase; margin-bottom:8px;}
+  .tt-bar-row{display:flex; align-items:center; gap:6px; margin-bottom:5px; font-size:11px;}
+  .tt-bar-row .lbl{width:78px; flex:0 0 auto; color:var(--ink-soft);}
+  .tt-bar-row .bar-track{flex:1; background:var(--surface-alt); height:8px; border-radius:4px; overflow:hidden;}
+  .tt-bar-row .bar-fill{height:100%; background:var(--t1); border-radius:4px;}
+  .tt-note{font-size:10.5px; color:var(--ink-faint); margin-top:8px; font-style:italic;}
+
+  /* reference line widget */
+  .refline-wrap{display:flex; gap:26px; flex-wrap:wrap; align-items:flex-end;}
+  .refline-chart{
+    position:relative; width:140px; height:320px; background:var(--surface-alt);
+    border:1px solid var(--border); border-radius:4px 4px 0 0; flex:0 0 auto;
+  }
+  .refline-bar{position:absolute; bottom:0; left:20px; width:60px; background:var(--blue); border-radius:2px 2px 0 0;}
+  .refline-line{position:absolute; left:0; right:0; border-top:2px dashed var(--orange);}
+  .refline-line .tag{
+    position:absolute; right:4px; top:-18px; background:var(--orange); color:#fff; font-size:10.5px;
+    font-weight:700; padding:2px 6px; border-radius:3px; white-space:nowrap;
+  }
+  .refline-controls{flex:1 1 260px; min-width:240px;}
+  .refline-controls label{font-size:12.5px; font-weight:700; color:var(--ink-soft); display:block; margin-bottom:6px;}
+  .refline-controls input[type=range]{width:100%; accent-color:var(--orange);}
+  .refline-readout{display:flex; gap:14px; margin-top:14px; flex-wrap:wrap;}
+  .refline-readout .box{
+    background:var(--surface); border:1px solid var(--border-strong); border-radius:4px; padding:10px 14px; flex:1 1 130px;
+  }
+  .refline-readout .box .lab{font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.05em;}
+  .refline-readout .box .val{font-size:17px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
+  .refline-readout .box.sales .val{color:var(--blue-dark);}
+  .refline-readout .box.target .val{color:var(--orange-dark);}
+
+  /* trend line */
+  .trend-wrap{display:flex; gap:20px; flex-wrap:wrap;}
+  .trend-chart{flex:1 1 320px; min-width:280px;}
+  .trend-info{flex:1 1 260px; min-width:240px;}
+  .trend-info h4{font-size:14.5px; margin-bottom:6px; color:var(--orange-dark);}
+  .describe-panel{
+    background:var(--navy); color:#D9E2E9; border-radius:6px; padding:14px 16px; font-family:var(--mono);
+    font-size:11.5px; margin-top:14px; line-height:1.7;
+  }
+  .describe-panel .dp-title{font-family:var(--sans); font-weight:700; color:#fff; font-size:12.5px; margin-bottom:6px;}
+  .describe-panel .dp-row{display:flex; justify-content:space-between; gap:10px;}
+  .describe-panel .dp-row span:first-child{color:#8FA3B3;}
+
+  /* comparison table */
+  table.cmp{border-collapse:collapse; width:100%; font-size:13px;}
+  table.cmp th, table.cmp td{border:1px solid var(--border); padding:9px 12px; vertical-align:top; text-align:left;}
+  table.cmp thead th{background:var(--navy); color:#fff; font-size:12px; text-transform:uppercase; letter-spacing:.04em;}
+  table.cmp td.aspect{font-weight:700; background:var(--surface-alt); white-space:nowrap; color:var(--ink);}
+  table.cmp tbody tr:nth-child(even) td:not(.aspect){background:#FAFAF8;}
+
+  /* summary */
+  .takeaway-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px;}
+  .takeaway-list li{
+    display:flex; gap:12px; align-items:flex-start; background:var(--surface);
+    border:1px solid var(--border-strong); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow);
+  }
+  .takeaway-list .q{font-weight:700; color:var(--blue-dark); font-size:13.5px; flex:0 0 42%;}
+  .takeaway-list .a{font-size:13.5px; color:var(--ink-soft);}
+  @media (max-width:700px){ .takeaway-list li{flex-direction:column;} .takeaway-list .q{flex:none;} }
+
+  /* sheet tabs (bottom nav) */
+  .sheet-tabs{
+    position:fixed; bottom:0; left:0; right:0; z-index:50;
+    background:#DCDEDA; border-top:1px solid var(--border-strong);
+    display:flex; align-items:stretch; overflow-x:auto;
+    box-shadow:0 -2px 10px rgba(0,0,0,.08);
+  }
+  .sheet-tabs button{
+    font-family:var(--sans); font-size:11.5px; font-weight:600; color:var(--ink-soft);
+    background:#CBCDC8; border:none; border-right:1px solid var(--border-strong);
+    padding:9px 14px; cursor:pointer; white-space:nowrap; flex:0 0 auto;
+    display:flex; align-items:center; gap:6px;
+  }
+  .sheet-tabs button .dot{width:6px; height:6px; border-radius:50%; background:var(--ink-faint); flex:0 0 auto;}
+  .sheet-tabs button.active{background:var(--surface); color:var(--ink); border-bottom:2px solid var(--orange);}
+  .sheet-tabs button.active .dot{background:var(--orange);}
+  .sheet-tabs button:hover{background:#F0F1EE;}
+  .sheet-tabs .addtab{padding:9px 12px; color:var(--ink-faint); flex:0 0 auto; display:flex; align-items:center;}
+
+  footer.endcap{max-width:1040px; margin:0 auto; padding:30px 24px 70px; text-align:center; color:var(--ink-faint); font-size:12.5px;}
+
+  /* fade-in on scroll */
+  .fade-up{opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease;}
+  .fade-up.in{opacity:1; transform:translateY(0);}
+
+  .fig-caption{font-size:11.5px; color:var(--ink-faint); margin-top:8px; text-align:center;}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· Tableau 4 · Table calculations and analytics</span><span class="pn"><a href="../Tableau-3-postread/" title="Tableau 3 · Level of detail">← Prev</a><a href="../Tableau-5-postread/" title="Tableau 5 · Joins, relationships and blends">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="tb-menu" role="presentation" aria-hidden="true">
+  <span class="brand"><span class="brand-mark"><span></span><span></span><span></span><span></span><span></span></span> Tableau Desktop</span>
+  <span class="item">File</span><span class="item">Data</span><span class="item">Worksheet</span><span class="item">Dashboard</span>
+  <span class="item">Story</span><span class="item">Analysis</span><span class="item">Map</span><span class="item">Format</span>
+  <span class="item">Server</span><span class="item">Window</span><span class="item">Help</span>
+</div>
+<div class="tb-toolbar" role="presentation" aria-hidden="true">
+  <span class="ic">◂</span><span class="ic">▸</span><span class="ic">⤓</span><span class="sep"></span>
+  <span class="ic">▦</span><span class="ic">▤</span><span class="ic">▥</span><span class="sep"></span>
+  <span class="ic">Σ</span><span class="ic">⚑</span><span class="ic">✎</span><span class="sep"></span>
+  <span class="ic">Standard ▾</span>
+</div>
+
+<div class="titlebar">
+  <div class="titlebar-inner">
+    <span class="eyebrow">Tableau · Session 4</span>
+    <h1>Table Calculations &amp; Analytics</h1>
+    <p class="sub">How to reshape a finished view — percentages, rankings, running totals — without ever going back to the data source. Plus tooltips, reference lines, and trend lines that turn a chart into a decision-making tool.</p>
+    <div class="dataset-chip"><span class="dot"></span> Working dataset: <strong>Sample Superstore</strong></div>
+  </div>
+</div>
+
+<main>
+
+<!-- ============ INTRO ============ -->
+<section id="intro">
+  <div class="kicker"><span class="num">1</span>Why this matters</div>
+  <h2>The view is already built. Now what?</h2>
+  <p class="lede">In the last session, LOD expressions let you tell Tableau to compute something at a different grain <em>before</em> the view was drawn — down in the data itself. This session solves a different problem: reshaping numbers that are <em>already on the screen</em>.</p>
+
+  <div class="analogy fade-up">
+    <div class="ic">◆</div>
+    <p>Picture a retail analyst presenting a clean bar chart — Sales by Quarter by Region — to her leadership team. The response: "Show me each quarter as a percent of the year, rank the quarters best to worst, and give me a running total." She re-imports the data and rebuilds the whole view. It takes two hours. Every one of those requests could have been answered in under a minute, without touching the data source — because none of them change <em>what</em> is being measured, only <em>how</em> the numbers already in the view are read.</p>
+  </div>
+
+  <p>The tool for that job is the <strong>table calculation</strong>. This article covers how table calculations work, the eight built-in calculation types, the difference between Index and Rank, and three features that make a finished view easier to read and act on: tooltips, reference lines, and trend lines.</p>
+</section>
+
+<!-- ============ CONCEPT ============ -->
+<section id="concept">
+  <div class="kicker"><span class="num">2</span>Core concept</div>
+  <h2>Table calculation vs. calculated field: it's about timing</h2>
+  <p class="lede">Both create new numbers. The difference is <em>when</em> Tableau does the math.</p>
+
+  <div class="grid-2">
+    <div class="card fade-up">
+      <h4 style="color:var(--blue-dark)">▪ Calculated field — cooked in the kitchen</h4>
+      <p>A calculated field like <code>Profit Ratio = SUM([Profit]) / SUM([Sales])</code> is computed at the data level, row by row, before the visualization is drawn. It behaves exactly like any other field in the data source.</p>
+    </div>
+    <div class="card fade-up">
+      <h4 style="color:var(--orange-dark)">▫ Table calculation — seasoned at the table</h4>
+      <p>Tableau builds the view first — say, Sales by Month — and only <em>then</em> applies the table calculation on top of the values already showing on screen. You're adjusting what's already been served, not returning to the kitchen.</p>
+    </div>
+  </div>
+
+  <div class="callout blue fade-up">
+    <strong>Rule of thumb:</strong> if the calculation needs to know about values already displayed elsewhere in the view (a total, a previous row, a rank among the visible marks), it's a table calculation. If it only needs the data source, it's a calculated field.
+  </div>
+</section>
+
+<!-- ============ SCOPE & DIRECTION ============ -->
+<section id="scope-direction">
+  <div class="kicker"><span class="num">3</span>The mechanics</div>
+  <h2>Scope and direction: how table calculations move</h2>
+  <p class="lede">Every table calculation needs two settings for each dimension in the view: is this dimension part of the <strong>scope</strong> (the boundary the calculation resets at) or the <strong>direction</strong> (the path it steps through)? There's no third option — every dimension gets assigned to one or the other.</p>
+
+  <div class="grid-2">
+    <div class="card fade-up">
+      <h4>Scope (partitioning) — <span style="color:var(--ink-soft);font-weight:400;">where does it calculate?</span></h4>
+      <ul style="margin:8px 0 0;padding-left:18px;font-size:13.5px;color:var(--ink-soft);">
+        <li><strong>Table</strong> — the entire visualization is one group.</li>
+        <li><strong>Pane</strong> — a sub-section of the view (e.g. one Region's block of columns) is its own group.</li>
+        <li><strong>Cell</strong> — a single mark; the calculation never looks beyond it.</li>
+      </ul>
+    </div>
+    <div class="card fade-up">
+      <h4>Direction (addressing) — <span style="color:var(--ink-soft);font-weight:400;">in what order?</span></h4>
+      <ul style="margin:8px 0 0;padding-left:18px;font-size:13.5px;color:var(--ink-soft);">
+        <li><strong>Down</strong> — top to bottom within each column.</li>
+        <li><strong>Across</strong> — left to right within each row.</li>
+        <li><strong>Down then across</strong> / <strong>across then down</strong> — finish one pass, then move to the next column or row.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>The simplest way to see scope and direction in action is with <code>INDEX()</code> — a calculation that does nothing but number the marks in view order: 1, 2, 3, 4… It has no business logic of its own, which is exactly why it's useful here: when the numbering pattern rearranges, you're watching scope and direction change in real time.</p>
+
+  <div class="worksheet fade-up">
+    <div class="worksheet-head">
+      <span class="name"><span class="sheet-ic"></span>Sheet 1 — INDEX() across Region × Category × Year × Quarter</span>
+    </div>
+    <div class="worksheet-body">
+      <div class="shelf">
+        <span class="shelf-label">Columns</span>
+        <span class="pill dim">Region</span><span class="pill dim">Category</span>
+        <span class="shelf-label" style="margin-left:14px;">Rows</span>
+        <span class="pill dim">Year(Order Date)</span><span class="pill dim">Quarter(Order Date)</span>
+        <span class="shelf-label" style="margin-left:14px;">Label</span>
+        <span class="pill mea" id="indexPillLabel">INDEX()</span>
+      </div>
+
+      <div class="toggle-row" style="margin-bottom:10px;align-items:center;">
+        <label for="computeUsing" style="font-size:12.5px;font-weight:700;color:var(--ink-soft);align-self:center;">Compute using:</label>
+        <select id="computeUsing" class="control">
+          <option value="table-across" selected>Table (across)</option>
+          <option value="table-across">Table (across then down)</option>
+          <option value="table-down">Table (down)</option>
+          <option value="table-down">Table (down then across)</option>
+          <option value="pane-across">Pane (across)</option>
+          <option value="pane-across">Pane (across then down)</option>
+          <option value="pane-down">Pane (down)</option>
+          <option value="pane-down">Pane (down then across)</option>
+          <option value="cell">Cell</option>
+          <option value="category">Specific Dimension: Category only</option>
+        </select>
+      </div>
+
+      <div class="grid-scroll">
+        <table class="idxtable" id="idxTable" aria-label="Index table calculation grid"></table>
+      </div>
+      <div class="idx-info" id="idxInfo">Hover any cell to see its address and INDEX() value.</div>
+      <p class="fig-caption">16 rows (4 years × 4 quarters) × 12 columns (4 regions × 3 categories) = 192 marks — matching the live Tableau example this section is based on.</p>
+    </div>
+  </div>
+
+  <div class="callout fade-up">
+    <strong>What you're seeing:</strong> <span id="modeExplain">Table (across) — the whole 192-cell grid is one scope. Numbering runs left to right across each row, then continues into the next row, never resetting.</span>
+    <br><small style="opacity:.85;">In this simplified two-level example, "X" and "X then down/across" land on the same path — the distinction only shows up once you nest three or more dimensions on one axis.</small>
+  </div>
+
+  <div class="analogy fade-up">
+    <div class="ic">▣</div>
+    <p>Think of a teacher grading three classes. Ranking students <em>within</em> each class separately makes each class a <strong>scope</strong> (Pane). Ranking every student in the school together makes the whole school one scope (Table). The order she works through the papers — row by row, or column by column — is the <strong>direction</strong>.</p>
+  </div>
+
+  <div class="quiz fade-up" data-quiz="1">
+    <span class="qtag">Knowledge check 1</span>
+    <h4>In Tableau table calculations, what happens when a dimension is selected for addressing (direction)?</h4>
+    <div class="opts">
+      <button class="opt" data-correct="false">Tableau aggregates all measures at that dimension level</button>
+      <button class="opt" data-correct="true">Tableau computes the calculation by moving across members of that dimension</button>
+      <button class="opt" data-correct="false">Tableau filters out all other dimensions from the view</button>
+      <button class="opt" data-correct="false">Tableau converts the dimension into a measure</button>
+    </div>
+    <div class="explain">Addressing defines the direction the calculation steps through. Tableau moves through the members of the addressed dimension while every other dimension in the view defines the partition (scope).</div>
+  </div>
+</section>
+
+<!-- ============ CALC TYPES ============ -->
+<section id="calc-types">
+  <div class="kicker"><span class="num">4</span>Reference</div>
+  <h2>Eight built-in table calculation types</h2>
+  <p class="lede">Scope and direction are the route Tableau travels through your view. The calculation type is what it does along the way. Tap a card to see a worked example.</p>
+
+  <div class="type-group">
+    <span class="type-group-title tg-comparison">Comparison</span>
+    <div class="grid-2">
+      <div class="type-card" data-key="diff">
+        <h4>Difference From</h4>
+        <p>Computes the difference between the current value and another value in the table.</p>
+        <span class="expand-hint">Show example ▾</span>
+        <div class="mini">
+          <table class="mini"><thead><tr><th>Month</th><th>Sales</th><th>Diff from Prev</th></tr></thead>
+          <tbody><tr><td>Jan</td><td>120</td><td>–</td></tr><tr><td>Feb</td><td>150</td><td>30</td></tr><tr><td>Mar</td><td>180</td><td>30</td></tr><tr><td>Apr</td><td>210</td><td>30</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="type-card" data-key="pctdiff">
+        <h4>Percentage Difference From</h4>
+        <p>Computes the difference between the current value and another value in the table, expressed as a percentage.</p>
+        <span class="expand-hint">Show example ▾</span>
+        <div class="mini">
+          <table class="mini"><thead><tr><th>Month</th><th>Sales</th><th>% Diff from Prev</th></tr></thead>
+          <tbody><tr><td>Jan</td><td>120</td><td>–</td></tr><tr><td>Feb</td><td>150</td><td>25.00%</td></tr><tr><td>Mar</td><td>180</td><td>20.00%</td></tr><tr><td>Apr</td><td>210</td><td>16.67%</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="type-group">
+    <span class="type-group-title tg-percentage">Percentage</span>
+    <div class="grid-2">
+      <div class="type-card" data-key="pctfrom">
+        <h4>Percentage From</h4>
+        <p>Computes a value as a percentage of some other value in the table.</p>
+        <span class="expand-hint">Show example ▾</span>
+        <div class="mini">
+          <table class="mini"><thead><tr><th>Item</th><th>Sales</th><th>% of Reference</th></tr></thead>
+          <tbody><tr><td>1</td><td>500</td><td>41.67%</td></tr><tr><td>2</td><td>300</td><td>25.00%</td></tr><tr><td>3</td><td>200</td><td>16.67%</td></tr><tr><td>4</td><td>200</td><td>16.67%</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="type-card" data-key="pctoftotal">
+        <h4>Percent of Total</h4>
+        <p>Computes a value as a percentage of all values in the current partition.</p>
+        <span class="expand-hint">Show example ▾</span>
+        <div class="mini">
+          <table class="mini"><thead><tr><th>Category</th><th>Sales</th><th>% of Total</th></tr></thead>
+          <tbody><tr><td>Phones</td><td>300</td><td>60.00%</td></tr><tr><td>Accessories</td><td>150</td><td>30.00%</td></tr><tr><td>Copiers</td><td>50</td><td>10.00%</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="type-group">
+    <span class="type-group-title tg-ranking">Ranking</span>
+    <div class="grid-2">
+      <div class="type-card" data-key="rank">
+        <h4>Rank</h4>
+        <p>Computes a ranking for each value in a partition.</p>
+        <span class="expand-hint">Show example ▾</span>
+        <div class="mini">
+          <table class="mini"><thead><tr><th>Product</th><th>Sales</th><th>Rank</th></tr></thead>
+          <tbody><tr><td>A</td><td>500</td><td>1</td></tr><tr><td>B</td><td>400</td><td>2</td></tr><tr><td>C</td><td>300</td><td>3</td></tr><tr><td>D</td><td>100</td><td>4</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="type-card" data-key="percentile">
+        <h4>Percentile</h4>
+        <p>Computes a percentile rank for each value in a partition.</p>
+        <span class="expand-hint">Show example ▾</span>
+        <div class="mini">
+          <table class="mini"><thead><tr><th>Product</th><th>Sales</th><th>Percentile</th></tr></thead>
+          <tbody><tr><td>A</td><td>500</td><td>100th</td></tr><tr><td>B</td><td>400</td><td>75th</td></tr><tr><td>C</td><td>300</td><td>50th</td></tr><tr><td>D</td><td>100</td><td>25th</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="type-group">
+    <span class="type-group-title tg-aggregation">Aggregation</span>
+    <div class="grid-2">
+      <div class="type-card" data-key="running">
+        <h4>Running Total</h4>
+        <p>Aggregates values cumulatively across a partition.</p>
+        <span class="expand-hint">Show example ▾</span>
+        <div class="mini">
+          <table class="mini"><thead><tr><th>Month</th><th>Sales</th><th>Running Total</th></tr></thead>
+          <tbody><tr><td>Jan</td><td>120</td><td>120</td></tr><tr><td>Feb</td><td>150</td><td>270</td></tr><tr><td>Mar</td><td>180</td><td>450</td></tr><tr><td>Apr</td><td>210</td><td>660</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="type-card" data-key="moving">
+        <h4>Moving Calculation</h4>
+        <p>Aggregates a specified number of values before or after the current value.</p>
+        <span class="expand-hint">Show example ▾</span>
+        <div class="mini">
+          <table class="mini"><thead><tr><th>Month</th><th>Sales</th><th>Moving Avg (3)</th></tr></thead>
+          <tbody><tr><td>Jan</td><td>120</td><td>–</td></tr><tr><td>Feb</td><td>150</td><td>–</td></tr><tr><td>Mar</td><td>180</td><td>150.00</td></tr><tr><td>Apr</td><td>210</td><td>180.00</td></tr><tr><td>May</td><td>240</td><td>210.00</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PERCENT OF TOTAL / RANK ============ -->
+<section id="percent-total">
+  <div class="kicker"><span class="num">5</span>Worked example</div>
+  <h2>Percent of Total &amp; Rank, on real Superstore numbers</h2>
+  <p class="lede">Business question: what share of each year's sales did every month contribute — and which month wins each quarter? One monthly Sales table, three ways to read it.</p>
+
+  <div class="worksheet fade-up">
+    <div class="worksheet-head">
+      <span class="name"><span class="sheet-ic"></span>Sheet 1 — Sales by Month, 2014–2017</span>
+    </div>
+    <div class="worksheet-body">
+      <div class="shelf">
+        <span class="shelf-label">Columns</span><span class="pill dim">Year(Order Date)</span>
+        <span class="shelf-label" style="margin-left:14px;">Rows</span><span class="pill dim">Quarter(Order Date)</span><span class="pill dim">Month(Order Date)</span>
+        <span class="shelf-label" style="margin-left:14px;">Label</span><span class="pill mea">SUM(Sales)</span>
+      </div>
+      <div class="toggle-row" id="pctToggle">
+        <button data-mode="raw" class="active">Sales ($)</button>
+        <button data-mode="pct">% of Total — Table (down)</button>
+        <button data-mode="rank">Rank — Pane (down), per quarter</button>
+      </div>
+      <div class="scroll-x" style="margin-top:14px;">
+        <table class="datatable" id="salesTable"></table>
+      </div>
+      <div class="insight-box" id="salesInsight"></div>
+    </div>
+  </div>
+
+  <div class="quiz fade-up" data-quiz="2">
+    <span class="qtag">Knowledge check 2</span>
+    <h4>You need to identify the top-performing month by sales within each year. Which table calculation is most appropriate?</h4>
+    <div class="opts">
+      <button class="opt" data-correct="false">Percent of Total</button>
+      <button class="opt" data-correct="false">Running Total</button>
+      <button class="opt" data-correct="true">Rank</button>
+      <button class="opt" data-correct="false">Difference From</button>
+    </div>
+    <div class="explain">Rank assigns an ordered position to each value within a partition — exactly what's needed to surface the top month, quarter, or category within a given year.</div>
+  </div>
+
+  <h3 style="margin-top:38px;">Index vs. Rank: position vs. value</h3>
+  <p>Once you've used both, the obvious question is: what's the difference? They both assign numbers to rows.</p>
+
+  <div class="analogy fade-up">
+    <div class="ic">▤</div>
+    <p>Five people are in a queue for movie tickets: A first, B second, C third, D fourth, E fifth. <strong>Index</strong> is their position in line — it doesn't care who's tallest or richest, only the order they appear: A=1, B=2, C=3… Now line the same five people up by height instead, tallest to shortest. That's <strong>Rank</strong> — it cares about the value being compared, not where someone happened to be standing.</p>
+  </div>
+
+  <div class="avr-cards fade-up">
+    <div class="avr-card idx">
+      <h4><span class="tagdot"></span>INDEX()</h4>
+      <ul>
+        <li>Depends on the <strong>addressing direction</strong> — the order marks are physically processed.</li>
+        <li>Does not consider ties; every mark gets a unique number.</li>
+        <li>Changes when sort order or Compute Using changes.</li>
+        <li>Typical use: building custom sequences, calculations that need position, not value.</li>
+      </ul>
+    </div>
+    <div class="avr-card rnk">
+      <h4><span class="tagdot"></span>RANK()</h4>
+      <ul>
+        <li>Depends on the <strong>values</strong> in the partition, regardless of where the marks sit in the view.</li>
+        <li>Handles ties based on a chosen ranking method.</li>
+        <li>Typical use: top-N analysis, leaderboards, "best/worst" questions.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="worksheet fade-up" style="margin-top:18px;">
+    <div class="worksheet-head"><span class="name"><span class="sheet-ic"></span>Same values, two calculations</span></div>
+    <div class="worksheet-body">
+      <table class="datatable" style="max-width:420px;">
+        <thead><tr><th class="rowlabel">SUM(Sales)</th><th>10,000</th><th>40,000</th><th>20,000</th><th>30,000</th></tr></thead>
+        <tbody>
+          <tr><td class="rowlabel">INDEX()</td><td>1</td><td>2</td><td>3</td><td>4</td></tr>
+          <tr><td class="rowlabel">RANK()</td><td>4</td><td>1</td><td>3</td><td>2</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">INDEX() simply counts left to right: 1, 2, 3, 4. RANK() looks at the values and gives the $40,000 mark the #1 rank — regardless of the fact that it sits second in the row.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:34px;">Breaking ties</h3>
+  <p>When two or more values are equal, Tableau offers four ranking methods. Try it on a tied dataset:</p>
+
+  <div class="worksheet fade-up">
+    <div class="worksheet-body">
+      <div class="toggle-row" id="tieToggle">
+        <button data-method="standard" class="active">Standard Rank</button>
+        <button data-method="dense">Dense Rank</button>
+        <button data-method="unique">Unique Rank</button>
+      </div>
+      <p style="font-size:12.5px;margin:12px 0 4px;color:var(--ink-faint);">Example values (illustrative, sorted descending): 90, 90, 75, 60</p>
+      <div class="tie-values" id="tieDemo"></div>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;" id="tieExplain"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ QUICK CALC ============ -->
+<section id="quick-calc">
+  <div class="kicker"><span class="num">6</span>Shortcut</div>
+  <h2>Quick Table Calculation</h2>
+  <p class="lede">Creating a table calculation the "full control" way — build the calculated field, then set Compute Using by hand — gives maximum flexibility. Tableau also ships a two-click shortcut for the most common calculation types: right-click the measure pill → <strong>Add Table Calculation</strong> (or the Quick Table Calculation submenu). It's the microwave-meal version: fast, with fewer knobs to turn. Understanding the Compute Using settings underneath still matters, because that's what you'll need to adjust when the default result isn't the one you expected.</p>
+
+  <div class="worksheet fade-up">
+    <div class="worksheet-head"><span class="name"><span class="sheet-ic"></span>Sheet 1 — Category share of sales, by quarter (2016)</span></div>
+    <div class="worksheet-body">
+      <div class="shelf">
+        <span class="shelf-label">Columns</span><span class="pill dim">Category</span>
+        <span class="shelf-label" style="margin-left:14px;">Rows</span><span class="pill dim">Year</span><span class="pill dim">Quarter</span>
+        <span class="shelf-label" style="margin-left:14px;">Label</span><span class="pill mea">% of Total Sales</span>
+      </div>
+      <table class="datatable" id="quickCalcTable" style="max-width:520px;"></table>
+      <p style="font-size:12px;color:var(--ink-faint);margin-top:8px;">Highlighted cell = the category with the largest share that quarter.</p>
+    </div>
+  </div>
+
+  <div class="insight-box fade-up">Technology took the largest share of sales in three of 2016's four quarters — including 44.16% in Q2, the strongest single-category share anywhere in the year.</div>
+</section>
+
+<!-- ============ CALC FIELD VS TABLE CALC ============ -->
+<section id="calc-vs-tablecalc">
+  <div class="kicker"><span class="num">7</span>Clearing up confusion</div>
+  <h2>Calculated field vs. table calculation, side by side</h2>
+  <p class="lede">This distinction confuses even experienced Tableau users — and it's a near-guaranteed interview question.</p>
+
+  <div class="scroll-x">
+    <table class="cmp fade-up">
+      <thead><tr><th>Aspect</th><th>Calculated Field</th><th>Table Calculation</th></tr></thead>
+      <tbody>
+        <tr><td class="aspect">Definition</td><td>A new field created from other fields and functions.</td><td>A calculation applied to results already in the view.</td></tr>
+        <tr><td class="aspect">Level of operation</td><td>Row-level — computed for every record.</td><td>After aggregation — across rows or columns of the view.</td></tr>
+        <tr><td class="aspect">When it's computed</td><td>Before data is aggregated.</td><td>After data is aggregated and displayed.</td></tr>
+        <tr><td class="aspect">Depends on</td><td>Data in the source only.</td><td>Dimensions in the view, scope, and direction.</td></tr>
+        <tr><td class="aspect">Changes with the view?</td><td>No — result stays the same regardless of layout.</td><td>Yes — result can change if dimensions, scope, or direction change.</td></tr>
+        <tr><td class="aspect">Examples</td><td>Profit = Sales − Cost</td><td>Running Total of Sales, Rank of Sales</td></tr>
+        <tr><td class="aspect">Typical use</td><td>New measures, flags, business logic.</td><td>Compare, rank, show contribution, trends over time.</td></tr>
+        <tr><td class="aspect">Usable in filters?</td><td>Yes.</td><td>No — computed after filters are applied.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="quiz fade-up" data-quiz="3">
+    <span class="qtag">Knowledge check 3</span>
+    <h4>What is the primary difference between a calculated field and a table calculation in Tableau?</h4>
+    <div class="opts">
+      <button class="opt" data-correct="false">Calculated fields can only be used with dimensions, while table calculations can only be used with measures</button>
+      <button class="opt" data-correct="true">Calculated fields are computed at the data level, while table calculations are computed on the visualization results</button>
+      <button class="opt" data-correct="false">Table calculations permanently modify the data source, while calculated fields do not</button>
+      <button class="opt" data-correct="false">Table calculations can be reused across worksheets, while calculated fields cannot</button>
+    </div>
+    <div class="explain">Calculated fields are evaluated before the visualization is rendered and become part of the data model. Table calculations are computed after the view is created, and depend on the layout and level of detail of that worksheet.</div>
+  </div>
+</section>
+
+<!-- ============ TOOLTIPS & REFERENCE LINES ============ -->
+<section id="tooltips-reflines">
+  <div class="kicker"><span class="num">8</span>Reading aids</div>
+  <h2>Tooltips &amp; reference lines</h2>
+
+  <h3>Tooltips: a chart inside a chart</h3>
+  <p class="lede">A tooltip is the detail that appears when you hover a mark. Beyond plain text, Tableau can embed an entire second worksheet inside a tooltip — so hovering one mark reveals a nested visualization for just that mark. A common build: a map colored by state profit, where hovering a state shows a bar chart of that state's profit by sub-category, without leaving the map.</p>
+
+  <div class="worksheet fade-up">
+    <div class="worksheet-head"><span class="name"><span class="sheet-ic"></span>Source sheet — Profit by State (map), tooltip = Target sheet</span></div>
+    <div class="worksheet-body">
+      <p style="font-size:13px;">Try it — hover or tap a state below. Two of these carry the exact total-profit figures from the worked example; the nested bar pattern illustrates how the embedded worksheet renders inside the tooltip.</p>
+      <div class="tt-wrap" id="ttWrap"></div>
+      <p class="fig-caption">Command buttons available from any tooltip: <strong>Keep Only</strong> (filter to just this selection), <strong>Exclude</strong>, <strong>Group Members</strong>, <strong>Create Set</strong>, and <strong>View Data</strong>.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:38px;">Reference lines: a fixed benchmark</h3>
+  <p class="lede">A reference line is a benchmark drawn on the chart — a target, an average, a threshold — that stays fixed regardless of which mark you're looking at, so you can instantly see what's above or below it.</p>
+
+  <div class="analogy fade-up">
+    <div class="ic">▲</div>
+    <p>It's the height-requirement board at an amusement park ride: <em>"You must be this tall to ride."</em> The line doesn't change based on who's standing there — it just tells each person, instantly, whether they clear the bar. In Tableau, Reference Lines live in the <strong>Analytics</strong> pane, alongside Reference Bands and Trend Lines.</p>
+  </div>
+
+  <div class="callout fade-up">Business scenario: find the sub-categories with above-average sales, for every category and year. Dragging a table-scoped <strong>Average Line</strong> from the Analytics pane onto the view draws one benchmark per pane — instantly showing which sub-categories clear their own category's average.</div>
+
+  <h4 style="margin-top:30px;">Controlling a reference line with a parameter</h4>
+  <p>Reference lines don't have to be static. Business scenario: set next year's sales target as this year's total profit multiplied by an adjustable target percentage — and let a parameter control that percentage live.</p>
+
+  <div class="worksheet fade-up">
+    <div class="worksheet-head"><span class="name"><span class="sheet-ic"></span>Sheet 3 — SUM(Sales) with a parameter-driven Target line</span></div>
+    <div class="worksheet-body">
+      <div class="shelf">
+        <span class="shelf-label">Rows</span><span class="pill mea">SUM(Sales)</span>
+        <span class="shelf-label" style="margin-left:14px;">Reference line</span><span class="pill mea">AGG(Target)</span>
+      </div>
+      <div class="refline-wrap">
+        <div>
+          <div class="refline-chart" id="reflineChart">
+            <div class="refline-bar" id="reflineBar"></div>
+            <div class="refline-line" id="reflineLine"><span class="tag" id="reflineTag">Target</span></div>
+          </div>
+          <p class="fig-caption">Sum(Sales)</p>
+        </div>
+        <div class="refline-controls">
+          <label for="targetParam">Adjustable Parameter — target as a % of this year's profit-derived Sales base: <strong id="targetPct">12.5%</strong></label>
+          <input type="range" id="targetParam" min="0" max="100" step="0.5" value="12.5" aria-label="Adjustable target percentage">
+          <div class="refline-readout">
+            <div class="box sales"><div class="lab">Sum(Sales)</div><div class="val">$2,297,201</div></div>
+            <div class="box target"><div class="lab">Target = Sales × Parameter</div><div class="val" id="targetVal">$287,150</div></div>
+          </div>
+          <p style="font-size:12px;color:var(--ink-faint);margin-top:10px;">Formula: <code>Target = SUM([Sales]) × [Adjustable Parameter]</code>. Drag the slider — the dashed line and readout update immediately, with no rebuild of the view.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TREND LINE ============ -->
+<section id="trend-line">
+  <div class="kicker"><span class="num">9</span>Forecasting the shape</div>
+  <h2>Trend lines</h2>
+  <p class="lede">A reference line marks a fixed point. A trend line answers a forward-looking question instead: given the pattern so far, where is this data going? Tableau fits a mathematical model to the marks in view and draws the resulting trajectory — requiring a continuous (green) field on both axes, with one exception: a discrete date field is allowed on one axis.</p>
+
+  <div class="trend-wrap">
+    <div class="trend-chart worksheet fade-up">
+      <div class="worksheet-head"><span class="name"><span class="sheet-ic"></span>Illustrative — house size vs. price</span></div>
+      <div class="worksheet-body">
+        <div class="toggle-row" id="trendToggle" style="margin-bottom:12px;">
+          <button data-model="linear" class="active">Linear</button>
+          <button data-model="log">Logarithmic</button>
+          <button data-model="exp">Exponential</button>
+          <button data-model="poly">Polynomial</button>
+          <button data-model="power">Power</button>
+        </div>
+        <svg viewBox="0 0 320 220" width="100%" height="220" role="img" aria-label="Trend line chart" id="trendSvg">
+          <line x1="30" y1="190" x2="310" y2="190" stroke="var(--border-strong)" stroke-width="1.5"></line>
+          <line x1="30" y1="10" x2="30" y2="190" stroke="var(--border-strong)" stroke-width="1.5"></line>
+          <text x="170" y="212" text-anchor="middle" font-size="10" fill="#8992A0">Size (illustrative)</text>
+          <text x="12" y="100" text-anchor="middle" font-size="10" fill="#8992A0" transform="rotate(-90 12 100)">Price (illustrative)</text>
+          <g id="trendDots"></g>
+          <path id="trendPath" d="" fill="none" stroke="#E8762C" stroke-width="2.5"></path>
+        </svg>
+      </div>
+    </div>
+    <div class="trend-info fade-up">
+      <h4 id="trendModelName">Linear</h4>
+      <p id="trendModelDesc">Use this model when you'd expect price to increase at a roughly constant rate as size increases — each extra square foot adds about the same amount of value.</p>
+      <div class="describe-panel">
+        <div class="dp-title">Describe Trend Model (example output)</div>
+        <div class="dp-row"><span>Number of modeled observations</span><span>4</span></div>
+        <div class="dp-row"><span>Model degrees of freedom</span><span>4</span></div>
+        <div class="dp-row"><span>SSE (sum squared error)</span><span>9.37356e+08</span></div>
+        <div class="dp-row"><span>R-Squared</span><span>0.97933</span></div>
+      </div>
+      <p style="font-size:11.5px;color:var(--ink-faint);margin-top:8px;">Real figures from Tableau's Describe Trend Model dialog for a year-wise sales trend — reached via Analytics → Trend Lines → Describe Trend Model.</p>
+    </div>
+  </div>
+
+  <div class="callout fade-up">
+    <strong>Two more factors shape a trend line:</strong> the fields defining the X/Y coordinates (both must be continuous, with the date-field exception above), and any discrete field placed on Rows, Columns, or Color — which splits one trend line into several distinct ones, one per member.
+  </div>
+
+  <div class="quiz fade-up" data-quiz="4">
+    <span class="qtag">Knowledge check 4</span>
+    <h4>Which condition must generally be satisfied before Tableau can create a trend line?</h4>
+    <div class="opts">
+      <button class="opt" data-correct="false">Both axes must contain dimensions</button>
+      <button class="opt" data-correct="true">Both Rows and Columns must contain continuous fields (with discrete dates being an exception)</button>
+      <button class="opt" data-correct="false">The visualization must contain a reference line</button>
+      <button class="opt" data-correct="false">The dataset must contain at least 10,000 rows</button>
+    </div>
+    <div class="explain">Trend lines model the relationship between X and Y coordinates, so both axes generally need continuous fields — though a discrete date field is allowed as an exception.</div>
+  </div>
+</section>
+
+<!-- ============ SUMMARY ============ -->
+<section id="summary">
+  <div class="kicker"><span class="num">10</span>Wrap-up</div>
+  <h2>Key interview takeaways</h2>
+  <ul class="takeaway-list fade-up">
+    <li><span class="q">"What's the difference between a calculated field and a table calculation?"</span><span class="a">Data level vs. view level — before aggregation vs. after.</span></li>
+    <li><span class="q">"What are scope and direction in table calculations?"</span><span class="a">Scope defines the boundary a calculation resets at; direction defines the path it steps through.</span></li>
+    <li><span class="q">"What's the difference between Index and Rank?"</span><span class="a">Index = position in the view. Rank = position by value.</span></li>
+  </ul>
+
+  <div class="callout blue fade-up" style="margin-top:24px;">
+    Across this session: table calculations compute on top of an already-built view, governed by scope and direction. Percent of Total and Rank turn raw numbers into share-of-whole and best-to-worst comparisons. Tooltips, reference lines, and trend lines then layer reading aids onto the finished chart — a benchmark, a trajectory, and drill-down detail — without a single trip back to the data source.
+  </div>
+</section>
+
+</main>
+
+<footer class="endcap">Table Calculations &amp; Analytics — Tableau 4 · Dataset: Sample Superstore</footer>
+
+<nav class="sheet-tabs" id="sheetTabs" aria-label="Section navigation">
+  <button data-target="intro" class="active"><span class="dot"></span>Start</button>
+  <button data-target="concept"><span class="dot"></span>What &amp; Why</button>
+  <button data-target="scope-direction"><span class="dot"></span>Scope &amp; Direction</button>
+  <button data-target="calc-types"><span class="dot"></span>Calc Types</button>
+  <button data-target="percent-total"><span class="dot"></span>% of Total / Rank</button>
+  <button data-target="quick-calc"><span class="dot"></span>Quick Calc</button>
+  <button data-target="calc-vs-tablecalc"><span class="dot"></span>Field vs Calc</button>
+  <button data-target="tooltips-reflines"><span class="dot"></span>Tooltips / RefLine</button>
+  <button data-target="trend-line"><span class="dot"></span>Trend Line</button>
+  <button data-target="summary"><span class="dot"></span>Takeaways</button>
+  <span class="addtab" aria-hidden="true">+</span>
+</nav>
+
+<script>
+(function(){
+
+/* ---------- Sales dataset (real figures transcribed from the source workbook) ---------- */
+var salesData = {
+  2014:{Jan:14237,Feb:4520,Mar:55691,Apr:28295,May:23648,Jun:34595,Jul:33946,Aug:27909,Sep:81777,Oct:31453,Nov:78629,Dec:69546},
+  2015:{Jan:18174,Feb:11951,Mar:38726,Apr:34195,May:30132,Jun:24797,Jul:28765,Aug:36898,Sep:64596,Oct:31405,Nov:75973,Dec:74920},
+  2016:{Jan:18542,Feb:22979,Mar:51716,Apr:38750,May:56988,Jun:40345,Jul:39262,Aug:31115,Sep:73410,Oct:59688,Nov:79412,Dec:96999},
+  2017:{Jan:43971,Feb:20301,Mar:58872,Apr:36522,May:44261,Jun:52982,Jul:45264,Aug:63121,Sep:87867,Oct:77777,Nov:118448,Dec:83829}
+};
+var years = [2014,2015,2016,2017];
+var monthOrder = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var quarterOf = {Jan:"Q1",Feb:"Q1",Mar:"Q1",Apr:"Q2",May:"Q2",Jun:"Q2",Jul:"Q3",Aug:"Q3",Sep:"Q3",Oct:"Q4",Nov:"Q4",Dec:"Q4"};
+var quarters = ["Q1","Q2","Q3","Q4"];
+function monthsInQuarter(q){ return monthOrder.filter(function(m){ return quarterOf[m]===q; }); }
+function yearTotal(y){ var t=0; monthOrder.forEach(function(m){ t+=salesData[y][m]; }); return t; }
+function fmt(n){ return "$"+Math.round(n).toLocaleString("en-US"); }
+function pctFmt(n){ return n.toFixed(2)+"%"; }
+function rankMonths(y,q){
+  var ms = monthsInQuarter(q).map(function(m){ return {m:m, v:salesData[y][m]}; });
+  var sorted = ms.slice().sort(function(a,b){ return b.v-a.v; });
+  var ranks = {};
+  sorted.forEach(function(item,i){
+    if(i>0 && item.v===sorted[i-1].v){ ranks[item.m]=ranks[sorted[i-1].m]; }
+    else{ ranks[item.m]=i+1; }
+  });
+  return ranks;
+}
+
+/* ---------- Percent of Total / Rank table ---------- */
+var pctMode = "raw";
+function renderSalesTable(){
+  var table = document.getElementById("salesTable");
+  var html = "<thead><tr><th class='rowlabel'>Quarter</th><th class='rowlabel'>Month</th>";
+  years.forEach(function(y){ html += "<th>"+y+"</th>"; });
+  html += "</tr></thead><tbody>";
+  quarters.forEach(function(q){
+    var ms = monthsInQuarter(q);
+    ms.forEach(function(m,i){
+      html += "<tr>";
+      if(i===0){ html += "<td class='qlabel' rowspan='"+ms.length+"'>"+q+"</td>"; }
+      html += "<td class='rowlabel'>"+m+"</td>";
+      years.forEach(function(y){
+        var raw = salesData[y][m];
+        var cellClass = "";
+        var text = "";
+        if(pctMode==="raw"){ text = raw.toLocaleString("en-US"); }
+        else if(pctMode==="pct"){ text = pctFmt(raw/yearTotal(y)*100); }
+        else if(pctMode==="rank"){
+          var r = rankMonths(y,q)[m];
+          text = "#"+r;
+          if(r===1) cellClass="hi";
+        }
+        html += "<td class='"+cellClass+"'>"+text+"</td>";
+      });
+      html += "</tr>";
+    });
+  });
+  html += "</tbody>";
+  table.innerHTML = html;
+
+  var insight = document.getElementById("salesInsight");
+  if(pctMode==="raw"){
+    insight.innerHTML = "▸ Same monthly Sales values Tableau uses for every calculation below — nothing here has been re-aggregated from the data source.";
+  } else if(pctMode==="pct"){
+    var nov17 = (salesData[2017].Nov/yearTotal(2017)*100).toFixed(2);
+    insight.innerHTML = "▸ In 2017, November alone accounted for "+nov17+"% of the year's sales — the single highest month, likely reflecting Black Friday and early holiday shopping. Switch the year mentally: the top month isn't the same every year.";
+  } else {
+    var consistent = quarters.every(function(q){
+      var first = null, ok = true;
+      years.forEach(function(y){
+        var top = Object.keys(rankMonths(y,q)).filter(function(m){ return rankMonths(y,q)[m]===1; })[0];
+        if(first===null) first = top; else if(top!==first) ok = false;
+      });
+      return ok;
+    });
+    insight.innerHTML = "★ March holds Rank #1 in Q1 across all four years (2014–2017) — a consistent seasonal leader. Q2–Q4 winners shift from year to year; try scanning the ★ cells.";
+  }
+}
+document.getElementById("pctToggle").addEventListener("click", function(e){
+  var btn = e.target.closest("button"); if(!btn) return;
+  pctMode = btn.dataset.mode;
+  document.querySelectorAll("#pctToggle button").forEach(function(b){ b.classList.toggle("active", b===btn); });
+  renderSalesTable();
+});
+renderSalesTable();
+
+/* ---------- Tie-breaking demo ---------- */
+var tieVals = [90,90,75,60];
+function computeTieRanks(method){
+  var sorted = tieVals.slice().sort(function(a,b){ return b-a; });
+  var ranks = [];
+  if(method==="standard"){
+    sorted.forEach(function(v,i){
+      if(i>0 && v===sorted[i-1]) ranks.push(ranks[i-1]); else ranks.push(i+1);
+    });
+  } else if(method==="dense"){
+    var cur = 0, last = null;
+    sorted.forEach(function(v){
+      if(v!==last){ cur++; last=v; }
+      ranks.push(cur);
+    });
+  } else if(method==="unique"){
+    sorted.forEach(function(v,i){ ranks.push(i+1); });
+  }
+  return {sorted:sorted, ranks:ranks};
+}
+function renderTie(method){
+  var r = computeTieRanks(method);
+  var wrap = document.getElementById("tieDemo");
+  wrap.innerHTML = "";
+  r.sorted.forEach(function(v,i){
+    var el = document.createElement("div");
+    el.className = "tie-val";
+    el.innerHTML = v + "<span class='tie-rank'>Rank "+r.ranks[i]+"</span>";
+    wrap.appendChild(el);
+  });
+  var explainEl = document.getElementById("tieExplain");
+  if(method==="standard") explainEl.textContent = "Standard Rank: tied values share a rank, and the next rank is skipped (1, 1, 3, 4).";
+  if(method==="dense") explainEl.textContent = "Dense Rank: tied values share a rank, but the next rank stays consecutive (1, 1, 2, 3).";
+  if(method==="unique") explainEl.textContent = "Unique Rank: every value gets a distinct rank, even when tied (1, 2, 3, 4).";
+}
+document.getElementById("tieToggle").addEventListener("click", function(e){
+  var btn = e.target.closest("button"); if(!btn) return;
+  document.querySelectorAll("#tieToggle button").forEach(function(b){ b.classList.toggle("active", b===btn); });
+  renderTie(btn.dataset.method);
+});
+renderTie("standard");
+
+/* ---------- Type cards expand ---------- */
+document.querySelectorAll(".type-card").forEach(function(card){
+  card.addEventListener("click", function(){
+    card.classList.toggle("open");
+    var hint = card.querySelector(".expand-hint");
+    hint.textContent = card.classList.contains("open") ? "Hide example ▴" : "Show example ▾";
+  });
+  card.setAttribute("tabindex","0");
+  card.setAttribute("role","button");
+  card.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); card.click(); } });
+});
+
+/* ---------- Index / Scope & Direction grid ---------- */
+var regions = ["Central","East","South","West"];
+var categories = ["Furniture","Office Su.","Technolo."];
+var idxYears = [2014,2015,2016,2017];
+var idxQuarters = ["Q1","Q2","Q3","Q4"];
+
+function computeIndexGrid(mode){
+  var rows = idxYears.length*idxQuarters.length; // 16
+  var cols = regions.length*categories.length; // 12
+  var grid = [];
+  for(var r=0;r<rows;r++){ grid.push(new Array(cols).fill(0)); }
+
+  if(mode==="table-across"){
+    var n=1;
+    for(var r=0;r<rows;r++) for(var c=0;c<cols;c++) grid[r][c]=n++;
+  } else if(mode==="table-down"){
+    var n=1;
+    for(var c=0;c<cols;c++) for(var r=0;r<rows;r++) grid[r][c]=n++;
+  } else if(mode==="pane-across"){
+    for(var reg=0; reg<regions.length; reg++){
+      var n=1; var colStart = reg*categories.length;
+      for(var r=0;r<rows;r++) for(var cc=0;cc<categories.length;cc++) grid[r][colStart+cc]=n++;
+    }
+  } else if(mode==="pane-down"){
+    for(var reg=0; reg<regions.length; reg++){
+      var n=1; var colStart = reg*categories.length;
+      for(var cc=0;cc<categories.length;cc++) for(var r=0;r<rows;r++) grid[r][colStart+cc]=n++;
+    }
+  } else if(mode==="cell"){
+    for(var r=0;r<rows;r++) for(var c=0;c<cols;c++) grid[r][c]=1;
+  } else if(mode==="category"){
+    for(var r=0;r<rows;r++){
+      for(var reg=0; reg<regions.length; reg++){
+        for(var cc=0; cc<categories.length; cc++){ grid[r][reg*categories.length+cc]=cc+1; }
+      }
+    }
+  }
+  return grid;
+}
+
+var modeCopy = {
+  "table-across":"Table (across) — the whole 192-cell grid is one scope. Numbering runs left to right across each row, then continues into the next row, never resetting.",
+  "table-down":"Table (down) — the whole 192-cell grid is one scope. Numbering runs top to bottom down each column, then continues into the next column.",
+  "pane-across":"Pane (across) — each Region's block of 3 columns is its own scope (48 cells). Numbering restarts at 1 for every new Region, running left to right then down within that block.",
+  "pane-down":"Pane (down) — each Region's block of 3 columns is its own scope. Numbering restarts at 1 for every new Region, running top to bottom down each of its 3 columns.",
+  "cell":"Cell — the scope is a single mark. INDEX() can only ever return 1, because the calculation never looks beyond the cell it's in.",
+  "category":"Specific Dimension: Category only — Category is the sole addressing dimension; Region, Year, and Quarter all become the partition. The index resets to 1, 2, 3 for every single Region/Year/Quarter combination."
+};
+
+function renderIdxTable(){
+  var mode = document.getElementById("computeUsing").value;
+  var grid = computeIndexGrid(mode);
+  var table = document.getElementById("idxTable");
+
+  var html = "<thead><tr class='regions'><th></th><th></th>";
+  regions.forEach(function(reg){ html += "<th colspan='3'>"+reg+"</th>"; });
+  html += "</tr><tr><th>Year</th><th>Qtr</th>";
+  regions.forEach(function(){ categories.forEach(function(cat){ html += "<th>"+cat+"</th>"; }); });
+  html += "</tr></thead><tbody>";
+
+  var rowIdx = 0;
+  idxYears.forEach(function(yr){
+    idxQuarters.forEach(function(q, qi){
+      html += "<tr>";
+      if(qi===0){ html += "<th class='yr' rowspan='4'>"+yr+"</th>"; }
+      html += "<th class='qr'>"+q+"</th>";
+      var colIdx = 0;
+      regions.forEach(function(reg){
+        categories.forEach(function(cat, ci){
+          var val = grid[rowIdx][colIdx];
+          var edge = ci===0 ? " pane-edge" : "";
+          html += "<td class='"+edge.trim()+"' data-year='"+yr+"' data-quarter='"+q+"' data-region='"+reg+"' data-category='"+cat+"' data-index='"+val+"'>"+val+"</td>";
+          colIdx++;
+        });
+      });
+      html += "</tr>";
+      rowIdx++;
+    });
+  });
+  html += "</tbody>";
+  table.innerHTML = html;
+
+  document.getElementById("modeExplain").textContent = modeCopy[mode];
+}
+
+document.getElementById("idxTable").addEventListener("mouseover", function(e){
+  var td = e.target.closest("td[data-index]"); if(!td) return;
+  var info = document.getElementById("idxInfo");
+  info.innerHTML = "<b>"+td.dataset.year+" "+td.dataset.quarter+"</b> · "+td.dataset.region+" / "+td.dataset.category+" &nbsp;→&nbsp; INDEX() = <b>"+td.dataset.index+"</b>";
+});
+document.getElementById("computeUsing").addEventListener("change", renderIdxTable);
+renderIdxTable();
+
+/* ---------- Quick calc table (2016 category share) ---------- */
+var quickCalc2016 = {
+  Q1:{Furniture:26.12, "Office Supplies":31.58, Technology:42.31},
+  Q2:{Furniture:30.42, "Office Supplies":25.41, Technology:44.16},
+  Q3:{Furniture:36.73, "Office Supplies":31.40, Technology:31.87},
+  Q4:{Furniture:34.03, "Office Supplies":31.67, Technology:34.31}
+};
+(function(){
+  var table = document.getElementById("quickCalcTable");
+  var html = "<thead><tr><th class='rowlabel'>Quarter (2016)</th><th>Furniture</th><th>Office Supplies</th><th>Technology</th></tr></thead><tbody>";
+  quarters.forEach(function(q){
+    var row = quickCalc2016[q];
+    var max = Math.max(row.Furniture, row["Office Supplies"], row.Technology);
+    html += "<tr><td class='rowlabel'>"+q+"</td>";
+    ["Furniture","Office Supplies","Technology"].forEach(function(cat){
+      var cls = row[cat]===max ? "hi" : "";
+      html += "<td class='"+cls+"'>"+row[cat].toFixed(2)+"%</td>";
+    });
+    html += "</tr>";
+  });
+  html += "</tbody>";
+  table.innerHTML = html;
+})();
+
+/* ---------- Tooltip demo ---------- */
+var ttStates = [
+  {name:"Oregon", profit:-1190, real:true, subs:[["Bookcases",30],["Appliances",55],["Art",20],["Binders",10],["Chairs",5]]},
+  {name:"Utah", profit:2547, real:true, subs:[["Accessories",70],["Appliances",50],["Art",40],["Binders",60],["Bookcases",55],["Copiers",90]]},
+  {name:"Illustrative State A", profit:null, real:false, subs:[["Furniture",45],["Office Supplies",65],["Technology",35]]},
+  {name:"Illustrative State B", profit:null, real:false, subs:[["Furniture",30],["Office Supplies",40],["Technology",70]]}
+];
+(function(){
+  var wrap = document.getElementById("ttWrap");
+  ttStates.forEach(function(st, idx){
+    var card = document.createElement("button");
+    card.className = "tt-state";
+    card.setAttribute("aria-expanded","false");
+    var profitHtml = st.real
+      ? "<div class='st-profit "+(st.profit<0?"neg":"pos")+"'>Profit: "+(st.profit<0?"-$":"$")+Math.abs(st.profit).toLocaleString("en-US")+"</div>"
+      : "<div class='st-profit' style='color:var(--ink-faint);'>Illustrative pattern only</div>";
+    var barsHtml = st.subs.map(function(s){
+      return "<div class='tt-bar-row'><span class='lbl'>"+s[0]+"</span><span class='bar-track'><span class='bar-fill' style='width:"+s[1]+"%;'></span></span></div>";
+    }).join("");
+    card.innerHTML =
+      "<div class='st-name'>"+st.name+"</div>"+profitHtml+
+      "<div class='tt-popover'><div class='tp-title'>Profit by Sub-Category</div>"+barsHtml+
+      "<div class='tt-note'>"+(st.real ? "Total profit is the real workbook figure; sub-category bars illustrate the nested-tooltip pattern." : "Fully illustrative — demonstrates the tooltip mechanic only.")+"</div></div>";
+    card.addEventListener("click", function(){
+      var willOpen = !card.classList.contains("open");
+      document.querySelectorAll(".tt-state").forEach(function(c){ c.classList.remove("open"); c.setAttribute("aria-expanded","false"); });
+      if(willOpen){ card.classList.add("open"); card.setAttribute("aria-expanded","true"); }
+    });
+    wrap.appendChild(card);
+  });
+  document.addEventListener("click", function(e){
+    if(!e.target.closest(".tt-state")){
+      document.querySelectorAll(".tt-state").forEach(function(c){ c.classList.remove("open"); c.setAttribute("aria-expanded","false"); });
+    }
+  });
+})();
+
+/* ---------- Reference line slider ---------- */
+var SALES_TOTAL = 2297201;
+function renderRefLine(){
+  var pct = parseFloat(document.getElementById("targetParam").value);
+  document.getElementById("targetPct").textContent = pct.toFixed(1)+"%";
+  var target = SALES_TOTAL * (pct/100);
+  document.getElementById("targetVal").textContent = "$"+Math.round(target).toLocaleString("en-US");
+
+  var chartH = 300, chartMaxVal = SALES_TOTAL * 1.15;
+  var barH = (SALES_TOTAL/chartMaxVal)*chartH;
+  document.getElementById("reflineBar").style.height = barH+"px";
+  var lineFromBottom = (target/chartMaxVal)*chartH;
+  var lineTop = chartH - lineFromBottom;
+  document.getElementById("reflineLine").style.top = Math.max(0,Math.min(chartH,lineTop))+"px";
+  document.getElementById("reflineTag").textContent = "Target "+pct.toFixed(1)+"%";
+}
+document.getElementById("targetParam").addEventListener("input", renderRefLine);
+renderRefLine();
+
+/* ---------- Trend line explorer ---------- */
+var trendModels = {
+  linear:{name:"Linear", desc:"Use this model when you'd expect price to increase at a roughly constant rate as size increases — each extra square foot adds about the same amount of value.", path:"M40,175 L300,45"},
+  log:{name:"Logarithmic", desc:"Use this model when diminishing returns are at play — price climbs quickly at first, then flattens as buyers stop paying much more for additional size.", path:"M40,178 C90,110 150,68 300,50"},
+  exp:{name:"Exponential", desc:"Use this model when each additional increase in size drives a dramatically larger jump in price — the curve accelerates rather than climbing steadily.", path:"M40,185 C160,182 250,140 300,40"},
+  poly:{name:"Polynomial", desc:"Use this model when price is better explained as a function of size raised to a power — the relationship bends rather than following a straight line.", path:"M40,178 C110,60 190,180 300,45"},
+  power:{name:"Power", desc:"Use this model when the relationship between size and price is complex and follows something closer to an S-shaped curve.", path:"M40,182 C80,178 130,150 170,110 C210,70 260,50 300,45"}
+};
+var trendDotsFixed = [[55,168],[95,150],[140,120],[180,95],[225,75],[270,55]];
+function renderTrend(model){
+  var m = trendModels[model];
+  document.getElementById("trendModelName").textContent = m.name;
+  document.getElementById("trendModelDesc").textContent = m.desc;
+  document.getElementById("trendPath").setAttribute("d", m.path);
+  var dotsG = document.getElementById("trendDots");
+  dotsG.innerHTML = "";
+  trendDotsFixed.forEach(function(p){
+    var c = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("cx",p[0]); c.setAttribute("cy",p[1]); c.setAttribute("r","4");
+    c.setAttribute("fill","#1F77B4");
+    dotsG.appendChild(c);
+  });
+}
+document.getElementById("trendToggle").addEventListener("click", function(e){
+  var btn = e.target.closest("button"); if(!btn) return;
+  document.querySelectorAll("#trendToggle button").forEach(function(b){ b.classList.toggle("active", b===btn); });
+  renderTrend(btn.dataset.model);
+});
+renderTrend("linear");
+
+/* ---------- Quiz interactivity ---------- */
+document.querySelectorAll(".quiz").forEach(function(quiz){
+  var answered = false;
+  quiz.querySelectorAll(".opt").forEach(function(opt){
+    opt.addEventListener("click", function(){
+      if(answered) return;
+      answered = true;
+      quiz.querySelectorAll(".opt").forEach(function(o){
+        if(o.dataset.correct==="true") o.classList.add("correct");
+        else if(o===opt) o.classList.add("incorrect");
+        o.disabled = true;
+      });
+      quiz.querySelector(".explain").classList.add("show");
+    });
+  });
+});
+
+/* ---------- Sheet tabs: click to scroll + active on scroll ---------- */
+var tabButtons = Array.prototype.slice.call(document.querySelectorAll("#sheetTabs button[data-target]"));
+tabButtons.forEach(function(btn){
+  btn.addEventListener("click", function(){
+    var target = document.getElementById(btn.dataset.target);
+    if(target) target.scrollIntoView({behavior:"smooth", block:"start"});
+  });
+});
+var sectionEls = tabButtons.map(function(b){ return document.getElementById(b.dataset.target); }).filter(Boolean);
+if("IntersectionObserver" in window){
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        var id = entry.target.id;
+        tabButtons.forEach(function(b){ b.classList.toggle("active", b.dataset.target===id); });
+      }
+    });
+  }, {rootMargin:"-40% 0px -55% 0px", threshold:0});
+  sectionEls.forEach(function(s){ observer.observe(s); });
+
+  var fadeObserver = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){ entry.target.classList.add("in"); fadeObserver.unobserve(entry.target); }
+    });
+  }, {threshold:0.1});
+  document.querySelectorAll(".fade-up").forEach(function(el){ fadeObserver.observe(el); });
+} else {
+  document.querySelectorAll(".fade-up").forEach(function(el){ el.classList.add("in"); });
+}
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Tableau-4-postread" target="_blank" rel="noopener">github.com/scaler-content/Tableau-4-postread</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1409 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class 5 RAG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#fbf9f5; --paper-2:#ffffff; --ink:#1a1a17; --ink-2:#4a4a42; --ink-3:#7a7a70;
+  --rule:#e3ded4; --rule-2:#d2cbbe;
+  --accent:#0f5e55; --accent-2:#0a4a43; --accent-soft:#e6f0ee;
+  --amber:#8a5a00; --amber-soft:#fdf3e0;
+  --violet:#54407f; --violet-soft:#efeaf8;
+  --rose:#8d3a46; --rose-soft:#fbecee;
+  --b1:#0f5e55; --b2:#c98a2e; --b3:#54407f; --b4:#8d3a46; --b5:#3a6b8c;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --sans:'Inter',system-ui,-apple-system,sans-serif;
+  --serif:'Fraunces',Georgia,serif;
+  --shadow:0 1px 2px rgba(26,26,23,.05),0 8px 24px -12px rgba(26,26,23,.12);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#15171a; --paper-2:#1c1f23; --ink:#eceae4; --ink-2:#b4b2aa; --ink-3:#85837c;
+    --rule:#2b2f34; --rule-2:#3a3f45;
+    --accent:#5fc0b2; --accent-2:#8ad6c9; --accent-soft:#16302d;
+    --amber:#e0a94a; --amber-soft:#2e2515;
+    --violet:#b39ae8; --violet-soft:#241e33;
+    --rose:#e095a0; --rose-soft:#2e1c20;
+    --b1:#5fc0b2; --b2:#e0a94a; --b3:#b39ae8; --b4:#e095a0; --b5:#79b3d6;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15171a; --paper-2:#1c1f23; --ink:#eceae4; --ink-2:#b4b2aa; --ink-3:#85837c;
+  --rule:#2b2f34; --rule-2:#3a3f45;
+  --accent:#5fc0b2; --accent-2:#8ad6c9; --accent-soft:#16302d;
+  --amber:#e0a94a; --amber-soft:#2e2515;
+  --violet:#b39ae8; --violet-soft:#241e33;
+  --rose:#e095a0; --rose-soft:#2e1c20;
+  --b1:#5fc0b2; --b2:#e0a94a; --b3:#b39ae8; --b4:#e095a0; --b5:#79b3d6;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:1.5rem}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:17px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- shell ---------- */
+.shell{max-width:1180px;margin:0 auto;padding:0 16px;display:grid;grid-template-columns:230px 1fr;gap:48px}
+@media(max-width:940px){.shell{grid-template-columns:1fr;gap:0}}
+
+aside{
+  position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+  padding:40px 0 60px;border-right:1px solid var(--rule);
+  font-size:13.5px;line-height:1.45;
+}
+@media(max-width:940px){aside{display:none}}
+aside .tocHead{font:600 11px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:0 0 14px}
+aside a{display:flex;gap:8px;align-items:baseline;justify-content:space-between;color:var(--ink-2);text-decoration:none;padding:5px 10px 5px 11px;border-left:2px solid transparent;margin-left:-1px}
+aside a:hover{color:var(--accent);background:var(--accent-soft)}
+aside a.active{color:var(--accent);border-left-color:var(--accent);font-weight:600}
+aside a .mins{flex:0 0 auto;color:var(--ink-3);font:500 11.5px var(--mono)}
+
+main{padding:40px 0 120px;min-width:0;max-width:760px}
+
+/* ---------- masthead ---------- */
+.mast{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:8px}
+.kicker{font:600 11px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+.mast h1{
+  font-family:var(--serif);font-weight:600;font-size:clamp(2.1rem,5.4vw,3.3rem);
+  line-height:1.04;letter-spacing:-.02em;margin:0 0 16px;
+}
+.mast .meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px;color:var(--ink-2)}
+.mast .meta b{color:var(--ink);font-weight:600}
+.pill{
+  display:inline-block;padding:3px 9px;border-radius:999px;
+  background:var(--accent-soft);color:var(--accent);
+  font:600 12px var(--sans);border:1px solid color-mix(in srgb,var(--accent) 22%,transparent);
+}
+
+/* ---------- prose ---------- */
+h2{
+  font-family:var(--serif);font-weight:600;font-size:1.72rem;line-height:1.15;
+  letter-spacing:-.015em;margin:3.1rem 0 .3rem;padding-top:1.5rem;
+  border-top:1px solid var(--rule);
+}
+h2:first-of-type{border-top:0}
+h2 .secn{
+  display:block;font:600 11px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;
+}
+h3{font-family:var(--sans);font-weight:650;font-size:1.13rem;letter-spacing:-.005em;margin:2.1rem 0 .4rem}
+h4{font-family:var(--sans);font-weight:650;font-size:1rem;margin:1.5rem 0 .3rem;color:var(--ink-2)}
+p{margin:.85em 0}
+main>p:first-of-type{font-size:1.04em}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+strong{font-weight:650}
+hr{border:0;border-top:1px solid var(--rule);margin:2.4rem 0}
+img{max-width:100%;height:auto;border-radius:10px;border:1px solid var(--rule);display:block;margin:1.4rem 0;background:var(--paper-2)}
+code{font-family:var(--mono);font-size:.875em;background:var(--paper-2);border:1px solid var(--rule);border-radius:4px;padding:.1em .35em}
+pre{
+  background:var(--paper-2);border:1px solid var(--rule);border-radius:10px;
+  padding:16px 18px;overflow-x:auto;margin:1.4rem 0;box-shadow:var(--shadow);
+}
+pre code{background:none;border:0;padding:0;font-size:13.2px;line-height:1.6}
+
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:14.6px;display:block;overflow-x:auto}
+th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--rule);vertical-align:top}
+thead th{
+  font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);
+  border-bottom:1.5px solid var(--rule-2);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:color-mix(in srgb,var(--accent) 4%,transparent)}
+td strong{color:var(--ink)}
+
+ul,ol{padding-left:1.3em;margin:.85em 0}
+li{margin:.3em 0}
+
+/* ---------- labels ---------- */
+.lbl{
+  margin:1.5rem 0;padding:13px 16px 13px 17px;border-radius:0 9px 9px 0;
+  border-left:3px solid var(--rule-2);background:var(--paper-2);font-size:15.5px;line-height:1.6;
+}
+.lbl .tag{
+  display:block;font:600 10.5px/1 var(--sans);letter-spacing:.13em;text-transform:uppercase;
+  margin-bottom:7px;
+}
+.lbl.instructor{border-left-color:var(--violet);background:var(--violet-soft)}
+.lbl.instructor .tag{color:var(--violet)}
+.lbl.ask{border-left-color:var(--accent);background:var(--accent-soft)}
+.lbl.ask .tag{color:var(--accent)}
+.lbl.important{border-left-color:var(--amber);background:var(--amber-soft)}
+.lbl.important .tag{color:var(--amber)}
+.lbl.doubt{border-left-color:var(--b5);background:color-mix(in srgb,var(--b5) 10%,transparent)}
+.lbl.doubt .tag{color:var(--b5)}
+.lbl.question{border-left-color:var(--rose);background:var(--rose-soft)}
+.lbl.question .tag{color:var(--rose)}
+.step{
+  display:flex;gap:13px;margin:.7rem 0;padding:11px 14px;background:var(--paper-2);
+  border:1px solid var(--rule);border-radius:9px;font-size:15.5px;
+}
+.step .n{
+  flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--paper-2);
+  display:grid;place-items:center;font:600 13px var(--mono);
+}
+:root[data-theme="dark"] .step .n,
+html:not([data-theme="light"]) .step .n{color:#0d1114}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .step .n{color:#fff}}
+.step .body{flex:1;min-width:0}
+
+/* ---------- quiz ---------- */
+.quiz{
+  margin:2.2rem 0;border:1px solid var(--rule-2);border-radius:13px;overflow:hidden;
+  background:var(--paper-2);box-shadow:var(--shadow);
+}
+.quiz .qhead{
+  display:flex;align-items:center;gap:10px;padding:13px 18px;
+  border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--accent) 7%,transparent);
+}
+.quiz .qnum{font:600 11px var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--accent)}
+.quiz .qbody{padding:16px 18px 18px}
+.quiz .qtext{font-weight:600;margin:0 0 14px;font-size:16.5px;line-height:1.5}
+.opt{
+  display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;
+  padding:11px 14px;margin:7px 0;border:1px solid var(--rule);border-radius:9px;
+  background:var(--paper);color:var(--ink);font:400 15.5px/1.5 var(--sans);cursor:pointer;
+  transition:border-color .12s,background .12s;
+}
+.opt:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft)}
+.opt:disabled{cursor:default}
+.opt .k{
+  flex:0 0 auto;width:23px;height:23px;border-radius:5px;border:1px solid var(--rule-2);
+  display:grid;place-items:center;font:600 12.5px var(--mono);color:var(--ink-2);background:var(--paper-2);
+}
+.opt.right{border-color:var(--accent);background:var(--accent-soft)}
+.opt.right .k{background:var(--accent);border-color:var(--accent);color:var(--paper-2)}
+.opt.wrong{border-color:var(--rose);background:var(--rose-soft)}
+.opt.wrong .k{background:var(--rose);border-color:var(--rose);color:var(--paper-2)}
+.verdict{margin:14px 0 0;padding:13px 15px;border-radius:9px;font-size:15px;line-height:1.6;display:none}
+.verdict.show{display:block}
+.verdict .vt{font-weight:650;display:block;margin-bottom:5px}
+.verdict.ok{background:var(--accent-soft);border-left:3px solid var(--accent)}
+.verdict.no{background:var(--rose-soft);border-left:3px solid var(--rose)}
+
+/* ---------- visualizers ---------- */
+.viz{
+  margin:2.3rem 0;border:1px solid var(--rule-2);border-radius:13px;background:var(--paper-2);
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.viz .vhead{padding:14px 18px 12px;border-bottom:1px solid var(--rule)}
+.viz .vk{font:600 10.5px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--b2);margin-bottom:7px}
+.viz .vhead h4{margin:0;font-size:1.05rem;color:var(--ink);font-weight:650}
+.viz .vhead p{margin:5px 0 0;font-size:14px;color:var(--ink-2)}
+.viz .vbody{padding:17px 18px 20px}
+.ctl{display:grid;gap:14px;margin-bottom:17px}
+.ctl.two{grid-template-columns:1fr 1fr}
+.ctl.three{grid-template-columns:repeat(3,1fr)}
+@media(max-width:620px){.ctl.two,.ctl.three{grid-template-columns:1fr}}
+.ctl label{display:block;font:600 12px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.ctl label .v{float:right;text-transform:none;letter-spacing:0;font-family:var(--mono);color:var(--accent);font-size:12.5px}
+input[type=range]{width:100%;accent-color:var(--accent);height:22px}
+textarea,select,input[type=number]{
+  width:100%;font-family:var(--mono);font-size:13.5px;padding:9px 11px;
+  border:1px solid var(--rule-2);border-radius:8px;background:var(--paper);color:var(--ink);
+}
+textarea{resize:vertical;min-height:74px;line-height:1.55}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{
+  padding:6px 12px;border:1px solid var(--rule-2);border-radius:7px;background:var(--paper);
+  color:var(--ink-2);font:500 13px var(--sans);cursor:pointer;
+}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:var(--paper-2);font-weight:600}
+
+.toks{display:flex;flex-wrap:wrap;gap:3px;padding:13px;background:var(--paper);border:1px solid var(--rule);border-radius:9px;min-height:54px;align-content:flex-start}
+.tok{font-family:var(--mono);font-size:13px;padding:2px 5px;border-radius:4px;white-space:pre;border:1px solid transparent}
+.tok.c0{background:color-mix(in srgb,var(--b1) 17%,transparent);border-color:color-mix(in srgb,var(--b1) 35%,transparent)}
+.tok.c1{background:color-mix(in srgb,var(--b2) 17%,transparent);border-color:color-mix(in srgb,var(--b2) 35%,transparent)}
+.tok.c2{background:color-mix(in srgb,var(--b3) 17%,transparent);border-color:color-mix(in srgb,var(--b3) 35%,transparent)}
+.tok.c3{background:color-mix(in srgb,var(--b4) 17%,transparent);border-color:color-mix(in srgb,var(--b4) 35%,transparent)}
+.tok.c4{background:color-mix(in srgb,var(--b5) 17%,transparent);border-color:color-mix(in srgb,var(--b5) 35%,transparent)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:1px;margin-top:15px;background:var(--rule);border:1px solid var(--rule);border-radius:9px;overflow:hidden}
+.stat{background:var(--paper-2);padding:11px 13px}
+.stat .sl{font:600 10.5px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px}
+.stat .sv{font:600 1.22rem/1.15 var(--mono);color:var(--ink);letter-spacing:-.01em}
+.stat .sv.a{color:var(--accent)}
+.stat .sv.w{color:var(--amber)}
+.stat .sn{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+
+.bars{display:grid;gap:9px;margin-top:4px}
+.bar{display:grid;grid-template-columns:132px 1fr auto;gap:11px;align-items:center;font-size:13.5px}
+@media(max-width:560px){.bar{grid-template-columns:96px 1fr auto;gap:8px;font-size:12.5px}}
+.bar .bl{color:var(--ink-2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .bt{height:17px;background:color-mix(in srgb,var(--ink) 7%,transparent);border-radius:4px;overflow:hidden}
+.bar .bf{height:100%;border-radius:4px;transition:width .22s ease}
+.bar .bv{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);min-width:52px;text-align:right}
+.bar.hi .bl{color:var(--ink);font-weight:650}
+
+.note{margin-top:15px;padding-top:13px;border-top:1px dashed var(--rule-2);font-size:13.5px;color:var(--ink-3);line-height:1.55}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:12.5px;color:var(--ink-2)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+.theme{
+  position:fixed;right:16px;bottom:16px;z-index:50;
+  width:42px;height:42px;border-radius:50%;border:1px solid var(--rule-2);
+  background:var(--paper-2);color:var(--ink-2);cursor:pointer;box-shadow:var(--shadow);
+  font-size:17px;line-height:1;display:grid;place-items:center;
+}
+.theme:hover{color:var(--accent);border-color:var(--accent)}
+.endnote{margin-top:4rem;padding-top:1.3rem;border-top:2px solid var(--ink);font-size:13.5px;color:var(--ink-3)}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/rag/">RAG &amp; retrieval</a><span class="t">· AI Academy 5 · RAG: how a machine finds the right page</span><span class="p"><a href="../Academy-AI-class-5-preRead/">Pre-read</a><b>Class</b><a href="../Academy-AI-class-5-postRead/">Post-read</a></span><span class="pn"><a href="../Understanding-the-landscape-of-RAG-/" title="RAG · Understanding the landscape of RAG">← Prev</a><a href="../AI-beginners-class5/" title="AI Beginners 5 · Retrieval-augmented generation">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="shell">
+  <aside><div class="tocHead">On this page</div><nav id="toc"></nav></aside>
+  <main>
+    <header class="mast">
+      <div class="kicker">AI and Agents &middot; Academy Advanced</div>
+      <h1>RAG, or How a Machine Finds the Right Page</h1>
+      <div class="meta">
+        <span><b>Class 5</b> of 12</span>
+        <span class="pill">112 min + 8 min buffer</span>
+        <span>5 in-class quizzes</span>
+        <span>Gemini Notebook, free, no installs</span>
+      </div>
+    </header>
+    <div id="content"><h2 id="agenda" data-label="Agenda">Agenda</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Section</th>
+<th>Minutes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>You already built the crudest possible version</td>
+<td>5</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Why RAG exists</td>
+<td>8</td>
+</tr>
+<tr>
+<td></td>
+<td>Quiz 1</td>
+<td>3</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The pipeline, and the two phases people confuse</td>
+<td>8</td>
+</tr>
+<tr>
+<td></td>
+<td>Quiz 2</td>
+<td>3</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Embeddings: why meaning needs coordinates</td>
+<td>16</td>
+</tr>
+<tr>
+<td></td>
+<td>Quiz 3</td>
+<td>3</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Chunking: how you cut decides what you can find</td>
+<td>13</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Vector databases: what they actually do</td>
+<td>9</td>
+</tr>
+<tr>
+<td></td>
+<td>Quiz 4</td>
+<td>3</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Making retrieval good: reranking and hybrid search</td>
+<td>13</td>
+</tr>
+<tr>
+<td></td>
+<td>Quiz 5</td>
+<td>3</td>
+</tr>
+<tr>
+<td>8</td>
+<td>See it working: Gemini Notebook</td>
+<td>14</td>
+</tr>
+<tr>
+<td>9</td>
+<td>What this looks like in code, and where LangChain sits</td>
+<td>7</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Wrap-up and what is next</td>
+<td>4</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Total</strong></td>
+<td><strong>112</strong></td>
+</tr>
+</tbody>
+</table>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>This is a concepts class, not a build class. Learners do not write a retrieval pipeline today, and that is deliberate: the engineering of RAG belongs to the dedicated AI Engineering module, and trying to squeeze it in here produces a rushed demo and no understanding. What they leave with is the vocabulary, the decisions, and the ability to look at any "chat with your documents" product and say what it is doing.</div>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>There is one short code block, in Section 9. It is read-only and the script says so out loud. Do not let the room start typing it.</div>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>The only tool today is Gemini Notebook, free, on the Google account they already have. NotebookLM has been renamed: notebooklm.google.com now redirects to notebook.google.com and the product is called Gemini Notebook. Verified on 3 November 2026. Perplexity and NoteGPT are both out of this class.</div>
+<h2 id="section-1" data-label="You already built the crudest possible version" data-mins="5"><span class="secn">Section 1 &middot; 5 min</span>You already built the crudest possible version</h2>
+<p>Two classes ago you built a summariser. Look at what it actually does.</p>
+<p>It fetches a page, takes the whole thing, and pastes it into the prompt. Every word. Then it asks a question about it.</p>
+<p>That is retrieval. Specifically, it is retrieval where you retrieve everything and hope the answer is in there.</p>
+<div class="lbl ask"><span class="tag">Ask Learners</span>Your scraper has <code>MAX_CHARS = 12_000</code>. What happens when someone points it at a document that is four hundred thousand characters long?</div>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Let them answer. The honest answer is that you truncate, and you throw away most of the document without knowing whether the answer was in the part you cut. That is the gap this class fills.</div>
+<p>That approach works for one web page. It falls apart the moment the material is bigger than the prompt, and almost all real material is. A company handbook. A year of support tickets. A textbook.</p>
+<p>So the question for today is narrow and it is the whole of RAG: <strong>when the material is too big to send, how do you find the right few pieces to send instead?</strong></p>
+<h2 id="section-2" data-label="Why RAG exists" data-mins="8"><span class="secn">Section 2 &middot; 8 min</span>Why RAG exists</h2>
+<p>RAG stands for Retrieval-Augmented Generation. Before the model answers, you retrieve the most relevant pieces of your own material and put them in the prompt. The model answers from those.</p>
+<p>No retraining. No fine-tuning. It is an open-book exam instead of a closed-book one.</p>
+<h3>The four problems it solves</h3>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>What it looks like</th>
+<th>What RAG does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Knowledge cutoff</td>
+<td>It does not know what happened after training ended</td>
+<td>Fetch today's document</td>
+</tr>
+<tr>
+<td>Private data</td>
+<td>It has never seen your HR policy, your contracts, your tickets</td>
+<td>Search your own material</td>
+</tr>
+<tr>
+<td>Invention</td>
+<td>When unsure, it produces something plausible</td>
+<td>Ground the answer in real text</td>
+</tr>
+<tr>
+<td>No sources</td>
+<td>Ask "where did you get that" and there is nothing</td>
+<td>Return the passage it used</td>
+</tr>
+</tbody>
+</table>
+<p>Those first two are capability problems. The second two are the trust problems from Class 3, and RAG is the main structural answer to them.</p>
+<div class="lbl important"><span class="tag">Important</span>The fourth one is underrated. In Class 3 you learned that a confident answer tells you nothing about whether it is true. A retrieved answer can show you the passage, which means somebody can check it in five seconds. That changes what you can responsibly build.</div>
+<h3>Where you have already met it</h3>
+<p>Almost every AI feature you have used is this pattern underneath.</p>
+<table>
+<thead>
+<tr>
+<th>Product</th>
+<th>What it retrieves from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Notion AI</td>
+<td>Your workspace</td>
+</tr>
+<tr>
+<td>Glean</td>
+<td>Your company's connected apps</td>
+</tr>
+<tr>
+<td>Perplexity</td>
+<td>Live web pages</td>
+</tr>
+<tr>
+<td>Intercom Fin</td>
+<td>The company's support articles</td>
+</tr>
+<tr>
+<td>Cursor and similar</td>
+<td>Your repository</td>
+</tr>
+<tr>
+<td>Claude Projects, ChatGPT Projects</td>
+<td>The files you attached, which is Class 4</td>
+</tr>
+</tbody>
+</table>
+<div class="lbl ask"><span class="tag">Ask Learners</span>Which of those have you used? And did you ever notice it showing you a source?</div>
+<div class="lbl doubt"><span class="tag">Doubt by Learner</span>Why not just fine-tune a model on our data instead?</div>
+<p>Three reasons it is usually the wrong first move. It is expensive and slow to redo every time your data changes, and your data changes constantly. It still cannot cite a source. And it does not stop invention. RAG is faster, cheaper, traceable, and almost always what you want first.</p>
+<section class="quiz" data-ans="B" data-exp="The two things that matter here are that the material changes monthly and that HR answers need to be checkable. RAG handles both: swap the file, and every answer can point at its source. A is sometimes true but is not the deciding factor. D is not the trade-off: fine-tuning affects style and format at least as much as retrieval does, and fluency was never the problem."><div class="qhead"><span class="qnum">In-class quiz 1</span></div><div class="qbody"><p class="qtext">A company wants an assistant that answers questions about their internal HR policy, which is updated roughly every month. Why is RAG a better first choice than fine-tuning a model on the policy?</p><div class="opts"><button class="opt" data-k="A"><span class="k">A</span><span>Fine-tuning requires more GPUs than most companies have access to</span></button><button class="opt" data-k="B"><span class="k">B</span><span>You swap the document when the policy changes, and every answer can show its source</span></button><button class="opt" data-k="C"><span class="k">C</span><span>Fine-tuned models cannot be deployed on free tiers</span></button><button class="opt" data-k="D"><span class="k">D</span><span>A fine-tuned model would produce less fluent answers, which matters because HR questions are read by non-technical employees across the company</span></button></div><div class="verdict"><span class="vt"></span> <span class="vx"></span></div></div></section>
+
+<h2 id="section-3" data-label="The pipeline, and the two phases people confuse" data-mins="8"><span class="secn">Section 3 &middot; 8 min</span>The pipeline, and the two phases people confuse</h2>
+<p>Strip the jargon and the whole thing is a librarian sitting between the question and the model.</p>
+<p>You ask a friend about an 800-page book they have never read. They guess. Instead, you find the three most relevant pages, hand them over, and then ask. Now they answer from real text. The librarian who finds those three pages is the only new thing in this class.</p>
+<h3>The five boxes</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Box</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Question</td>
+<td>The user types it</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Search</td>
+<td>Find the most relevant chunks</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Stuff</td>
+<td>Put those chunks in the prompt</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Model</td>
+<td>Answer using them</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Answer</td>
+<td>Plus the source it used</td>
+</tr>
+</tbody>
+</table>
+<p>Boxes 1, 3, 4 and 5 you already built in Class 3. Box 2 is the entire subject of today.</p>
+<h3>The two phases</h3>
+<p>This is the distinction people get wrong most often, and everything else makes more sense once it is clear.</p>
+<p><strong>Indexing happens once, offline.</strong> Read your documents, cut them into chunks, turn each chunk into numbers, store them. It is slow, and you only redo it when the documents change.</p>
+<p><strong>Querying happens every time, online.</strong> Turn the question into numbers, find the nearest chunks, put them in the prompt, answer. Milliseconds.</p>
+<div class="lbl important"><span class="tag">Important</span>Nothing here retrains the model. The model is the same one you called in Class 1. You are only changing what goes into the prompt. RAG is, at its core, automated prompt engineering.</div>
+<div class="lbl doubt"><span class="tag">Doubt by Learner</span>If indexing is slow, does my app get slower as I add documents?</div>
+<p>Indexing does, and your users never see it. Querying barely changes, because the search structures are built to scale: going from ten thousand chunks to ten million adds a handful of steps, not a million. Section 6 says why.</p>
+<section class="quiz" data-ans="C" data-exp="Indexing is where the reading, cutting and encoding happen, and that is proportional to how much material you add. Querying stays fast because of how vector search is structured, which is Section 6. A describes a naive comparison against every document, which is exactly what vector databases are built to avoid. D invents a filtering step that does not exist."><div class="qhead"><span class="qnum">In-class quiz 2</span></div><div class="qbody"><p class="qtext">A team adds 500 new PDFs to their RAG system. Which phase does this slow down?</p><div class="opts"><button class="opt" data-k="A"><span class="k">A</span><span>Querying, because the search has to compare against 500 more documents each time</span></button><button class="opt" data-k="B"><span class="k">B</span><span>Both phases equally, since more data always costs more at every stage</span></button><button class="opt" data-k="C"><span class="k">C</span><span>Indexing, which runs once when the documents are added</span></button><button class="opt" data-k="D"><span class="k">D</span><span>Neither, because documents are only read when a user&#x27;s question mentions them</span></button></div><div class="verdict"><span class="vt"></span> <span class="vx"></span></div></div></section>
+
+<h2 id="section-4" data-label="Embeddings: why meaning needs coordinates" data-mins="16"><span class="secn">Section 4 &middot; 16 min</span>Embeddings: why meaning needs coordinates</h2>
+<p>Before you can search by meaning, you need meaning in a form a computer can compare. That is an embedding, and once you see what it does the rest of RAG stops being mysterious.</p>
+<h3>Why keyword search is not enough</h3>
+<p>Someone searches your shoe catalogue for "running shoes". Your best product is titled "marathon footwear". Keyword search returns nothing, because not one word matches.</p>
+<p>That is the problem. You need a way to find things that <em>mean</em> the same, not things that <em>spell</em> the same.</p>
+<h3>The idea: meaning as a position</h3>
+<p>Forget AI for a moment. Put people on a chart with height on one axis and weight on the other. Each person becomes a point. People of similar build end up near each other, and you can now ask "who is most similar to this person" by measuring distance. You turned a description into coordinates and got comparison for free.</p>
+<p>An embedding does exactly that for text, except with hundreds or thousands of axes instead of two, and the axes are not things you can name. Similar meanings land near each other. Different meanings land far apart.</p>
+<div class="lbl important"><span class="tag">Important</span>This is the single idea the whole class rests on. "Find the relevant chunk" becomes "find the nearest point", and finding nearby points is something computers are extremely good at.</div>
+<h3>The part that convinces people</h3>
+<p>The famous demonstration: take the vector for king, subtract man, add woman, and you land very close to queen.</p>
+<p>That is arithmetic. On meaning. The model was never taught what royalty or gender are; those relationships fell out of learning to predict text, which is Class 1's self-supervision lesson showing up again in a different form.</p>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Live demo, 4 minutes, using the similarity meter in the visualizer rather than any tool. Type two sentences that share no words but mean the same thing, and show the score stay high. Then two that share most of their words but mean opposite things, and show it drop. That contrast is the whole lesson and it does not depend on any model behaving in a particular way.</div>
+<h3>How similarity is actually measured</h3>
+<p>Cosine similarity, which is the angle between two arrows from the origin. Pointing the same way scores 1. At right angles, 0. Opposite, -1.</p>
+<p>Why the angle and not the straight-line distance: a long document and a short sentence about the same topic produce arrows of different lengths but similar direction. Angle captures "about the same thing" while ignoring "says more about it".</p>
+<h3>Choosing an embedding model</h3>
+<p>You do not need to build one, and you do need to pick one. The decisions that matter:</p>
+<table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>What to think about</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>General or domain-specific</td>
+<td>A general model is fine for most things. Legal, medical and code have specialised models that do noticeably better</td>
+</tr>
+<tr>
+<td>English or multilingual</td>
+<td>A multilingual model lets a Hindi question find an English passage. An English-only model will not</td>
+</tr>
+<tr>
+<td>Size and dimensions</td>
+<td>Bigger vectors capture more nuance, cost more to store and compare. More is not automatically better</td>
+</tr>
+<tr>
+<td>Hosted or local</td>
+<td>Hosted is one API call. Local keeps your text on your own machines, which matters for regulated data</td>
+</tr>
+</tbody>
+</table>
+<div class="lbl important"><span class="tag">Important</span>One rule that catches everybody: you must use the same embedding model for your documents and for your questions. Two models produce two different coordinate systems, and distances between them are meaningless. Change your embedding model and you must re-index everything.</div>
+<div class="lbl doubt"><span class="tag">Doubt by Learner (Optional)</span>Is an embedding the same as a token from Class 1?</div>
+<p>No, and they are easy to confuse. A token is a chunk of text the model reads, with no meaning attached. An embedding is a position in meaning-space for a whole piece of text. Tokens are about reading, embeddings are about comparing.</p>
+<section class="quiz" data-ans="D" data-exp="Two embedding models place meaning differently, so a question encoded by one cannot be meaningfully compared with articles encoded by the other, and the distances between them mean nothing. Changing the embedding model means re-indexing everything. C would at least fail loudly with a dimension mismatch, which is a kinder failure than this one. B describes something that does not happen."><div class="qhead"><span class="qnum">In-class quiz 3</span></div><div class="qbody"><p class="qtext">A team indexes 50,000 support articles with one embedding model. Six months later they switch to a newer, better embedding model and use it for incoming questions, leaving the stored article vectors as they are. Retrieval quality collapses. Why?</p><div class="opts"><button class="opt" data-k="A"><span class="k">A</span><span>The new model scores better on public benchmarks but performs worse on this company&#x27;s particular support content, which those benchmarks do not represent</span></button><button class="opt" data-k="B"><span class="k">B</span><span>The old vectors have degraded over six months of storage</span></button><button class="opt" data-k="C"><span class="k">C</span><span>The stored vectors have more dimensions than the new model produces</span></button><button class="opt" data-k="D"><span class="k">D</span><span>The questions and the articles are now in two different coordinate systems</span></button></div><div class="verdict"><span class="vt"></span> <span class="vx"></span></div></div></section>
+
+<h2 id="section-5" data-label="Chunking: how you cut decides what you can find" data-mins="13"><span class="secn">Section 5 &middot; 13 min</span>Chunking: how you cut decides what you can find</h2>
+<p>You cannot embed a 300-page book as one vector. The meaning of the whole book averages out into something that is close to nothing. So you cut it into pieces first, and how you cut turns out to matter a great deal.</p>
+<p>A chunk is the unit of retrieval. Whatever you cut is what gets found and handed to the model.</p>
+<h3>Four strategies worth knowing</h3>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>How it cuts</th>
+<th>Where it fits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fixed size</td>
+<td>Every N characters, regardless of content</td>
+<td>Simplest. Cuts mid-sentence and mid-word. Fine for uniform text, bad for most things</td>
+</tr>
+<tr>
+<td>Recursive</td>
+<td>Tries paragraph breaks first, then sentences, then words</td>
+<td>The sane default. Respects natural boundaries while keeping sizes roughly even</td>
+</tr>
+<tr>
+<td>Semantic</td>
+<td>Cuts where the topic changes</td>
+<td>Best quality, most expensive, because it needs a model to judge the boundaries</td>
+</tr>
+<tr>
+<td>Structure-aware</td>
+<td>Uses the document's own headings and sections</td>
+<td>Free quality when the document has structure: markdown, HTML, a contract with clauses</td>
+</tr>
+</tbody>
+</table>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Live demo, 4 minutes, with the chunking visualizer. Run the same passage through all four and let the room watch the boundaries move. The moment that lands is fixed-size cutting a sentence in half, then recursive fixing it at the same chunk size.</div>
+<h3>The trade-off you will actually tune</h3>
+<p>Big chunks mean high recall and low precision: the answer is probably in there, surrounded by a lot of irrelevant text that dilutes it.</p>
+<p>Small chunks mean high precision and low recall: when you find the right chunk it is exactly the answer, but the relevant material may be split across two chunks and you only retrieved one.</p>
+<div class="lbl important"><span class="tag">Important</span>Chunk size is the first thing teams tune when RAG quality is poor, and there is no universal right answer. It depends on your documents and your questions.</div>
+<h3>Overlap</h3>
+<p>Chunks usually overlap by a small amount, often fifty to a hundred characters. If the answer sits exactly on a boundary, overlap means it still appears whole in at least one chunk. Cheap insurance against an annoying failure.</p>
+<div class="lbl ask"><span class="tag">Ask Learners</span>Think of a document you work with. Which of the four strategies fits it, and why?</div>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Advanced learner extension, if the room is ahead: ask what the right chunk is for source code. The answer people reach is the function or the class, not a character count, which is structure-aware chunking arrived at from first principles.</div>
+<h2 id="section-6" data-label="Vector databases: what they actually do" data-mins="9"><span class="secn">Section 6 &middot; 9 min</span>Vector databases: what they actually do</h2>
+<p>You now have a few hundred thousand chunks, each with a vector. For every question you need the nearest few, fast. That is a vector database, and that is all it is.</p>
+<p>An ordinary database answers "find rows where the column equals this". A vector database answers "find the vectors closest to this vector". Same idea, different question.</p>
+<h3>Three operations</h3>
+<p>That is genuinely the whole interface.</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Add</td>
+<td>Store chunks and their vectors. This is indexing</td>
+</tr>
+<tr>
+<td>Query</td>
+<td>Give me the k nearest vectors to this one. This is retrieval</td>
+</tr>
+<tr>
+<td>Delete</td>
+<td>Remove chunks when a document goes away</td>
+</tr>
+</tbody>
+</table>
+<h3>Why it stays fast</h3>
+<p>Comparing your question against a million vectors one at a time would be slow. Vector databases build a structure that lets a query take roughly log-many hops instead of a million comparisons, which is why lookups stay in the milliseconds even at very large scale.</p>
+<p>You will never implement this. Every vector database ships it. What you need to know is that it is approximate: it trades a tiny amount of accuracy for an enormous amount of speed, and that trade is almost always worth it.</p>
+<h3>The names you will hear</h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>What it is for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chroma</td>
+<td>Open source, runs inside your process, no server. Prototypes and small datasets</td>
+</tr>
+<tr>
+<td>Pinecone</td>
+<td>Fully managed and paid. No operations work, scales very large</td>
+</tr>
+<tr>
+<td>Qdrant, Weaviate</td>
+<td>Open source and production-grade. Self-host or use their cloud</td>
+</tr>
+<tr>
+<td>FAISS</td>
+<td>A library rather than a database. The building block underneath many of the others</td>
+</tr>
+</tbody>
+</table>
+<div class="lbl important"><span class="tag">Important</span>You do not always need one. For a few hundred chunks, a list in memory and a loop is genuinely fine, and the dependency costs you more than it saves. Reach for a vector database when the data outgrows memory, when you need it to persist, or when many users query it at once.</div>
+<section class="quiz" data-ans="B" data-exp="Vector databases solve scale, persistence and concurrency. None of those bite at 200 pages. The search itself is just comparing a question vector against stored vectors, which a plain list handles fine at this size. A and C both treat a storage optimisation as a requirement of the method. D confuses the kind of data with the kind of search."><div class="qhead"><span class="qnum">In-class quiz 4</span></div><div class="qbody"><p class="qtext">A team is building a prototype that answers questions over about 200 internal pages. A consultant tells them they must set up a managed vector database before they can start. What is the most reasonable assessment?</p><div class="opts"><button class="opt" data-k="A"><span class="k">A</span><span>Correct, because semantic search cannot work without a vector database</span></button><button class="opt" data-k="B"><span class="k">B</span><span>At that size the vectors fit in memory, and a database can be added later</span></button><button class="opt" data-k="C"><span class="k">C</span><span>Correct, because embeddings cannot be stored in ordinary data structures</span></button><button class="opt" data-k="D"><span class="k">D</span><span>They should use a relational database instead, since internal documentation is structured data that fits naturally into tables and columns</span></button></div><div class="verdict"><span class="vt"></span> <span class="vx"></span></div></div></section>
+
+<h2 id="section-7" data-label="Making retrieval good: reranking and hybrid search" data-mins="13"><span class="secn">Section 7 &middot; 13 min</span>Making retrieval good: reranking and hybrid search</h2>
+<p>Basic RAG works. Good RAG needs two more ideas, and these are where most of the quality difference between a demo and a product lives.</p>
+<h3>Problem one: the top five are not the best five</h3>
+<p>Embedding similarity is fast but shallow. It sometimes ranks a passage that shares surface wording above one that actually answers the question.</p>
+<p>The fix is two passes, and the analogy is hiring.</p>
+<p>You have a thousand applicants for one role. You cannot interview all of them, and you cannot pick from a stack of CVs on instinct. So you scan quickly to get a shortlist of twenty-five, then interview those properly.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>First pass</th>
+<th>Second pass</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Called</td>
+<td>Bi-encoder</td>
+<td>Cross-encoder</td>
+</tr>
+<tr>
+<td>How it works</td>
+<td>Encodes the question and each document separately, compares the vectors</td>
+<td>Feeds the question and one document in together and scores the pair</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>Milliseconds across millions</td>
+<td>Much slower, one pair at a time</td>
+</tr>
+<tr>
+<td>Can you precompute it</td>
+<td>Yes, encode documents once and store forever</td>
+<td>No, every score is specific to that question</td>
+</tr>
+<tr>
+<td>Use it to</td>
+<td>Narrow a million down to fifty</td>
+<td>Pick the best three from those fifty</td>
+</tr>
+</tbody>
+</table>
+<div class="lbl important"><span class="tag">Important</span>The second pass is only affordable because the first pass did the narrowing. That two-stage shape shows up everywhere in search and recommendation, not just RAG.</div>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Live demo, 4 minutes, with the reranking visualizer. The moment worth pausing on is the passage that never uses the word in the question and still turns out to be the best answer. Vector search puts it fourth; the reranker lifts it to first.</div>
+<h3>Problem two: sometimes you need the exact word</h3>
+<p>Semantic search is bad at things with no meaning to speak of. Ask for "the price of SKU-4429" and the embedding sees "price" and "product" and shrugs at the code. Product codes, model numbers, legal section numbers, names and dates are all cases where you want the literal string.</p>
+<p>Keyword search, usually BM25, is excellent at exactly this and useless at synonyms. So you run both.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>BM25, the literalist</th>
+<th>Vector, the philosopher</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Great at</td>
+<td>Codes, IDs, names, exact phrases</td>
+<td>Synonyms, paraphrase, intent, other languages</td>
+</tr>
+<tr>
+<td>Blind to</td>
+<td>Meaning. "Marathon footwear" is not "running shoes"</td>
+<td>Exact strings. SKU-4429 is noise</td>
+</tr>
+</tbody>
+</table>
+<p>Hybrid search sends the question to both and merges the two ranked lists. The usual merge is Reciprocal Rank Fusion: each document scores based on where it placed in each list, so anything both methods liked rises to the top, and anything one method loved strongly still gets a fair hearing.</p>
+<div class="lbl important"><span class="tag">Important</span>Real questions are messy. Mostly natural language, sprinkled with a product code or a proper noun. Hybrid covers both halves automatically, which is why it is the production default rather than a clever extra.</div>
+<section class="quiz" data-ans="A" data-exp="The failure is specific to an exact string with no semantic content, which is precisely what embeddings are bad at and keyword search is good at. D is a real improvement but it can only reorder what the first pass retrieved, and if the right page was never retrieved there is nothing to promote. B and C both adjust the semantic side, which is not where the problem is."><div class="qhead"><span class="qnum">In-class quiz 5</span></div><div class="qbody"><p class="qtext">A documentation search works well for questions like &quot;how do I reset my password&quot; but consistently fails to find the page for &quot;error E-4471&quot;. What is the most direct fix?</p><div class="opts"><button class="opt" data-k="A"><span class="k">A</span><span>Add keyword search alongside the semantic search and merge the rankings</span></button><button class="opt" data-k="B"><span class="k">B</span><span>Re-chunk the documents using a smaller chunk size</span></button><button class="opt" data-k="C"><span class="k">C</span><span>Switch to a larger embedding model with more dimensions</span></button><button class="opt" data-k="D"><span class="k">D</span><span>Add a reranking step so a cross-encoder can re-score the retrieved candidates more accurately</span></button></div><div class="verdict"><span class="vt"></span> <span class="vx"></span></div></div></section>
+
+<h2 id="section-8" data-label="See it working: Gemini Notebook" data-mins="14"><span class="secn">Section 8 &middot; 14 min</span>See it working: Gemini Notebook</h2>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Hands-on, 14 minutes. Everyone follows along. This is a free Google product and the whole point of using it is that it shows you the retrieved passage, which almost no consumer AI product does. Steps verified on 3 November 2026.</div>
+<p>Everything so far has been the idea. Now watch a real RAG system do it, and watch it show its work.</p>
+<div class="step"><div class="n">1</div><div class="body">Go to https://notebook.google.com. If you type the old notebooklm.google.com it redirects there. The product used to be called NotebookLM and is now Gemini Notebook.</div></div>
+<div class="step"><div class="n">2</div><div class="body">Click <strong>New notebook</strong>, then add two or three sources. Use something you actually know: lecture notes, a policy document, a long article, a YouTube link. It takes PDFs, Google Docs, pasted text, web links and YouTube videos.</div></div>
+<div class="step"><div class="n">3</div><div class="body">Look at the layout. Sources on the left, the chat in the middle, Studio on the right. The chat box tells you how many sources it is searching.</div></div>
+<div class="step"><div class="n">4</div><div class="body">Ask a specific question about your material.</div></div>
+<div class="step"><div class="n">5</div><div class="body">This is the important part. The answer has small numbered chips in it. <strong>Click one.</strong> A panel opens showing the exact passage from your source that the claim came from, and the left panel jumps to that source with the passage highlighted.</div></div>
+<div class="lbl ask"><span class="tag">Ask Learners</span>Click a citation and read the passage it points to. Does it actually support the sentence it is attached to?</div>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Give this a full three minutes and take answers. Usually most citations are solid and one is loosely attached. Both outcomes teach: a supported citation shows grounding working, and a loose one shows exactly why Class 3 said to click them.</div>
+<h3>What you are actually looking at</h3>
+<p>That numbered chip is the retrieved chunk. Everything in Sections 4 to 7 happened to produce it: your document was chunked, each chunk embedded, your question embedded, the nearest chunks retrieved, and those chunks put into the prompt.</p>
+<div class="lbl important"><span class="tag">Important</span>You are seeing box 2 of the five, which is the box you cannot normally see. In your Class 3 summariser there was nothing to show, because you retrieved the whole page. Here the system can point at the sentence.</div>
+<div class="step"><div class="n">6</div><div class="body">Now ask something your sources do not cover. Watch it decline rather than invent.</div></div>
+<div class="lbl important"><span class="tag">Important</span>That refusal is the whole point of grounding, and it is the behaviour you wrote by hand into your own app in Class 3 with "answer only from the page". Here it is built in.</div>
+<div class="lbl doubt"><span class="tag">Doubt by Learner</span>Is this doing the reranking and hybrid search from Section 7?</div>
+<p>Google does not publish the details, and a production system from a major lab almost certainly does more than basic vector search. What you can observe is the part that matters for today: it retrieves specific passages and it can show you which ones.</p>
+<h2 id="section-9" data-label="What this looks like in code, and where LangChain sits" data-mins="7"><span class="secn">Section 9 &middot; 7 min</span>What this looks like in code, and where LangChain sits</h2>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Read-only, 7 minutes. Say clearly at the start that nobody is building this today and nobody needs to type it. It is here so the vocabulary lands on something concrete and so they recognise the shape when they meet it in the AI Engineering module.</div>
+<p>Everything from Sections 4 to 6, in about ten lines.</p>
+<pre><code class="language-python"># NOT a build exercise. Read it, do not type it.
+
+# --- Indexing: runs once, when documents change -------------------
+chunks   = splitter.split_text(document)        # Section 5: chunking
+db       = VectorStore.from_texts(chunks, embedder)   # Sections 4 and 6
+
+# --- Querying: runs on every question -----------------------------
+hits     = db.similarity_search(question, k=3)  # Section 6: the three nearest
+context  = &quot;\n\n&quot;.join(h.text for h in hits)    # Section 3: box 3, stuff
+
+answer   = client.chat.completions.create(      # Class 1, unchanged
+    model=&quot;openai/gpt-oss-120b&quot;,
+    messages=[
+        {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;Answer only from the context below.&quot;},
+        {&quot;role&quot;: &quot;user&quot;,   &quot;content&quot;: f&quot;{context}\n\nQuestion: {question}&quot;},
+    ],
+)
+</code></pre>
+<p>Two things to notice, and they are the reason this block is here.</p>
+<p>The last call is the one you already wrote in Class 1. Same client, same three roles, same shape. RAG did not replace anything you know; it changed what goes into the context.</p>
+<p>The system line is the Class 3 grounding rule, unchanged. "Answer only from the context below" is still the most important hallucination control in the whole system.</p>
+<h3>Where LangChain fits</h3>
+<p>LangChain is the name you will hear most around this code, so here is what it actually is: glue.</p>
+<p>It provides one common interface over the pieces. Document loaders for PDFs, web pages and the rest. Text splitters implementing the strategies from Section 5. Wrappers for embedding models and vector databases so that switching from Chroma to Pinecone is a one-line change rather than a rewrite.</p>
+<div class="lbl important"><span class="tag">Important</span>You do not need LangChain to do RAG. Every line above can be written directly against the underlying libraries, and for a small project that is often simpler. It earns its place when you are swapping components, chaining several steps together, or want the loaders written for you.</div>
+<div class="lbl doubt"><span class="tag">Doubt by Learner</span>Should I learn LangChain?</div>
+<p>Learn the concepts first, which is what today was. The concepts transfer to any framework and outlast all of them. Frameworks in this area change fast; chunking, embeddings and retrieval do not.</p>
+<h2 id="section-10" data-label="Wrap-up and what is next" data-mins="4"><span class="secn">Section 10 &middot; 4 min</span>Wrap-up and what is next</h2>
+<h3>What you can do now</h3>
+<p>You can explain what RAG is without using the word retrieval-augmented: when the material is too big to send, find the right pieces and send those.</p>
+<p>You can say why embeddings exist, and why you cannot change the embedding model without re-indexing.</p>
+<p>You can name four chunking strategies and the recall-precision trade-off between big and small chunks.</p>
+<p>You can say what a vector database does, and when you do not need one.</p>
+<p>You can name the two things that separate a demo from a product, reranking and hybrid search, and say what each fixes.</p>
+<p>And you have watched a real system show you the passage it retrieved.</p>
+<h3>The honest limit of today</h3>
+<p>You have not built one. That is deliberate. Building a production retrieval pipeline, tuning chunk sizes against real queries and measuring whether reranking helped is a course of its own, and it is what the AI Engineering module is for. What you have is the map, which is what you need to read any of these systems and to ask the right question when someone says their RAG is not working.</p>
+<h3>Where it goes next</h3>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>What changes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 to 3</td>
+<td>An app that reads one page and writes about it</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Saved instructions and attached files, where the platform retrieves for you</td>
+</tr>
+<tr>
+<td>5, today</td>
+<td>What that retrieval is actually doing</td>
+</tr>
+<tr>
+<td>6 onwards</td>
+<td>Systems that act, not just answer</td>
+</tr>
+</tbody>
+</table>
+<p>The jump worth naming: today the retrieval always happens. A system that <em>decides</em> whether to look something up, judges whether what it found was good enough, and searches again if not, is making choices. That is the thread the rest of the module pulls on.</p>
+<h3>Resources used in this class</h3>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>URL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gemini Notebook, used in Section 8</td>
+<td>https://notebook.google.com</td>
+</tr>
+<tr>
+<td>Your Class 3 app, the crude version</td>
+<td>your own folder</td>
+</tr>
+</tbody>
+</table></div>
+  </main>
+</div>
+
+<button class="theme" id="themeBtn" title="Switch light and dark" aria-label="Switch light and dark">&#9682;</button>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   0. theme
+   ============================================================ */
+try{
+  var saved=localStorage.getItem("c5-theme");
+  if(saved) document.documentElement.setAttribute("data-theme",saved);
+}catch(e){}
+document.getElementById("themeBtn").addEventListener("click",function(){
+  var cur=document.documentElement.getAttribute("data-theme");
+  if(!cur){
+    cur=window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";
+  }
+  var next=cur==="dark"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",next);
+  try{localStorage.setItem("c5-theme",next);}catch(e){}
+});
+
+/* ============================================================
+   1. content is pre-rendered at build time; bind the quizzes
+   ============================================================ */
+var host=document.getElementById("content");
+
+Array.prototype.slice.call(host.querySelectorAll(".quiz")).forEach(function(box){
+  var ans=box.dataset.ans, exp=box.dataset.exp;
+  var verdict=box.querySelector(".verdict");
+  var opts=Array.prototype.slice.call(box.querySelectorAll(".opt"));
+  opts.forEach(function(btn){
+    btn.addEventListener("click",function(){
+      var correct=btn.dataset.k===ans;
+      opts.forEach(function(b){
+        b.disabled=true;
+        if(b.dataset.k===ans) b.classList.add("right");
+        else if(b===btn) b.classList.add("wrong");
+      });
+      verdict.className="verdict show "+(correct?"ok":"no");
+      verdict.querySelector(".vt").textContent=correct
+        ? "Correct. Answer "+ans+"."
+        : "Not that one. The answer is "+ans+".";
+      verdict.querySelector(".vx").textContent=exp;
+    });
+  });
+});
+
+/* ============================================================
+   4. helpers
+   ============================================================ */
+function el(tag,cls,html){
+  var n=document.createElement(tag);
+  if(cls)n.className=cls;
+  if(html!=null)n.innerHTML=html;
+  return n;
+}
+function viz(kicker,title,sub,bodyHTML){
+  var s=el("section","viz");
+  s.innerHTML='<div class="vhead"><div class="vk">'+kicker+'</div><h4>'+title+'</h4><p>'+sub+'</p></div>'+
+              '<div class="vbody">'+bodyHTML+'</div>';
+  return s;
+}
+// insert a node after the heading whose text starts with `prefix`
+function afterHeading(prefix,node){
+  var hs=host.querySelectorAll("h2,h3");
+  for(var i=0;i<hs.length;i++){
+    if(hs[i].textContent.trim().toLowerCase().indexOf(prefix.toLowerCase())===0){
+      var anchor=hs[i], next=anchor.nextElementSibling;
+      // slip past the first paragraph so the teaching line comes first
+      if(next&&next.tagName==="P") anchor=next;
+      anchor.after(node);
+      return true;
+    }
+  }
+  host.appendChild(node);
+  return false;
+}
+function fmtMoney(v){
+  if(v>=1000) return "$"+Math.round(v).toLocaleString();
+  if(v>=1) return "$"+v.toFixed(2);
+  return "$"+v.toFixed(4);
+}
+
+/* ============================================================
+   VISUALIZER 1 - the five boxes and the two phases
+   ============================================================ */
+(function(){
+  var BOX=[
+    {n:"1. Question",ph:"query",c:"var(--b3)",
+     d:"The user types it. This is the only input your system gets.",
+     you:"You built this in Class 3: the URL box in your Gradio app."},
+    {n:"2. Search",ph:"query",c:"var(--b2)",
+     d:"Turn the question into a vector, find the nearest chunks. The librarian.",
+     you:"This is the box you have never built. Everything in Sections 4 to 7 is here."},
+    {n:"3. Stuff",ph:"query",c:"var(--b3)",
+     d:"Paste the retrieved chunks into the prompt as context.",
+     you:"You built this: the f-string that put the page text inside <page> tags."},
+    {n:"4. Model",ph:"query",c:"var(--b3)",
+     d:"Answer using the chunks. Same model, same call, same three roles.",
+     you:"You built this in Class 1 and have not changed it since."},
+    {n:"5. Answer",ph:"query",c:"var(--b1)",
+     d:"The reply, plus the passage it came from.",
+     you:"You built the reply. The citation is new, and it is what box 2 buys you."}
+  ];
+  var INDEX=[
+    {n:"Read",d:"Open the documents and pull out their text."},
+    {n:"Chunk",d:"Cut them into retrievable pieces. Section 5."},
+    {n:"Embed",d:"Turn each chunk into a vector. Section 4."},
+    {n:"Store",d:"Put the vectors somewhere searchable. Section 6."}
+  ];
+
+  var html=
+    '<div class="seg" id="pfSeg" style="margin-bottom:14px">'+
+      '<button data-p="index">Indexing, once</button>'+
+      '<button data-p="query" class="on">Querying, every question</button>'+
+    '</div>'+
+    '<div id="pfBoxes"></div>'+
+    '<div id="pfDetail" style="margin-top:14px"></div>'+
+    '<div class="note" id="pfNote"></div>';
+
+  var v=viz("Visualizer 1","Five boxes, and the two phases people confuse",
+    "The whole of RAG. Four of the five boxes you have already built. Click a box.",html);
+  afterHeading("Section 3",v);
+
+  var phase="query", cur=1;
+
+  function render(){
+    var rows = phase==="query" ? BOX : INDEX;
+    if(cur>=rows.length) cur=0;
+    v.querySelector("#pfBoxes").innerHTML=rows.map(function(b,i){
+      var c=b.c||"var(--b5)";
+      return '<div class="bar'+(i===cur?' hi':'')+'" style="cursor:pointer;margin:7px 0" data-i="'+i+'">'+
+        '<div class="bl">'+b.n+'</div>'+
+        '<div class="bt"><div class="bf" style="width:100%;background:'+c+';opacity:'+(i===cur?1:.4)+'"></div></div>'+
+        '<div class="bv">'+(phase==="query"?(i===1?"today":"built"):"offline")+'</div></div>';
+    }).join("");
+    Array.prototype.slice.call(v.querySelectorAll("#pfBoxes .bar")).forEach(function(r){
+      r.addEventListener("click",function(){ cur=+r.dataset.i; render(); });
+    });
+
+    var b=rows[cur];
+    v.querySelector("#pfDetail").innerHTML=
+      '<div class="lbl '+(phase==="query"&&cur===1?"important":"ask")+'" style="margin:0">'+
+      '<span class="tag">'+b.n+'</span>'+b.d+
+      (b.you?'<br><br><strong>Where you have met it.</strong> '+b.you:'')+'</div>';
+
+    v.querySelector("#pfNote").textContent = phase==="query"
+      ? "Querying runs on every question and finishes in milliseconds. Notice that only box 2 is new: the model, the prompt and the answer are all unchanged from Class 1."
+      : "Indexing runs once, when the documents change, and your users never wait for it. Adding 500 PDFs makes this slower and leaves querying almost exactly as fast.";
+  }
+
+  Array.prototype.slice.call(v.querySelectorAll("#pfSeg button")).forEach(function(btn){
+    btn.addEventListener("click",function(){
+      v.querySelectorAll("#pfSeg button").forEach(function(x){x.classList.remove("on");});
+      btn.classList.add("on");
+      phase=btn.dataset.p; cur=phase==="query"?1:0; render();
+    });
+  });
+  render();
+})();
+
+/* ============================================================
+   VISUALIZER 2 - similarity meter
+   ============================================================ */
+(function(){
+  // Hand-scored pairs. Honest about being illustrative, not a live model.
+  var PAIRS=[
+    {a:"running shoes",b:"marathon footwear",s:0.88,kw:"miss it entirely",kwOk:false,
+     note:"Not one word in common, and they mean almost the same thing. This is the case keyword search cannot handle and the reason embeddings exist."},
+    {a:"running shoes",b:"shoes for running",s:0.97,kw:"also find it",kwOk:true,
+     note:"Same words, reordered. High, as you would expect. Keyword search also handles this one."},
+    {a:"the bank raised rates",b:"the river bank was muddy",s:0.21,kw:"wrongly rank it high",kwOk:false,
+     note:"Four words shared out of five, and almost nothing in common. Keyword search scores this pair highly, which is exactly how keyword search goes wrong."},
+    {a:"how do I return a defective item",b:"refund policy for damaged goods",s:0.79,kw:"miss it entirely",kwOk:false,
+     note:"No overlapping words again. This is what makes a support search feel like it understands the question."},
+    {a:"what is the price of SKU-4429",b:"SKU-4429 costs Rs 1,299",s:0.52,kw:"nail it instantly",kwOk:true,
+     note:"Lower than you would hope. The code carries the meaning and embeddings treat it as noise. This is the gap hybrid search closes in Section 7."},
+    {a:"the cat sat on the mat",b:"quarterly revenue grew 12 percent",s:0.04,kw:"also score it low",kwOk:true,
+     note:"Unrelated. The floor of the scale, and a useful reference point for what a low score actually looks like."}
+  ];
+
+  var html=
+    '<div class="seg" id="smSeg" style="margin-bottom:14px"></div>'+
+    '<div class="ctl two">'+
+      '<div><label>Text A</label><pre style="margin:0;white-space:pre-wrap;font-size:13px"><code id="smA"></code></pre></div>'+
+      '<div><label>Text B</label><pre style="margin:0;white-space:pre-wrap;font-size:13px"><code id="smB"></code></pre></div>'+
+    '</div>'+
+    '<div class="bars" style="margin-top:16px" id="smBar"></div>'+
+    '<div class="stats">'+
+      '<div class="stat"><div class="sl">Cosine similarity</div><div class="sv a" id="smS">0.00</div><div class="sn">1 = same direction</div></div>'+
+      '<div class="stat"><div class="sl">Words in common</div><div class="sv" id="smW">0</div></div>'+
+      '<div class="stat"><div class="sl">Keyword search would</div><div class="sv" id="smK" style="font-size:.95rem">-</div></div>'+
+    '</div>'+
+    '<div class="note" id="smN"></div>';
+
+  var v=viz("Visualizer 2","Meaning, scored",
+    "Six pairs. Watch where the similarity score and the word overlap disagree, because that gap is the entire argument for embeddings.",html);
+  afterHeading("Section 4",v);
+
+  var cur=0;
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+  function overlap(a,b){
+    var stop={"the":1,"a":1,"an":1,"of":1,"for":1,"is":1,"was":1,"do":1,"i":1,"what":1,"how":1,"on":1};
+    var A=a.toLowerCase().match(/[a-z0-9-]+/g)||[], B=b.toLowerCase().match(/[a-z0-9-]+/g)||[];
+    var sb={}; B.forEach(function(w){sb[w]=1;});
+    return A.filter(function(w){return sb[w]&&!stop[w];}).length;
+  }
+
+  function render(){
+    v.querySelector("#smSeg").innerHTML=PAIRS.map(function(p,i){
+      return '<button data-i="'+i+'"'+(i===cur?' class="on"':'')+'>'+(i+1)+'</button>';
+    }).join("");
+    Array.prototype.slice.call(v.querySelectorAll("#smSeg button")).forEach(function(b){
+      b.addEventListener("click",function(){ cur=+b.dataset.i; render(); });
+    });
+
+    var p=PAIRS[cur];
+    v.querySelector("#smA").innerHTML=esc(p.a);
+    v.querySelector("#smB").innerHTML=esc(p.b);
+
+    var w=overlap(p.a,p.b);
+    var col=p.s>0.7?"var(--b1)":p.s>0.4?"var(--b2)":"var(--b4)";
+    v.querySelector("#smBar").innerHTML=
+      '<div class="bar hi"><div class="bl">Meaning, by embedding</div>'+
+      '<div class="bt"><div class="bf" style="width:'+(p.s*100)+'%;background:'+col+'"></div></div>'+
+      '<div class="bv">'+p.s.toFixed(2)+'</div></div>'+
+      '<div class="bar"><div class="bl">Word overlap</div>'+
+      '<div class="bt"><div class="bf" style="width:'+Math.min(100,w*25)+'%;background:var(--b5)"></div></div>'+
+      '<div class="bv">'+w+' word'+(w===1?'':'s')+'</div></div>';
+
+    v.querySelector("#smS").textContent=p.s.toFixed(2);
+    v.querySelector("#smW").textContent=w;
+    var k=v.querySelector("#smK");
+    k.textContent=p.kw;
+    k.className="sv "+(p.kwOk?"a":"w");
+    k.style.fontSize=".95rem";
+
+    v.querySelector("#smN").textContent=p.note;
+  }
+  render();
+})();
+
+/* ============================================================
+   VISUALIZER 3 - four chunking strategies
+   ============================================================ */
+(function(){
+  var TEXT=
+    "## Refunds\nItems may be returned within 30 days of delivery. Damaged items must be "+
+    "reported within 14 days with photographs.\n\n## Shipping\nStandard delivery is free on "+
+    "orders above Rs 999. Express delivery costs Rs 99 and arrives next working day.\n\n"+
+    "## Corporate orders\nFor orders above 50 units, contact the sales team for pricing.";
+
+  function fixed(t,size){
+    var out=[]; for(var i=0;i<t.length;i+=size) out.push(t.slice(i,i+size)); return out;
+  }
+  function recursive(t,size){
+    var paras=t.split(/\n\n/), out=[];
+    paras.forEach(function(p){
+      if(p.length<=size){ out.push(p); return; }
+      var sents=p.split(/(?<=\.)\s+/), buf="";
+      sents.forEach(function(s){
+        if((buf+" "+s).trim().length>size && buf){ out.push(buf.trim()); buf=s; }
+        else buf=(buf+" "+s).trim();
+      });
+      if(buf) out.push(buf);
+    });
+    return out;
+  }
+  function semantic(t){
+    return t.split(/\n\n/).map(function(p){return p.trim();});
+  }
+  function structure(t){
+    var parts=t.split(/(?=## )/).map(function(p){return p.trim();}).filter(Boolean);
+    return parts;
+  }
+
+  var html=
+    '<div class="seg" id="ckSeg" style="margin-bottom:12px">'+
+      '<button data-s="fixed" class="on">Fixed size</button>'+
+      '<button data-s="recursive">Recursive</button>'+
+      '<button data-s="semantic">Semantic</button>'+
+      '<button data-s="structure">Structure-aware</button>'+
+    '</div>'+
+    '<div class="ctl"><div><label>Chunk size <span class="v" id="ckV"></span></label>'+
+      '<input type="range" id="ck" min="40" max="220" step="10" value="80"></div></div>'+
+    '<div id="ckOut" style="margin-top:14px"></div>'+
+    '<div class="stats">'+
+      '<div class="stat"><div class="sl">Chunks</div><div class="sv" id="ckN">0</div></div>'+
+      '<div class="stat"><div class="sl">Cuts mid-sentence</div><div class="sv" id="ckB">0</div><div class="sn">answers split in half</div></div>'+
+      '<div class="stat"><div class="sl">Retrieval shape</div><div class="sv" id="ckR" style="font-size:.95rem">-</div></div>'+
+    '</div>'+
+    '<div class="note" id="ckN2"></div>';
+
+  var v=viz("Visualizer 3","Same text, four ways to cut it",
+    "The chunk is the unit of retrieval: whatever you cut is what gets found. Watch the boundaries move.",html);
+  afterHeading("Section 5",v);
+
+  var strat="fixed";
+  var PAL=["var(--b1)","var(--b2)","var(--b3)","var(--b4)","var(--b5)"];
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+
+  function render(){
+    var size=+v.querySelector("#ck").value;
+    v.querySelector("#ckV").textContent=size+" chars";
+    var chunks = strat==="fixed"?fixed(TEXT,size)
+               : strat==="recursive"?recursive(TEXT,size)
+               : strat==="semantic"?semantic(TEXT)
+               : structure(TEXT);
+
+    var midCuts=0;
+    chunks.forEach(function(c,i){
+      if(i===chunks.length-1) return;
+      if(!/[.\n]\s*$/.test(c)) midCuts++;
+    });
+
+    v.querySelector("#ckOut").innerHTML=
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+chunks.map(function(c,i){
+        return '<div style="flex:1 1 210px;min-width:0;padding:9px 11px;border-radius:8px;font-size:12px;'+
+          'white-space:pre-wrap;background:color-mix(in srgb,'+PAL[i%5]+' 14%,transparent);'+
+          'border:1px solid color-mix(in srgb,'+PAL[i%5]+' 38%,transparent)"><div style="font:600 10px var(--sans);'+
+          'letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">chunk '+(i+1)+
+          ' &middot; '+c.length+'</div>'+esc(c)+'</div>';
+      }).join("")+'</div>';
+
+    v.querySelector("#ckN").textContent=chunks.length;
+    var b=v.querySelector("#ckB");
+    b.textContent=midCuts;
+    b.className="sv "+(midCuts===0?"a":"w");
+    var r=v.querySelector("#ckR");
+    var avg=TEXT.length/chunks.length;
+    r.textContent=avg>160?"high recall, low precision":avg<70?"high precision, low recall":"balanced";
+    r.style.fontSize=".95rem";
+
+    v.querySelector("#ckN2").textContent=
+      strat==="fixed"?"Cuts every N characters regardless of what is there. Watch a sentence get split across two chunks: retrieve one and you get half an answer. Simple, and rarely what you want."
+      :strat==="recursive"?"Tries paragraph breaks first, then sentences. Same size setting as fixed, and the mid-sentence cuts disappear. This is the sane default for most documents."
+      :strat==="semantic"?"Cuts where the topic changes, so each chunk is about one thing. Best quality, and it costs a model call per document to decide the boundaries. The size slider does not apply."
+      :"Uses the document's own headings. Free quality when the structure is already there, which it is in markdown, HTML, and most contracts and policies. The size slider does not apply.";
+  }
+
+  Array.prototype.slice.call(v.querySelectorAll("#ckSeg button")).forEach(function(b){
+    b.addEventListener("click",function(){
+      v.querySelectorAll("#ckSeg button").forEach(function(x){x.classList.remove("on");});
+      b.classList.add("on"); strat=b.dataset.s; render();
+    });
+  });
+  v.querySelector("#ck").addEventListener("input",render);
+  render();
+})();
+
+/* ============================================================
+   VISUALIZER 4 - what a vector database does
+   ============================================================ */
+(function(){
+  var SIZES=[200,5000,100000,2000000,50000000];
+  var html=
+    '<div class="ctl"><div><label>Chunks in your collection <span class="v" id="vdV"></span></label>'+
+      '<input type="range" id="vd" min="0" max="4" step="1" value="0"></div></div>'+
+    '<div class="bars" id="vdBar"></div>'+
+    '<div class="stats">'+
+      '<div class="stat"><div class="sl">A loop over everything</div><div class="sv" id="vdL">-</div><div class="sn">comparisons per query</div></div>'+
+      '<div class="stat"><div class="sl">A vector index</div><div class="sv a" id="vdH">-</div><div class="sn">roughly, per query</div></div>'+
+      '<div class="stat"><div class="sl">Verdict</div><div class="sv" id="vdR" style="font-size:.95rem">-</div></div>'+
+    '</div>'+
+    '<div class="note" id="vdN"></div>';
+
+  var v=viz("Visualizer 4","When you actually need a vector database",
+    "Three operations: add, query, delete. The only real question is at what size a plain loop stops being fine.",html);
+  afterHeading("Section 6",v);
+
+  function fmt(n){
+    if(n>=1e6) return (n/1e6).toFixed(n%1e6?1:0)+"M";
+    if(n>=1000) return Math.round(n/1000)+"K";
+    return ""+n;
+  }
+
+  function render(){
+    var n=SIZES[+v.querySelector("#vd").value];
+    v.querySelector("#vdV").textContent=fmt(n);
+    var hops=Math.max(8,Math.round(Math.log2(n)*4));
+
+    var max=Math.log10(SIZES[4]);
+    v.querySelector("#vdBar").innerHTML=
+      '<div class="bar hi"><div class="bl">Loop over everything</div>'+
+      '<div class="bt"><div class="bf" style="width:'+(Math.log10(n)/max*100)+'%;background:var(--b4)"></div></div>'+
+      '<div class="bv">'+fmt(n)+'</div></div>'+
+      '<div class="bar"><div class="bl">Vector index</div>'+
+      '<div class="bt"><div class="bf" style="width:'+(Math.log10(hops)/max*100)+'%;background:var(--b1)"></div></div>'+
+      '<div class="bv">~'+hops+'</div></div>'+
+      '<div class="note" style="margin-top:4px;border:0;padding:0">Both axes are log scale, which is the only way to show these on one chart.</div>';
+
+    v.querySelector("#vdL").textContent=fmt(n);
+    v.querySelector("#vdH").textContent="~"+hops;
+    var r=v.querySelector("#vdR");
+    r.textContent=n<=5000?"a list is fine":n<=100000?"either works":"you need the index";
+    r.className="sv "+(n<=5000?"a":n<=100000?"":"w");
+    r.style.fontSize=".95rem";
+
+    v.querySelector("#vdN").textContent=
+      n<=5000 ? "At this size, comparing the question against every stored vector in a plain loop finishes faster than you can notice. Adding a vector database here buys you a dependency and nothing else. This is most prototypes and plenty of real internal tools."
+      : n<=100000 ? "The crossover region. A loop still works but is starting to show, and persistence across restarts is usually the thing that pushes teams over rather than raw speed."
+      : "Now the structure earns its place. A loop would mean millions of comparisons per question; the index takes a few dozen hops instead. It is approximate, trading a sliver of accuracy for orders of magnitude of speed, and that trade is almost always right.";
+  }
+  v.querySelector("#vd").addEventListener("input",render);
+  render();
+})();
+
+/* ============================================================
+   VISUALIZER 5 - reranking
+   ============================================================ */
+(function(){
+  var DOCS=[
+    {t:"Returns: items can be returned within 30 days if unused.",v:1,r:3},
+    {t:"Our return address is Unit 4, Indiranagar, Bangalore.",v:2,r:5},
+    {t:"If your product arrives broken, raise a claim within 14 days with photos and we will replace or refund it.",v:4,r:1},
+    {t:"Return shipping is free for orders above Rs 999.",v:3,r:4},
+    {t:"Faulty goods are covered by a 12-month warranty; contact support to arrange a replacement.",v:5,r:2}
+  ];
+
+  var html=
+    '<div class="note" style="border:0;padding:0;margin:0 0 14px">Query: <code>how do I return a defective product?</code></div>'+
+    '<div class="seg" style="margin-bottom:14px"><button id="rkRun">Run the cross-encoder</button></div>'+
+    '<div class="ctl two">'+
+      '<div><label>Stage 1 &middot; vector search</label><div id="rkA"></div></div>'+
+      '<div><label>Stage 2 &middot; after reranking</label><div id="rkB"></div></div>'+
+    '</div>'+
+    '<div class="note" id="rkN"></div>';
+
+  var v=viz("Visualizer 5","The top five are not the best five",
+    "Same five candidates, two rankings. Watch which passage rises, and notice which word it never uses.",html);
+  afterHeading("Problem one: the top five are not the best five",v);
+
+  var ran=false;
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+
+  function list(order,key,highlight){
+    return order.map(function(d,i){
+      var top=i<3;
+      var isStar=d===DOCS[2];
+      return '<div class="bar" style="margin:7px 0;grid-template-columns:22px 1fr">'+
+        '<div class="bl" style="font-family:var(--mono);color:'+(top?"var(--accent)":"var(--ink-3)")+'">'+(i+1)+'</div>'+
+        '<div class="bt" style="background:none;height:auto"><span style="font-size:12.5px;color:'+
+          (top?"var(--ink)":"var(--ink-3)")+';'+(isStar&&highlight?"font-weight:650":"")+'">'+
+          esc(d.t)+'</span></div></div>';
+    }).join("");
+  }
+
+  function render(){
+    var byV=DOCS.slice().sort(function(a,b){return a.v-b.v;});
+    var byR=DOCS.slice().sort(function(a,b){return a.r-b.r;});
+    v.querySelector("#rkA").innerHTML=list(byV,"v",false);
+    v.querySelector("#rkB").innerHTML=ran?list(byR,"r",true)
+      :'<div class="note" style="border:0;padding:0;margin:0;color:var(--ink-3)">Press the button.</div>';
+    v.querySelector("#rkN").textContent=ran
+      ? "The passage that moved from fourth to first never contains the word \"return\". It says \"arrives broken\" and \"claim\", and it is plainly the best answer to the question. Vector search ranked it fourth because the surface wording is further away; the cross-encoder reads the question and the passage together and sees that it answers it. That is the entire case for reranking, and it costs one extra pass over about fifty candidates."
+      : "This is what vector search returned, ranked by cosine similarity. It looks reasonable. One of these is a much better answer than its position suggests.";
+  }
+  v.querySelector("#rkRun").addEventListener("click",function(){
+    ran=!ran; this.classList.toggle("on",ran);
+    this.textContent=ran?"Reset":"Run the cross-encoder";
+    render();
+  });
+  render();
+})();
+
+/* ============================================================
+   VISUALIZER 6 - hybrid search
+   ============================================================ */
+(function(){
+  var QUERIES={
+    nl:{q:"comfortable shoes for jogging",
+      bm25:[["Jogging tips for beginners",1],["Shoe care and cleaning guide",2],["Marathon footwear: our 2026 range",4],["Cushioned trainers for daily runs",3]],
+      vec:[["Cushioned trainers for daily runs",1],["Marathon footwear: our 2026 range",2],["Jogging tips for beginners",3],["Shoe care and cleaning guide",4]],
+      note:"A natural-language question. The vector side understands that trainers and footwear are what is being asked for; BM25 chases the literal words \"jogging\" and \"shoes\" into articles that are not products at all. Hybrid still gets it right, because the fusion rewards what both agreed on."},
+    code:{q:"price of SKU-4429",
+      bm25:[["SKU-4429 Trail Runner, Rs 1,299",1],["SKU-4430 Road Runner, Rs 1,199",2],["Pricing and payment FAQ",3],["How our product codes work",4]],
+      vec:[["Pricing and payment FAQ",1],["How our product codes work",2],["SKU-4430 Road Runner, Rs 1,199",3],["SKU-4429 Trail Runner, Rs 1,299",4]],
+      note:"Now reverse it. The exact product is what the user wants, and the vector side buries it in fourth place because a product code carries no meaning to an embedding. BM25 nails it instantly. Look carefully at the fused column: hybrid does not put the product first either, it puts it second, a hair behind the FAQ. That is real Reciprocal Rank Fusion and it is worth being honest about. What matters is that the product moved from fourth to second, so it survives into the top three that get sent to the model, where pure vector search would have dropped it. Production systems that handle a lot of code-like queries weight the keyword side higher to close that last gap."}
+  };
+
+  var html=
+    '<div class="seg" id="hySeg" style="margin-bottom:12px">'+
+      '<button data-q="nl" class="on">A natural-language question</button>'+
+      '<button data-q="code">A product code</button>'+
+    '</div>'+
+    '<div class="note" style="border:0;padding:0;margin:0 0 14px">Query: <code id="hyQ"></code></div>'+
+    '<div class="ctl three">'+
+      '<div><label>BM25, keyword</label><div id="hyA"></div></div>'+
+      '<div><label>Vector, meaning</label><div id="hyB"></div></div>'+
+      '<div><label>Hybrid, fused</label><div id="hyC"></div></div>'+
+    '</div>'+
+    '<div class="note" id="hyN"></div>';
+
+  var v=viz("Visualizer 6","Two librarians, and why you want both",
+    "The same four documents ranked three ways. Switch the query type and watch which method collapses.",html);
+  afterHeading("Problem two: sometimes you need the exact word",v);
+
+  var cur="nl";
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+
+  function rrf(a,b){
+    var score={};
+    a.forEach(function(x){ score[x[0]]=(score[x[0]]||0)+1/(60+x[1]); });
+    b.forEach(function(x){ score[x[0]]=(score[x[0]]||0)+1/(60+x[1]); });
+    return Object.keys(score).sort(function(x,y){return score[y]-score[x];})
+      .map(function(k,i){return [k,i+1];});
+  }
+
+  function list(rows,best){
+    return rows.map(function(r,i){
+      var isBest=r[0]===best;
+      return '<div class="bar" style="margin:6px 0;grid-template-columns:20px 1fr">'+
+        '<div class="bl" style="font-family:var(--mono);color:'+(i===0?"var(--accent)":"var(--ink-3)")+'">'+(i+1)+'</div>'+
+        '<div class="bt" style="background:none;height:auto"><span style="font-size:12px;color:'+
+        (isBest?"var(--ink)":"var(--ink-3)")+';'+(isBest?"font-weight:650":"")+'">'+esc(r[0])+'</span></div></div>';
+    }).join("");
+  }
+
+  function render(){
+    var Q=QUERIES[cur];
+    var best = cur==="nl" ? "Cushioned trainers for daily runs" : "SKU-4429 Trail Runner, Rs 1,299";
+    v.querySelector("#hyQ").textContent=Q.q;
+    v.querySelector("#hyA").innerHTML=list(Q.bm25.slice().sort(function(a,b){return a[1]-b[1];}),best);
+    v.querySelector("#hyB").innerHTML=list(Q.vec.slice().sort(function(a,b){return a[1]-b[1];}),best);
+    v.querySelector("#hyC").innerHTML=list(rrf(Q.bm25,Q.vec),best);
+    v.querySelector("#hyN").textContent=Q.note+" The merge is Reciprocal Rank Fusion: each document scores 1/(60+its rank) in each list, and the two are added.";
+  }
+  Array.prototype.slice.call(v.querySelectorAll("#hySeg button")).forEach(function(b){
+    b.addEventListener("click",function(){
+      v.querySelectorAll("#hySeg button").forEach(function(x){x.classList.remove("on");});
+      b.classList.add("on"); cur=b.dataset.q; render();
+    });
+  });
+  render();
+})();
+/* ============================================================
+   5. table of contents and scroll state
+   ============================================================ */
+(function(){
+  var hs=Array.prototype.slice.call(host.querySelectorAll("h2"));
+  var toc=document.getElementById("toc");
+
+  hs.forEach(function(h,i){
+    if(!h.id) h.id="s"+i;
+    var label=h.dataset.label||h.textContent.trim();
+    var mins=h.dataset.mins||"";
+    var a=document.createElement("a");
+    a.href="#"+h.id;
+    a.innerHTML=label+(mins?'<span class="mins">'+mins+'m</span>':'');
+    toc.appendChild(a);
+  });
+
+  var links=Array.prototype.slice.call(toc.querySelectorAll("a"));
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(!e.isIntersecting) return;
+        links.forEach(function(l){
+          l.classList.toggle("active",l.getAttribute("href")==="#"+e.target.id);
+        });
+      });
+    },{rootMargin:"-10% 0px -80% 0px"});
+    hs.forEach(function(h){io.observe(h);});
+  }
+})();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Academy-AI-class-5" target="_blank" rel="noopener">github.com/scaler-content/Academy-AI-class-5</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

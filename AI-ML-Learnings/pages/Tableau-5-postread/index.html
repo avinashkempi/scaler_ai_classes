@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operations on Dataset · Combining Data in Tableau</title>
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --navy:#12294b;
+  --navy-2:#0c1d38;
+  --blue:#1f77b4;
+  --blue-dark:#155a8a;
+  --blue-pale:#e7f1fa;
+  --green:#2f8f4e;
+  --green-pale:#e8f5ea;
+  --orange:#e0791e;
+  --orange-pale:#fdf1e3;
+  --purple:#6b4fa0;
+  --purple-pale:#f0ecf8;
+  --teal:#2a8f8f;
+  --teal-pale:#e7f5f5;
+  --red:#c0392b;
+  --red-pale:#fbeaea;
+  --bg:#eef2f6;
+  --panel:#ffffff;
+  --border:#d7e0e8;
+  --border-soft:#e6ebf1;
+  --text:#1b2836;
+  --text-mute:#5a6b7a;
+  --text-faint:#8695a3;
+  --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --sans:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  --radius:6px;
+  --shadow:0 1px 2px rgba(18,41,75,.06), 0 4px 14px rgba(18,41,75,.06);
+  --shadow-lift:0 6px 24px rgba(18,41,75,.14);
+}
+/* method accent colors, matched to the source deck's own color coding */
+:root{
+  --m-join:#1f4e8c;
+  --m-relationship:#2a8f8f;
+  --m-union:#6b4fa0;
+  --m-blend:#e0791e;
+  --m-crossdb:#2f8f4e;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto;}
+  *{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important;}
+}
+body{
+  margin:0;
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--text);
+  font-size:15px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:var(--sans);font-weight:600;color:var(--navy);margin:0 0 .5em;}
+p{margin:0 0 1em;}
+a{color:var(--blue-dark);}
+button{font-family:inherit;}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+
+/* ============================================================
+   TOP BAR — mimics Tableau's application chrome
+   ============================================================ */
+.tb-topbar{
+  background:var(--navy);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:0 16px;
+  height:48px;
+  position:sticky;
+  top:0;
+  z-index:60;
+  box-shadow:0 1px 0 rgba(0,0,0,.25);
+}
+.tb-topbar .tb-hamburger{
+  display:none;
+  background:transparent;border:1px solid rgba(255,255,255,.25);border-radius:4px;
+  color:#fff;width:32px;height:32px;cursor:pointer;align-items:center;justify-content:center;
+}
+.tb-logo{
+  width:26px;height:26px;flex:0 0 auto;
+  background:linear-gradient(135deg,var(--blue) 0 50%, var(--orange) 50% 100%);
+  border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+}
+.tb-logo svg{width:16px;height:16px;}
+.tb-topbar-title{display:flex;flex-direction:column;line-height:1.15;min-width:0;}
+.tb-topbar-title strong{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-topbar-title span{font-size:11px;color:#b9c7dc;white-space:nowrap;}
+.tb-menu{display:flex;gap:16px;margin-left:12px;font-size:12.5px;color:#a9bcd6;}
+.tb-menu span{cursor:default;opacity:.75;}
+.tb-topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.tb-showme{
+  font-size:11.5px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.2);
+  color:#dfe8f5;
+  padding:5px 10px;
+  border-radius:4px;
+  white-space:nowrap;
+}
+
+/* ============================================================
+   BODY LAYOUT — data pane (sidebar) + canvas
+   ============================================================ */
+.tb-body{display:flex;align-items:flex-start;min-height:calc(100vh - 48px - 40px);}
+
+.tb-datapane{
+  width:250px;flex:0 0 250px;
+  background:var(--panel);
+  border-right:1px solid var(--border);
+  position:sticky;top:48px;
+  height:calc(100vh - 48px - 40px);
+  overflow-y:auto;
+  padding:14px 0 30px;
+}
+.tb-datapane-head{padding:0 14px 10px;border-bottom:1px solid var(--border-soft);margin-bottom:8px;}
+.tb-connection{
+  display:flex;align-items:center;gap:8px;
+  font-size:12.5px;color:var(--text-mute);
+  padding:6px 8px;border:1px solid var(--border-soft);border-radius:4px;background:#fafcfe;
+}
+.tb-connection .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex:0 0 auto;}
+.tb-search{
+  margin:10px 14px 4px;
+  display:flex;align-items:center;gap:6px;
+  border:1px solid var(--border);border-radius:4px;padding:5px 8px;
+  color:var(--text-faint);font-size:12.5px;background:#fbfcfe;
+}
+.tb-datapane-label{
+  font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);
+  padding:12px 14px 4px;font-weight:600;
+}
+.tb-tablelist{list-style:none;margin:0;padding:0 8px;}
+.tb-tablelist li{margin-bottom:1px;}
+.tb-navlink{
+  display:flex;align-items:center;gap:8px;
+  width:100%;text-align:left;
+  background:transparent;border:none;border-radius:4px;
+  padding:7px 8px;font-size:13px;color:var(--text);cursor:pointer;
+  border-left:3px solid transparent;
+}
+.tb-navlink:hover{background:var(--blue-pale);}
+.tb-navlink.active{background:var(--blue-pale);border-left-color:var(--blue);font-weight:600;color:var(--blue-dark);}
+.tb-navlink .icon{width:14px;height:14px;flex:0 0 auto;border-radius:2px;}
+
+.tb-canvas{flex:1;min-width:0;padding:28px 32px 60px;max-width:1040px;margin:0 auto;}
+
+/* ============================================================
+   SHEET (content section) — mimics a Tableau worksheet card
+   ============================================================ */
+.sheet{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  margin-bottom:26px;
+  overflow:hidden;
+  opacity:0; transform:translateY(14px);
+  transition:opacity .5s ease, transform .5s ease;
+}
+.sheet.in-view{opacity:1;transform:translateY(0);}
+.sheet-head{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 20px;
+  background:#f6f9fc;
+  border-bottom:1px solid var(--border-soft);
+}
+.sheet-head .tab-icon{width:14px;height:14px;color:var(--text-faint);flex:0 0 auto;}
+.sheet-head span{font-size:12px;color:var(--text-faint);font-family:var(--mono);}
+.sheet-body{padding:26px 28px 30px;}
+.sheet-body h2{font-size:22px;margin-bottom:.35em;}
+.sheet-body h3{font-size:16.5px;margin-top:1.6em;}
+.sheet-kicker{
+  display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 9px;border-radius:20px;margin-bottom:10px;
+}
+
+/* hero */
+.hero{
+  background:
+    radial-gradient(1100px 420px at 90% -10%, rgba(255,127,14,.18), transparent 60%),
+    linear-gradient(160deg,var(--navy) 0%, var(--navy-2) 100%);
+  color:#fff;padding:52px 32px 40px;
+}
+.hero-inner{max-width:1040px;margin:0 auto;}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#bcd0ec;
+  border:1px solid rgba(255,255,255,.22);padding:5px 12px;border-radius:20px;margin-bottom:18px;
+}
+.hero h1{color:#fff;font-size:clamp(28px,4vw,40px);margin-bottom:.3em;max-width:16ch;}
+.hero p.lede{color:#cfdcef;font-size:16.5px;max-width:60ch;margin-bottom:0;}
+.hero-methods{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px;}
+.hero-chip{
+  font-size:12px;color:#eef3fb;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:6px 10px;
+  display:flex;align-items:center;gap:7px;
+}
+.hero-chip i{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+/* ============================================================
+   METHOD OVERVIEW CARDS
+   ============================================================ */
+.method-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0 6px;}
+.method-card{
+  border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px 12px;
+  cursor:pointer;background:#fbfcfe;text-align:left;transition:box-shadow .2s, transform .2s;
+}
+.method-card:hover{box-shadow:var(--shadow-lift);transform:translateY(-2px);}
+.method-card .tag{
+  display:inline-block;font-size:10.5px;font-weight:700;color:#fff;border-radius:3px;padding:2px 6px;margin-bottom:8px;
+}
+.method-card h4{font-size:13.5px;margin:0 0 4px;}
+.method-card p{font-size:12px;color:var(--text-mute);margin:0;}
+.method-detail{
+  margin-top:14px;padding:16px 18px;border-radius:var(--radius);
+  border:1px solid var(--border);background:#fbfcfe;display:none;
+}
+.method-detail.show{display:block;}
+.method-detail h4{font-size:14.5px;margin-bottom:6px;}
+.method-detail p{font-size:13.5px;color:var(--text-mute);margin-bottom:0;}
+
+/* ============================================================
+   PILLS / SHELVES / MARKS CARD — Tableau interface mimicry
+   ============================================================ */
+.pill{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:12px;font-family:var(--sans);font-weight:600;color:#fff;
+  padding:4px 10px 4px 8px;border-radius:14px;white-space:nowrap;
+}
+.pill.dim{background:var(--blue);}
+.pill.mea{background:var(--green);}
+.pill .pill-ico{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.55);display:inline-block;}
+.shelfrow{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:4px;padding:8px 10px;background:#fbfcfe;margin-bottom:8px;flex-wrap:wrap;}
+.shelfrow .shelf-label{font-size:11px;color:var(--text-faint);width:64px;flex:0 0 auto;text-transform:uppercase;letter-spacing:.04em;}
+.marks-card{border:1px solid var(--border);border-radius:6px;background:#fbfcfe;padding:12px;margin:14px 0;}
+.marks-card .mc-title{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);margin-bottom:8px;font-weight:700;}
+.mc-type{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:4px;padding:4px 9px;font-size:12.5px;background:#fff;margin-bottom:10px;}
+.mc-fields{display:flex;flex-direction:column;gap:6px;}
+.mc-field-row{display:flex;align-items:center;gap:8px;font-size:12.5px;}
+.mc-field-row .mc-slot{width:60px;flex:0 0 auto;color:var(--text-faint);font-size:11px;text-transform:uppercase;letter-spacing:.03em;}
+
+/* ============================================================
+   RECIPE STEPS
+   ============================================================ */
+.recipe{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:16px 0;}
+.recipe-head{background:var(--blue-pale);padding:10px 16px;font-size:13px;font-weight:700;color:var(--blue-dark);}
+.recipe-body{padding:14px 18px;}
+.recipe ol{margin:0;padding-left:20px;}
+.recipe li{margin-bottom:8px;font-size:13.8px;}
+.recipe li:last-child{margin-bottom:0;}
+
+/* ============================================================
+   ANALOGY / CALLOUT BOXES
+   ============================================================ */
+.callout{
+  border-left:4px solid var(--blue);background:var(--blue-pale);
+  border-radius:0 6px 6px 0;padding:14px 18px;margin:18px 0;font-size:13.8px;color:#1c3b57;
+}
+.callout .callout-label{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--blue-dark);margin-bottom:6px;display:block;}
+.callout.orange{border-left-color:var(--orange);background:var(--orange-pale);color:#6b3d0f;}
+.callout.orange .callout-label{color:#a35314;}
+.callout.green{border-left-color:var(--green);background:var(--green-pale);color:#1c4a2b;}
+.callout.green .callout-label{color:#1e6b38;}
+.callout.purple{border-left-color:var(--purple);background:var(--purple-pale);color:#3a2a5c;}
+.callout.purple .callout-label{color:#563c8c;}
+
+.use-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0;}
+.use-box{border-radius:6px;padding:14px 16px;border:1px solid var(--border);}
+.use-box.yes{background:var(--green-pale);border-color:#bfe0c8;}
+.use-box.no{background:var(--red-pale);border-color:#eec7c1;}
+.use-box h5{margin:0 0 8px;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;}
+.use-box.yes h5{color:#1e6b38;}
+.use-box.no h5{color:var(--red);}
+.use-box ul{margin:0;padding-left:18px;}
+.use-box li{font-size:13px;margin-bottom:6px;}
+@media (max-width:640px){.use-grid{grid-template-columns:1fr;}}
+
+/* ============================================================
+   TABLES (register data / results / comparisons)
+   ============================================================ */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px;}
+table.dtable{border-collapse:collapse;width:100%;font-size:13px;min-width:340px;}
+table.dtable th{
+  background:var(--navy);color:#fff;text-align:left;padding:8px 12px;font-size:11.5px;
+  text-transform:uppercase;letter-spacing:.03em;font-weight:600;white-space:nowrap;
+}
+table.dtable td{padding:7px 12px;border-bottom:1px solid var(--border-soft);white-space:nowrap;}
+table.dtable tr:last-child td{border-bottom:none;}
+table.dtable tr:nth-child(even) td{background:#fafcfe;}
+table.dtable td.blank{color:var(--text-faint);font-style:italic;}
+table.dtable td.dup{background:var(--orange-pale) !important;font-weight:600;}
+.compare-table td:first-child,.compare-table th:first-child{font-weight:600;color:var(--navy);}
+
+/* ============================================================
+   JOIN SIMULATOR
+   ============================================================ */
+.join-sim{border:1px solid var(--border);border-radius:8px;padding:18px;background:#fbfcfe;margin:18px 0;}
+.join-registers{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:start;margin-bottom:16px;}
+.join-registers .plus{align-self:center;font-size:20px;color:var(--text-faint);text-align:center;}
+.reg-title{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+.jointype-row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0;}
+.jt-btn{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  border:1.5px solid var(--border);background:#fff;border-radius:6px;padding:8px 12px;cursor:pointer;flex:1 1 120px;
+  min-width:110px;
+}
+.jt-btn svg{width:34px;height:22px;}
+.jt-btn span{font-size:12px;font-weight:600;color:var(--text);}
+.jt-btn[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-pale);}
+.jt-btn[aria-pressed="true"] span{color:var(--blue-dark);}
+.join-result-head{display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;flex-wrap:wrap;gap:8px;}
+.join-result-head h5{margin:0;font-size:13px;color:var(--navy);}
+.join-note{font-size:12.5px;color:var(--text-mute);background:#fff;border:1px dashed var(--border);border-radius:6px;padding:8px 12px;margin-top:10px;}
+
+@media (max-width:700px){
+  .join-registers{grid-template-columns:1fr;}
+  .join-registers .plus{display:none;}
+}
+
+/* ============================================================
+   DUPLICATION DEMO
+   ============================================================ */
+.dup-demo{border:1px solid var(--border);border-radius:8px;padding:18px;background:#fbfcfe;margin:18px 0;}
+.dup-tables{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+@media (max-width:700px){.dup-tables{grid-template-columns:1fr;}}
+.dup-metrics{display:flex;gap:12px;margin:14px 0;flex-wrap:wrap;}
+.metric-box{flex:1 1 140px;border:1px solid var(--border);border-radius:6px;padding:10px 14px;background:#fff;}
+.metric-box .m-label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em;}
+.metric-box .m-value{font-size:20px;font-weight:700;color:var(--navy);}
+.metric-box.alert{border-color:#eec7c1;background:var(--red-pale);}
+.metric-box.alert .m-value{color:var(--red);}
+.dup-actionrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px;}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--blue);color:#fff;border:none;border-radius:5px;
+  padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;
+}
+.btn:hover{background:var(--blue-dark);}
+.btn.secondary{background:#fff;color:var(--navy);border:1px solid var(--border);}
+.btn.secondary:hover{background:#f2f6fa;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ============================================================
+   GEO ROLE DEMO
+   ============================================================ */
+.geo-demo{border:1px solid var(--border);border-radius:8px;padding:18px;background:#fbfcfe;margin:18px 0;}
+.geo-field{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:6px;padding:10px 14px;background:#fff;margin-bottom:12px;flex-wrap:wrap;}
+.geo-field .field-icon{width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex:0 0 auto;}
+.geo-status{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:8px 12px;border-radius:6px;margin-top:8px;}
+.geo-status.bad{background:var(--red-pale);color:var(--red);}
+.geo-status.good{background:var(--green-pale);color:#1e6b38;}
+.geo-status .dot2{width:8px;height:8px;border-radius:50%;background:currentColor;}
+
+/* ============================================================
+   BAR CHART
+   ============================================================ */
+.chart-card{border:1px solid var(--border);border-radius:8px;padding:16px 16px 4px;background:#fbfcfe;margin:18px 0;}
+.chart-tooltip{
+  position:fixed;pointer-events:none;background:var(--navy);color:#fff;font-size:12px;
+  padding:6px 10px;border-radius:5px;z-index:200;opacity:0;transition:opacity .1s;white-space:nowrap;
+}
+.chart-tooltip.show{opacity:1;}
+.chart-legend{display:flex;justify-content:center;gap:16px;font-size:11.5px;color:var(--text-mute);padding:6px 0 14px;flex-wrap:wrap;}
+
+/* ============================================================
+   BLEND RESULT VISUAL
+   ============================================================ */
+.blend-flow{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;margin:16px 0;}
+@media (max-width:700px){.blend-flow{grid-template-columns:1fr;}}
+.blend-src{border:1px solid var(--border);border-radius:6px;padding:12px 14px;background:#fff;}
+.blend-src .src-tag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:3px;padding:2px 7px;display:inline-block;margin-bottom:8px;}
+.blend-src.primary .src-tag{background:var(--blue-pale);color:var(--blue-dark);}
+.blend-src.secondary .src-tag{background:var(--orange-pale);color:#a35314;}
+.blend-arrow{text-align:center;font-size:12px;color:var(--text-faint);}
+
+/* ============================================================
+   QUIZ
+   ============================================================ */
+.quiz{border:2px solid var(--navy);border-radius:8px;overflow:hidden;margin:26px 0 8px;}
+.quiz-head{background:var(--navy);color:#fff;padding:10px 18px;display:flex;align-items:center;gap:10px;}
+.quiz-head .qnum{background:var(--orange);border-radius:4px;padding:2px 9px;font-size:12px;font-weight:700;}
+.quiz-head span.qt{font-size:13px;font-weight:600;}
+.quiz-body{padding:18px;background:#fff;}
+.quiz-q{font-size:14.5px;font-weight:600;margin-bottom:14px;color:var(--navy);}
+.quiz-options{display:flex;flex-direction:column;gap:8px;}
+.qopt{
+  display:flex;gap:10px;align-items:flex-start;
+  border:1px solid var(--border);border-radius:6px;padding:10px 14px;
+  background:#fbfcfe;text-align:left;cursor:pointer;font-size:13.3px;color:var(--text);
+}
+.qopt:hover{border-color:var(--blue);}
+.qopt .qletter{
+  flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:var(--text-mute);
+}
+.qopt.correct{background:var(--green-pale);border-color:var(--green);}
+.qopt.correct .qletter{background:var(--green);border-color:var(--green);color:#fff;}
+.qopt.incorrect{background:var(--red-pale);border-color:var(--red);}
+.qopt.incorrect .qletter{background:var(--red);border-color:var(--red);color:#fff;}
+.qopt:disabled{cursor:default;}
+.quiz-feedback{display:none;margin-top:14px;padding:12px 16px;border-radius:6px;background:#f6f9fc;border:1px solid var(--border);font-size:13.3px;}
+.quiz-feedback.show{display:block;}
+.quiz-feedback strong{color:var(--navy);}
+.quiz-feedback a{font-size:12.5px;}
+
+/* ============================================================
+   DECISION WIZARD
+   ============================================================ */
+.wizard{border:1px solid var(--border);border-radius:8px;padding:22px;background:#fbfcfe;margin:18px 0;}
+.wizard-trail{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;min-height:22px;}
+.trail-chip{font-size:11.5px;background:var(--blue-pale);color:var(--blue-dark);border-radius:12px;padding:3px 10px;}
+.wizard-q{font-size:15.5px;font-weight:600;color:var(--navy);margin-bottom:16px;}
+.wizard-choices{display:flex;gap:12px;flex-wrap:wrap;}
+.wizard-choices button{flex:1 1 140px;}
+.wizard-result{display:none;text-align:center;padding:20px;border-radius:8px;}
+.wizard-result.show{display:block;}
+.wizard-result .wr-icon{width:44px;height:44px;border-radius:10px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;}
+.wizard-result h4{font-size:19px;margin-bottom:6px;}
+.wizard-result p{color:var(--text-mute);font-size:13.5px;max-width:44ch;margin:0 auto 16px;}
+
+/* ============================================================
+   SCENARIOS
+   ============================================================ */
+.scenario-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:16px;}
+.scenario{border:1px solid var(--border);border-radius:8px;background:#fbfcfe;overflow:hidden;}
+.scenario-q{padding:14px 16px;font-size:13.6px;display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;}
+.scenario-q p{margin:0;flex:1 1 320px;}
+.scenario-ans{display:none;padding:0 16px 16px;border-top:1px dashed var(--border);margin-top:0;}
+.scenario-ans.show{display:block;padding-top:12px;}
+.scenario-ans .ans-tag{display:inline-block;font-size:11px;font-weight:700;color:#fff;border-radius:4px;padding:3px 8px;margin-bottom:8px;}
+.scenario-toggle{flex:0 0 auto;}
+
+/* ============================================================
+   SUMMARY CARDS
+   ============================================================ */
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px;}
+@media (max-width:800px){.summary-grid{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:480px){.summary-grid{grid-template-columns:1fr;}}
+.summary-card{border-radius:8px;padding:16px;color:#fff;}
+.summary-card h4{color:#fff;font-size:15px;margin-bottom:6px;}
+.summary-card p{font-size:12.5px;opacity:.92;margin-bottom:10px;}
+.summary-card .sc-tag{font-size:11px;background:rgba(255,255,255,.18);border-radius:4px;padding:3px 8px;display:inline-block;}
+
+/* ============================================================
+   SHEET TABS (footer) — mimics Tableau's worksheet tab bar
+   ============================================================ */
+.tb-sheettabs{
+  position:sticky;bottom:0;z-index:55;
+  background:#dbe4ee;border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:2px;padding:0 10px;
+  height:40px;overflow-x:auto;white-space:nowrap;
+}
+.tb-tab{
+  background:#fff;border:1px solid var(--border);border-bottom:none;
+  border-radius:4px 4px 0 0;padding:7px 14px;font-size:12px;color:var(--text-mute);
+  cursor:pointer;flex:0 0 auto;margin-top:6px;
+}
+.tb-tab.active{background:var(--panel);color:var(--navy);font-weight:700;border-color:var(--blue);box-shadow:0 -2px 0 var(--blue) inset;}
+.tb-tab:hover{color:var(--navy);}
+
+/* ============================================================
+   MISC
+   ============================================================ */
+.small-note{font-size:12px;color:var(--text-faint);margin-top:10px;}
+.def-list dt{font-weight:700;color:var(--navy);font-size:13.5px;margin-top:10px;}
+.def-list dd{margin:2px 0 0;font-size:13.5px;color:var(--text-mute);}
+.icon-strip{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0;}
+.icon-item{display:flex;flex-direction:column;align-items:center;gap:6px;width:78px;text-align:center;}
+.icon-item .ii-box{width:34px;height:34px;border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff;color:var(--navy);}
+.icon-item span{font-size:10.5px;color:var(--text-mute);}
+.checklist{list-style:none;margin:0;padding:0;}
+.checklist li{display:flex;gap:10px;padding:6px 0;font-size:13.6px;align-items:flex-start;}
+.checklist li svg{flex:0 0 auto;margin-top:2px;color:var(--green);width:15px;height:15px;}
+
+/* skip link */
+.skip-link{position:absolute;left:-999px;top:0;background:var(--blue);color:#fff;padding:10px 16px;z-index:999;}
+.skip-link:focus{left:10px;top:10px;}
+
+/* ============================================================
+   RESPONSIVE — drawer for data pane
+   ============================================================ */
+@media (max-width:900px){
+  .tb-topbar .tb-hamburger{display:flex;}
+  .tb-menu{display:none;}
+  .tb-datapane{
+    position:fixed;left:-270px;top:48px;height:calc(100vh - 48px);
+    width:250px;z-index:70;transition:left .25s ease;box-shadow:var(--shadow-lift);
+  }
+  .tb-datapane.open{left:0;}
+  .tb-scrim{display:none;position:fixed;inset:48px 0 0 0;background:rgba(10,20,35,.4);z-index:65;}
+  .tb-scrim.show{display:block;}
+  .tb-canvas{padding:20px 16px 50px;}
+  .method-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width:520px){
+  .sheet-body{padding:20px 16px 24px;}
+  .join-registers{gap:10px;}
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· Tableau 5 · Joins, relationships and blends</span><span class="pn"><a href="../Tableau-4-postread/" title="Tableau 4 · Table calculations and analytics">← Prev</a><a href="../Tableau-6-postread/" title="Tableau 6 · Dashboard creation">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a href="#main-start" class="skip-link">Skip to content</a>
+
+<!-- ============ TOP BAR ============ -->
+<header class="tb-topbar">
+  <button class="tb-hamburger" id="hamburgerBtn" aria-label="Toggle section navigation" aria-expanded="false">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
+  <div class="tb-logo" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M4 19V9M12 19V4M20 19v-7"/></svg>
+  </div>
+  <div class="tb-topbar-title">
+    <strong>Operations on Dataset</strong>
+    <span>Tableau 5 · Interactive learning article</span>
+  </div>
+  <nav class="tb-menu" aria-hidden="true">
+    <span>File</span><span>Data</span><span>Worksheet</span><span>Dashboard</span><span>Analysis</span><span>Map</span>
+  </nav>
+  <div class="tb-topbar-right">
+    <span class="tb-showme">sample_superstore ▾</span>
+  </div>
+</header>
+
+<div class="tb-scrim" id="scrim"></div>
+
+<div class="tb-body">
+  <!-- ============ DATA PANE (SIDEBAR NAV) ============ -->
+  <nav class="tb-datapane" id="datapane" aria-label="Article sections">
+    <div class="tb-datapane-head">
+      <div class="tb-connection"><span class="dot"></span> sample_superstore (connected)</div>
+    </div>
+    <div class="tb-search">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Tables
+    </div>
+    <p class="tb-datapane-label">Contents</p>
+    <ul class="tb-tablelist" id="navList">
+      <li><button class="tb-navlink" data-target="intro"><span class="icon" style="background:var(--navy)"></span>Why combine data</button></li>
+      <li><button class="tb-navlink" data-target="join"><span class="icon" style="background:var(--m-join)"></span>Join</button></li>
+      <li><button class="tb-navlink" data-target="geo"><span class="icon" style="background:var(--m-join)"></span>Geographic data &amp; maps</button></li>
+      <li><button class="tb-navlink" data-target="crossdb"><span class="icon" style="background:var(--m-crossdb)"></span>Cross‑database join</button></li>
+      <li><button class="tb-navlink" data-target="relationship"><span class="icon" style="background:var(--m-relationship)"></span>Relationship</button></li>
+      <li><button class="tb-navlink" data-target="union"><span class="icon" style="background:var(--m-union)"></span>Union</button></li>
+      <li><button class="tb-navlink" data-target="blend"><span class="icon" style="background:var(--m-blend)"></span>Blend</button></li>
+      <li><button class="tb-navlink" data-target="framework"><span class="icon" style="background:var(--navy)"></span>Decision framework</button></li>
+      <li><button class="tb-navlink" data-target="scenarios"><span class="icon" style="background:var(--navy)"></span>Practice scenarios</button></li>
+      <li><button class="tb-navlink" data-target="summary"><span class="icon" style="background:var(--navy)"></span>Quick summary</button></li>
+    </ul>
+  </nav>
+
+  <!-- ============ MAIN CANVAS ============ -->
+  <main class="tb-canvas" id="main-start">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-inner">
+        <span class="hero-eyebrow">Tableau 5 · Operations on dataset</span>
+        <h1>Bringing multiple data sources together in Tableau</h1>
+        <p class="lede">Real business data almost never lives in one table — sales sits in one system, returns in another, employees in a third. This article walks through the four ways Tableau lets you combine them: Joins, Relationships, Unions, and Data Blending, plus the special case of Cross‑Database Joins — and, most importantly, how to choose the right one.</p>
+        <div class="hero-methods">
+          <span class="hero-chip"><i style="background:var(--m-join)"></i>Join — adds columns</span>
+          <span class="hero-chip"><i style="background:var(--m-relationship)"></i>Relationship — keeps tables separate</span>
+          <span class="hero-chip"><i style="background:var(--m-union)"></i>Union — adds rows</span>
+          <span class="hero-chip"><i style="background:var(--m-blend)"></i>Blend — combines sources in a view</span>
+          <span class="hero-chip"><i style="background:var(--m-crossdb)"></i>Cross‑database join</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         INTRO
+    ========================================================== -->
+    <section class="sheet" id="intro">
+      <div class="sheet-head"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg><span>Sheet · Overview</span></div>
+      <div class="sheet-body">
+        <span class="sheet-kicker" style="background:var(--blue-pale);color:var(--blue-dark)">Foundations</span>
+        <h2>Five ways to combine data</h2>
+        <p>Every combination method answers a different question: are the tables in the same place, do they share a structure, and do you need row‑level detail or just a quick comparison? Tap a card below to see what each method actually does before diving into the details.</p>
+
+        <div class="method-grid" id="methodGrid">
+          <button class="method-card" data-method="m-join" style="border-top:3px solid var(--m-join)">
+            <span class="tag" style="background:var(--m-join)">JOIN</span>
+            <h4>Join</h4>
+            <p>Combines tables using a common field. Adds columns.</p>
+          </button>
+          <button class="method-card" data-method="m-relationship" style="border-top:3px solid var(--m-relationship)">
+            <span class="tag" style="background:var(--m-relationship)">RELATIONSHIP</span>
+            <h4>Relationship</h4>
+            <p>A logical connection between tables. Tables stay separate.</p>
+          </button>
+          <button class="method-card" data-method="m-union" style="border-top:3px solid var(--m-union)">
+            <span class="tag" style="background:var(--m-union)">UNION</span>
+            <h4>Union</h4>
+            <p>Appends records from one table after another. Adds rows.</p>
+          </button>
+          <button class="method-card" data-method="m-blend" style="border-top:3px solid var(--m-blend)">
+            <span class="tag" style="background:var(--m-blend)">BLEND</span>
+            <h4>Blend</h4>
+            <p>Combines a primary and secondary source at the view level.</p>
+          </button>
+          <button class="method-card" data-method="m-crossdb" style="border-top:3px solid var(--m-crossdb)">
+            <span class="tag" style="background:var(--m-crossdb)">CROSS‑DB JOIN</span>
+            <h4>Cross‑database join</h4>
+            <p>Joins tables that live in different databases via a common key.</p>
+          </button>
+        </div>
+        <div class="method-detail" id="methodDetail"></div>
+
+        <p style="margin-top:22px;">Each method trades off differently between <strong>flexibility</strong>, <strong>row‑level detail</strong>, and how tightly the underlying data needs to be connected. The rest of this article works through each one, with the reasoning and pitfalls that matter when you're deciding which to reach for.</p>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         JOIN
+    ========================================================== -->
+    <section class="sheet" id="join">
+      <div class="sheet-head"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="12" r="5"/><circle cx="16" cy="12" r="5"/></svg><span>Sheet · Join</span></div>
+      <div class="sheet-body">
+        <span class="sheet-kicker" style="background:#e9edf7;color:var(--m-join)">Method 1</span>
+        <h2>Join</h2>
+        <p>The data you want to analyze is often a collection of tables related by specific fields. Joining combines the related data on those common fields — and the result is typically a table extended <strong>horizontally</strong>, by adding columns.</p>
+
+        <div class="callout">
+          <span class="callout-label">Analogy</span>
+          Think of two paper registers at a school. One has student names and roll numbers; the other has roll numbers and exam scores. To get a single report of names alongside scores, you'd look up each roll number and write the data side by side — that's exactly what a join does. The roll number is the common field, and the combined register is the joined table. If a student appears in the first register but never sat the exam, their score is missing: an <strong>inner join</strong> would drop that student entirely, while a <strong>left join</strong> would keep the student with a blank score.
+        </div>
+
+        <h3>Try it: choose a join type</h3>
+        <p>Two registers below share the field <strong>Roll Number</strong>. Register 2 has no entry for roll 104 (that student never sat the exam). Select a join type to see how the result changes.</p>
+
+        <div class="join-sim">
+          <div class="join-registers">
+            <div>
+              <div class="reg-title">Register 1 — Student Details</div>
+              <div class="tbl-wrap"><table class="dtable" id="reg1Table"></table></div>
+            </div>
+            <div class="plus">＋</div>
+            <div>
+              <div class="reg-title">Register 2 — Exam Scores</div>
+              <div class="tbl-wrap"><table class="dtable" id="reg2Table"></table></div>
+            </div>
+          </div>
+
+          <div class="jointype-row" id="joinTypeRow" role="group" aria-label="Join type">
+            <button class="jt-btn" data-jt="inner" aria-pressed="true">
+              <svg viewBox="0 0 60 34"><circle cx="22" cy="17" r="14" fill="none" stroke="#c7d2de" stroke-width="1.5"/><circle cx="38" cy="17" r="14" fill="none" stroke="#c7d2de" stroke-width="1.5"/><clipPath id="clipI"><circle cx="22" cy="17" r="14"/></clipPath><circle cx="38" cy="17" r="14" fill="var(--blue)" clip-path="url(#clipI)"/></svg>
+              <span>Inner Join</span>
+            </button>
+            <button class="jt-btn" data-jt="left" aria-pressed="false">
+              <svg viewBox="0 0 60 34"><circle cx="22" cy="17" r="14" fill="var(--blue)"/><circle cx="38" cy="17" r="14" fill="none" stroke="#c7d2de" stroke-width="1.5"/></svg>
+              <span>Left Join</span>
+            </button>
+            <button class="jt-btn" data-jt="right" aria-pressed="false">
+              <svg viewBox="0 0 60 34"><circle cx="22" cy="17" r="14" fill="none" stroke="#c7d2de" stroke-width="1.5"/><circle cx="38" cy="17" r="14" fill="var(--blue)"/></svg>
+              <span>Right Join</span>
+            </button>
+            <button class="jt-btn" data-jt="full" aria-pressed="false">
+              <svg viewBox="0 0 60 34"><circle cx="22" cy="17" r="14" fill="var(--blue)"/><circle cx="38" cy="17" r="14" fill="var(--blue)"/></svg>
+              <span>Full Outer</span>
+            </button>
+          </div>
+
+          <div class="join-result-head">
+            <h5 id="joinResultLabel">Result — Inner Join on Roll Number</h5>
+          </div>
+          <div class="tbl-wrap"><table class="dtable" id="joinResultTable"></table></div>
+          <div class="join-note" id="joinNote"></div>
+        </div>
+
+        <div class="use-grid">
+          <div class="use-box yes">
+            <h5>Reach for a join when…</h5>
+            <ul>
+              <li>Both tables are in the same data source and you need one flat combined table.</li>
+              <li>You need explicit control over the join type (inner, left, right, full outer).</li>
+              <li>You're working with custom SQL.</li>
+            </ul>
+          </div>
+          <div class="use-box no">
+            <h5>Avoid a join when…</h5>
+            <ul>
+              <li>Tables have very different granularity (one row per customer joined with many rows per order) — this causes row duplication.</li>
+              <li>You'd rather Tableau manage the join logic automatically — use a Relationship instead.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>Worked example: CO₂ emissions by country</h3>
+        <p><strong>Business problem:</strong> find CO₂ (kt) and CO₂ per capita for each country, filtered to the top 10 countries by CO₂ (kt), using <code style="font-family:var(--mono)">World_Bank_CO2.xlsx</code>. The information the business needs — country name, CO₂ (kt), and CO₂ per capita — is split across two tables that both share <strong>Country Name</strong>, so they're joined on that common field before building the view.</p>
+
+        <div class="recipe">
+          <div class="recipe-head">Recipe</div>
+          <div class="recipe-body">
+            <ol>
+              <li>Join the <strong>CO2 (kt) Pivoted</strong> table with the <strong>CO2 Per Capita (Pivoted)</strong> table, keying both sides on <strong>Country Name</strong>.</li>
+              <li>Build the view: put <strong>Country Name</strong> on Filter (Top 10 by CO2 (kt)), then configure the marks card below.</li>
+            </ol>
+          </div>
+        </div>
+        <div class="marks-card">
+          <div class="mc-title">Marks card</div>
+          <div class="mc-type">🗺 Map</div>
+          <div class="mc-fields">
+            <div class="mc-field-row"><span class="mc-slot">Label</span><span class="pill dim"><span class="pill-ico"></span>Country Name</span></div>
+            <div class="mc-field-row"><span class="mc-slot">Size</span><span class="pill mea"><span class="pill-ico"></span>CO2 (kt)</span></div>
+            <div class="mc-field-row"><span class="mc-slot">Color</span><span class="pill mea"><span class="pill-ico"></span>CO2 Per Capita</span></div>
+          </div>
+        </div>
+
+        <h3>The pitfall: row duplication</h3>
+        <p>When tables are joined at different levels of granularity — say, one row per order joined against a returns table where some orders were returned more than once — the join produces one output row per match. If an order matches three return entries, that order's row (and its Sales value) appears three times.</p>
+
+        <div class="dup-demo">
+          <div class="dup-tables">
+            <div>
+              <div class="reg-title">Orders</div>
+              <div class="tbl-wrap"><table class="dtable" id="ordersTable"></table></div>
+            </div>
+            <div>
+              <div class="reg-title">Returns</div>
+              <div class="tbl-wrap"><table class="dtable" id="returnsTable"></table></div>
+            </div>
+          </div>
+          <div class="dup-actionrow">
+            <button class="btn" id="runJoinBtn">Perform inner join on Order ID</button>
+            <button class="btn secondary" id="resetDupBtn" disabled>Reset</button>
+          </div>
+          <div id="dupResultWrap" style="display:none;margin-top:14px;">
+            <div class="reg-title">Result — Orders ⋈ Returns</div>
+            <div class="tbl-wrap"><table class="dtable" id="dupResultTable"></table></div>
+            <div class="dup-metrics">
+              <div class="metric-box"><div class="m-label">Rows before join</div><div class="m-value">4</div></div>
+              <div class="metric-box"><div class="m-label">SUM(Sales) before</div><div class="m-value">$1,900</div></div>
+              <div class="metric-box alert"><div class="m-label">SUM(Sales) after join</div><div class="m-value" id="dupSum">$2,500</div></div>
+            </div>
+            <p class="join-note">Order 1001 matched three return entries, so its row — and its $500 in Sales — was counted three times. The correct total is still $1,900. <strong>Always verify row counts and key metrics after a join</strong>; an unexpected increase usually means a one‑to‑many or many‑to‑many match. This is exactly the problem Relationships were introduced to solve.</p>
+          </div>
+        </div>
+
+        <div id="quiz1"></div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         GEOGRAPHIC DATA
+    ========================================================== -->
+    <section class="sheet" id="geo">
+      <div class="sheet-head"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.6 7-12a7 7 0 10-14 0c0 5.4 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><span>Sheet · Geographic data type</span></div>
+      <div class="sheet-body">
+        <span class="sheet-kicker" style="background:#e9edf7;color:var(--m-join)">Working with Join · maps</span>
+        <h2>Geographic data type &amp; maps</h2>
+        <p>Depending on the map you want to build, fields need the right <strong>data type</strong>, <strong>data role</strong>, and <strong>geographic role</strong>. Latitude and longitude fields should typically be a decimal number, a measure, with the Latitude / Longitude geographic roles assigned. Every other geographic field — country, state, postal code — should be a string, a dimension, with the matching geographic role.</p>
+
+        <p>When a field has the correct geographic role, Tableau matches its values against its built‑in geocoding database to plot them on a map — that's how it knows where each location belongs. A globe icon on a column means a role is already assigned; otherwise it can be assigned manually from the field's data‑type menu.</p>
+
+        <h3>Try it: fix a broken postal code field</h3>
+        <p>Tableau sometimes assigns a Postal Code column a <strong>Number (whole)</strong> data type. That breaks map views — leading zeros in postal codes get silently dropped, and no geographic role can be attached to a numeric field.</p>
+        <div class="geo-demo">
+          <div class="geo-field" id="geoField">
+            <div class="field-icon" id="geoIcon" style="background:var(--text-faint);">#</div>
+            <div>
+              <strong>Postal Code</strong>
+              <div style="font-size:12px;color:var(--text-mute);" id="geoTypeLabel">Number (whole) · no geographic role</div>
+            </div>
+            <button class="btn secondary" id="geoFixBtn" style="margin-left:auto;">Convert to String + assign role</button>
+          </div>
+          <div class="geo-status bad" id="geoStatus"><span class="dot2"></span> Map view: broken — leading zeros lost, no geographic role available</div>
+        </div>
+
+        <div class="use-grid" style="grid-template-columns:1fr;">
+          <div class="use-box yes">
+            <h5>Keep in mind when building a map</h5>
+            <ul>
+              <li>Latitude/longitude fields: numeric (decimal) data type, measure role.</li>
+              <li>Country, city, state fields: string data type, dimension role.</li>
+              <li>Tableau auto‑assigns geographic roles based on field name and values where it can.</li>
+              <li>No latitude/longitude in the source? Maps can still be built from geographic fields like country or state alone.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>Importance of maps</h3>
+        <p>Location data enhances the insight you can pull from a dataset and presents it more intuitively than most other chart types — useful for spatial questions like state‑wise sales, which states have the highest profit, or where a particular product sells best.</p>
+
+        <h3>Pan, zoom, and select</h3>
+        <p>The view toolbar in the upper‑left of any map (or chart) lets you navigate and select marks:</p>
+        <div class="icon-strip">
+          <div class="icon-item"><div class="ii-box">🔍+</div><span>Zoom in / out</span></div>
+          <div class="icon-item"><div class="ii-box">▭</div><span>Zoom to area</span></div>
+          <div class="icon-item"><div class="ii-box">✥</div><span>Pan the view</span></div>
+          <div class="icon-item"><div class="ii-box">⟲</div><span>Reset zoom / pan</span></div>
+          <div class="icon-item"><div class="ii-box">▢</div><span>Rectangular select</span></div>
+          <div class="icon-item"><div class="ii-box">◯</div><span>Radial select</span></div>
+          <div class="icon-item"><div class="ii-box">✎</div><span>Freehand select</span></div>
+        </div>
+
+        <div id="quiz2"></div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         CROSS-DATABASE JOIN
+    ========================================================== -->
+    <section class="sheet" id="crossdb">
+      <div class="sheet-head"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg><span>Sheet · Cross‑database join</span></div>
+      <div class="sheet-body">
+        <span class="sheet-kicker" style="background:#e9f5ec;color:var(--m-crossdb)">Method · Cross‑database join</span>
+        <h2>Cross‑database join</h2>
+        <p>A cross‑database join joins two or more tables that live in <strong>different databases</strong> using a common field, producing a single table in Tableau that visualizations can be built from. It requires a <strong>multi‑connection data source</strong> — a separate connection to each database, created before the tables are joined.</p>
+
+        <h3>Worked example: highest and lowest‑selling sub‑categories</h3>
+        <p><strong>Business problem:</strong> identify the sub‑categories with the highest and lowest sales, using <code style="font-family:var(--mono)">Retail_store_order_details.xlsx</code> (Excel) and <code style="font-family:var(--mono)">Retail_store_product_details.csv</code> (CSV). Sales lives in one file, product/sub‑category information in the other — different file formats, but joinable because they share <strong>Product ID</strong>.</p>
+
+        <div class="recipe">
+          <div class="recipe-head">Recipe</div>
+          <div class="recipe-body">
+            <ol>
+              <li>Load both files as separate connections in one data source, then inner‑join <strong>order_details</strong> and <strong>product_details</strong> on <strong>Product ID</strong>.</li>
+              <li>Sub‑Category is a dimension being grouped, so it goes on Columns; Sales is a measure being aggregated (SUM), so it goes on Rows.</li>
+            </ol>
+          </div>
+        </div>
+        <div class="shelfrow"><span class="shelf-label">Columns</span><span class="pill dim"><span class="pill-ico"></span>Sub‑Category</span></div>
+        <div class="shelfrow"><span class="shelf-label">Rows</span><span class="pill mea"><span class="pill-ico"></span>SUM(Sales)</span></div>
+
+        <div class="chart-card">
+          <svg id="subcatChart" viewBox="0 0 760 340" width="100%" role="img" aria-label="Bar chart of sum of sales by sub-category"></svg>
+          <div class="chart-legend">Chairs leads at roughly $2.66M; Fasteners and Envelopes trail under $90K. Hover or focus a bar for its exact value.</div>
+        </div>
+        <p class="small-note">Reconstructed from the lecture's Sub‑Category sales chart (sample_superstore dataset).</p>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         RELATIONSHIP
+    ========================================================== -->
+    <section class="sheet" id="relationship">
+      <div class="sheet-head"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="8" width="7" height="8" rx="1"/><rect x="15" y="8" width="7" height="8" rx="1"/><path d="M9 12h6"/></svg><span>Sheet · Relationship</span></div>
+      <div class="sheet-body">
+        <span class="sheet-kicker" style="background:var(--teal-pale);color:var(--teal)">Method 2</span>
+        <h2>Relationship</h2>
+        <p>Joins combine two tables into one flat table at the physical level — powerful, but when tables sit at different levels of granularity (an Orders table with one row per order, a Returns table with fewer rows), the result can duplicate data and inflate metrics, as seen above. Relationships solve this: they connect tables logically <em>without</em> forcing them into one flat table, and Tableau joins them on the fly, only when a visualization actually needs it.</p>
+
+        <ul class="checklist">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>A dynamic, flexible way to combine data from multiple tables for analysis.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>No join type to define — there's no Venn diagram, because tables aren't merged.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Describes how two tables relate based on common fields, without merging them.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Each table keeps its own level of detail and domain.</li>
+        </ul>
+
+        <div class="callout">
+          <span class="callout-label">Analogy</span>
+          A company has two departments: Sales keeps a detailed transaction log; HR keeps a list of employees with department and salary. Physically merging these into one spreadsheet would repeat each employee's salary on every one of their transaction rows — wasted space and confusion. Instead, keep both registers separate but connected by Employee ID, and look up the relevant information only when a question needs both. That's what a Relationship does: the data stays in separate tables, and Tableau fetches what it needs only when the visualization requires it.
+        </div>
+
+        <div class="use-grid">
+          <div class="use-box yes">
+            <h5>Reach for a relationship when…</h5>
+            <ul>
+              <li>It's your default — Tableau's recommended approach for combining tables since version 2020.2.</li>
+              <li>Tables sit at different levels of granularity and you want to avoid row duplication.</li>
+              <li>You want Tableau to determine the correct join type automatically, at query time.</li>
+            </ul>
+          </div>
+          <div class="use-box no">
+            <h5>Avoid a relationship when…</h5>
+            <ul>
+              <li>You need custom SQL.</li>
+              <li>You require a specific join type that Tableau's automatic logic won't produce.</li>
+              <li>You're working with a legacy workbook that relies on explicit join behavior.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>Relationship vs. Join</h3>
+        <div class="tbl-wrap">
+          <table class="dtable compare-table">
+            <thead><tr><th>Relationships</th><th>Joins</th></tr></thead>
+            <tbody>
+              <tr><td>Defined between logical tables, in the Relationship canvas</td><td>Defined between physical tables, in the Join/Union canvas</td></tr>
+              <tr><td>No join type to define</td><td>Require join planning and a join type</td></tr>
+              <tr><td>Act like containers for tables that are joined or unioned</td><td>Are merged into their logical table</td></tr>
+              <tr><td>Only data relevant to the view is queried</td><td>Run as part of every query</td></tr>
+              <tr><td>Level of detail is the aggregate for the view</td><td>Level of detail is the row for the single table</td></tr>
+              <tr><td>Join types are formed automatically based on the analysis</td><td>Join types are static and fixed at the data‑source level</td></tr>
+              <tr><td>Rows aren't duplicated</td><td>Merged data can result in duplication</td></tr>
+              <tr><td>Unmatched records are included in aggregates unless excluded</td><td>Unmatched records are omitted from the merged data</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="quiz3"></div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         UNION
+    ========================================================== -->
+    <section class="sheet" id="union">
+      <div class="sheet-head"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="5" rx="1"/><rect x="4" y="14" width="16" height="5" rx="1"/></svg><span>Sheet · Union</span></div>
+      <div class="sheet-body">
+        <span class="sheet-kicker" style="background:var(--purple-pale);color:var(--purple)">Method 3</span>
+        <h2>Union</h2>
+        <p>Though it isn't a type of join, a union is another way to combine two or more tables — by <strong>appending</strong> rows from one table after another, extending the data <em>vertically</em>.</p>
+
+        <div class="callout purple">
+          <span class="callout-label">Analogy</span>
+          Think of a diary of daily expenses, with a new page for each month — January, February, March — all sharing the same columns: Date, Item, Amount. To see a full year of spending, you don't match rows between pages; you simply stack all twelve pages together. That's a union.
+        </div>
+
+        <p>For a union to work cleanly, the tables need the <strong>same number of fields</strong>, the <strong>same field names</strong>, and fields of the <strong>same data type</strong>.</p>
+
+        <h3>Join vs. Union</h3>
+        <div class="tbl-wrap">
+          <table class="dtable compare-table">
+            <thead><tr><th>Join</th><th>Union</th></tr></thead>
+            <tbody>
+              <tr><td>Combines related tables using a common field</td><td>Appends rows from two or more tables</td></tr>
+              <tr><td>Extends data horizontally — adds columns</td><td>Extends data vertically — adds rows</td></tr>
+              <tr><td>Requires a common field between tables</td><td>Tables must have the same fields, in the same number and order</td></tr>
+              <tr><td>Types: inner, left, right, full outer</td><td>Appends data vertically; does not match rows</td></tr>
+              <tr><td>Best when combining related data and seeing more detail in the same row</td><td>Best when combining similar data from different periods or sources</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="use-grid">
+          <div class="use-box yes">
+            <h5>Reach for a union when…</h5>
+            <ul>
+              <li>Tables share the same (or a very similar) structure and represent different subsets of the same data — time periods, regions, or categories.</li>
+              <li>You need to append rows vertically into one continuous dataset.</li>
+            </ul>
+          </div>
+          <div class="use-box no">
+            <h5>Avoid a union when…</h5>
+            <ul>
+              <li>Tables have different structures or represent different entities — don't union an Orders table with a Customers table.</li>
+              <li>You need to combine tables horizontally — use a Join or Relationship instead.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         BLEND
+    ========================================================== -->
+    <section class="sheet" id="blend">
+      <div class="sheet-head"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg><span>Sheet · Blend</span></div>
+      <div class="sheet-body">
+        <span class="sheet-kicker" style="background:var(--orange-pale);color:#a35314">Method 4</span>
+        <h2>Blend</h2>
+        <p>Joins, Relationships, and Unions all combine data <em>within</em> the same Tableau data source — even one with multiple connections, as in a cross‑database join. Data Blending is different: it links data from <strong>completely separate</strong> Tableau data sources at the visualization level, without physically combining the underlying data. It brings in additional information from a <strong>secondary</strong> source and displays it alongside the <strong>primary</strong> source, directly in the view.</p>
+
+        <div class="callout orange">
+          <span class="callout-label">Analogy</span>
+          Planning a trip: flight information lives in one airline's app, hotel booking in a different app, the local tour schedule on a travel website — three systems with no connection to each other. But mentally, you link them by date: on April 10th, the flight lands at 2&nbsp;PM, hotel check‑in is at 3&nbsp;PM, the city tour starts at 5&nbsp;PM. That's blending — combining separate sources using a shared field, here the date, without ever merging the underlying systems.
+        </div>
+
+        <p>A <strong>LEFT JOIN</strong> is created between the primary and secondary source, based on common dimensions (the linking field). All records from the primary source are retained; matching data from the secondary source is added, and unmatched values return as null.</p>
+
+        <h3>Worked example: Olympic medals vs. CO₂ per capita</h3>
+        <p><strong>Business problem:</strong> for each country, find the total Olympic medals won and CO₂ per capita emissions through 2008 — using <code style="font-family:var(--mono)">Modified Summer Olympic Medallists 1896‑2008.xlsx</code> and <code style="font-family:var(--mono)">World_Bank_CO2.xlsx</code>, two entirely separate workbooks. Since these datasets are meant to stay separate and only need to be compared within one view, a join isn't the right tool here — this is a blending problem, linked on <strong>Country Name</strong>.</p>
+
+        <div class="blend-flow">
+          <div class="blend-src primary">
+            <span class="src-tag">Primary</span>
+            <div style="font-size:13px;font-weight:600;">CO2 Per Capita (Pivoted)</div>
+            <div style="font-size:12px;color:var(--text-mute);">World_Bank_CO2.xlsx</div>
+          </div>
+          <div class="blend-arrow">LEFT JOIN<br>on Country Name →</div>
+          <div class="blend-src secondary">
+            <span class="src-tag">Secondary</span>
+            <div style="font-size:13px;font-weight:600;">Team Events Fixed</div>
+            <div style="font-size:12px;color:var(--text-mute);">Modified Summer Olympics.xlsx</div>
+          </div>
+        </div>
+
+        <div class="tbl-wrap">
+          <table class="dtable">
+            <thead><tr><th>Country</th><th>CO2 Per Capita</th><th>Total Medals</th></tr></thead>
+            <tbody>
+              <tr><td>USA</td><td>16.5</td><td>976</td></tr>
+              <tr><td>India</td><td>1.9</td><td>25</td></tr>
+              <tr><td>China</td><td>7.5</td><td>583</td></tr>
+              <tr><td>UK</td><td>6.0</td><td>284</td></tr>
+              <tr><td>Brazil</td><td>2.2</td><td class="blank">null</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="join-note">Brazil has no matching row in the secondary source, so its medal count returns null — the primary source's fields still define the level of detail. Country names can also differ across sources (for example, "United States" vs. "USA"); when that happens, Tableau flags the linking field and an <strong>alias</strong> can be set on the mismatched value so the two sources line up correctly.</p>
+
+        <div class="use-grid">
+          <div class="use-box yes">
+            <h5>Reach for blending when…</h5>
+            <ul>
+              <li>Data lives in completely separate Tableau data sources that can't be connected within one multi‑connection source.</li>
+              <li>You need a quick comparison between two sources without restructuring your data model.</li>
+            </ul>
+          </div>
+          <div class="use-box no">
+            <h5>Avoid blending when…</h5>
+            <ul>
+              <li>Both datasets could be brought into the same data source — use a Join or Relationship instead.</li>
+              <li>You need row‑level detail from the secondary source (blending always aggregates it).</li>
+              <li>Performance is critical — blending can be slow on large datasets.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>Joining vs. Blending</h3>
+        <div class="tbl-wrap">
+          <table class="dtable compare-table">
+            <thead><tr><th>Data Joining</th><th>Data Blending</th></tr></thead>
+            <tbody>
+              <tr><td>Used when the dataset is from the same source</td><td>Used when the dataset is from a different source</td></tr>
+              <tr><td>Supports inner, left, right, and full outer join</td><td>Uses only a left join</td></tr>
+              <tr><td>Data has to be at the same level of granularity</td><td>Data can be at different levels of granularity</td></tr>
+              <tr><td>Joins data at the row level</td><td>Sends a separate query to each dataset, aggregates, then blends</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Cross‑Database Join vs. Blending</h3>
+        <div class="tbl-wrap">
+          <table class="dtable compare-table">
+            <thead><tr><th>Cross‑database join</th><th>Blending</th></tr></thead>
+            <tbody>
+              <tr><td>Joins two or more tables from different databases using a common field</td><td>Combines data from multiple sources within a single visualization</td></tr>
+              <tr><td>Creates a single table in Tableau usable for visualizations</td><td>Does not create a single table — data is blended on the fly per view</td></tr>
+              <tr><td>Requires a common field for the join</td><td>Does not require a common field across the databases</td></tr>
+              <tr><td>Not recommended when sources are at different levels of detail</td><td>Recommended when sources are at different levels of detail</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="quiz4"></div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         DECISION FRAMEWORK
+    ========================================================== -->
+    <section class="sheet" id="framework">
+      <div class="sheet-head"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v6M12 21v-6M5 12h14"/><circle cx="12" cy="12" r="9"/></svg><span>Sheet · Decision framework</span></div>
+      <div class="sheet-body">
+        <span class="sheet-kicker" style="background:#eef1f5;color:var(--navy)">Putting it together</span>
+        <h2>Which method should you use?</h2>
+        <p>The most important skill here isn't knowing how each method works in isolation — it's knowing which one to reach for. Answer the questions below in order to arrive at a recommendation.</p>
+
+        <div class="wizard" id="wizard">
+          <div class="wizard-trail" id="wizardTrail"></div>
+          <div id="wizardActive">
+            <div class="wizard-q" id="wizardQ"></div>
+            <div class="wizard-choices" id="wizardChoices"></div>
+          </div>
+          <div class="wizard-result" id="wizardResult"></div>
+          <div style="margin-top:16px;">
+            <button class="btn secondary" id="wizardReset" style="display:none;">Start over</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         SCENARIOS
+    ========================================================== -->
+    <section class="sheet" id="scenarios">
+      <div class="sheet-head"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><span>Sheet · Practice</span></div>
+      <div class="sheet-body">
+        <span class="sheet-kicker" style="background:#eef1f5;color:var(--navy)">Practice</span>
+        <h2>Five scenarios, five decisions</h2>
+        <p>For each scenario, decide which method fits before revealing the recommendation.</p>
+        <div class="scenario-grid" id="scenarioGrid"></div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         SUMMARY
+    ========================================================== -->
+    <section class="sheet" id="summary">
+      <div class="sheet-head"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Sheet · Summary</span></div>
+      <div class="sheet-body">
+        <span class="sheet-kicker" style="background:#eef1f5;color:var(--navy)">Recap</span>
+        <h2>Quick summary</h2>
+        <p>There are several ways to combine data, each with its own strengths and trade‑offs.</p>
+        <div class="summary-grid">
+          <div class="summary-card" style="background:var(--m-join)">
+            <h4>Join</h4>
+            <p>Combines tables side by side using a common field — more columns, established before analysis begins. Can duplicate or drop rows when granularity differs.</p>
+            <span class="sc-tag">Adds columns</span>
+          </div>
+          <div class="summary-card" style="background:var(--m-relationship)">
+            <h4>Relationship</h4>
+            <p>The default and most flexible method. Adapts to each sheet's analysis, works across tables at different levels of detail, without duplicating rows.</p>
+            <span class="sc-tag">Keeps tables separate</span>
+          </div>
+          <div class="summary-card" style="background:var(--m-union)">
+            <h4>Union</h4>
+            <p>Stacks tables with identical structure on top of each other — more rows, for data split across time periods, regions, or categories.</p>
+            <span class="sc-tag">Adds rows</span>
+          </div>
+          <div class="summary-card" style="background:var(--m-blend)">
+            <h4>Blend</h4>
+            <p>Queries each data source independently, aggregates the results, then presents them together in one view. Handles different levels of detail and separate sources, including published data sources.</p>
+            <span class="sc-tag">Combines sources in a view</span>
+          </div>
+        </div>
+        <p style="margin-top:20px;color:var(--text-mute);font-size:13.5px;">In professional practice: prefer a <strong>Relationship</strong> as your default. Reach for a <strong>Join</strong> only when you need explicit control over join type or custom SQL. Use a <strong>Union</strong> when tables share a structure and you're stacking rows. Fall back to <strong>Blending</strong> only when the data truly can't live in the same source.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============ SHEET TABS (bottom nav) ============ -->
+<nav class="tb-sheettabs" id="sheetTabs" aria-label="Quick jump"></nav>
+
+<div class="chart-tooltip" id="chartTooltip"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   NAVIGATION: data pane + sheet tabs + active-section highlight
+   ============================================================ */
+var sectionIds = ["intro","join","geo","crossdb","relationship","union","blend","framework","scenarios","summary"];
+var tabLabels = {intro:"Overview",join:"Join",geo:"Maps",crossdb:"Cross-DB",relationship:"Relationship",union:"Union",blend:"Blend",framework:"Decision",scenarios:"Practice",summary:"Summary"};
+
+var datapane = document.getElementById('datapane');
+var scrim = document.getElementById('scrim');
+var hamburger = document.getElementById('hamburgerBtn');
+hamburger.addEventListener('click', function(){
+  var open = datapane.classList.toggle('open');
+  scrim.classList.toggle('show', open);
+  hamburger.setAttribute('aria-expanded', open ? 'true':'false');
+});
+scrim.addEventListener('click', function(){
+  datapane.classList.remove('open');
+  scrim.classList.remove('show');
+  hamburger.setAttribute('aria-expanded','false');
+});
+
+function goTo(id){
+  var el = document.getElementById(id);
+  if(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); }
+  datapane.classList.remove('open'); scrim.classList.remove('show');
+}
+
+var navLinks = document.querySelectorAll('.tb-navlink');
+navLinks.forEach(function(btn){
+  btn.addEventListener('click', function(){ goTo(btn.getAttribute('data-target')); });
+});
+
+var sheetTabsNav = document.getElementById('sheetTabs');
+sectionIds.forEach(function(id){
+  var b = document.createElement('button');
+  b.className='tb-tab'; b.textContent=tabLabels[id]; b.dataset.target=id;
+  b.addEventListener('click', function(){ goTo(id); });
+  sheetTabsNav.appendChild(b);
+});
+
+function setActive(id){
+  navLinks.forEach(function(l){ l.classList.toggle('active', l.getAttribute('data-target')===id); });
+  sheetTabsNav.querySelectorAll('.tb-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.target===id); });
+}
+
+var io = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){ e.target.classList.add('in-view'); }
+  });
+},{threshold:0.08});
+document.querySelectorAll('.sheet').forEach(function(s){ io.observe(s); });
+
+var ioActive = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){ setActive(e.target.id); }
+  });
+},{rootMargin:'-30% 0px -55% 0px'});
+sectionIds.forEach(function(id){ var el=document.getElementById(id); if(el) ioActive.observe(el); });
+setActive('intro');
+
+/* ============================================================
+   METHOD OVERVIEW CARDS
+   ============================================================ */
+var methodInfo = {
+  'm-join':{title:'Join', color:'var(--m-join)', text:"Matches rows from two tables on a common field and merges them into one physical table. Extends data horizontally by adding fields. Best when both tables live in the same source and you need explicit control over inner, left, right, or full outer join behavior."},
+  'm-relationship':{title:'Relationship', color:'var(--m-relationship)', text:"A logical contract between tables: when a view needs fields from both, Tableau builds the right query and join automatically — without physically merging the tables or duplicating rows. Tableau's recommended default since version 2020.2."},
+  'm-union':{title:'Union', color:'var(--m-union)', text:"Appends rows from one table after another to build one continuous dataset. Requires the same number of fields, same names, and same data types across every table being stacked."},
+  'm-blend':{title:'Blend', color:'var(--m-blend)', text:"Combines a primary and a secondary data source at the visualization level via a left join, without physically merging the underlying data. The only option when the sources can't be connected within one data source."},
+  'm-crossdb':{title:'Cross-database join', color:'var(--m-crossdb)', text:"A join between tables from different databases via a common field, made possible by a multi-connection data source. Produces a single table Tableau can visualize, same as a same-database join."}
+};
+var methodDetail = document.getElementById('methodDetail');
+document.querySelectorAll('.method-card').forEach(function(card){
+  card.addEventListener('click', function(){
+    var m = methodInfo[card.dataset.method];
+    methodDetail.style.borderLeft = '4px solid '+m.color;
+    methodDetail.innerHTML = '<h4 style="color:'+m.color+'">'+m.title+'</h4><p>'+m.text+'</p>';
+    methodDetail.classList.add('show');
+    document.querySelectorAll('.method-card').forEach(function(c){c.style.boxShadow='';});
+    card.style.boxShadow = 'var(--shadow-lift)';
+  });
+});
+
+/* ============================================================
+   JOIN SIMULATOR
+   ============================================================ */
+var register1 = [
+  {roll:101,name:'Aarav'},{roll:102,name:'Diya'},{roll:103,name:'Kabir'},{roll:104,name:'Meera'},{roll:105,name:'Rohan'}
+];
+var register2 = [
+  {roll:101,score:85},{roll:102,score:92},{roll:103,score:78},{roll:105,score:88}
+];
+
+function renderSimpleTable(el, headers, rows, keyFields){
+  var h = '<thead><tr>'+headers.map(function(x){return '<th>'+x+'</th>';}).join('')+'</tr></thead><tbody>';
+  rows.forEach(function(r){
+    h += '<tr>'+keyFields.map(function(f){
+      var v = r[f];
+      return v===null||v===undefined ? '<td class="blank">—</td>' : '<td>'+v+'</td>';
+    }).join('')+'</tr>';
+  });
+  h += '</tbody>';
+  el.innerHTML = h;
+}
+renderSimpleTable(document.getElementById('reg1Table'), ['Roll Number','Student Name'], register1, ['roll','name']);
+renderSimpleTable(document.getElementById('reg2Table'), ['Roll Number','Exam Score'], register2, ['roll','score']);
+
+function computeJoin(type){
+  var rows = [];
+  if(type==='inner'){
+    rows = register1.filter(function(r){ return register2.some(function(s){return s.roll===r.roll;}); })
+      .map(function(r){ var m = register2.find(function(s){return s.roll===r.roll;}); return {roll:r.roll,name:r.name,score:m.score}; });
+  } else if(type==='left'){
+    rows = register1.map(function(r){ var m = register2.find(function(s){return s.roll===r.roll;}); return {roll:r.roll,name:r.name,score:m?m.score:null}; });
+  } else if(type==='right'){
+    rows = register2.map(function(s){ var m = register1.find(function(r){return r.roll===s.roll;}); return {roll:s.roll,name:m?m.name:null,score:s.score}; });
+  } else if(type==='full'){
+    var rolls = [];
+    register1.concat(register2).forEach(function(x){ if(rolls.indexOf(x.roll)===-1) rolls.push(x.roll); });
+    rolls.sort(function(a,b){return a-b;});
+    rows = rolls.map(function(roll){
+      var r = register1.find(function(x){return x.roll===roll;});
+      var s = register2.find(function(x){return x.roll===roll;});
+      return {roll:roll,name:r?r.name:null,score:s?s.score:null};
+    });
+  }
+  return rows;
+}
+var joinNotes = {
+  inner:"Only roll numbers present in both registers are kept — Meera (104) is dropped because she has no exam score.",
+  left:"Every row from Register 1 is kept. Meera (104) stays, but her score is blank because she has no match in Register 2.",
+  right:"Every row from Register 2 is kept. In this data every scored roll number already exists in Register 1, so the result matches the inner join.",
+  full:"All roll numbers from either register are kept. Meera (104) stays with a blank score — here that makes the result identical to the left join, since Register 2 has no roll numbers outside Register 1."
+};
+var joinLabels = {inner:'Inner Join', left:'Left Join', right:'Right Join', full:'Full Outer Join'};
+
+function renderJoinResult(type){
+  var rows = computeJoin(type);
+  document.getElementById('joinResultLabel').textContent = 'Result — '+joinLabels[type]+' on Roll Number';
+  renderSimpleTable(document.getElementById('joinResultTable'), ['Roll Number','Student Name','Exam Score'], rows, ['roll','name','score']);
+  document.getElementById('joinNote').textContent = joinNotes[type];
+}
+document.querySelectorAll('#joinTypeRow .jt-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('#joinTypeRow .jt-btn').forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+    btn.setAttribute('aria-pressed','true');
+    renderJoinResult(btn.dataset.jt);
+  });
+});
+renderJoinResult('inner');
+
+/* ============================================================
+   ROW DUPLICATION DEMO
+   ============================================================ */
+var orders = [
+  {id:1001,cust:'Amit',sales:500},{id:1002,cust:'Neha',sales:300},{id:1003,cust:'Raj',sales:700},{id:1004,cust:'Sara',sales:400}
+];
+var returns = [
+  {rid:'R1',oid:1001,amt:200},{rid:'R2',oid:1001,amt:150},{rid:'R3',oid:1001,amt:150},{rid:'R4',oid:1002,amt:100},{rid:'R5',oid:1003,amt:300}
+];
+function renderOrdersReturns(){
+  var t1='<thead><tr><th>Order ID</th><th>Customer</th><th>Sales</th></tr></thead><tbody>';
+  orders.forEach(function(o){ t1+='<tr><td>'+o.id+'</td><td>'+o.cust+'</td><td>$'+o.sales+'</td></tr>'; });
+  t1+='</tbody>';
+  document.getElementById('ordersTable').innerHTML=t1;
+  var t2='<thead><tr><th>Return ID</th><th>Order ID</th><th>Return Amt</th></tr></thead><tbody>';
+  returns.forEach(function(r){ t2+='<tr><td>'+r.rid+'</td><td>'+r.oid+'</td><td>$'+r.amt+'</td></tr>'; });
+  t2+='</tbody>';
+  document.getElementById('returnsTable').innerHTML=t2;
+}
+renderOrdersReturns();
+
+document.getElementById('runJoinBtn').addEventListener('click', function(){
+  var counts = {};
+  var joined = returns.map(function(r){
+    var o = orders.find(function(x){return x.id===r.oid;});
+    counts[r.oid] = (counts[r.oid]||0)+1;
+    return {order:o, ret:r};
+  });
+  var sum = joined.reduce(function(acc,j){ return acc + j.order.sales; }, 0);
+  var h = '<thead><tr><th>Order ID</th><th>Customer</th><th>Sales</th><th>Return ID</th><th>Return Amt</th></tr></thead><tbody>';
+  joined.forEach(function(j){
+    var dup = counts[j.order.id] > 1;
+    h += '<tr><td class="'+(dup?'dup':'')+'">'+j.order.id+'</td><td class="'+(dup?'dup':'')+'">'+j.order.cust+'</td><td class="'+(dup?'dup':'')+'">$'+j.order.sales+'</td><td>'+j.ret.rid+'</td><td>$'+j.ret.amt+'</td></tr>';
+  });
+  h += '</tbody>';
+  document.getElementById('dupResultTable').innerHTML = h;
+  document.getElementById('dupSum').textContent = '$'+sum.toLocaleString();
+  document.getElementById('dupResultWrap').style.display='block';
+  document.getElementById('runJoinBtn').disabled = true;
+  document.getElementById('resetDupBtn').disabled = false;
+});
+document.getElementById('resetDupBtn').addEventListener('click', function(){
+  document.getElementById('dupResultWrap').style.display='none';
+  document.getElementById('runJoinBtn').disabled = false;
+  document.getElementById('resetDupBtn').disabled = true;
+});
+
+/* ============================================================
+   GEO ROLE DEMO
+   ============================================================ */
+var geoFixed = false;
+document.getElementById('geoFixBtn').addEventListener('click', function(){
+  geoFixed = !geoFixed;
+  var icon = document.getElementById('geoIcon');
+  var label = document.getElementById('geoTypeLabel');
+  var status = document.getElementById('geoStatus');
+  var btn = document.getElementById('geoFixBtn');
+  if(geoFixed){
+    icon.textContent='Abc'; icon.style.background='var(--blue)';
+    label.textContent='String · Geographic Role: Zip Code / Postcode';
+    status.className='geo-status good';
+    status.innerHTML='<span class="dot2"></span> Map view: fixed — postal codes match the geocoding database correctly';
+    btn.textContent='Revert to Number (whole)';
+  } else {
+    icon.textContent='#'; icon.style.background='var(--text-faint)';
+    label.textContent='Number (whole) · no geographic role';
+    status.className='geo-status bad';
+    status.innerHTML='<span class="dot2"></span> Map view: broken — leading zeros lost, no geographic role available';
+    btn.textContent='Convert to String + assign role';
+  }
+});
+
+/* ============================================================
+   SUB-CATEGORY BAR CHART
+   ============================================================ */
+var subcat = [
+  ["Accessories",1306599],["Appliances",589927],["Art",156698],["Binders",1649540],["Bookcases",705146],
+  ["Chairs",2659343],["Copiers",801599],["Envelopes",87974],["Fasteners",18449],["Furnishings",537486],
+  ["Labels",88499],["Machines",443221],["Paper",525931],["Phones",1926863],["Storage",1776775],
+  ["Supplies",236714],["Tables",1335993]
+];
+var palette = ['#4E79A7','#F28E2B','#E15759','#76B7B2','#59A14F','#EDC948','#B07AA1','#FF9DA7','#9C755F','#BAB0AC'];
+(function drawChart(){
+  var svg = document.getElementById('subcatChart');
+  var W=760,H=340, padL=54, padR=10, padT=14, padB=56;
+  var innerW = W-padL-padR, innerH = H-padT-padB;
+  var max = 2700000;
+  var n = subcat.length;
+  var bw = innerW/n * 0.62;
+  var gap = innerW/n;
+  var ns = 'http://www.w3.org/2000/svg';
+
+  // gridlines + y labels
+  var steps=[0,500000,1000000,1500000,2000000,2500000];
+  steps.forEach(function(v){
+    var y = padT + innerH - (v/max)*innerH;
+    var line = document.createElementNS(ns,'line');
+    line.setAttribute('x1',padL); line.setAttribute('x2',W-padR); line.setAttribute('y1',y); line.setAttribute('y2',y);
+    line.setAttribute('stroke','#e6ebf1'); line.setAttribute('stroke-width','1');
+    svg.appendChild(line);
+    var t = document.createElementNS(ns,'text');
+    t.setAttribute('x',padL-8); t.setAttribute('y',y+4); t.setAttribute('text-anchor','end');
+    t.setAttribute('font-size','10'); t.setAttribute('fill','#8695a3');
+    t.textContent = (v/1000)+'K';
+    svg.appendChild(t);
+  });
+
+  subcat.forEach(function(d,i){
+    var x = padL + i*gap + (gap-bw)/2;
+    var h = (d[1]/max)*innerH;
+    var y = padT + innerH - h;
+    var rect = document.createElementNS(ns,'rect');
+    rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width',bw); rect.setAttribute('height',h);
+    rect.setAttribute('fill', palette[i%palette.length]);
+    rect.setAttribute('rx','2');
+    rect.setAttribute('tabindex','0');
+    rect.style.cursor='pointer';
+    rect.setAttribute('role','img');
+    rect.setAttribute('aria-label', d[0]+': $'+d[1].toLocaleString());
+    svg.appendChild(rect);
+
+    var label = document.createElementNS(ns,'text');
+    label.setAttribute('x', x+bw/2); label.setAttribute('y', padT+innerH+16);
+    label.setAttribute('text-anchor','end'); label.setAttribute('font-size','9.5');
+    label.setAttribute('fill','#5a6b7a');
+    label.setAttribute('transform','rotate(-42 '+(x+bw/2)+' '+(padT+innerH+16)+')');
+    label.textContent = d[0];
+    svg.appendChild(label);
+
+    var tooltip = document.getElementById('chartTooltip');
+    function showTip(evt){
+      tooltip.textContent = d[0]+': $'+d[1].toLocaleString();
+      tooltip.classList.add('show');
+      var cx = evt.clientX!==undefined ? evt.clientX : (rect.getBoundingClientRect().left+rect.getBoundingClientRect().width/2);
+      var cy = evt.clientY!==undefined ? evt.clientY : rect.getBoundingClientRect().top;
+      tooltip.style.left = (cx+12)+'px';
+      tooltip.style.top = (cy-30)+'px';
+      rect.setAttribute('opacity','0.75');
+    }
+    function hideTip(){ tooltip.classList.remove('show'); rect.setAttribute('opacity','1'); }
+    rect.addEventListener('mousemove', showTip);
+    rect.addEventListener('mouseleave', hideTip);
+    rect.addEventListener('focus', function(e){ var r=rect.getBoundingClientRect(); showTip({clientX:r.left+r.width/2, clientY:r.top}); });
+    rect.addEventListener('blur', hideTip);
+  });
+})();
+
+/* ============================================================
+   QUIZZES
+   ============================================================ */
+function buildQuiz(container, num, question, options, correctIdx, explanation, refUrl){
+  var letters = ['A','B','C','D'];
+  var wrap = document.createElement('div'); wrap.className='quiz';
+  var head = document.createElement('div'); head.className='quiz-head';
+  head.innerHTML = '<span class="qnum">QUIZ '+num+'</span><span class="qt">Check your understanding</span>';
+  wrap.appendChild(head);
+  var body = document.createElement('div'); body.className='quiz-body';
+  var q = document.createElement('div'); q.className='quiz-q'; q.textContent = question;
+  body.appendChild(q);
+  var optsWrap = document.createElement('div'); optsWrap.className='quiz-options';
+  var feedback = document.createElement('div'); feedback.className='quiz-feedback'; feedback.setAttribute('role','status');
+  var answered = false;
+  options.forEach(function(opt, idx){
+    var b = document.createElement('button'); b.className='qopt';
+    b.innerHTML = '<span class="qletter">'+letters[idx]+'</span><span>'+opt+'</span>';
+    b.addEventListener('click', function(){
+      if(answered) return; answered = true;
+      Array.prototype.slice.call(optsWrap.children).forEach(function(o,i2){
+        o.disabled = true;
+        if(i2===correctIdx) o.classList.add('correct');
+        else if(o===b) o.classList.add('incorrect');
+      });
+      var refHtml = refUrl ? ' <a href="'+refUrl+'" target="_blank" rel="noopener">Reference ↗</a>' : '';
+      feedback.innerHTML = '<strong>'+(idx===correctIdx ? 'Correct. ' : 'Not quite. ')+'</strong>'+explanation+refHtml;
+      feedback.classList.add('show');
+    });
+    optsWrap.appendChild(b);
+  });
+  body.appendChild(optsWrap);
+  body.appendChild(feedback);
+  wrap.appendChild(body);
+  container.appendChild(wrap);
+}
+
+buildQuiz(document.getElementById('quiz1'), 1,
+  "You have an Orders table with 10,000 rows (one row per order) and a Customers table with 500 rows (one row per customer). Each order has a Customer ID matching the Customers table. You need to see the customer segment alongside each order. Which method — and roughly how many rows in the result?",
+  ["Union; 10,500 rows (orders and customers stacked)",
+   "Inner Join on Customer ID; approximately 10,000 rows (one per order, with customer details added)",
+   "Data Blend; 500 rows (one per customer with aggregated order data)",
+   "Relationship; 500 rows (Tableau reduces to customer level)"],
+  1,
+  "Both tables are in the same data source, and you need to add customer attributes to each order row — a Join is appropriate. An inner join on Customer ID keeps all 10,000 order rows (assuming every order has a valid customer) and adds the segment as an extra column. A union doesn't fit since the tables have different structures; a blend would unnecessarily aggregate the secondary source. A relationship could also work, but the question specifically asks about row count in a flat combined table.");
+
+buildQuiz(document.getElementById('quiz2'), 2,
+  "A Postal Code field is being recognized as a Number (Whole) in Tableau, and a map visualization isn't working correctly. What should be done?",
+  ["Convert the field to a Measure",
+   "Convert the field to a String data type and assign the appropriate geographic role",
+   "Convert the field to Latitude",
+   "Change the visualization type to a Bar Chart"],
+  1,
+  "Postal codes should generally be stored as strings, since leading zeros can be significant. Assigning the correct geographic role lets Tableau match the values against its geocoding database and plot them correctly.");
+
+buildQuiz(document.getElementById('quiz3'), 3,
+  "You join an Orders table (10,000 rows) with a Returns table (2,000 rows, but some orders have multiple return entries) using an inner join on Order ID. After the join, your total Sales figure is higher than expected. What's the most likely cause, and what alternative would prevent it?",
+  ["The join added extra columns, which inflated the Sales figure. Use a Union instead.",
+   "The many-to-many match between Orders and Returns duplicated order rows, inflating the Sales sum. Use a Relationship instead.",
+   "The inner join removed non-returned orders, reducing the row count and deflating Sales. Use a Full Outer Join.",
+   "Data Blending would produce the same duplication. There is no solution."],
+  1,
+  "When an order has multiple return entries, an inner join produces one result row per match, duplicating that order's Sales value. Summing Sales across the duplicated rows inflates the total. A Relationship avoids this by keeping the tables separate and combining data only at query time, preserving each table's original level of detail.",
+  "https://help.tableau.com/current/pro/desktop/en-us/relate_tables.htm");
+
+buildQuiz(document.getElementById('quiz4'), 4,
+  "Your company's sales data is in a SQL Server database, already connected as your primary data source. Your manager emails an Excel file with regional sales targets. You need to compare actual sales vs. target sales by region. Which method should you use?",
+  ["Union the Excel file with the SQL table, since both contain sales-related data",
+   "Create a cross-database join by adding the Excel file as a second connection in the same data source",
+   "Use Data Blending by adding the Excel file as a separate data source, linking on Region",
+   "Either B or C could work, but they differ in behavior"],
+  3,
+  "Both a cross-database join (adding a new connection to the same data source) and data blending (adding a separate data source) are technically possible. The cross-database join physically combines the tables and allows row-level analysis of targets; blending keeps them separate, with the secondary source (targets) always aggregated. Use a cross-database join if you need row-level target data; use blending if you only need aggregated values for comparison. In professional practice, prefer a join or relationship over blending whenever you can.");
+
+/* ============================================================
+   DECISION WIZARD
+   ============================================================ */
+var wizardState = { step:1, trail:[] };
+var wizardResultInfo = {
+  blend:{name:'Data Blending', color:'var(--m-blend)', text:"The tables live in separate data sources that can't be connected within a single multi-connection source, so combine them at the visualization level with a left join."},
+  union:{name:'Union', color:'var(--m-union)', text:"Same source, same structure — stack the tables vertically to build one continuous dataset."},
+  join:{name:'Join', color:'var(--m-join)', text:"Same source, different structure, and you need explicit control over the join type or custom SQL — use a physical-layer Join."},
+  relationship:{name:'Relationship', color:'var(--m-relationship)', text:"Same source, different structure, no need for a specific join type — use a Relationship, Tableau's recommended default, to avoid row duplication."}
+};
+function wizardRender(){
+  var qEl = document.getElementById('wizardQ');
+  var choicesEl = document.getElementById('wizardChoices');
+  var trailEl = document.getElementById('wizardTrail');
+  var resultEl = document.getElementById('wizardResult');
+  var activeEl = document.getElementById('wizardActive');
+  var resetBtn = document.getElementById('wizardReset');
+  trailEl.innerHTML = wizardState.trail.map(function(t){return '<span class="trail-chip">'+t+'</span>';}).join('');
+
+  if(wizardState.step===1){
+    resultEl.classList.remove('show'); activeEl.style.display='block'; resetBtn.style.display = wizardState.trail.length? 'inline-flex':'none';
+    qEl.textContent = "1. Are the tables in the same data source (same connection, or a multi-connection source)?";
+    choicesEl.innerHTML='';
+    var yes=mkChoiceBtn('Yes', function(){ wizardState.trail.push('Same data source: Yes'); wizardState.step=2; wizardRender(); });
+    var no=mkChoiceBtn('No', function(){ wizardState.trail.push('Same data source: No'); showWizardResult('blend'); });
+    choicesEl.appendChild(yes); choicesEl.appendChild(no);
+  } else if(wizardState.step===2){
+    qEl.textContent = "2. Do the tables have the same structure (same columns, representing the same kind of data)?";
+    choicesEl.innerHTML='';
+    var yes2=mkChoiceBtn('Yes', function(){ wizardState.trail.push('Same structure: Yes'); showWizardResult('union'); });
+    var no2=mkChoiceBtn('No', function(){ wizardState.trail.push('Same structure: No'); wizardState.step=3; wizardRender(); });
+    choicesEl.appendChild(yes2); choicesEl.appendChild(no2);
+  } else if(wizardState.step===3){
+    qEl.textContent = "3. Do you need explicit control over the join type, or are you working with custom SQL?";
+    choicesEl.innerHTML='';
+    var yes3=mkChoiceBtn('Yes', function(){ wizardState.trail.push('Needs explicit join/SQL: Yes'); showWizardResult('join'); });
+    var no3=mkChoiceBtn('No', function(){ wizardState.trail.push('Needs explicit join/SQL: No'); showWizardResult('relationship'); });
+    choicesEl.appendChild(yes3); choicesEl.appendChild(no3);
+  }
+}
+function mkChoiceBtn(label, fn){
+  var b=document.createElement('button'); b.className='btn secondary'; b.textContent=label;
+  b.addEventListener('click', fn);
+  return b;
+}
+function showWizardResult(key){
+  var info = wizardResultInfo[key];
+  document.getElementById('wizardActive').style.display='none';
+  var r = document.getElementById('wizardResult');
+  r.style.background = 'color-mix(in srgb, '+info.color+' 10%, white)';
+  r.innerHTML = '<div class="wr-icon" style="background:'+info.color+'">'+info.name.charAt(0)+'</div>'+
+    '<h4 style="color:'+info.color+'">'+info.name+'</h4><p>'+info.text+'</p>';
+  r.classList.add('show');
+  document.getElementById('wizardReset').style.display='inline-flex';
+  document.getElementById('wizardTrail').innerHTML = wizardState.trail.map(function(t){return '<span class="trail-chip">'+t+'</span>';}).join('');
+}
+document.getElementById('wizardReset').addEventListener('click', function(){
+  wizardState = {step:1, trail:[]};
+  document.getElementById('wizardResult').classList.remove('show');
+  document.getElementById('wizardActive').style.display='block';
+  wizardRender();
+});
+wizardRender();
+
+/* ============================================================
+   SCENARIOS
+   ============================================================ */
+var scenarios = [
+  {q:"Your company stores sales data in a PostgreSQL database. Marketing has a Google Sheet with campaign spend by month. You need to compare monthly sales against campaign spend.",
+   method:'Data Blending', color:'var(--m-blend)',
+   a:"The data lives in completely separate sources, so link them on Month at the visualization level."},
+  {q:"You have an Orders table and a Customers table, both in the same Excel workbook. You want customer segments alongside order details.",
+   method:'Relationship (preferred) or Join', color:'var(--m-relationship)',
+   a:"Both tables are in the same source with a common key (Customer ID). A Relationship is preferred since it preserves each table's granularity."},
+  {q:"Your company has 12 Excel files, one per month's transactions, all with identical columns: Date, Product, Amount.",
+   method:'Union', color:'var(--m-union)',
+   a:"Same structure, different time periods — stack them vertically into one continuous dataset."},
+  {q:"You have a SQL Server database with a Sales table and a separate Oracle database with a Product Catalog table. Both share Product ID. You want to analyze sales by product category.",
+   method:'Cross-Database Join', color:'var(--m-crossdb)',
+   a:"Add both connections to the same Tableau data source and join on Product ID. If a multi-connection source isn't possible, fall back to Data Blending."},
+  {q:"You have an Orders table with 50,000 rows and a Returns table with 5,000 rows in the same database. Some orders have multiple returns. You want total sales and return counts without inflating the sales figure.",
+   method:'Relationship', color:'var(--m-relationship)',
+   a:"A join would duplicate order rows for orders with multiple returns, inflating the sales total. A Relationship keeps both tables at their original granularity."}
+];
+var scenarioGrid = document.getElementById('scenarioGrid');
+scenarios.forEach(function(s, i){
+  var card = document.createElement('div'); card.className='scenario';
+  var qDiv = document.createElement('div'); qDiv.className='scenario-q';
+  qDiv.innerHTML = '<p><strong>Scenario '+(i+1)+'.</strong> '+s.q+'</p>';
+  var toggle = document.createElement('button'); toggle.className='btn secondary scenario-toggle'; toggle.textContent='Reveal answer';
+  qDiv.appendChild(toggle);
+  var ans = document.createElement('div'); ans.className='scenario-ans';
+  ans.innerHTML = '<span class="ans-tag" style="background:'+s.color+'">'+s.method+'</span><p style="margin:0;font-size:13.4px;color:var(--text-mute);">'+s.a+'</p>';
+  toggle.addEventListener('click', function(){
+    var show = ans.classList.toggle('show');
+    toggle.textContent = show ? 'Hide answer' : 'Reveal answer';
+  });
+  card.appendChild(qDiv); card.appendChild(ans);
+  scenarioGrid.appendChild(card);
+});
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Tableau-5-postread" target="_blank" rel="noopener">github.com/scaler-content/Tableau-5-postread</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

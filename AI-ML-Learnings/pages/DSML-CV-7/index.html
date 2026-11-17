@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Computer Vision 7 post read</title>
+<meta name="description" content="Computer Vision 7 post read: object localization, IoU, NMS and the R-CNN family.">
+<style>
+:root{
+  --v950:#1e0b4b;--v900:#2e1065;--v800:#4c1d95;--v700:#6d28d9;--v600:#7c3aed;--v500:#8b5cf6;
+  --v400:#a78bfa;--v300:#c4b5fd;--v200:#ddd6fe;--v100:#ede9fe;--v50:#f5f3ff;
+  --ink:#1f1637;--muted:#5a4f78;--line:#e4dcfa;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{margin:0;background:#fff;color:var(--ink);font:17px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:Georgia,"Iowan Old Style","Times New Roman",serif;line-height:1.2;color:var(--v900);margin:0}
+h2{font-size:clamp(1.7rem,3.4vw,2.3rem);margin:0 0 .7rem}
+h3{font-size:1.35rem;margin:2.2rem 0 .5rem}
+h4{font-size:1.02rem;margin:1.2rem 0 .3rem;color:var(--v800)}
+p{margin:.75rem 0}
+p,ul,ol{max-width:70ch}
+li{margin:.3rem 0}
+a{color:var(--v700)}
+code{font:.88em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--v100);color:var(--v800);padding:.1em .35em;border-radius:5px}
+:focus-visible{outline:3px solid var(--v500);outline-offset:2px;border-radius:4px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:-999px;top:8px;background:var(--v900);color:#fff;padding:.5rem 1rem;z-index:100;border-radius:8px}
+.skip:focus{left:8px}
+
+/* header */
+.top{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .in{max-width:1040px;margin:0 auto;padding:.6rem 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font:700 1.05rem Georgia,serif;color:var(--v900);text-decoration:none;display:flex;align-items:center;gap:10px}
+.brand i{width:18px;height:18px;border-radius:4px;background:conic-gradient(var(--v700) 25%,var(--v300) 0 50%,var(--v500) 0 75%,var(--v900) 0);display:inline-block}
+#bar{height:3px;background:var(--v600);width:0;transition:width .1s}
+.btn{font:600 .9rem system-ui,sans-serif;background:var(--v700);color:#fff;border:2px solid var(--v700);border-radius:10px;padding:7px 14px;cursor:pointer}
+.btn:hover{background:var(--v800);border-color:var(--v800)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:#fff;color:var(--v700)}
+.btn.ghost:hover{background:var(--v50)}
+.btn.sm{padding:4px 10px;font-size:.82rem}
+#toc{position:absolute;right:max(20px,calc(50% - 520px));top:100%;width:min(360px,calc(100vw - 40px));max-height:70vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px -12px rgba(46,16,101,.35);padding:10px}
+#toc ol{list-style:none;margin:0;padding:0;max-width:none}
+#toc a{display:flex;gap:10px;padding:7px 10px;border-radius:8px;text-decoration:none;color:var(--ink);font-size:.95rem;line-height:1.35}
+#toc a b{color:var(--v600);font-variant-numeric:tabular-nums;min-width:1.6em}
+#toc a:hover,#toc a[aria-current=true]{background:var(--v100);color:var(--v900)}
+#toc a[aria-current=true]{font-weight:700}
+
+/* hero */
+.hero{color:#fff;padding:84px 20px 92px;background-color:var(--v900);
+  background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(135deg,var(--v950),var(--v700));
+  background-size:30px 30px,30px 30px,100% 100%}
+.hero .in{max-width:900px;margin:0 auto}
+.eyebrow{font:700 .78rem system-ui;letter-spacing:.14em;text-transform:uppercase;color:var(--v200)}
+.hero h1{color:#fff;font-size:clamp(2.3rem,6.5vw,4rem);margin:.4rem 0 1rem}
+.hero p{font-size:1.2rem;color:var(--v100);max-width:56ch}
+.hero .cta{margin-top:1.6rem;display:flex;gap:12px;flex-wrap:wrap}
+.hero .btn{background:#fff;color:var(--v800);border-color:#fff}
+.hero .btn.ghost{background:transparent;color:#fff;border-color:var(--v300)}
+
+/* sections */
+main section{padding:60px 20px;border-bottom:1px solid var(--line)}
+main section:nth-of-type(even){background:var(--v50)}
+main section>.in{max-width:940px;margin:0 auto}
+.kicker{display:inline-block;font:700 .78rem system-ui;letter-spacing:.14em;text-transform:uppercase;color:var(--v600);margin-bottom:.35rem}
+.callout{border-left:5px solid var(--v600);background:var(--v100);padding:12px 18px;border-radius:0 14px 14px 0;margin:1.2rem 0;max-width:70ch}
+.callout p{margin:.3rem 0}
+.note{font-size:.88rem;color:var(--muted)}
+.formula{font:italic 1.2rem Georgia,serif;text-align:center;background:var(--v900);color:#fff;border-radius:14px;padding:14px 18px;margin:16px 0;overflow-x:auto;max-width:none}
+.formula small{display:block;font:.8rem system-ui;color:var(--v200);font-style:normal;margin-top:4px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.card{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:#fff}
+.card h4{margin:0 0 .3rem;font-size:1.05rem;color:var(--v900)}
+.card p{margin:.3rem 0;font-size:.97rem}
+.card.dark{background:var(--v900);color:#fff;border-color:var(--v900)}
+.card.dark h4{color:#fff}
+.tag{display:inline-block;font:700 .72rem system-ui;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--v100);color:var(--v800)}
+
+/* widgets */
+.widget{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin:24px 0;box-shadow:0 8px 26px -14px rgba(76,29,149,.35)}
+.wtag{display:inline-block;font:700 .7rem system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--v700);background:var(--v100);padding:5px 10px;border-radius:999px;margin-bottom:8px}
+.wtitle{font:700 1.12rem/1.3 Georgia,serif;color:var(--v900);margin:0 0 4px}
+.wdesc{color:var(--muted);font-size:.93rem;margin:0 0 12px;max-width:none}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:8px 0 14px}
+.seg{display:inline-flex;flex-wrap:wrap}
+.seg button{font:600 .85rem system-ui,sans-serif;border:1.5px solid var(--v300);background:#fff;color:var(--v800);padding:6px 12px;cursor:pointer;margin-left:-1.5px}
+.seg button:first-child{border-radius:10px 0 0 10px;margin-left:0}
+.seg button:last-child{border-radius:0 10px 10px 0}
+.seg button:only-child{border-radius:10px}
+.seg button:hover{background:var(--v50)}
+.seg button[aria-pressed=true]{background:var(--v700);border-color:var(--v700);color:#fff;position:relative;z-index:1}
+select,input[type=number]{font:inherit;font-size:.9rem;padding:6px 8px;border:1.5px solid var(--v300);border-radius:8px;background:#fff;color:var(--v900)}
+input[type=number]{width:92px}
+input[type=range]{accent-color:var(--v600)}
+label.sel,label.chk,label.fld{font-size:.88rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+label.fld{flex-direction:column;align-items:flex-start;gap:3px;font-weight:600}
+.mat{display:grid;gap:3px;grid-template-columns:repeat(var(--c),minmax(0,1fr))}
+.cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;text-align:center;font:600 clamp(.6rem,1.7vw,.88rem)/1.1 ui-monospace,Menlo,monospace;border-radius:6px;background:var(--v50);color:var(--v900);border:1.5px solid var(--v200);padding:0;margin:0}
+button.cell{cursor:pointer}
+button.cell:hover{border-color:var(--v700)}
+.cell.win{outline:3px solid var(--v900);outline-offset:-2px;z-index:1}
+.cell.pad{background:repeating-linear-gradient(45deg,#fff,#fff 4px,var(--v100) 4px,var(--v100) 8px);color:var(--muted);border-style:dashed}
+.cell.neg{border:2px dashed var(--v900)}
+.cell.cur{outline:3px solid var(--v900);outline-offset:-2px}
+.cell.on{background:var(--v700);color:#fff;border-color:var(--v700)}
+.cell.ghost{border:2px dashed var(--v700)}
+.cell.sel{outline:3px solid var(--v900);outline-offset:-2px}
+.bars{display:grid;gap:6px}
+.brow{display:grid;grid-template-columns:minmax(78px,150px) 1fr 62px;gap:10px;align-items:center;font-size:.9rem}
+.bl{font-weight:600;color:var(--v900)}
+.bt{background:var(--v100);border-radius:6px;height:16px;overflow:hidden;display:block}
+.bf{display:block;height:100%;background:var(--v700);border-radius:6px;transition:width .25s}
+.bv{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted)}
+.readout{margin-top:12px;padding:10px 14px;background:var(--v50);border:1px solid var(--line);border-radius:12px;font-size:.93rem;max-width:none}
+.readout b{color:var(--v900)}
+.fig{margin:14px 0}
+.fig img{max-width:100%;height:auto;border-radius:12px;border:1px solid var(--line);display:block;margin:0 auto}
+.fig figcaption{font-size:.85rem;color:var(--muted);text-align:center;margin-top:6px}
+.fb{display:none;padding:18px;border:2px dashed var(--v300);border-radius:12px;color:var(--muted);font-size:.9rem;text-align:center}
+.fig.broken .fb{display:block}
+.fig.broken img{display:none}
+.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+
+/* tabs */
+.tabs{margin:18px 0}
+.tablist{display:flex;gap:4px;flex-wrap:wrap;border-bottom:2px solid var(--line);margin-bottom:14px}
+.tablist button{font:600 .92rem system-ui,sans-serif;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:9px 14px;cursor:pointer;margin-bottom:-2px;border-radius:8px 8px 0 0}
+.tablist button:hover{color:var(--v800);background:var(--v50)}
+.tablist button[aria-selected=true]{color:var(--v800);border-bottom-color:var(--v700);background:var(--v100)}
+[role=tabpanel]:focus-visible{outline-offset:6px}
+
+/* code + tables */
+details.code{border:1px solid var(--line);border-radius:12px;margin:14px 0;background:#fff;overflow:hidden}
+details.code summary{cursor:pointer;padding:10px 14px;font:600 .9rem system-ui;color:var(--v800);background:var(--v50)}
+details.code[open] summary{border-bottom:1px solid var(--line)}
+pre{margin:0;padding:14px 16px;overflow:auto;background:var(--v950);color:var(--v100);font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.tw{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--v100);color:var(--v900);font-weight:700}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+
+/* specific widgets */
+.pxwrap{display:grid;grid-template-columns:minmax(0,420px) 1fr;gap:20px;align-items:start}
+.pxgrid{gap:2px}
+.pxgrid .cell{border-radius:3px;border:0;font-size:clamp(.5rem,1.4vw,.68rem)}
+.vrow{display:flex;align-items:center;gap:8px;margin:5px 0}
+.vl{font-weight:800;color:var(--v800);width:44px;font-size:.82rem}
+.vcells{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:3px;flex:1}
+.vcells .cell{aspect-ratio:auto;height:34px;font-size:clamp(.55rem,1.5vw,.78rem)}
+.flat{display:grid;grid-template-columns:130px 1fr;gap:22px;align-items:start}
+.flat .mat{max-width:130px}
+.srow{display:grid;grid-template-columns:72px minmax(90px,1fr) 42px minmax(90px,1fr) 58px;gap:10px;align-items:center;margin:8px 0;font-size:.9rem}
+.srow input{width:100%}
+.zv{font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
+.mx{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;align-items:start}
+.layers{list-style:none;margin:0;padding:0;max-width:none;display:grid;gap:6px}
+.lay{width:100%;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.9fr) minmax(0,1fr);gap:8px;align-items:center;text-align:left;font:inherit;font-size:.86rem;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;color:var(--ink)}
+.lay:hover{border-color:var(--v400)}
+.lay[aria-pressed=true]{border-color:var(--v700);background:var(--v50);box-shadow:inset 4px 0 0 var(--v700)}
+.lay .ln{font-weight:700;color:var(--v900)}
+.lay .ls{color:var(--muted);font-variant-numeric:tabular-nums}
+.lay .lp{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.lay .lb{grid-column:1/-1;height:6px;background:var(--v100);border-radius:4px;overflow:hidden}
+.lay .lb i{display:block;height:100%;background:var(--v600)}
+.ldetail{background:var(--v900);color:#fff;border-radius:14px;padding:16px 18px;position:sticky;top:90px}
+.ldetail h4{color:#fff;margin:0 0 6px}
+.ldetail p{margin:.4rem 0;font-size:.92rem;color:var(--v100)}
+.ldetail code{background:rgba(255,255,255,.14);color:#fff}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin:6px 0}
+.legend i{display:inline-block;width:26px;height:0;border-top:3px solid var(--v900);vertical-align:middle;margin-right:6px}
+.plot{touch-action:pan-y;outline-offset:2px}
+.plot svg{width:100%;height:auto;display:block}
+.cx{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,.7fr) minmax(0,.7fr) minmax(0,1fr);gap:16px;align-items:start}
+.pl{font:700 .78rem system-ui;color:var(--v800);margin-bottom:6px;letter-spacing:.02em}
+.sum{margin-top:8px;font-size:.95rem}
+.stepbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:14px}
+.stepbar input[type=range]{flex:1;min-width:140px}
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0}
+.stat{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff}
+.stat .k{font:700 .74rem system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font:700 1.7rem Georgia,serif;color:var(--v900)}
+.stat .s{font-size:.85rem;color:var(--muted)}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vs div{padding:8px 10px;border-radius:10px;background:var(--v50)}
+.vs div.win{background:var(--v900);color:#fff}
+.vs small{display:block;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.vs b{font:700 1.3rem Georgia,serif}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0;max-width:none}
+.flow span{background:#fff;border:1.5px solid var(--v300);color:var(--v900);padding:8px 12px;border-radius:10px;font:600 .9rem system-ui}
+.flow i{color:var(--v600);font-style:normal;font-weight:800}
+.cortex{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:stretch}
+.cortex .rl{font:700 .75rem system-ui;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center}
+.cortex button{font:inherit;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:10px 8px;cursor:pointer;text-align:center;color:var(--ink);font-size:.84rem}
+.cortex button:hover{border-color:var(--v400)}
+.cortex button[aria-pressed=true]{background:var(--v900);color:#fff;border-color:var(--v900)}
+.cortex svg{width:40px;height:40px;display:block;margin:0 auto 4px}
+.cortex button b{display:block;font-size:.86rem}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;margin:8px 0;cursor:pointer;background:#fff}
+.opt:hover{border-color:var(--v400)}
+.opt input{margin-top:5px;accent-color:var(--v700)}
+.opt.ok{background:var(--v900);color:#fff;border-color:var(--v900)}
+.opt.bad{border:2px dashed var(--v900);background:var(--v50)}
+.opt .mk{margin-left:auto;font-weight:700;font-size:.82rem;white-space:nowrap}
+fieldset{border:0;padding:0;margin:0}
+legend{font-weight:700;color:var(--v900);padding:0;margin-bottom:6px}
+.qa{display:flex;gap:10px;margin-top:10px}
+footer{background:var(--v950);color:var(--v200);text-align:center;padding:36px 20px;font:700 1rem Georgia,serif}
+footer small{display:block;font:.8rem system-ui;opacity:.7;margin-top:4px}
+
+@media (max-width:820px){
+  .pxwrap,.flat,.mx{grid-template-columns:1fr}
+  .cx{grid-template-columns:1fr 1fr}
+  .cx .pn-in{grid-column:1/-1}
+  .ldetail{position:static}
+  .cortex{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .cortex .rl{grid-column:1/-1}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  main section{padding:44px 16px}
+  .srow{grid-template-columns:72px 1fr 42px}
+  .srow .bt{grid-column:2}
+  .srow .bv{grid-column:3}
+  .brow{grid-template-columns:84px 1fr 54px}
+}
+/* L2 additions */
+.maps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.maps .mat{gap:2px}
+.maps .cell{border-radius:3px;border:0;font-size:clamp(.5rem,1.4vw,.72rem)}
+.mapbtn{border:2px solid transparent;background:none;border-radius:10px;padding:4px;cursor:pointer;text-align:left;font:inherit}
+.mapbtn:hover{border-color:var(--v300)}
+.mapbtn[aria-pressed=true]{border-color:var(--v700);background:var(--v50)}
+.outrow{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+.outrow .cell{width:34px;height:34px;aspect-ratio:auto;border-radius:5px;font-size:.7rem}
+.neurons{gap:3px;max-width:420px}
+.neurons .cell{border-radius:4px;border:0;font-size:0}
+.neurons .cell.on{background:var(--v700)}
+.neurons .cell.off{background:repeating-linear-gradient(45deg,#fff,#fff 3px,var(--v200) 3px,var(--v200) 6px);border:1.5px dashed var(--v300)}
+.meter{height:12px;background:var(--v100);border-radius:6px;overflow:hidden;margin:4px 0 10px}
+.meter i{display:block;height:100%;background:var(--v700);transition:width .2s}
+.meter.warn i{background:var(--v900)}
+.mrow{font-size:.9rem;color:var(--ink)}
+.mrow b{color:var(--v900)}
+.lsteps{list-style:none;counter-reset:s;padding:0;margin:12px 0;max-width:none;display:grid;gap:8px}
+.lsteps li{counter-increment:s;display:flex;gap:12px;align-items:center;border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;background:#fff;margin:0}
+.lsteps li::before{content:counter(s);flex:none;width:28px;height:28px;border-radius:50%;background:var(--v700);color:#fff;display:flex;align-items:center;justify-content:center;font:700 .85rem system-ui}
+.lsteps li.skip{border-style:dashed;background:var(--v50);color:var(--muted)}
+.lsteps li.skip::before{background:var(--v300)}
+.lsteps li .tg{margin-left:auto;font:700 .72rem system-ui;letter-spacing:.06em;text-transform:uppercase;color:var(--v800);background:var(--v100);padding:3px 8px;border-radius:999px;white-space:nowrap}
+.augg{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0}
+.augg figure{margin:0;text-align:center}
+.augg svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:10px;background:#fff}
+.augg figcaption{font:600 .78rem system-ui;color:var(--muted);margin-top:4px}
+.vols{width:100%;height:auto;display:block;margin:6px 0 10px}
+.vols g[role=button]{cursor:pointer}
+.vols g:focus-visible{outline:none}
+.vols g:focus-visible rect:first-of-type{stroke-width:4}
+.rbars{display:grid;gap:8px}
+.rb{display:grid;grid-template-columns:minmax(120px,210px) 1fr 64px;gap:10px;align-items:center;text-align:left;font:inherit;font-size:.9rem;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;color:var(--ink);width:100%}
+.rb:hover{border-color:var(--v400)}
+.rb[aria-pressed=true]{border-color:var(--v700);background:var(--v50);box-shadow:inset 4px 0 0 var(--v700)}
+.rb .bl{font-weight:700}
+.rb .bt{height:18px;position:relative}
+.rb .zone{position:absolute;top:0;bottom:0;left:0;background:repeating-linear-gradient(45deg,var(--v200),var(--v200) 3px,#fff 3px,#fff 6px);opacity:.9}
+.rb .bf{position:relative}
+.mt td,.mt th{text-align:center;padding:6px 8px}
+.mt td:first-child,.mt th:first-child{text-align:left}
+.yes{font-weight:800;color:var(--v700)}
+.no{color:var(--v300)}
+pre.prompt{white-space:pre-wrap;word-break:break-word;border-radius:12px;font-size:13px}
+.hint{font-size:.85rem;color:var(--muted)}
+.cardlink{display:inline-block;margin-top:.4rem;font-weight:700;font-size:.9rem}
+@media (max-width:640px){
+  .maps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rb{grid-template-columns:90px 1fr 54px}
+}
+td.hl{background:var(--v100);font-weight:700}
+label.sel{flex-wrap:wrap;max-width:100%}
+label.sel select{max-width:100%;min-width:0}
+@media (max-width:640px){label.sel{width:100%}label.sel select{width:100%}}
+.yes{white-space:nowrap}
+@media (max-width:640px){.plot svg text{font-size:19px}.vols text{font-size:18px}}
+p code,li code,td code{overflow-wrap:anywhere}
+@media (max-width:640px){.widget .tw th,.widget .tw td{padding:6px 5px;font-size:.74rem}}
+.readout pre{overflow-x:auto;max-width:100%}
+.seg{max-width:100%;flex-wrap:wrap}
+.brow{grid-template-columns:minmax(70px,150px) minmax(0,1fr) auto}.brow .bl{overflow-wrap:anywhere}
+.readout{overflow-wrap:anywhere}
+
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/cv/">Computer vision</a><span class="t">· Computer Vision 7 · Object localisation and IoU</span><span class="pn"><a href="../DSML-CV-6/" title="Computer Vision 6 · Chest X-ray pneumonia classifier">← Prev</a><a href="../DSML-CV-8/" title="Computer Vision 8 · Single-stage detectors: SSD and YOLO">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="#top"><i aria-hidden="true"></i>Computer Vision 7 post read</a>
+    <button class="btn ghost sm" id="tocBtn" aria-expanded="false" aria-controls="toc">Contents</button>
+  </div>
+  <div id="bar" aria-hidden="true"></div>
+  <nav id="toc" aria-label="Contents" hidden><ol></ol></nav>
+</header>
+
+<div class="hero" id="top">
+  <div class="in">
+    <div class="eyebrow">Deep Learning · Computer Vision</div>
+    <h1>Computer Vision 7 post read</h1>
+    <p>From “what is in this image?” to “what is where?”. We build a single-object gun localizer (a frozen ResNet-50 with a class head and a box head), score it with Intersection over Union, then see how detection handles many objects: sliding windows, non-max suppression, and the two-stage R-CNN family up to Faster R-CNN.</p>
+    <div class="cta"><a class="btn" href="#problem">Start reading</a><a class="btn ghost" href="#iou">Jump to IoU</a></div>
+  </div>
+</div>
+
+<main id="main">
+
+<section id="problem" data-title="Classification vs detection">
+<div class="in">
+  <span class="kicker">01</span>
+  <h2>Classification vs detection</h2>
+  <p>Shootings in schools, malls and other public places have created demand for monitoring that spots danger early and raises an alert. Most security teams still rely on walk-through or handheld metal detectors, which only sense changes in a magnetic field. You are an ML Engineer at Omnilert AI, building an AI-powered visual gun detection system that triggers alerts and safety protocols: connect to existing surveillance cameras and recognise firearms quickly and reliably.</p>
+  <div data-fig="gun"></div>
+  <p>So far, CNNs have told us <i>what</i> is in an image: one label and one probability for the whole picture. They don’t tell us <i>where</i> the object is, or <i>how many</i> there are.</p>
+  <div data-fig="cd1,cd2"></div>
+  <div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="card"><span class="tag">What</span><h4>Classification</h4><p>One label (and probability) for the whole image.</p></div>
+    <div class="card"><span class="tag">Where</span><h4>Localization</h4><p>The class <b>and</b> a bounding box, for one object.</p></div>
+    <div class="card"><span class="tag">How many</span><h4>Detection</h4><p>A class and a box for <b>each</b> object in the image.</p></div>
+  </div>
+  <div class="widget" data-w="quiz" data-q="q1"></div>
+</div>
+</section>
+
+<section id="data" data-title="The data">
+<div class="in">
+  <span class="kicker">02</span>
+  <h2>The data and its annotations</h2>
+  <p>The dataset has 3,703 image files (<code>1.jpg</code> …) with a matching text annotation each. An annotation holds five numbers: <code>class x_center y_center width height</code>.</p>
+  <ul>
+    <li><code>class</code>: 1 = gun, 0 = no gun.</li>
+    <li>The four box values are fractions of the image width and height, so they lie between 0 and 1.</li>
+    <li>Images with no gun carry an all-zero box.</li>
+  </ul>
+  <div data-fig="ann"></div>
+  <div class="widget" data-w="fmt"></div>
+  <p>Reading the pixel size from the image itself keeps the box in the right place even if an image isn’t 416 × 416.</p>
+  <div data-fig="b1,b2,b3"></div>
+  <details class="code"><summary>Code: read annotations and draw boxes</summary><pre data-code="plot"></pre></details>
+
+  <h3>Preparing the arrays</h3>
+  <p>Each file must contain exactly one box (this model handles one object). Only images that are 416 × 416 × 3 are kept so they stack into one array: <code>(3703, 416, 416, 3)</code> images, <code>(3703,)</code> classes and <code>(3703, 4)</code> boxes, all of them uint8 images. No no-gun image has a non-zero box.</p>
+  <div class="widget" data-w="bal"></div>
+  <p>With a 70/30 stratified split the sets have 2,592 and 1,111 images. Near-duplicate frames of one scene would make a random split look better than it really is, which is another reason to read the held-out numbers with care.</p>
+  <details class="code"><summary>Code: load into arrays, check balance, split</summary><pre data-code="load"></pre></details>
+</div>
+</section>
+
+<section id="model" data-title="A localization model">
+<div class="in">
+  <span class="kicker">03</span>
+  <h2>A localization model: backbone + two heads</h2>
+  <p>To get a box as well as a class, take a classifier and add outputs at the end: one neuron for the class and four neurons for the box (a regression head).</p>
+  <div data-fig="cl"></div>
+  <div class="vs">
+    <div><b>Class head</b><p>One output, the gun logit.</p></div>
+    <div class="win"><b>Box head</b><p>Four outputs (x_center, y_center, width, height) through a sigmoid, so they stay between 0 and 1 like the normalized labels.</p></div>
+  </div>
+  <div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="card"><span class="tag">1</span><h4>Frozen ResNet-50</h4><p>Pre-trained on ImageNet, global pooling and the final layer dropped. A 416 × 416 image becomes a <b>2048 × 13 × 13</b> feature map (the network shrinks the image by 32). Pooling is dropped on purpose because it would throw away <i>where</i> things are.</p></div>
+    <div class="card"><span class="tag">2</span><h4>1 × 1 conv reduction</h4><p>Squeeze 2048 channels down to 32 while keeping the 13 × 13 layout, then flatten to 32 × 13 × 13 = 5,408 values.</p></div>
+    <div class="card"><span class="tag">3</span><h4>Two small heads</h4><p>Each head is Linear(5408→128), ReLU, Linear(128→32), ReLU, Linear(32→out), with out = 1 (class) or 4 (box).</p></div>
+  </div>
+  <div class="widget" data-w="params"></div>
+  <p class="note">The frozen backbone’s batch-norm statistics are kept fixed too: the model’s <code>train</code> method puts the backbone back in eval mode. The model expects pixel values 0–255 and normalizes them with the ImageNet mean and standard deviation inside <code>forward</code>.</p>
+  <details class="code"><summary>Code: dataset, backbone, <code>GunLocalizer</code>, sanity check</summary><pre data-code="model"></pre></details>
+
+  <h3>Loss and training</h3>
+  <ul>
+    <li><b>Class head:</b> binary cross-entropy on the gun logit.</li>
+    <li><b>Box head:</b> mean squared error, <b>only on images that contain a gun</b>.</li>
+    <li><b>Total loss</b> = 4.0 × box loss + 1.0 × class loss.</li>
+  </ul>
+  <div data-fig="loss"></div>
+  <div class="widget" data-w="loss"></div>
+  <p>Only the new layers go to the Adam optimizer (learning rate 1e-4). Batches have 32 images. <code>run_epoch</code> trains when <code>train=True</code> and only measures otherwise, tracking box error on gun images, class loss, accuracy, and the counts needed for recall and specificity. The test split doubles as validation data here so we can watch generalization; nothing is tuned on it.</p>
+  <details class="code"><summary>Code: loss, optimizer and <code>run_epoch</code></summary><pre data-code="loss"></pre></details>
+</div>
+</section>
+
+<section id="results" data-title="Training and results">
+<div class="in">
+  <span class="kicker">04</span>
+  <h2>Training and results</h2>
+  <div class="widget" data-w="curves"></div>
+  <ul>
+    <li>Box loss should trend down.</li>
+    <li>Class loss can bounce around between epochs, so compare train and validation before calling the model stable.</li>
+    <li>Training metrics are measured while the weights change, so they look slightly worse than a clean evaluation pass.</li>
+  </ul>
+  <details class="code"><summary>Lecture plot and code</summary><div data-fig="curves"></div><pre data-code="train"></pre></details>
+
+  <h3>Predicting and evaluating</h3>
+  <p>A helper predicts for one image or many. For one test image it returns a box and a gun probability (for the first test image the probability is 0.99999976).</p>
+  <div class="widget" data-w="res"></div>
+  <h3>Predicted vs ground-truth boxes</h3>
+  <p>Ground-truth boxes are drawn only for gun images, and predicted boxes only when the gun probability is at least 0.5. Three test examples from the lecture:</p>
+  <ul>
+    <li>A gun image: truth <code>[0.705, 0.554, 0.458, 0.403]</code>, prediction <code>[0.684, 0.600, 0.531, 0.502]</code>, probability 1.000.</li>
+    <li>A no-gun image: truth is all zeros, gun probability 0.000, so no box is drawn.</li>
+    <li>A gun filling most of the frame: truth <code>[0.497, 0.488, 0.956, 0.958]</code>, prediction <code>[0.485, 0.520, 0.946, 0.922]</code>.</li>
+  </ul>
+  <div data-fig="p1,p2,p3"></div>
+  <details class="code"><summary>Code: <code>predict</code>, test metrics and <code>plot_prediction</code></summary><pre data-code="predict"></pre></details>
+</div>
+</section>
+
+<section id="iou" data-title="Intersection over Union">
+<div class="in">
+  <span class="kicker">05</span>
+  <h2>Intersection over Union (IoU)</h2>
+  <p>MSE tells us how far apart the numbers are, not how well the boxes overlap. IoU measures overlap directly:</p>
+  <div class="callout"><p><b>IoU = area of overlap ÷ area of union</b>. It runs from 0 (no overlap) to 1 (perfect match). A prediction usually counts as correct when IoU ≥ 0.5 (the PASCAL VOC convention).</p></div>
+  <div data-fig="iou,iou2"></div>
+  <p>To compute it: convert boxes from centre format to corners, then take the overlap rectangle (clipped at zero) and divide by the union (sum of the two areas minus the overlap). Before trusting the function, the lecture tests it where the answer is known: identical boxes give 1, disjoint boxes 0, a same-size box shifted by half its width 1/3, and a box fully inside another at quarter size 0.25.</p>
+  <div class="widget" data-w="iou"></div>
+  <div data-fig="iou3"></div>
+  <div class="widget" data-w="quiz" data-q="q2"></div>
+  <details class="code"><summary>Code: IoU functions, checks and a test image</summary><pre data-code="iou"></pre></details>
+  <h3>Mean IoU and correct detections</h3>
+  <p>No-gun images have no true box, so mean IoU is averaged over gun images only. A <b>correct detection</b> is a gun image where the model says gun (probability ≥ 0.5) <i>and</i> the box has IoU ≥ 0.5 with the truth. The lecture finds train: mean IoU 0.6081, 70.4% correct; test: mean IoU 0.5661, 63.7% correct. A big train/test gap usually means the box head is overfitting. The IoU of the single test example above is 0.645 (the box is clearly useful but far from perfect).</p>
+</div>
+</section>
+
+<section id="many" data-title="From one box to many">
+<div class="in">
+  <span class="kicker">06</span>
+  <h2>From one box to many</h2>
+  <p>A localization model outputs a fixed four numbers, so it can find only <b>one</b> object per image. Algorithms that classify <i>and</i> locate many objects, with a box around each, are called <b>object detection</b> algorithms.</p>
+  <div data-fig="det"></div>
+  <h3>Sliding window</h3>
+  <p>Slide a box across the image and classify each crop (object or not). This turns detection into a classification problem. Objects come in different sizes, so we try windows of several sizes and scales.</p>
+  <div data-fig="sw"></div>
+  <p><b>The catch is cost.</b> Every crop goes through the CNN separately, so one image needs many forward passes. Fewer windows and a larger stride help. And one object gets detected several times, across neighbouring windows and scales. A fully convolutional network can do the sliding in a single pass.</p>
+  <div class="widget" data-w="slide"></div>
+  <details class="code"><summary>Lecture figures: fully convolutional sliding and duplicate detections</summary><div data-fig="sw2,sw3"></div></details>
+
+  <h3>Non-max suppression (NMS)</h3>
+  <p>NMS removes the duplicate boxes for each object.</p>
+  <ol>
+    <li>Pick the proposal with the highest confidence, remove it from the list and add it to the final list.</li>
+    <li>Compute its IoU with every remaining proposal.</li>
+    <li>Remove every proposal whose IoU with it is above a threshold N (between 0 and 1).</li>
+    <li>From what is left, pick the highest-confidence proposal, add it to the final list and repeat.</li>
+    <li>Stop when no proposals are left.</li>
+  </ol>
+  <div data-fig="nms"></div>
+  <div class="widget" data-w="nms"></div>
+  <details class="code"><summary>Code: overlap table, <code>nms</code> and the torchvision check</summary><pre data-code="nms"></pre></details>
+  <div class="widget" data-w="quiz" data-q="q3"></div>
+  <div class="widget" data-w="quiz" data-q="q4"></div>
+  <p>Sliding windows let us treat detection as classification, but pushing so many positions and scales through a CNN is expensive. Can we do better? Yes: test fewer regions, and skip the regions where no object is present.</p>
+</div>
+</section>
+
+<section id="rcnn" data-title="Two-stage detectors: R-CNN">
+<div class="in">
+  <span class="kicker">07</span>
+  <h2>Two-stage detectors: R-CNN and Selective Search</h2>
+  <p>The R-CNN family (Regions + CNN) uses a separate region proposal method to find <b>regions of interest</b>, the places where an object might be. They are called <b>two-stage</b> because stage one proposes regions that may contain an object, and stage two classifies each region and refines its box.</p>
+  <div data-fig="two"></div>
+  <h3>R-CNN (2013)</h3>
+  <p><i>Rich feature hierarchies for accurate object detection</i> (<a href="https://arxiv.org/abs/1311.2524">paper</a>). It works in three steps:</p>
+  <ol>
+    <li><b>Region proposals</b> from an algorithm such as Selective Search.</li>
+    <li><b>Features:</b> warp each proposal to the CNN input size and extract features with a pre-trained CNN such as VGG-16 or ResNet: one forward pass per proposal, about 2000 per image.</li>
+    <li><b>Classify and refine:</b> each proposal with a Support Vector Machine (SVM), and refine its box with a bounding-box regressor, both fed by those features.</li>
+  </ol>
+  <div data-fig="rcnn"></div>
+  <h3>Selective Search</h3>
+  <p>A bottom-up region proposal algorithm:</p>
+  <ol>
+    <li>Over-segment the image into many small regions (Felzenszwalb and Huttenlocher’s graph-based method).</li>
+    <li>Add each region’s bounding box to the proposal list.</li>
+    <li>Merge the two most similar neighbouring regions (similarity combines colour, texture, size and shape).</li>
+    <li>Repeat from step 2 until one region covers the whole image.</li>
+  </ol>
+  <p>The collected boxes are the proposals, and R-CNN keeps about 2000 per image. This is far cheaper than running sliding windows over an image pyramid. <a href="https://learnopencv.com/selective-search-for-object-detection-cpp-python/">More on Selective Search</a>.</p>
+  <div data-fig="ss"></div>
+  <div class="widget" data-w="quiz" data-q="q5"></div>
+  <div class="widget" data-w="quiz" data-q="q6"></div>
+</div>
+</section>
+
+<section id="fast" data-title="Fast R-CNN and ROI pooling">
+<div class="in">
+  <span class="kicker">08</span>
+  <h2>Fast R-CNN and ROI pooling</h2>
+  <p>Fast R-CNN (2015, <a href="https://arxiv.org/abs/1504.08083">paper</a>) still uses Selective Search for proposals, but runs the CNN <b>once</b> on the whole image to build a feature map instead of once per proposal. ROI pooling crops each proposal from that map and resizes it to a fixed size, and the SVMs are replaced by fully connected layers with two outputs: a softmax classifier and a box regressor.</p>
+  <div data-fig="fast,fast2"></div>
+  <p>The big win: the network trains <b>end to end</b> (proposals still come from Selective Search). Input an image and its ground-truth boxes, extract the feature map, apply ROI pooling to get a feature vector per proposal, then two sets of fully connected layers output the class label and the box location for each proposal.</p>
+  <h3>What is ROI pooling?</h3>
+  <p>ROI pooling is max-pooling whose pool size adapts to the input, so the output is always the same size. We need that because fully connected layers expect a fixed-size input.</p>
+  <div data-fig="roi"></div>
+  <h3>A worked example</h3>
+  <p>Take a single 8 × 8 feature map, one region of interest and an output size of 2 × 2. The proposal’s (top-left, bottom-right) corners are (0, 3) and (7, 8) as (column, row), with the bottom-right exclusive, so the region is 7 columns wide and 5 rows tall. Splitting it into 2 × 2 sections (which need not divide evenly) and taking the max of each gives the pooled output. The same operation works for proposals of any width and height and always gives the same output size.</p>
+  <div data-fig="r1,r2,r3,r4"></div>
+  <div class="widget" data-w="roi"></div>
+  <p>Try the smaller gun at the top-right of the lecture figure by moving the region. If a region does not divide evenly, neighbouring sections can share a boundary row or column, and a hand split such as 3 + 4 columns can differ from the code’s rule if the max sits on the shared line, so decide your splitting rule before comparing.</p>
+  <div data-fig="r5"></div>
+  <details class="code"><summary>Code: <code>roi_max_pool</code></summary><pre data-code="roi"></pre></details>
+  <div class="widget" data-w="quiz" data-q="q7"></div>
+  <div class="widget" data-w="quiz" data-q="q8"></div>
+</div>
+</section>
+
+<section id="faster" data-title="Faster R-CNN and the RPN">
+<div class="in">
+  <span class="kicker">09</span>
+  <h2>Faster R-CNN and the Region Proposal Network</h2>
+  <p>In Fast R-CNN, proposals still come from Selective Search, which runs outside the network, doesn’t learn from the data and is slow. With Selective Search, Fast R-CNN takes about 1.8 s per image, most of it spent on proposals. To go faster, the network itself should produce the proposals.</p>
+  <h3>Faster R-CNN (2015)</h3>
+  <p><i>Towards real-time object detection with Region Proposal Networks</i> (<a href="https://arxiv.org/pdf/1506.01497.pdf">paper</a>). The main idea: use the last convolutional layers of the backbone to predict region proposals. It has two modules: the <b>RPN</b>, which produces rectangles from deep convolutional features, and the <b>Fast R-CNN detector</b>, which pools each proposal with ROI pooling, classifies it and refines its box.</p>
+  <div data-fig="fr"></div>
+  <ol>
+    <li>Take a CNN pre-trained on ImageNet as the backbone.</li>
+    <li>Get feature maps from its last convolutional layer.</li>
+    <li>Train a region proposal network that decides whether each location holds an object and proposes a box.</li>
+    <li>Turn RPN outputs into proposals: apply the box offsets to the anchors, drop low-scoring boxes, run NMS and keep the top few hundred (300 in the paper).</li>
+    <li>Pass the proposals to ROI pooling, as in Fast R-CNN.</li>
+    <li>Send the pooled features to fully connected layers for classification and box refinement.</li>
+  </ol>
+  <h3>Region Proposal Network (RPN)</h3>
+  <p>A fully convolutional network that predicts object bounds and an objectness score at every position, trained end to end. The RPN and Fast R-CNN <b>share convolutional features</b>, so they merge into one network: the RPN tells the detector where to look. Anchor boxes at several scales and aspect ratios serve as references, so there is no need for image pyramids or multiple filter sizes.</p>
+  <ol>
+    <li><b>Features</b> from a pre-trained CNN such as VGG-16 or a ResNet.</li>
+    <li><b>Anchors:</b> k = 9 at each feature-map position (3 scales × 3 aspect ratios; the paper uses areas of 128², 256² and 512² pixels with ratios 1:1, 1:2 and 2:1).</li>
+    <li><b>Labeling anchors:</b> positive if it has the highest IoU with some ground-truth box, or IoU above 0.7 with any; negative if IoU below 0.3 with every ground-truth box; all others ignored.</li>
+    <li><b>Box regression:</b> for each anchor, an objectness score and four offsets (t<sub>x</sub>, t<sub>y</sub>, t<sub>w</sub>, t<sub>h</sub>).</li>
+  </ol>
+  <div data-fig="rpn"></div>
+  <div class="widget" data-w="anchor"></div>
+  <div class="callout"><p><b>A common mix-up.</b> The RPN uses 0.7 / 0.3 to label anchors. The 0.5 and 0.1 thresholds belong to the second stage, where Fast R-CNN samples foreground ROIs with IoU ≥ 0.5 and background ROIs with IoU in [0.1, 0.5). And the RPN predicts four offsets relative to the anchor, not “width, height and depth”: images are 2D.</p></div>
+  <p>The RPN loss is a weighted sum of a classification term (log loss on objectness) and a regression term (smooth L1, counted only for positive anchors); see Equation 1 in the paper. <b>In short:</b> the image goes through the CNN to get a feature map; at each position there are anchor boxes, and for each anchor the RPN predicts the probability that an object is there, plus the box offsets to apply if so.</p>
+  <div class="widget" data-w="quiz" data-q="q9"></div>
+  <div class="widget" data-w="quiz" data-q="q10"></div>
+
+  <h3>Training Faster R-CNN</h3>
+  <p>The paper trains the RPN and the detector with a 4-step alternating scheme so they end up sharing convolutional layers. Joint training in one pass also works. A jointly trained model has four losses: RPN classification (object or not), RPN box proposal, Fast R-CNN classification (the object class) and Fast R-CNN box regression (refines the proposal).</p>
+  <div data-fig="tr"></div>
+  <h3>Speed and accuracy across the family</h3>
+  <div class="widget" data-w="family"></div>
+  <details class="code"><summary>Lecture comparison figures</summary><div data-fig="cmp1,cmp2"></div></details>
+</div>
+</section>
+
+<section id="ready" data-title="A ready-made Faster R-CNN">
+<div class="in">
+  <span class="kicker">10</span>
+  <h2>A ready-made Faster R-CNN</h2>
+  <p>torchvision ships a complete Faster R-CNN (ResNet-50 + FPN backbone). Swapping its classifier for two classes (background and gun) and running one training step on two images (one gun, one no-gun) returns the four losses listed above:</p>
+  <div class="tw"><table><thead><tr><th>Loss</th><th>Value in the lecture’s one step</th></tr></thead><tbody><tr><td><code>loss_classifier</code></td><td>0.4477</td></tr><tr><td><code>loss_box_reg</code></td><td>0.0524</td></tr><tr><td><code>loss_objectness</code></td><td>0.0024</td></tr><tr><td><code>loss_rpn_box_reg</code></td><td>0.0059</td></tr></tbody></table></div>
+  <p>Unlike our localizer, it handles no-gun images (empty target) and any number of boxes per image. To fine-tune it on your own data, see the <a href="https://docs.pytorch.org/tutorials/intermediate/torchvision_tutorial.html">TorchVision Object Detection Finetuning Tutorial</a>.</p>
+  <details class="code"><summary>Code: swap the classifier and run one training step</summary><pre data-code="frcnn"></pre></details>
+  <h3>Key takeaways</h3>
+  <div class="callout"><ul>
+    <li>A <b>single-object localizer</b> is a frozen pre-trained backbone with a class head and a box head, trained with a box loss on gun images only.</li>
+    <li>Evaluate with accuracy, <b>recall</b>, <b>specificity</b> and <b>IoU</b>: 99.8% test accuracy against a 73.0% baseline, but only 63.7% correct detections (class and IoU ≥ 0.5).</li>
+    <li><b>NMS</b> removes duplicate detections of the same object.</li>
+    <li>Detection grew from sliding windows to the R-CNN family: <b>R-CNN</b> (a CNN pass per proposal), <b>Fast R-CNN</b> (one shared feature map and ROI pooling) and <b>Faster R-CNN</b> (proposals from the Region Proposal Network).</li>
+  </ul></div>
+</div>
+</section>
+
+</main>
+<footer>Computer Vision 7 post read<small>Interactive learning article</small></footer>
+
+<script>
+(function(){
+'use strict';
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const fmt=n=>Number(n).toLocaleString('en-US');
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+let uid=0;
+function h(html){const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstElementChild;}
+function mix(t){t=Math.max(0,Math.min(1,t));const a=[255,255,255],b=[109,40,217];return 'rgb('+a.map((v,i)=>Math.round(v+(b[i]-v)*t)).join(',')+')';}
+function ink(t){return t>0.5?'#fff':'#2e1065';}
+function shell(root,title,desc){root.classList.add('widget');root.innerHTML='<span class="wtag">Interactive</span><h4 class="wtitle">'+title+'</h4>'+(desc?'<p class="wdesc">'+desc+'</p>':'')+'<div class="wbody"></div>';return $('.wbody',root);}
+function seg(container,options,value,onChange,label){
+  const wrap=h('<div class="seg" role="group" aria-label="'+label+'"></div>');
+  function set(v){value=v;Array.from(wrap.children).forEach((b,i)=>b.setAttribute('aria-pressed',String(options[i].value===v)));}
+  options.forEach(o=>{const b=h('<button type="button" aria-pressed="false">'+o.label+'</button>');b.addEventListener('click',()=>{set(o.value);onChange(o.value);});wrap.appendChild(b);});
+  set(value);container.appendChild(wrap);return {set};
+}
+
+/* ---------- chart helper (inline SVG) ---------- */
+function niceMax(m){const st=m<=3?0.5:m<=6?1:2;return Math.ceil(m/st)*st;}
+function stepTicks(a,b,st){const t=[];for(let v=a;v<=b+1e-9;v+=st)t.push(+v.toFixed(6));return t;}
+function epochTicks(n){const st=n<=12?1:5,t=[1];for(let v=st;v<=n;v+=st)if(v>1)t.push(v);return t;}
+function chart(o){
+  const W=o.W||640,H=o.H||300,M=Object.assign({l:52,r:16,t:16,b:40},o.M||{});
+  const iw=W-M.l-M.r,ih=H-M.t-M.b,x0=o.x[0],x1=o.x[1],y0=o.y[0],y1=o.y[1];
+  const X=v=>M.l+(v-x0)/(x1-x0)*iw,Y=v=>M.t+ih-(v-y0)/(y1-y0)*ih;
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.label||'Chart')+'">';
+  (o.yt||[]).forEach(t=>{s+='<line x1="'+M.l+'" x2="'+(W-M.r)+'" y1="'+Y(t).toFixed(1)+'" y2="'+Y(t).toFixed(1)+'" stroke="#e4dcfa"/><text x="'+(M.l-8)+'" y="'+(Y(t)+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#5a4f78">'+(o.yf?o.yf(t):t)+'</text>';});
+  (o.xt||[]).forEach(t=>{s+='<text x="'+X(t).toFixed(1)+'" y="'+(H-M.b+17)+'" text-anchor="middle" font-size="11" fill="#5a4f78">'+(o.xf?o.xf(t):t)+'</text>';});
+  s+='<line x1="'+M.l+'" x2="'+(W-M.r)+'" y1="'+(M.t+ih)+'" y2="'+(M.t+ih)+'" stroke="#a78bfa"/>';
+  if(o.xlabel)s+='<text x="'+(M.l+iw/2)+'" y="'+(H-5)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#2e1065">'+esc(o.xlabel)+'</text>';
+  if(o.ylabel)s+='<text transform="translate(13 '+(M.t+ih/2)+') rotate(-90)" text-anchor="middle" font-size="12" font-weight="700" fill="#2e1065">'+esc(o.ylabel)+'</text>';
+  (o.hl||[]).forEach(v=>{s+='<line x1="'+M.l+'" x2="'+(W-M.r)+'" y1="'+Y(v.y).toFixed(1)+'" y2="'+Y(v.y).toFixed(1)+'" stroke="'+(v.c||'#a78bfa')+'" stroke-width="'+(v.w||1.5)+'"'+(v.d?' stroke-dasharray="'+v.d+'"':'')+'/>';});
+  (o.vl||[]).forEach(v=>{const x=X(v.x),right=x>W*0.7;s+='<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+M.t+'" y2="'+(M.t+ih)+'" stroke="'+(v.c||'#8b5cf6')+'" stroke-width="'+(v.w||1.5)+'" stroke-dasharray="'+(v.d||'4 4')+'"/>'+(v.label?'<text x="'+(x+(right?-4:4)).toFixed(1)+'" y="'+(M.t+11)+'" text-anchor="'+(right?'end':'start')+'" font-size="10.5" font-weight="700" fill="#4c1d95">'+esc(v.label)+'</text>':'');});
+  if(o.cur!=null){const x=X(o.cur).toFixed(1);s+='<line x1="'+x+'" x2="'+x+'" y1="'+M.t+'" y2="'+(M.t+ih)+'" stroke="#a78bfa" stroke-width="2"/>';}
+  (o.series||[]).forEach(se=>{
+    if(!se.pts.length)return;
+    s+='<path d="'+se.pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ')+'" fill="none" stroke="'+se.c+'" stroke-width="'+(se.w||2.6)+'"'+(se.d?' stroke-dasharray="'+se.d+'"':'')+' stroke-linejoin="round"/>';
+    if(se.m)se.pts.forEach(p=>{const hi=o.cur!=null&&Math.abs(p[0]-o.cur)<1e-9,r=hi?6:3.4,x=X(p[0]),y=Y(p[1]);
+      if(se.m==='c')s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'" fill="'+se.c+'"/>';
+      else if(se.m==='s')s+='<rect x="'+(x-r).toFixed(1)+'" y="'+(y-r).toFixed(1)+'" width="'+2*r+'" height="'+2*r+'" fill="#fff" stroke="'+se.c+'" stroke-width="2.2"/>';
+      else s+='<path d="M'+x.toFixed(1)+' '+(y-r-1).toFixed(1)+' L'+(x+r+1).toFixed(1)+' '+(y+r).toFixed(1)+' L'+(x-r-1).toFixed(1)+' '+(y+r).toFixed(1)+' Z" fill="#fff" stroke="'+se.c+'" stroke-width="2.2"/>';});
+  });
+  (o.dots||[]).forEach(d=>{s+='<circle cx="'+X(d.x).toFixed(1)+'" cy="'+Y(d.y).toFixed(1)+'" r="6" fill="'+d.c+'" stroke="#fff" stroke-width="2"/>';});
+  return s+'</svg>';
+}
+function legendHtml(S){return S.map(se=>'<span><i style="border-color:'+se.c+';'+(se.d?'border-top-style:dashed':'')+'"></i>'+se.n+'</span>').join('');}
+function fmtLR(v){return v.toFixed(6).replace(/0+$/,'').replace(/\.$/,'');}
+
+/* ---------- figures ---------- */
+const CF='https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/';
+function fig(path,alt,cap,w){
+  return '<figure class="fig"><img src="'+CF+path+'" alt="'+esc(alt)+'" loading="lazy"'+(w?' style="max-width:'+w+'px"':'')+' onerror="this.closest(\'.fig\').classList.add(\'broken\')"><div class="fb" role="note">Image not available offline. '+esc(alt)+'</div>'+(cap?'<figcaption>'+cap+'</figcaption>':'')+'</figure>';
+}
+/* ---------- tabs ---------- */
+function mountTabs(root,items){
+  root.classList.add('tabs');
+  const id='t'+(++uid),list=h('<div class="tablist" role="tablist"></div>'),tabs=[],panels=[];
+  items.forEach((it,i)=>{
+    const b=h('<button type="button" role="tab" id="'+id+'-t'+i+'" aria-controls="'+id+'-p'+i+'">'+it.label+'</button>');
+    const p=h('<div role="tabpanel" id="'+id+'-p'+i+'" aria-labelledby="'+id+'-t'+i+'" tabindex="0"></div>');
+    p.innerHTML=it.html;tabs.push(b);panels.push(p);list.appendChild(b);
+  });
+  root.append(list,...panels);
+  function sel(i,focus){tabs.forEach((b,j)=>{const on=i===j;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;panels[j].hidden=!on;});if(focus)tabs[i].focus();}
+  tabs.forEach((b,i)=>{
+    b.addEventListener('click',()=>sel(i));
+    b.addEventListener('keydown',e=>{
+      if(e.key==='ArrowRight'){e.preventDefault();sel((i+1)%tabs.length,true);}
+      else if(e.key==='ArrowLeft'){e.preventDefault();sel((i-1+tabs.length)%tabs.length,true);}
+      else if(e.key==='Home'){e.preventDefault();sel(0,true);}
+      else if(e.key==='End'){e.preventDefault();sel(tabs.length-1,true);}
+    });
+  });
+  sel(0);
+}
+const code=k=>'<pre data-code="'+k+'"></pre>';
+function wQuiz(root,key){
+  const d=QUIZ[key],name='q'+(++uid),L='abcd';
+  root.classList.add('widget');
+  root.innerHTML='<span class="wtag">Check your understanding</span><fieldset><legend>'+d.q+'</legend>'+d.c.map((c,i)=>'<label class="opt"><input type="radio" name="'+name+'" value="'+i+'"><span>'+(d.letters?L[i]+') ':'')+c+'</span><span class="mk"></span></label>').join('')+'</fieldset><div class="qa"><button type="button" class="btn" disabled>Check answer</button><button type="button" class="btn ghost" hidden>Try again</button></div><div class="readout" aria-live="polite" hidden></div>';
+  const [chk,again]=$$('.btn',root),out=$('.readout',root),opts=$$('.opt',root),radios=$$('input',root);
+  radios.forEach(r=>r.addEventListener('change',()=>{chk.disabled=false;}));
+  chk.addEventListener('click',()=>{
+    const v=radios.findIndex(r=>r.checked);if(v<0)return;
+    opts.forEach((o,i)=>{o.classList.remove('ok','bad');$('.mk',o).textContent='';if(i===d.a){o.classList.add('ok');$('.mk',o).textContent='✓ Correct answer';}else if(i===v){o.classList.add('bad');$('.mk',o).textContent='✗ Your choice';}});
+    out.hidden=false;out.innerHTML='<b>'+(v===d.a?'Correct.':'Not quite.')+'</b> '+d.e;
+    chk.hidden=true;again.hidden=false;radios.forEach(r=>r.disabled=true);
+  });
+  again.addEventListener('click',()=>{
+    opts.forEach(o=>{o.classList.remove('ok','bad');$('.mk',o).textContent='';});
+    radios.forEach(r=>{r.checked=false;r.disabled=false;});out.hidden=true;chk.hidden=false;chk.disabled=true;again.hidden=true;
+  });
+}
+
+/* ---------- contents + progress ---------- */
+function wToc(){
+  const secs=$$('main section[data-title]'),ol=$('#toc ol'),btn=$('#tocBtn'),toc=$('#toc');
+  ol.innerHTML=secs.map((s,i)=>'<li><a href="#'+s.id+'"><b>'+String(i+1).padStart(2,'0')+'</b><span>'+s.dataset.title+'</span></a></li>').join('');
+  function close(){toc.hidden=true;btn.setAttribute('aria-expanded','false');}
+  btn.addEventListener('click',()=>{const o=toc.hidden;toc.hidden=!o;btn.setAttribute('aria-expanded',String(o));});
+  ol.addEventListener('click',e=>{if(e.target.closest('a'))close();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!toc.hidden){close();btn.focus();}});
+  document.addEventListener('click',e=>{if(!toc.hidden&&!e.target.closest('#toc')&&!e.target.closest('#tocBtn'))close();});
+  const links=$$('a',ol);
+  if('IntersectionObserver' in window){
+    const io=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){links.forEach(l=>l.removeAttribute('aria-current'));const l=$('a[href="#'+en.target.id+'"]',ol);if(l)l.setAttribute('aria-current','true');}});},{rootMargin:'-30% 0px -60% 0px'});
+    secs.forEach(s=>io.observe(s));
+  }
+  const bar=$('#bar');
+  function prog(){const d=document.documentElement,t=d.scrollHeight-d.clientHeight;bar.style.width=(t>0?Math.min(100,d.scrollTop/t*100):0)+'%';}
+  window.addEventListener('scroll',prog,{passive:true});prog();
+}
+const mk=(n,m,f)=>Array.from({length:n},(_,i)=>Array.from({length:m},(_,j)=>f(i,j)));
+function corr(a,k){const kh=k.length,kw=k[0].length;return mk(a.length-kh+1,a[0].length-kw+1,(i,j)=>{let s=0;for(let p=0;p<kh;p++)for(let q=0;q<kw;q++)s+=a[i+p][j+q]*k[p][q];return s;});}
+const flip=k=>k.slice().reverse().map(r=>r.slice().reverse());
+function padM(a,p){return mk(a.length+2*p,a[0].length+2*p,(i,j)=>{const r=i-p,c=j-p;return r>=0&&r<a.length&&c>=0&&c<a[0].length?a[r][c]:0;});}
+const convFull=(a,k)=>corr(padM(a,k.length-1),flip(k));
+const r2=v=>Math.round(v*1e6)/1e6;
+function matHtml(m,o){o=o||{};return '<div class="mat" style="--c:'+m[0].length+(o.max?';max-width:'+o.max+'px':'')+'">'+m.map((r,i)=>r.map((v,j)=>'<div class="cell'+(o.cls?' '+o.cls(i,j,v):'')+'"'+(o.style?' style="'+o.style(i,j,v)+'"':'')+'>'+(o.fmt?o.fmt(v):r2(v))+'</div>').join('')).join('')+'</div>';}
+const heat=(m,v)=>"background:"+mix(Math.abs(v)/(m||1))+";color:"+ink(Math.abs(v)/(m||1));
+const A='249/',S='250/';
+const FIGS={
+ gun:fig(A+'397/original/1.png?1793088389','Visual gun detection on a surveillance image','Visual gun detection',520),
+ cd1:fig(A+'400/original/2.png?1793088415','Classification gives one label; detection also gives locations','Classification vs detection',520),
+ cd2:fig(A+'403/original/3.png?1793088430','Detection finds the location and count of objects','Where and how many',520),
+ ann:fig(A+'407/original/4.png?1793088467','Annotation file format: class, x centre, y centre, width, height','Annotation format',520),
+ b1:fig(S+'364/original/Screenshot_2026-10-29_135145.png?1793262117','A training image with its ground-truth box','Ground-truth box',200),
+ b2:fig(S+'366/original/Screenshot_2026-10-29_135254.png?1793262190','A second training image with its box','Ground-truth box',200),
+ b3:fig(S+'367/original/Screenshot_2026-10-29_135335.png?1793262226','A third training image with its box','Ground-truth box',200),
+ cl:fig(A+'413/original/5.png?1793088606','A CNN with a class neuron and four box neurons','Classification + localization',520),
+ loss:fig(A+'418/original/6.png?1793088741','Total loss combines box loss and class loss','Loss design',520),
+ curves:fig(S+'370/original/Screenshot_2026-10-29_135720.png?1793262449','Training and validation curves for box MSE, class BCE and accuracy','Training and validation curves',760),
+ p1:fig(S+'371/original/Screenshot_2026-10-29_135826.png?1793262516','Predicted box versus ground truth, example 1','Example 1',360),
+ p2:fig(S+'372/original/Screenshot_2026-10-29_135900.png?1793262551','Predicted box versus ground truth, example 2 (no gun)','Example 2 (no gun)',360),
+ p3:fig(S+'373/original/Screenshot_2026-10-29_135945.png?1793262594','Predicted box versus ground truth, example 3','Example 3',360),
+ iou:fig(A+'419/original/7.png?1793088769','IoU is overlap area divided by union area','IoU',520),
+ iou2:fig('047/611/original/Screenshot_2023-09-11_at_10.29.47_AM.png?1694408427','IoU illustration','IoU illustration',520),
+ iou3:fig(S+'374/original/Screenshot_2026-10-29_140030.png?1793262644','Predicted and true box on a test image, IoU 0.645','A test image: IoU 0.645',400),
+ det:fig(A+'421/original/8.png?1793088801','Object detection draws a box around each object','Object detection',520),
+ sw:fig(A+'422/original/9.gif?1793088822','A sliding window moving across an image','Sliding window',520),
+ sw2:fig('047/612/original/Screenshot_2023-09-11_at_10.31.27_AM.png?1694408497','Fully convolutional sliding window in one pass','Sliding in a single pass',520),
+ sw3:fig('047/613/original/Screenshot_2023-09-11_at_10.32.10_AM.png?1694408549','Multiple detections of the same object','Duplicate detections',520),
+ nms:fig(A+'427/original/10.png?1793088971','Non-max suppression','NMS',520),
+ n1:fig(S+'375/original/Screenshot_2026-10-29_140125.png?1793262693','Five boxes before NMS','Before NMS',300),
+ n2:fig(S+'376/original/Screenshot_2026-10-29_140207.png?1793262739','Two boxes after NMS','After NMS',300),
+ two:fig(A+'430/original/1.png?1793089125','Two-stage detector: propose regions then classify','Two-stage detectors',520),
+ rcnn:fig(A+'431/original/2.png?1793089142','R-CNN pipeline','R-CNN',520),
+ ss:fig(A+'432/original/3.png?1793089162','Selective search merging regions','Selective Search',520),
+ fast:fig(A+'433/original/4.png?1793089186','Fast R-CNN pipeline','Fast R-CNN',520),
+ fast2:fig(A+'437/original/5.png?1793089237','Fast R-CNN training end to end','End to end',520),
+ roi:fig(A+'435/original/7.png?1793089211','ROI pooling makes a fixed-size output','ROI pooling',520),
+ r1:fig(A+'457/original/8.png?1793093198','The 8 by 8 feature map','The 8×8 feature map',420),
+ r2:fig(A+'459/original/9.png?1793093221','The proposal region on the feature map','The region of interest',420),
+ r3:fig(A+'462/original/10.png?1793093250','Region split into 2 by 2 sections','Split into 2×2 sections',420),
+ r4:fig(A+'469/original/1.png?1793093426','Max of each section','Max of each section',420),
+ r5:fig(A+'470/original/2.png?1793093443','A smaller gun at the top right','A second region',420),
+ fr:fig(A+'483/original/3.png?1793093763','Faster R-CNN architecture','Faster R-CNN',520),
+ rpn:fig(A+'484/original/4.png?1793093783','The Region Proposal Network with anchors','Region Proposal Network',520),
+ tr:fig(A+'485/original/5.png?1793093802','Four losses of Faster R-CNN','Four losses',520),
+ cmp1:fig(A+'486/original/6.png?1793093819','Visual comparison of the R-CNN family','Comparison',520),
+ cmp2:fig(A+'487/original/7.png?1793093835','Comparison of speed','Speed comparison',520)
+};
+const QUIZ={
+ q1:{q:'What does object localization predict?',letters:true,c:['Only the class label of an image','The class and bounding-box coordinates of an object','Only the number of objects','Only the image dimensions'],a:1,e:'Localization says what the object is and where it is, using a box (often centre, width and height). Plain classification gives only the label.'},
+ q2:{q:'If the intersection area is 30 and the union area is 60, what is the IoU?',letters:true,c:['0.25','0.50','2.00','0.75'],a:1,e:'IoU = intersection / union = 30 / 60 = 0.50. An IoU of 0 means no overlap and 1 means a perfect match.'},
+ q3:{q:'What is the primary purpose of NMS?',letters:true,c:['Increase image resolution','Remove highly overlapping, lower-confidence boxes','Generate CNN feature maps','Calculate classification loss'],a:1,e:'Detectors often predict several boxes for the same object. NMS keeps the most confident one and suppresses the others whose IoU with it exceeds the threshold, which removes duplicates.'},
+ q4:{q:'Two boxes have an IoU above the NMS threshold. One has confidence 0.92 and the other 0.65. What normally happens when they are compared?',letters:true,c:['Both are always retained','The 0.65 box is preferred','The 0.92 box is retained and the overlapping 0.65 box is suppressed','Both confidence scores become zero'],a:2,e:'NMS takes the highest-confidence box first and suppresses any lower-confidence box that overlaps it beyond the threshold. (This assumes both boxes are in the same NMS group, such as the same class.)'},
+ q5:{q:'Which algorithm generates region proposals in the original R-CNN pipeline?',letters:true,c:['K-means','Selective Search','Backpropagation','Non-Max Suppression'],a:1,e:'Selective Search groups regions by colour, texture, size and similarity to produce candidate regions. R-CNN then extracts CNN features from each one and classifies it.'},
+ q6:{q:'What is a major computational drawback of original R-CNN?',letters:true,c:['It cannot classify objects','It processes each region proposal separately through the CNN','It does not use bounding boxes','It requires no feature extraction'],a:1,e:'With hundreds or thousands of proposals, the same image content is processed again and again, which makes training and inference expensive. Fast R-CNN fixes this with one shared feature map.'},
+ q7:{q:'How many times does Fast R-CNN typically run its backbone CNN for a single input image?',letters:true,c:['Once for the whole image','Once for every region proposal','Twice for every pixel','Once for every class'],a:0,e:'Fast R-CNN builds one feature map for the entire image and shares it across all proposals, instead of re-running the CNN on every crop like R-CNN.'},
+ q8:{q:'Why is ROI Pooling used?',letters:true,c:['To generate image labels','To suppress overlapping boxes','To produce fixed-size feature maps for proposals of different sizes','To replace the CNN backbone'],a:2,e:'Proposals come in different widths and heights. ROI pooling converts each one’s features to a fixed size so the fully connected layers can handle them uniformly.'},
+ q9:{q:'What is the main advantage of Faster R-CNN over Fast R-CNN?',letters:true,c:['It eliminates the need for a CNN','It uses an RPN to generate proposals instead of relying on Selective Search','It performs only image classification','It removes bounding-box regression'],a:1,e:'Fast R-CNN depends on an external proposal method. Faster R-CNN adds a Region Proposal Network that generates candidates from features shared with the detector, so proposals become cheaper and trainable inside the network.'},
+ q10:{q:'What does an RPN predict for anchor boxes?',letters:true,c:['Objectness scores and bounding-box offsets','Only the final class labels','Only image-level accuracy','Only feature-map dimensions'],a:0,e:'The RPN scores how likely each anchor is to contain an object and predicts offsets that refine the anchor. The second stage then classifies the proposed regions and refines their boxes further.'}
+};
+const P=fmt,pct=v=>(v*100).toFixed(1)+'%';
+const bar=(l,v,max,txt)=>'<div class="brow"><span class="bl">'+l+'</span><span class="bt"><span class="bf" style="width:'+Math.max(0.5,v/max*100)+'%"></span></span><span class="bv">'+txt+'</span></div>';
+const numF=(ctrl,label,val,cb,o)=>{o=o||{};const lab=h('<label class="fld">'+label+'<input type="number" value="'+val+'"'+(o.min!=null?' min="'+o.min+'"':'')+(o.max!=null?' max="'+o.max+'"':'')+(o.step?' step="'+o.step+'"':'')+'></label>');const i=$('input',lab);i.addEventListener('input',()=>{const v=parseFloat(i.value);if(!isNaN(v))cb(v);});ctrl.appendChild(lab);return i;};
+const x2c=b=>[b[0]-b[2]/2,b[1]-b[3]/2,b[0]+b[2]/2,b[1]+b[3]/2];
+const iouC=(a,b)=>{const w=Math.max(0,Math.min(a[2],b[2])-Math.max(a[0],b[0])),hh=Math.max(0,Math.min(a[3],b[3])-Math.max(a[1],b[1])),i=w*hh,u=(a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-i;return i/Math.max(u,1e-9);};
+const iouX=(a,b)=>iouC(x2c(a),x2c(b));
+function boxSvg(list,vb,label){const [x0,y0,x1,y1]=vb;return '<svg viewBox="'+x0+' '+y0+' '+(x1-x0)+' '+(y1-y0)+'" role="img" aria-label="'+esc(label)+'" style="max-width:380px;width:100%;background:#fff;border:1px solid #e4dcfa;border-radius:10px"><rect x="'+x0+'" y="'+y0+'" width="'+(x1-x0)+'" height="'+(y1-y0)+'" fill="#faf8ff"/>'+list.map(b=>'<rect x="'+b.x1+'" y="'+b.y1+'" width="'+(b.x2-b.x1)+'" height="'+(b.y2-b.y1)+'" fill="'+(b.fill||'none')+'" fill-opacity=".18" stroke="'+(b.c||'#2e1065')+'" stroke-width="'+(b.w||2.5)+'"'+(b.d?' stroke-dasharray="'+b.d+'"':'')+'/><text x="'+(b.x1+3)+'" y="'+(b.ty!=null?b.ty:b.y1-4)+'" font-size="'+(b.fs||12)+'" font-weight="700" fill="#2e1065">'+esc(b.t||'')+'</text>').join('')+'</svg>';}
+
+/* ---- balance ---- */
+function wBal(root){
+  const b=shell(root,'Gun vs no-gun balance','3,703 usable images (all 416 × 416 × 3). A stratified 70/30 split keeps the same gun share in both parts.');
+  const D={all:[999,2704],train:null,test:null};let sp='all';const ctrl=h('<div class="ctrl"></div>'),out=h('<div class="bars"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,out,ro);
+  seg(ctrl,[{label:'All images (3,703)',value:'all'},{label:'Train (2,592)',value:'train'},{label:'Test (1,111)',value:'test'}],sp,v=>{sp=v;draw();},'Split');
+  function draw(){let n,g,t;if(sp==='all'){n=999;g=2704;t=3703;out.innerHTML=bar('No gun',n,2704,P(n))+bar('Gun',g,2704,P(g));ro.innerHTML='Always answering “gun” scores <b>'+pct(g/t)+'</b> (the lecture: 73.0%). Every accuracy must be compared with this baseline; with skewed classes we also track <b>recall</b> and <b>specificity</b>.';}
+    else{t=sp==='train'?2592:1111;out.innerHTML=bar('Gun share',0.73,1,'0.730')+bar('No-gun share',0.27,1,'0.270');ro.innerHTML='Share of gun images in '+sp+': <b>0.730</b> (reported). Total '+P(t)+' images. Per-class counts for the split are not printed in the lecture.';}}
+  draw();
+}
+
+/* ---- box format ---- */
+function wFmt(root){
+  const b=shell(root,'Annotation → pixel box','An annotation row is <code>class x_center y_center width height</code>, each a fraction of the image. <code>cv_coords</code> converts it to pixel corners (truncating to integers). Defaults: the lecture’s centred 20% × 40% box on 416 × 416.');
+  const v={x:.5,y:.5,w:.2,h:.4,S:416};const ctrl=h('<div class="ctrl"></div>'),out=h('<div class="duo"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,out,ro);
+  [['x','x_center'],['y','y_center'],['w','width'],['h','height']].forEach(([k,l])=>numF(ctrl,l,v[k],x=>{v[k]=x;draw();},{min:0,max:1,step:.05}));numF(ctrl,'image size (px)',v.S,x=>{v.S=Math.max(1,x);draw();},{min:1});
+  function draw(){const S=v.S,x1=Math.trunc((v.x-v.w/2)*S),y1=Math.trunc((v.y-v.h/2)*S),x2=Math.trunc((v.x+v.w/2)*S),y2=Math.trunc((v.y+v.h/2)*S);
+    out.innerHTML=boxSvg([{x1:v.x-v.w/2,y1:v.y-v.h/2,x2:v.x+v.w/2,y2:v.y+v.h/2,t:'gun',w:.012,fs:.04}],[0,0,1,1],'Normalized box inside the unit square');
+    ro.innerHTML='Corners (x1, y1, x2, y2) = <b>('+x1+', '+y1+', '+x2+', '+y2+')</b>'+(v.x===.5&&v.y===.5&&v.w===.2&&v.h===.4&&S===416?' — matches the lecture’s (166, 124, 249, 291).':'')+'<br>No-gun images carry an all-zero box (class 0, width × height = 0).';}
+  draw();
+}
+
+/* ---- model parameters ---- */
+function wParams(root){
+  const b=shell(root,'Where do the trainable parameters live?','Frozen ResNet-50 (2048 × 13 × 13 features) → 1×1 conv to C channels → flatten → two heads (128 → 32 → out). Change C to see why we reduce channels first.');
+  let C=32;const ctrl=h('<div class="ctrl"></div>'),out=h('<div class="bars"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,out,ro);
+  numF(ctrl,'Reduced channels C',C,x=>{C=Math.max(1,Math.round(x));draw();},{min:1,step:1});
+  function draw(){const f=C*169,red=2048*C+C,head=o=>f*128+128+128*32+32+32*o+o,hc=head(1),hb=head(4),tr=red+hc+hb,back=23508032,direct=346112*128+128;
+    out.innerHTML=bar('1×1 reduction',red,tr,P(red))+bar('Class head',hc,tr,P(hc))+bar('Box head',hb,tr,P(hb));
+    ro.innerHTML='Flattened size = C × 13 × 13 = <b>'+P(f)+'</b>. Trainable = <b>'+P(tr)+'</b>; with the frozen ResNet-50 backbone (23,508,032 parameters: total minus trainable) total = <b>'+P(back+tr)+'</b>.'+(C===32?' Matches the lecture: trainable 1,458,693, total 24,966,725.':'')+'<br>Without the reduction, flattening all 2048 × 13 × 13 = 346,112 values into just the first 128-unit layer of one head would need <b>'+P(direct)+'</b> weights (computed): the 1×1 conv avoids this.<br>The box head ends in a sigmoid, so its four outputs stay between 0 and 1 like the normalized labels.';}
+  draw();
+}
+
+/* ---- loss ---- */
+function wLoss(root){
+  const b=shell(root,'Total loss = 4 × box loss + 1 × class loss','Box loss is MSE only on images that contain a gun; class loss is binary cross-entropy on the gun logit. Defaults: the lecture’s 4-image check (box 0.0700, class 0.6935, printed total 0.9733).');
+  const v={bx:.07,cl:.6935,wb:4,wc:1};const ctrl=h('<div class="ctrl"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,ro);
+  [['bx','box MSE (gun images)',.01],['cl','class BCE',.01],['wb','box weight',.5],['wc','class weight',.5]].forEach(([k,l,s])=>numF(ctrl,l,v[k],x=>{v[k]=x;draw();},{min:0,step:s}));
+  function draw(){const t=v.wb*v.bx+v.wc*v.cl;ro.innerHTML='Total = '+v.wb+' × '+v.bx+' + '+v.wc+' × '+v.cl+' = <b>'+t.toFixed(4)+'</b>'+(v.bx===.07&&v.cl===.6935&&v.wb===4&&v.wc===1?' (the lecture prints 0.9733; the small difference is rounding of the displayed terms).':'')+'<br><b>Why mask?</b> No-gun images carry a dummy all-zero box. Training the box head on them would teach it to predict tiny corner boxes for anything that looks empty, so their box loss is left out.';}
+  draw();
+}
+
+/* ---- curves ---- */
+const TR={loss:[.2985,.0570,.0439,.0367,.0331,.0284],bm:[.0271,.0131,.0105,.0090,.0081,.0070],bc:[.1901,.0046,.0019,.0007,.0005,.0004],acc:[.9140,.9996,.9996,1,1,1],vloss:[.0770,.0683,.0558,.0530,.0494,.0501],vbm:[.0161,.0145,.0114,.0109,.0099,.0098],vbc:[.0128,.0101,.0101,.0093,.0099,.0108],vacc:[.9973,.9982,.9982,.9982,.9982,.9982]};
+function wCurves(root){
+  const b=shell(root,'Training log: 6 epochs','Frozen ResNet-50 localizer. Hover the chart or use ← → to read each epoch. Validation data is the test split here; nothing is tuned on it.');
+  let met='bm',idx=5;const ctrl=h('<div class="ctrl"></div>');seg(ctrl,[{label:'Box MSE (gun images)',value:'bm'},{label:'Class BCE',value:'bc'},{label:'Accuracy',value:'acc'},{label:'Weighted total loss',value:'loss'}],met,v=>{met=v;draw();},'Metric');
+  const leg=h('<div class="legend"></div>'),pl=h('<div class="plot" tabindex="0" role="group" aria-label="Training chart. Use left and right arrow keys to change epoch."></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,leg,pl,ro);
+  const W=640,M={l:60,r:16,t:16,b:40},K={bm:['bm','vbm',[0,.03],[0,.01,.02,.03],'Box MSE'],bc:['bc','vbc',[0,.2],[0,.05,.1,.15,.2],'Class BCE'],acc:['acc','vacc',[.9,1],[.9,.925,.95,.975,1],'Accuracy'],loss:['loss','vloss',[0,.3],[0,.1,.2,.3],'Loss']};
+  const pts=a=>a.map((v,i)=>[i+1,v]);
+  function draw(){const k=K[met],S=[{n:'Train',pts:pts(TR[k[0]]),c:'#2e1065',d:'',m:'c'},{n:'Validation',pts:pts(TR[k[1]]),c:'#8b5cf6',d:'7 5',m:'s'}];
+    leg.innerHTML=legendHtml(S);pl.innerHTML=chart({W,H:260,M,x:[1,6],y:k[2],xt:[1,2,3,4,5,6],yt:k[3],yf:v=>met==='acc'?(v*100).toFixed(1)+'%':v,xlabel:'Epoch',label:k[4]+' per epoch',series:S,cur:idx+1});
+    ro.innerHTML='<b>Epoch '+(idx+1)+'/6</b> — train: loss '+TR.loss[idx].toFixed(4)+', box mse '+TR.bm[idx].toFixed(4)+', class bce '+TR.bc[idx].toFixed(4)+', acc '+TR.acc[idx].toFixed(4)+'<br>validation: loss <b>'+TR.vloss[idx].toFixed(4)+'</b>, box mse '+TR.vbm[idx].toFixed(4)+', class bce '+TR.vbc[idx].toFixed(4)+', acc '+TR.vacc[idx].toFixed(4);}
+  function at(e){const r=pl.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W;idx=Math.max(0,Math.min(5,Math.round(1+(x-M.l)/(W-M.l-M.r)*5)-1));draw();}
+  pl.addEventListener('pointermove',at);pl.addEventListener('pointerdown',at);pl.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){idx=Math.min(5,idx+1);draw();e.preventDefault();}else if(e.key==='ArrowLeft'){idx=Math.max(0,idx-1);draw();e.preventDefault();}});
+  draw();
+}
+
+/* ---- test results ---- */
+function wRes(root){
+  const b=shell(root,'Classification looks perfect. Localization is harder.','Test-set numbers from the lecture. Switch between the classification view and the localization view.');
+  let m='cls';const ctrl=h('<div class="ctrl"></div>'),out=h('<div></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,out,ro);
+  seg(ctrl,[{label:'Classification (test)',value:'cls'},{label:'Localization (IoU)',value:'loc'}],m,v=>{m=v;draw();},'View');
+  function draw(){if(m==='cls'){out.innerHTML='<div class="bars">'+bar('Always-“gun” baseline',.73,1,'73.0%')+bar('Accuracy',.9982,1,'99.82%')+bar('Recall (guns found)',1,1,'100.0%')+bar('Specificity (no-gun cleared)',.9933,1,'99.33%')+'</div>';
+      ro.innerHTML='Weighted loss 0.0501 · box MSE 0.0098 · class BCE 0.0108.<br>Derived counts (1,111 test images: about 811 gun, 300 no-gun, from the 0.730 share): TP 811, FN 0, TN 298, FP 2. They reproduce accuracy 0.9982 and specificity 0.9933.<br>A missed gun is dangerous; a false alarm wastes time and causes panic. Recall and specificity show both, which one accuracy number hides.';}
+    else{out.innerHTML='<div class="bars">'+bar('Train mean IoU',.6081,1,'0.6081')+bar('Test mean IoU',.5661,1,'0.5661')+bar('Train correct detections',.704,1,'70.4%')+bar('Test correct detections',.637,1,'63.7%')+'</div>';
+      ro.innerHTML='A <b>correct detection</b> = gun probability ≥ 0.5 <i>and</i> IoU ≥ 0.5 with the true box. Mean IoU is over gun images only. A big train/test gap usually means the box head is overfitting; here the gap is about 6.7 points of correct detections (computed: 70.4 − 63.7).<br>So although the class head is almost perfect, only about <b>64%</b> of test guns are both found and well boxed.';}}
+  draw();
+}
+
+/* ---- IoU ---- */
+function wIou(root){
+  const b=shell(root,'Intersection over Union','IoU = overlap area ÷ union area. Boxes are (x_center, y_center, w, h). Pick a preset or edit the numbers; 0.5 is the usual “correct” threshold (PASCAL VOC convention).');
+  const PR={'Identical':[[.5,.5,1,1],[.5,.5,1,1]],'Shifted by half':[[.5,.5,1,1],[1,.5,1,1]],'Fully inside':[[.5,.5,1,1],[.5,.5,.5,.5]],'Disjoint':[[.5,.5,1,1],[3,3,.2,.2]],'Lecture test image':[[.499,.35466667,.946,.60266667],[.4792754,.4860334,.8592594,.8731015]]};
+  let A=PR['Lecture test image'][0].slice(),B=PR['Lecture test image'][1].slice(),name='Lecture test image';
+  const ctrl=h('<div class="ctrl"></div>'),inp=h('<div class="ctrl"></div>'),out=h('<div class="duo"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,inp,out,ro);
+  const sg=h('<div class="seg" role="group" aria-label="Preset"></div>');Object.keys(PR).forEach(k=>{const bt=h('<button type="button" aria-pressed="false">'+k+'</button>');bt.addEventListener('click',()=>{A=PR[k][0].slice();B=PR[k][1].slice();name=k;sync();draw();});sg.appendChild(bt);});ctrl.appendChild(sg);
+  const I=[];['x','y','w','h'].forEach((l,i)=>I.push(numF(inp,'Truth '+l,A[i],x=>{A[i]=x;name='';draw();},{step:.05})));['x','y','w','h'].forEach((l,i)=>I.push(numF(inp,'Pred '+l,B[i],x=>{B[i]=x;name='';draw();},{step:.05})));
+  function sync(){A.forEach((v,i)=>I[i].value=+v.toFixed(4));B.forEach((v,i)=>I[4+i].value=+v.toFixed(4));}sync();
+  function draw(){$$('button',sg).forEach(x=>x.setAttribute('aria-pressed',String(x.textContent===name)));const a=x2c(A),c=x2c(B),w=Math.max(0,Math.min(a[2],c[2])-Math.max(a[0],c[0])),hh=Math.max(0,Math.min(a[3],c[3])-Math.max(a[1],c[1])),inter=w*hh,ua=(a[2]-a[0])*(a[3]-a[1]),ub=(c[2]-c[0])*(c[3]-c[1]),uni=ua+ub-inter,v=inter/Math.max(uni,1e-9);
+    const all=[a,c],mnx=Math.min(0,...all.map(q=>q[0]))-.1,mny=Math.min(0,...all.map(q=>q[1]))-.1,mxx=Math.max(1,...all.map(q=>q[2]))+.1,mxy=Math.max(1,...all.map(q=>q[3]))+.1,s=Math.max(mxx-mnx,mxy-mny),sc=s/380;
+    out.innerHTML=boxSvg([{x1:a[0],y1:a[1],x2:a[2],y2:a[3],t:'Truth',c:'#2e1065',fs:12*sc,w:2.5*sc},{x1:c[0],y1:c[1],x2:c[2],y2:c[3],t:'Prediction',c:'#8b5cf6',d:(7*sc)+' '+(5*sc),fs:12*sc,w:2.5*sc,fill:'#8b5cf6'}],[mnx,mny,mnx+s,mny+s],'Truth box (solid) and predicted box (dashed)');
+    ro.innerHTML='Overlap = '+inter.toFixed(4)+' · union = '+uni.toFixed(4)+' · IoU = <b>'+v.toFixed(3)+'</b> → '+(v>=.5?'<b>counts as correct</b> (IoU ≥ 0.5)':'<b>below 0.5</b>, not a correct box')+(name==='Lecture test image'?'<br>Matches the lecture: IoU 0.645.':name==='Shifted by half'?'<br>Overlap 0.5, union 1.5, so 1/3.':name==='Fully inside'?'<br>Overlap 0.25, union 1.0, so 0.25.':'')+'<br><span class="note">Unit square is the image; boxes beyond it are allowed in these checks.</span>';}
+  draw();
+}
+
+/* ---- sliding window cost ---- */
+function wSlide(root){
+  const b=shell(root,'Sliding windows: how many CNN passes?','Windows per scale = (⌊(image − window) ÷ stride⌋ + 1)². Each window is a separate crop through the CNN. The numbers you choose are illustrative, not from the lecture.');
+  const v={I:416,s:32,w:[64,128,256]};const ctrl=h('<div class="ctrl"></div>'),out=h('<div class="bars"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,out,ro);
+  numF(ctrl,'Image size',v.I,x=>{v.I=x;draw();},{min:1});numF(ctrl,'Stride',v.s,x=>{v.s=Math.max(1,x);draw();},{min:1});v.w.forEach((w,i)=>numF(ctrl,'Window '+(i+1),w,x=>{v.w[i]=x;draw();},{min:1}));
+  function draw(){const n=v.w.map(w=>w>v.I?0:Math.pow(Math.floor((v.I-w)/v.s)+1,2)),t=n.reduce((a,c)=>a+c,0),mx=Math.max(...n,1);
+    out.innerHTML=v.w.map((w,i)=>bar('Window '+w,n[i],mx,P(n[i]))).join('');
+    ro.innerHTML='Total crops through the CNN: <b>'+P(t)+'</b> for one image. Halving the stride roughly quadruples this. And one object is still detected by several neighbouring windows and scales, which is why we need NMS.';}
+  draw();
+}
+
+/* ---- NMS ---- */
+const NB=[[100,100,200,200],[105,98,205,198],[110,110,210,215],[300,300,380,380],[298,305,385,375]],NS=[.9,.8,.7,.6,.75];
+function nmsRun(th){let order=NS.map((s,i)=>i).sort((a,b)=>NS[b]-NS[a]),keep=[],log=[];while(order.length){const best=order[0];keep.push(best);const rest=order.slice(1);if(!rest.length){log.push('Pick box '+best+' (score '+NS[best].toFixed(2)+'). Nothing left to compare.');break;}
+  const ov=rest.map(j=>iouC(NB[best],NB[j]));log.push('Pick box '+best+' (score '+NS[best].toFixed(2)+'). IoU with the rest: '+rest.map((j,k)=>'box '+j+' = '+ov[k].toFixed(2)).join(', ')+' → remove '+(rest.filter((j,k)=>ov[k]>th).map(j=>'box '+j).join(', ')||'none')+'.');order=rest.filter((j,k)=>ov[k]<=th);}return {keep,log};}
+function wNms(root){
+  const b=shell(root,'Non-max suppression, step by step','Five proposals around two guns, with confidence scores. Keep the best remaining box, remove those whose IoU with it is above the threshold, repeat. Default threshold 0.4.');
+  let th=.4;const sl=h('<label class="fld">IoU threshold <span class="zv"></span><input type="range" min="0.05" max="0.95" step="0.05" value="0.4" aria-label="IoU threshold"></label>'),out=h('<div class="duo"></div>'),ro=h('<div class="readout" aria-live="polite"></div>'),mt=h('<div></div>');b.append(sl,out,mt,ro);
+  $('input',sl).addEventListener('input',e=>{th=+e.target.value;draw();});
+  function draw(){$('.zv',sl).textContent=th.toFixed(2);const r=nmsRun(th),ks=new Set(r.keep);
+    out.innerHTML=boxSvg(NB.map((q,i)=>({x1:q[0],y1:q[1],x2:q[2],y2:q[3],t:i+' · '+NS[i].toFixed(2)+(ks.has(i)?' kept':' removed'),c:ks.has(i)?'#2e1065':'#a78bfa',d:ks.has(i)?'':'6 4',fs:11,w:ks.has(i)?3:1.8,ty:q[1]+14+13*(i%3)})),[80,80,400,400],'Five boxes: kept ones solid, removed ones dashed');
+    mt.innerHTML='<p class="note">Overlap table: entry (i, j) is the IoU of box i with box j.</p>'+matHtml(NB.map(p=>NB.map(q=>iouC(p,q))),{max:300,fmt:v=>(Math.round(v*100)/100),style:(i,j,v)=>heat(1,v)});
+    ro.innerHTML='<b>Kept: ['+r.keep.join(', ')+']</b>'+(th===.4?' (matches the lecture: [0, 4], same as <code>torchvision.ops.nms</code>)':'')+'<ol style="margin:.5rem 0 0 1.2rem">'+r.log.map(l=>'<li>'+l+'</li>').join('')+'</ol><span class="note">As written, NMS compares every pair. Real detectors run it per class (<code>torchvision.ops.batched_nms</code>) so a “person” box never suppresses a “gun” box.</span>';}
+  draw();
+}
+
+/* ---- ROI pooling ---- */
+const FM=[[8,6,5,2,3,0,0,0],[1,8,6,9,5,6,9,7],[6,5,5,9,2,8,6,0],[3,8,5,0,7,7,8,1],[0,8,0,5,0,2,4,4],[4,0,0,1,0,6,5,6],[2,6,7,3,4,9,8,9],[3,6,9,6,8,6,7,3]];
+function wRoi(root){
+  const b=shell(root,'ROI max-pooling','Max-pool a region of any size into a fixed grid. Region = (x1, y1) top-left inclusive, (x2, y2) bottom-right exclusive, in (column, row). The 8 × 8 map is the one printed in the lecture’s helper; the default region is its (0, 3, 7, 8).');
+  const R=[0,3,7,8];let n=2;const ctrl=h('<div class="ctrl"></div>'),out=h('<div class="duo"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,out,ro);
+  ['x1','y1','x2','y2'].forEach((l,i)=>numF(ctrl,l,R[i],x=>{R[i]=Math.round(x);draw();},{min:0,max:8,step:1}));
+  seg(ctrl,[{label:'Output 2 × 2',value:2},{label:'Output 3 × 3',value:3}],n,v=>{n=v;draw();},'Output size');
+  const rg=(i,L)=>[Math.floor(i*L/n),Math.ceil((i+1)*L/n)];
+  function draw(){const [x1,y1,x2,y2]=R.map((v,i)=>Math.max(0,Math.min(8,v)));if(x2<=x1||y2<=y1){ro.textContent='The region must have x2 > x1 and y2 > y1.';out.innerHTML='';return;}
+    const W=x2-x1,H=y2-y1,res=[];for(let i=0;i<n;i++){res.push([]);const [r0,r1]=rg(i,H);for(let j=0;j<n;j++){const [c0,c1]=rg(j,W);let m=-1;for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++)m=Math.max(m,FM[y1+r][x1+c]);res[i].push(m);}}
+    out.innerHTML='<div class="pn"><div class="pl">Feature map (region highlighted)</div>'+matHtml(FM,{max:260,cls:(i,j)=>(i>=y1&&i<y2&&j>=x1&&j<x2)?'win':'',style:(i,j,v)=>(i>=y1&&i<y2&&j>=x1&&j<x2)?heat(9,v):'opacity:.45'})+'</div><div class="pn"><div class="pl">Pooled output '+n+'×'+n+'</div>'+matHtml(res,{max:150,style:(i,j,v)=>heat(9,v)})+'</div>';
+    ro.innerHTML='Region is <b>'+W+' columns × '+H+' rows</b>. Each output cell takes the max over a section: rows '+Array.from({length:n},(_,i)=>{const [a,c]=rg(i,H);return (y1+a)+'–'+(y1+c-1);}).join(' | ')+', columns '+Array.from({length:n},(_,i)=>{const [a,c]=rg(i,W);return (x1+a)+'–'+(x1+c-1);}).join(' | ')+'. Sections need not divide evenly and may share a boundary row or column, so the exact splitting rule matters (the lecture’s <code>adaptive_max_pool2d</code> rule is used here).'+(R.join()==='0,3,7,8'&&n===2?'<br>Matches the lecture: [[8, 8], [9, 9]].':'');}
+  draw();
+}
+
+/* ---- anchors ---- */
+function wAnchor(root){
+  const b=shell(root,'RPN anchors, labels and offsets','At every feature-map position the RPN places k = 9 anchors: 3 scales × 3 aspect ratios (areas 128², 256², 512² pixels; ratios 1:1, 1:2, 2:1). Widths and heights below are computed from area and ratio w : h.');
+  const S=[128,256,512],Rr=[[1,1],[1,2],[2,1]];let iou=.55;
+  const draw1=h('<div class="duo"></div>'),sl=h('<label class="fld">IoU of an anchor with its best ground-truth box <span class="zv"></span><input type="range" min="0" max="1" step="0.01" value="0.55" aria-label="Anchor IoU"></label>'),ro=h('<div class="readout" aria-live="polite"></div>'),off=h('<div class="ctrl"></div>'),ro2=h('<div class="readout" aria-live="polite"></div>');
+  const an=[];S.forEach(s=>Rr.forEach(([a,c])=>{const r=a/c;an.push({s,r:a+':'+c,w:s*Math.sqrt(r),h:s/Math.sqrt(r)});}));
+  b.append(draw1,sl,ro,h('<h5 style="margin:1rem 0 .3rem">Box regression offsets</h5>'),off,ro2);
+  draw1.innerHTML='<div>'+boxSvg(an.map((q,i)=>({x1:-q.w/2,y1:-q.h/2,x2:q.w/2,y2:q.h/2,t:'',c:['#2e1065','#8b5cf6','#c4b5fd'][Math.floor(i/3)],d:['','8 5','2 4'][i%3],w:3})),[-300,-300,300,300],'Nine anchors centred on one position')+'</div><div class="tw"><table><thead><tr><th>Scale</th><th>Ratio w:h</th><th>Width × height (px)</th></tr></thead><tbody>'+an.map(q=>'<tr><td>'+q.s+'²</td><td>'+q.r+'</td><td>'+q.w.toFixed(0)+' × '+q.h.toFixed(0)+'</td></tr>').join('')+'</tbody></table></div>';
+  $('input',sl).addEventListener('input',e=>{iou=+e.target.value;d1();});
+  function d1(){$('.zv',sl).textContent=iou.toFixed(2);ro.innerHTML=(iou>.7?'<b>Positive</b> (IoU above 0.7).':iou<.3?'<b>Negative</b> (IoU below 0.3 with every ground-truth box).':'<b>Ignored</b> (between 0.3 and 0.7): it does not contribute to training.')+' An anchor is also positive if it has the highest IoU with some ground-truth box, even below 0.7.<br><span class="note">These are the RPN’s thresholds. The 0.5 and 0.1 values seen elsewhere belong to the second stage: Fast R-CNN samples foreground ROIs with IoU ≥ 0.5 and background ROIs with IoU in [0.1, 0.5).</span>';}
+  d1();
+  const v={x:110,y:95,w:120,h:90,xa:100,ya:100,wa:100,ha:100};[['x','box x'],['y','box y'],['w','box w'],['h','box h'],['xa','anchor x'],['ya','anchor y'],['wa','anchor w'],['ha','anchor h']].forEach(([k,l])=>numF(off,l,v[k],x=>{v[k]=x;d2();},{min:1}));
+  function d2(){ro2.innerHTML='t<sub>x</sub> = (x − x<sub>a</sub>)/w<sub>a</sub> = <b>'+((v.x-v.xa)/v.wa).toFixed(3)+'</b> · t<sub>y</sub> = (y − y<sub>a</sub>)/h<sub>a</sub> = <b>'+((v.y-v.ya)/v.ha).toFixed(3)+'</b> · t<sub>w</sub> = log(w/w<sub>a</sub>) = <b>'+Math.log(v.w/v.wa).toFixed(3)+'</b> · t<sub>h</sub> = log(h/h<sub>a</sub>) = <b>'+Math.log(v.h/v.ha).toFixed(3)+'</b><br><span class="note">Illustrative numbers (centre/size of a box and its anchor). The RPN predicts these four values per anchor, not width, height and depth: images are 2D.</span>';}
+  d2();
+}
+
+/* ---- family ---- */
+function wFamily(root){
+  const b=shell(root,'R-CNN, Fast R-CNN, Faster R-CNN','VOC2007 mAP and test time per image (figures from the papers, VGG-16 backbone, trained on VOC2007 trainval). Timings come from different papers and GPUs: treat them as orders of magnitude.');
+  const D=[['R-CNN',66.0,47,'47 s'],['Fast R-CNN',66.9,1.8,'0.32 s without proposals, about 1.8 s with Selective Search'],['Faster R-CNN',69.9,0.2,'0.2 s (5 fps) including proposals']];let m='map';
+  const ctrl=h('<div class="ctrl"></div>'),out=h('<div class="bars"></div>'),ro=h('<div class="readout"></div>'),tb=h('<div class="tabs-host"></div>');b.append(ctrl,out,ro,tb);
+  seg(ctrl,[{label:'VOC07 mAP',value:'map'},{label:'Seconds per image',value:'t'}],m,v=>{m=v;draw();},'Metric');
+  mountTabs(tb,[{label:'R-CNN (2013)',html:'<ol><li>Selective Search proposes about 2000 regions.</li><li>Each region is warped and sent <b>separately</b> through a pre-trained CNN.</li><li>An SVM classifies, and a bounding-box regressor refines the box.</li></ol><p><b>Cost:</b> one CNN forward pass per proposal.</p>'},{label:'Fast R-CNN (2015)',html:'<ol><li>Selective Search still proposes regions (outside the network).</li><li>The CNN runs <b>once</b> on the whole image.</li><li>ROI pooling gives each proposal a fixed-size feature.</li><li>Fully connected layers output a softmax class and a box.</li></ol><p><b>Win:</b> trains end to end. <b>Cost:</b> proposals dominate the time.</p>'},{label:'Faster R-CNN (2015)',html:'<ol><li>A backbone builds shared feature maps.</li><li>The <b>RPN</b> scores anchors and refines them into proposals.</li><li>ROI pooling, then classification and box refinement, as in Fast R-CNN.</li></ol><p><b>Win:</b> proposals come from the network itself, about 5 fps including proposals.</p>'}]);
+  function draw(){if(m==='map'){out.innerHTML=D.map(r=>bar(r[0],r[1],80,r[1].toFixed(1))).join('');ro.innerHTML='mAP improved from 66.0 to 69.9 across the family.';}
+    else{out.innerHTML=D.map(r=>bar(r[0],Math.log10(r[2]*10+1),Math.log10(471),r[3])).join('');ro.innerHTML='Bar length uses a log scale. Roughly 47 s → 0.2 s is a speed-up of about <b>235×</b> (computed), but compare orders of magnitude only.';}}
+  draw();
+}
+const COST_NOTE='';
+function fillCode(){$$('[data-code]').forEach(el=>{el.textContent=CODE[el.dataset.code]||'';});}
+const W={bal:wBal,fmt:wFmt,params:wParams,loss:wLoss,curves:wCurves,res:wRes,iou:wIou,slide:wSlide,nms:wNms,roi:wRoi,anchor:wAnchor,family:wFamily};
+function init(){
+  $$('[data-fig]').forEach(el=>{el.innerHTML=el.dataset.fig.split(',').map(k=>FIGS[k]||'').join('');});
+  fillCode();
+  $$('[data-w]').forEach(el=>{const k=el.dataset.w;if(k==='quiz'){wQuiz(el,el.dataset.q);return;}if(W[k])W[k](el);});
+  wToc();
+}
+const CODE={"plot": "import matplotlib.pyplot as plt\nimport cv2\n\nimg_h = 416\nimg_w = 416\n\n\ndef cv_coords(box, w=img_w, h=img_h):\n    '''\n    Convert a box from (x_center, y_center, width, height), values in 0-1,\n    to pixel corners (x1, y1, x2, y2): top-left and bottom-right, as cv2 expects.\n    '''\n    x, y, bw, bh = box\n    x1, y1 = int((x - bw / 2) * w), int((y - bh / 2) * h)\n    x2, y2 = int((x + bw / 2) * w), int((y + bh / 2) * h)\n    return x1, y1, x2, y2\n\n\nprint(cv_coords((0.5, 0.5, 0.2, 0.4)))      # a centred box covering 20% x 40% of a 416 x 416 image\n\ndef plot_img_and_box(img, bbox):\n    plt.figure(figsize=(6, 6))\n    print('Image resolution:', img.shape)\n    h, w = img.shape[:2]\n    x1, y1, x2, y2 = cv_coords(bbox, w, h)\n    img = cv2.rectangle(img, (x1, y1), (x2, y2), (255, 255, 0), 3)\n    plt.axis('off')\n    plt.imshow(img)\n\n\nfor i in range(5):\n    img_path = f'{datapath}pistol_images/{i+1}.jpg'\n    label_path = f'{datapath}pistol_annotations/{i+1}.txt'\n\n    img = plt.imread(img_path).copy()\n\n    with open(label_path, 'r') as f:\n        values = [float(v) for v in f.readlines()[0].split(' ')]\n    print(values)\n    plot_img_and_box(img, values[1:])      # values[0] is the class", "load": "from tqdm.auto import tqdm\nimport numpy as np\n\n\ndef return_bbox(label_path):\n    '''Read the class and the box from an annotation file (exactly one line expected).'''\n    with open(label_path, 'r') as f:\n        lines = [l for l in f.read().splitlines() if l.strip()]\n    if len(lines) != 1:\n        raise ValueError(f'{len(lines)} boxes in file; this model handles one')\n    values = [float(v) for v in lines[0].split()]\n    return values[0], values[1:]\n\n\ndef return_image_label(filename):\n    '''Read one image together with its class label and box.'''\n    try:\n        image = plt.imread(f'{datapath}pistol_images/{filename}.jpg')\n        class_label, bbox_label = return_bbox(f'{datapath}pistol_annotations/{filename}.txt')\n        return True, image, class_label, bbox_label\n    except Exception as e:\n        print('Skipped:', filename, str(e))\n        return False, None, None, None\n\nimages, class_labels, bbox_labels = [], [], []\nfor filename in tqdm(annot_files):\n    filename = filename[:-4]\n    status, image, class_label, bbox_label = return_image_label(filename)\n    if status and image.shape == (416, 416, 3):\n        images.append(image)\n        class_labels.append(class_label)\n        bbox_labels.append(bbox_label)\n\nimages, class_labels, bbox_labels = np.array(images), np.array(class_labels), np.array(bbox_labels)\nprint(images.shape, class_labels.shape, bbox_labels.shape, images.dtype)\nprint('No-gun images with a non-zero box:', int((np.abs(bbox_labels[class_labels == 0]).sum(axis=1) > 0).sum()))\n\nclasses, counts = np.unique(class_labels, return_counts=True)\nfor c, n in zip(classes, counts):\n    print(f'class {int(c)} ({\"gun\" if c == 1 else \"no gun\"}): {n} images')\n\nbaseline = counts.max() / counts.sum()\nprint(f'\\nA model that always answers \"{\"gun\" if counts.argmax() == 1 else \"no gun\"}\" scores {100 * baseline:.1f}% accuracy.')\n\nfrom sklearn.model_selection import train_test_split\n\nX_train, X_test, y_train_class, y_test_class, y_train_box, y_test_box = train_test_split(\n    images, class_labels, bbox_labels, test_size=0.30, random_state=42, stratify=class_labels)\n\nprint(X_train.shape, X_test.shape, y_train_class.shape, y_test_class.shape, y_train_box.shape, y_test_box.shape)\nprint('Share of gun images  train: %.3f  test: %.3f' % (y_train_class.mean(), y_test_class.mean()))", "model": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\nfrom torch.utils.data import Dataset, DataLoader\nfrom torchvision.models import resnet50, ResNet50_Weights\n\ntorch.manual_seed(42)\nnp.random.seed(42)\ndevice = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\nprint('Device:', device)\n\n\nclass GunDataset(Dataset):\n    '''Wraps the image, class and box arrays. Images stay uint8 until the model normalizes them.'''\n    def __init__(self, images, class_labels, bbox_labels):\n        self.images, self.classes, self.boxes = images, class_labels, bbox_labels\n\n    def __len__(self):\n        return len(self.images)\n\n    def __getitem__(self, i):\n        img = torch.from_numpy(self.images[i]).permute(2, 0, 1)         # HWC -> CHW, uint8\n        box = torch.tensor(self.boxes[i], dtype=torch.float32)\n        cls = torch.tensor(self.classes[i], dtype=torch.float32)\n        return img, box, cls\n\nresnet = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)\nbackbone = nn.Sequential(*list(resnet.children())[:-2])      # drop global pooling and the final fc layer\nfor p in backbone.parameters():\n    p.requires_grad = False                                  # fixed feature extractor\n\nbackbone.eval()\nwith torch.no_grad():\n    feats = backbone(torch.zeros(1, 3, 416, 416))\nprint('Feature map for one 416 x 416 image:', tuple(feats.shape))\n\nclass GunLocalizer(nn.Module):\n    '''Frozen backbone -> 1x1 conv reduction -> classification head and box-regression head.'''\n    def __init__(self, backbone):\n        super().__init__()\n        self.backbone = backbone\n        self.register_buffer('mean', torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))\n        self.register_buffer('std', torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))\n\n        self.reduce = nn.Sequential(nn.Conv2d(2048, 32, kernel_size=1), nn.ReLU(), nn.Flatten())\n        feat_dim = 32 * 13 * 13\n\n        def head(out_dim):\n            return nn.Sequential(nn.Linear(feat_dim, 128), nn.ReLU(),\n                                 nn.Linear(128, 32), nn.ReLU(),\n                                 nn.Linear(32, out_dim))\n\n        self.class_head = head(1)     # gun / no gun logit\n        self.box_head = head(4)       # x_center, y_center, width, height\n\n    def train(self, mode=True):\n        super().train(mode)\n        self.backbone.eval()          # keep the frozen BatchNorm statistics fixed\n        return self\n\n    def forward(self, x):\n        x = (x.float() / 255.0 - self.mean) / self.std                  # expects pixel values in 0-255\n        with torch.no_grad():\n            feats = self.backbone(x)\n        feats = self.reduce(feats)\n        box = torch.sigmoid(self.box_head(feats))\n        class_logit = self.class_head(feats).squeeze(1)\n        return box, class_logit\n\n\nmodel = GunLocalizer(backbone).to(device)\n\nimgs = torch.from_numpy(X_train[:4]).permute(0, 3, 1, 2).to(device)\nbox, logit = model(imgs)\nprint('box output  :', tuple(box.shape), '(4 numbers per image)')\nprint('class output:', tuple(logit.shape), '(1 logit per image)')\n\ntotal = sum(p.numel() for p in model.parameters())\ntrainable = sum(p.numel() for p in model.parameters() if p.requires_grad)\nprint(f'Total parameters:     {total:,}')\nprint(f'Trainable parameters: {trainable:,}')", "loss": "class_loss_fn = nn.BCEWithLogitsLoss()      # sigmoid + binary cross-entropy in one numerically stable step\nbox_weight, class_weight = 4.0, 1.0\n\n\ndef localization_loss(pred_box, class_logit, boxes, labels):\n    has_gun = labels == 1\n    if has_gun.any():\n        box_loss = F.mse_loss(pred_box[has_gun], boxes[has_gun])\n    else:\n        box_loss = pred_box.sum() * 0.0                 # no gun in this batch: no box loss (keeps the graph valid)\n    class_loss = class_loss_fn(class_logit, labels)\n    return box_weight * box_loss + class_weight * class_loss, box_loss, class_loss\n\n\n# Try it on the 4 images from above\nlabels = torch.from_numpy(y_train_class[:4]).float().to(device)\nboxes = torch.from_numpy(y_train_box[:4]).float().to(device)\ntotal_loss, box_loss, class_loss = localization_loss(box, logit, boxes, labels)\nprint('labels:', labels.tolist())\nprint(f'box loss {box_loss.item():.4f}  class loss {class_loss.item():.4f}  total {total_loss.item():.4f}')\n\noptimizer = torch.optim.Adam([p for p in model.parameters() if p.requires_grad], lr=1e-4)\n\ntrain_loader = DataLoader(GunDataset(X_train, y_train_class, y_train_box), batch_size=32, shuffle=True)\ntest_loader = DataLoader(GunDataset(X_test, y_test_class, y_test_box), batch_size=32)\n\ndef run_epoch(loader, train):\n    '''One pass over the loader. Updates weights if train=True. Returns averaged metrics.'''\n    model.train(train)\n    s = dict(box_sq=0.0, n_gun=0, class_bce=0.0, n=0, tp=0, tn=0, fp=0, fn=0)\n    with torch.set_grad_enabled(train):\n        for imgs, boxes, labels in tqdm(loader, leave=False):\n            imgs, boxes, labels = imgs.to(device), boxes.to(device), labels.to(device)\n            pred_box, class_logit = model(imgs)\n            loss, box_loss, class_loss = localization_loss(pred_box, class_logit, boxes, labels)\n\n            if train:\n                optimizer.zero_grad()\n                loss.backward()\n                optimizer.step()\n\n            b, has_gun = len(imgs), labels == 1\n            s['box_sq'] += ((pred_box - boxes) ** 2).mean(dim=1)[has_gun].sum().item()\n            s['n_gun'] += int(has_gun.sum())\n            s['class_bce'] += class_loss.item() * b\n            s['n'] += b\n            pred = class_logit > 0                                 # logit > 0 means probability > 0.5\n            s['tp'] += int((pred & has_gun).sum());  s['fn'] += int((~pred & has_gun).sum())\n            s['tn'] += int((~pred & ~has_gun).sum()); s['fp'] += int((pred & ~has_gun).sum())\n\n    box_mse = s['box_sq'] / max(s['n_gun'], 1)\n    class_bce = s['class_bce'] / s['n']\n    return dict(loss=box_weight * box_mse + class_weight * class_bce, box_mse=box_mse, class_bce=class_bce,\n                accuracy=(s['tp'] + s['tn']) / s['n'],\n                recall=s['tp'] / max(s['tp'] + s['fn'], 1),\n                specificity=s['tn'] / max(s['tn'] + s['fp'], 1))", "train": "metric_names = ('loss', 'box_mse', 'class_bce', 'accuracy')\nhistory = {f'{split}_{k}': [] for split in ('train', 'val') for k in metric_names}\n\nepochs = 6\nfor epoch in range(1, epochs + 1):\n    tr = run_epoch(train_loader, train=True)\n    va = run_epoch(test_loader, train=False)\n    for k in metric_names:\n        history[f'train_{k}'].append(tr[k])\n        history[f'val_{k}'].append(va[k])\n    print(f\"Epoch {epoch:2d}/{epochs} | \"\n          f\"train loss {tr['loss']:.4f}  box mse {tr['box_mse']:.4f}  class bce {tr['class_bce']:.4f}  acc {tr['accuracy']:.4f} | \"\n          f\"val loss {va['loss']:.4f}  box mse {va['box_mse']:.4f}  class bce {va['class_bce']:.4f}  acc {va['accuracy']:.4f}\")\n\nfig, axes = plt.subplots(1, 3, figsize=(15, 4))\nfor ax, key, title in zip(axes, ('box_mse', 'class_bce', 'accuracy'), ('Box MSE (gun images)', 'Class BCE', 'Accuracy')):\n    ax.plot(range(1, epochs + 1), history[f'train_{key}'], label='train')\n    ax.plot(range(1, epochs + 1), history[f'val_{key}'], label='validation')\n    ax.set_title(title)\n    ax.set_xlabel('Epoch')\n    ax.legend()\nplt.tight_layout()\nplt.show()", "predict": "@torch.no_grad()\ndef predict(input_img_arr, model, mode='single', batch_size=64):\n    '''\n    mode='single': one HxWx3 uint8 image -> (box, gun probability)\n    mode='batch' : N images              -> (boxes, gun probabilities)\n    '''\n    model.eval()\n    if mode == 'single':\n        input_img_arr = input_img_arr[None]\n    boxes, probs = [], []\n    for i in range(0, len(input_img_arr), batch_size):\n        x = torch.from_numpy(input_img_arr[i:i + batch_size]).permute(0, 3, 1, 2).to(device)\n        box, logit = model(x)\n        boxes.append(box.cpu().numpy())\n        probs.append(torch.sigmoid(logit).cpu().numpy())\n    boxes, probs = np.concatenate(boxes), np.concatenate(probs)\n    return (boxes[0], probs[0]) if mode == 'single' else (boxes, probs)\n\n\nprint(predict(X_test[0], model))\nprint(predict(X_test[0:4], model, 'batch'))\n\neval_res = run_epoch(test_loader, train=False)\nprint(f\"Weighted total loss: {eval_res['loss']:.4f}\")\nprint(f\"BBox MSE (gun images): {eval_res['box_mse']:.4f}\")\nprint(f\"Class BCE loss:      {eval_res['class_bce']:.4f}\")\nprint(f\"Accuracy:            {eval_res['accuracy']:.4f}   (always-gun baseline: {100 * y_test_class.mean():.1f}%)\")\nprint(f\"Recall (guns found): {eval_res['recall']:.4f}\")\nprint(f\"Specificity (no-gun cleared): {eval_res['specificity']:.4f}\")\n\ndef plot_prediction(img, label, pred, prob=None):\n    img = img.copy()\n    h, w = img.shape[:2]\n\n    if label[2] * label[3] > 0:                       # no-gun images have an all-zero box, so draw nothing\n        x1, y1, x2, y2 = cv_coords(label, w, h)\n        img = cv2.rectangle(img, (x1, y1), (x2, y2), (255, 255, 0), 3)\n        cv2.putText(img, 'Ground Truth', (x1, max(y1 - 5, 12)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)\n\n    if prob is None or prob >= 0.5:\n        x1, y1, x2, y2 = cv_coords(pred, w, h)\n        img = cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 3)\n        cv2.putText(img, 'Prediction', (x1, max(y1 - 5, 12)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)\n\n    plt.figure(figsize=(8, 8))\n    plt.axis('off')\n    if prob is not None:\n        plt.title(f'Gun probability: {prob:.3f}')\n    plt.imshow(img)\n\n\nfor index in [500, 101, 5]:\n    index %= len(X_test)\n    label = y_test_box[index]\n    img = X_test[index]\n    pred_box, class_prob = predict(img, model)\n\n    print('Ground truth box:', label)\n    print('Predicted box   :', pred_box, '| gun probability: %.3f' % class_prob)\n    plot_prediction(img, label, pred_box, class_prob)", "iou": "def xywh_to_xyxy(box):\n    '''(x_center, y_center, w, h) -> (x1, y1, x2, y2). Works on one box or an array of boxes.'''\n    box = np.asarray(box, dtype=float)\n    return np.stack([box[..., 0] - box[..., 2] / 2, box[..., 1] - box[..., 3] / 2,\n                     box[..., 0] + box[..., 2] / 2, box[..., 1] + box[..., 3] / 2], axis=-1)\n\n\ndef iou_xyxy(a, b):\n    '''IoU of boxes in (x1, y1, x2, y2) format. a and b can be single boxes or arrays that broadcast.'''\n    a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)\n    inter_w = np.clip(np.minimum(a[..., 2], b[..., 2]) - np.maximum(a[..., 0], b[..., 0]), 0, None)\n    inter_h = np.clip(np.minimum(a[..., 3], b[..., 3]) - np.maximum(a[..., 1], b[..., 1]), 0, None)\n    intersection = inter_w * inter_h\n    area_a = (a[..., 2] - a[..., 0]) * (a[..., 3] - a[..., 1])\n    area_b = (b[..., 2] - b[..., 0]) * (b[..., 3] - b[..., 1])\n    union = area_a + area_b - intersection\n    return intersection / np.maximum(union, 1e-9)\n\n\ndef compute_iou(label_box, pred_box):\n    '''IoU of two boxes given as (x_center, y_center, w, h).'''\n    return iou_xyxy(xywh_to_xyxy(label_box), xywh_to_xyxy(pred_box))\n\nsame = (0.5, 0.5, 1.0, 1.0)\nshifted = (1.0, 0.5, 1.0, 1.0)         # same size, moved right by half its width\nfar = (3.0, 3.0, 0.2, 0.2)             # no overlap\ninside = (0.5, 0.5, 0.5, 0.5)          # fully inside `same`\n\nassert abs(compute_iou(same, same) - 1.0) < 1e-6          # identical boxes\nassert abs(compute_iou(same, far) - 0.0) < 1e-6           # disjoint boxes\nassert abs(compute_iou(same, shifted) - 1 / 3) < 1e-6     # overlap 0.5, union 1.5\nassert abs(compute_iou(same, inside) - 0.25) < 1e-6       # overlap 0.25, union 1.0\nprint('All IoU checks passed')\n\n# One test image that contains a gun\nindex = int(np.where(y_test_class == 1)[0][0])\n\nlabel = y_test_box[index]\nimg = X_test[index]\npred_box, class_prob = predict(img, model)\n\nprint('Ground truth box:', label)\nprint('Predicted box   :', pred_box)\nprint('IoU             : %.3f' % compute_iou(label, pred_box))\n\nplot_prediction(img, label, pred_box, class_prob)\n\ndef gun_ious(gt_box, pred_box):\n    '''IoU for the images that contain a gun, plus the mask that selects them.'''\n    has_gun = gt_box[:, 2] * gt_box[:, 3] > 0\n    return iou_xyxy(xywh_to_xyxy(gt_box[has_gun]), xywh_to_xyxy(pred_box[has_gun])), has_gun\n\n\nfor name, X, y_box in [('Train', X_train, y_train_box), ('Test', X_test, y_test_box)]:\n    pred_boxes, pred_probs = predict(X, model, 'batch')\n    ious, has_gun = gun_ious(y_box, pred_boxes)\n    correct = (ious >= 0.5) & (pred_probs[has_gun] >= 0.5)\n    print(f'{name:>5}: mean IoU {ious.mean():.4f} | correct detections (IoU >= 0.5 and p >= 0.5): {100 * correct.mean():.1f}%')", "nms": "import torchvision\n\n# Three boxes around one gun, two around another   (x1, y1, x2, y2)\nboxes = np.array([[100, 100, 200, 200],\n                  [105,  98, 205, 198],\n                  [110, 110, 210, 215],\n                  [300, 300, 380, 380],\n                  [298, 305, 385, 375]])\nscores = np.array([0.90, 0.80, 0.70, 0.60, 0.75])\n\n\ndef draw(boxes, scores, title, ax):\n    ax.set_xlim(80, 400); ax.set_ylim(400, 80); ax.set_aspect('equal'); ax.set_title(title)\n    for (x1, y1, x2, y2), s in zip(boxes, scores):\n        ax.add_patch(plt.Rectangle((x1, y1), x2 - x1, y2 - y1, fill=False, linewidth=2))\n        ax.text(x1, y1 - 3, f'{s:.2f}', fontsize=9)\n\n\nfig, ax = plt.subplots(figsize=(4, 4))\ndraw(boxes, scores, 'Before NMS', ax)\nplt.show()\n\noverlap = iou_xyxy(boxes[:, None, :], boxes[None, :, :])\nprint(np.round(overlap, 2))\n\ndef nms(boxes, scores, iou_threshold=0.4):\n    '''\n    boxes:  (N, 4) array in (x1, y1, x2, y2) format\n    scores: (N,) confidence scores\n    Returns the indices of the boxes to keep, highest score first.\n    '''\n    boxes, scores = np.asarray(boxes, dtype=float), np.asarray(scores, dtype=float)\n    order = np.argsort(scores)[::-1]                      # remaining proposals, best first\n    keep = []\n    while order.size > 0:\n        best = order[0]                                   # steps 1 and 4\n        keep.append(int(best))\n        rest = order[1:]\n        if rest.size == 0:\n            break\n        overlaps = iou_xyxy(boxes[best], boxes[rest])     # step 2\n        order = rest[overlaps <= iou_threshold]           # steps 3 and 5: drop the heavy overlaps\n    return keep\n\nkeep = nms(boxes, scores, iou_threshold=0.4)\nprint('Kept (ours):       ', keep)\n\nreference = torchvision.ops.nms(torch.tensor(boxes, dtype=torch.float32),\n                                torch.tensor(scores, dtype=torch.float32), 0.4)\nprint('Kept (torchvision):', reference.tolist())\n\nfig, ax = plt.subplots(figsize=(4, 4))\ndraw(boxes[keep], scores[keep], 'After NMS', ax)\nplt.show()", "roi": "def roi_max_pool(fmap, roi, out_size=(2, 2)):\n    '''\n    fmap: 2D feature map (H x W)\n    roi:  (x1, y1, x2, y2) in (column, row); top-left inclusive, bottom-right exclusive\n    Splits the region into out_size sections and returns the max of each.\n    '''\n    x1, y1, x2, y2 = roi\n    region = torch.as_tensor(np.asarray(fmap), dtype=torch.float32)[y1:y2, x1:x2]\n    return F.adaptive_max_pool2d(region[None, None], out_size)[0, 0].numpy()\n\n\nfmap = np.random.default_rng(0).integers(0, 10, size=(8, 8))     # replace with the values from the figure\nprint(fmap)\nprint(roi_max_pool(fmap, (0, 3, 7, 8)))                            # the bottom-left gun region from the example", "frcnn": "from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights\nfrom torchvision.models.detection.faster_rcnn import FastRCNNPredictor\n\ndet_model = fasterrcnn_resnet50_fpn(weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT)\nin_features = det_model.roi_heads.box_predictor.cls_score.in_features\ndet_model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=2)     # background + gun\ndet_model.to(device)\n\n\ndef make_target(box, label):\n    '''Turn a normalized (x_center, y_center, w, h) label into the pixel (x1, y1, x2, y2) target the detector expects.'''\n    if label == 1:\n        x, y, w, h = box\n        xyxy = [(x - w / 2) * img_w, (y - h / 2) * img_h, (x + w / 2) * img_w, (y + h / 2) * img_h]\n        return {'boxes': torch.tensor([xyxy], dtype=torch.float32, device=device),\n                'labels': torch.tensor([1], dtype=torch.int64, device=device)}\n    return {'boxes': torch.zeros((0, 4), dtype=torch.float32, device=device),\n            'labels': torch.zeros((0,), dtype=torch.int64, device=device)}\n\n\nidx = [int(np.where(y_train_class == 1)[0][0]), int(np.where(y_train_class == 0)[0][0])]   # one gun image, one no-gun image\nbatch_imgs = [torch.from_numpy(X_train[i]).permute(2, 0, 1).float().div(255).to(device) for i in idx]\nbatch_targets = [make_target(y_train_box[i], y_train_class[i]) for i in idx]\n\ndet_model.train()\nloss_dict = det_model(batch_imgs, batch_targets)\nfor name, value in loss_dict.items():\n    print(f'{name:20s} {value.item():.4f}')"};
+init();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-CV-7" target="_blank" rel="noopener">github.com/scaler-content/DSML-CV-7</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

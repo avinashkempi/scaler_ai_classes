@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K-nearest Neighbors 1 post read</title>
+<meta name="description" content="How k-Nearest Neighbors classifies a new point by asking its closest neighbours to vote, told through the Orbit Express store-tier ticket.">
+<script>
+(function(){
+  var t=null;
+  try{t=localStorage.getItem('knn1-theme');}catch(e){}
+  if(!t){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+<style>
+:root{
+  --bg:#F6F5F3; --surface:#FFFFFF; --surface-2:#EFEDE9; --text:#1A1A1A; --muted:#57534D; --border:#D9D5CE;
+  --red:#D0121B; --red-deep:#8E0B12; --red-tint:#FCEBEC;
+  --gold:#D4AF37; --gold-ink:#7A5C00; --gold-tint:#FBF4D9;
+  --black:#000000;
+  --c1:#D0121B; --c2:#D4AF37; --c3:#111111; --mark-stroke:#111111;
+  --pressed-bg:#D0121B; --pressed-fg:#FFFFFF; --focus:#D0121B;
+  --ok:#14532D; --ok-tint:#E6F4EA;
+  --display:"Avenir Next Condensed","Arial Narrow","Roboto Condensed","Helvetica Neue Condensed","Helvetica Neue",Arial,sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+:root[data-theme="dark"]{
+  --bg:#0A0A0A; --surface:#161514; --surface-2:#211F1D; --text:#EFECE7; --muted:#B3ADA4; --border:#34302C;
+  --red:#F0424D; --red-deep:#B5121B; --red-tint:#2A1416;
+  --gold:#E0BB4A; --gold-ink:#E0BB4A; --gold-tint:#2A2412;
+  --c1:#F0424D; --c2:#E0BB4A; --c3:#EDEAE6; --mark-stroke:#000000;
+  --pressed-bg:#E0BB4A; --pressed-fg:#000000; --focus:#E0BB4A;
+  --ok:#7DD99A; --ok-tint:#132A1B;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:1.0625rem;line-height:1.7}
+img,svg{max-width:100%}
+a{color:var(--red)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.skip{position:absolute;left:-999px;top:8px;background:#fff;color:#000;padding:8px 14px;z-index:100}
+.skip:focus{left:8px}
+i,em{font-style:italic}
+
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:0;z-index:50;height:56px;background:#000;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 24px;border-bottom:3px solid #D4AF37}
+.brand{font-family:var(--display);font-style:italic;font-weight:800;font-size:1.2rem;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.theme-btn{font:inherit;font-size:.85rem;color:#fff;background:transparent;border:1px solid #6b6660;border-radius:4px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.theme-btn:hover{border-color:var(--gold)}
+.theme-btn:focus-visible{outline-color:#E0BB4A}
+.progress{position:absolute;left:0;bottom:-3px;height:3px;width:0;background:#D0121B}
+
+/* ---------- hero ---------- */
+.hero{position:relative;overflow:hidden;background:#000;color:#fff;padding:76px 24px 88px}
+.hero::before,.hero::after{content:"";position:absolute;top:0;bottom:0;right:0;pointer-events:none;clip-path:polygon(130px 0,100% 0,100% 100%,0 100%)}
+.hero::after{width:calc(46% + 24px);background:#D4AF37;z-index:0}
+.hero::before{width:46%;background:#D0121B;z-index:1}
+.hero-inner{position:relative;z-index:2;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:48px;align-items:center}
+.hero h1{font-family:var(--display);font-style:italic;font-weight:800;font-size:clamp(2.9rem,7vw,5.4rem);line-height:1;letter-spacing:-.01em;margin:0 0 22px;max-width:9em}
+.hero .sub{font-family:var(--display);font-style:italic;font-weight:700;font-size:clamp(1.3rem,2.4vw,1.75rem);color:#E0BB4A;margin:0 0 26px}
+.hero .lead{max-width:33rem;color:#E4E0DA;font-size:1.1rem;margin:0}
+.hero svg{width:100%;height:auto;display:block;max-width:440px;margin-left:auto;box-shadow:10px 10px 0 #000}
+.hero{--c1:#F0424D;--c2:#E0BB4A;--c3:#EDEAE6;--mark-stroke:#000}
+.kit{height:12px;background:repeating-linear-gradient(-45deg,#D0121B 0 16px,#000 16px 20px,#D4AF37 20px 28px,#000 28px 32px)}
+
+/* ---------- layout ---------- */
+.layout{max-width:1200px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:196px minmax(0,1fr);gap:56px}
+.toc{position:sticky;top:56px;align-self:start;max-height:calc(100vh - 56px);overflow:auto;padding:36px 0}
+.toc h2{font-family:var(--display);font-style:italic;font-weight:800;font-size:1.15rem;margin:0 0 12px;padding:0}
+.toc h2::after,.toc h2::before{display:none}
+.toc ol{list-style:none;margin:0;padding:0;border-left:2px solid var(--border)}
+.toc a{display:block;padding:6px 0 6px 14px;margin-left:-2px;border-left:2px solid transparent;color:var(--muted);text-decoration:none;font-size:.92rem;line-height:1.35}
+.toc a:hover{color:var(--text)}
+.toc a[aria-current="true"]{color:var(--text);font-weight:700;border-left-color:var(--red)}
+main{min-width:0;max-width:860px;padding:44px 0 90px}
+@media (max-width:1079px){
+  .hero-inner{grid-template-columns:1fr}
+  .hero svg{margin:8px auto 0;max-width:340px}
+  .hero::before,.hero::after{top:auto;left:0;right:auto;width:100%;clip-path:polygon(0 70px,100% 0,100% 100%,0 100%)}
+  .hero::before{height:46%}.hero::after{height:calc(46% + 14px)}
+  .layout{display:block;padding:0 18px}
+  .toc{top:56px;z-index:20;background:var(--bg);padding:8px 0;max-height:none;overflow:visible;border-bottom:1px solid var(--border);margin:0 -18px;padding-left:18px;padding-right:18px}
+  .toc h2{display:none}
+  .toc ol{display:flex;gap:4px;overflow-x:auto;border-left:0;scrollbar-width:thin;padding-bottom:2px}
+  .toc a{border-left:0;border-bottom:2px solid transparent;margin:0;padding:6px 10px;white-space:nowrap}
+  .toc a[aria-current="true"]{border-bottom-color:var(--red)}
+  main{padding-top:24px}
+  .topbar{padding:0 16px}
+}
+@media (max-width:560px){.hero{padding:48px 18px 56px}.brand{font-size:.9rem}}
+
+/* ---------- typography ---------- */
+.chapter{margin-top:80px;scroll-margin-top:110px}
+.chapter:first-child{margin-top:0}
+h2{font-family:var(--display);font-style:italic;font-weight:800;font-size:clamp(2rem,4.2vw,3rem);line-height:1.06;margin:0 0 28px;padding-bottom:22px;position:relative}
+h2::after{content:"";position:absolute;left:6px;bottom:0;width:72px;height:8px;background:var(--red);transform:skewX(-28deg)}
+h2::before{content:"";position:absolute;left:92px;bottom:0;width:28px;height:8px;background:var(--gold);transform:skewX(-28deg)}
+h3{font-family:var(--display);font-style:italic;font-weight:700;font-size:1.65rem;line-height:1.2;margin:46px 0 12px}
+h4{font-family:var(--display);font-style:italic;font-weight:800;font-size:1.15rem;margin:0 0 6px;letter-spacing:.005em}
+.chapter>p,.chapter>ul,.chapter>ol{max-width:68ch}
+p{margin:0 0 1.05em}
+ul,ol{padding-left:1.3em}
+li{margin:.3em 0}
+strong{font-weight:700}
+code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);padding:.1em .38em;border-radius:3px}
+sub,sup{line-height:0}
+
+/* ---------- callouts ---------- */
+.key{margin:28px 0;padding:20px 26px;background:#000;color:#fff;border-left:8px solid var(--red);border-bottom:4px solid var(--gold);font-family:var(--serif);font-style:italic;font-size:1.3rem;line-height:1.5;max-width:68ch}
+.key p{margin:0}
+.rule{margin:24px 0;padding:14px 20px;background:var(--red-tint);border-left:6px solid var(--red);max-width:68ch}
+.rule p:last-child,.note p:last-child{margin-bottom:0}
+.note{margin:24px 0;padding:14px 20px;background:var(--gold-tint);border-left:6px solid var(--gold);max-width:68ch}
+.rule b:first-child,.note b:first-child{display:inline}
+.ticket{margin:28px 0;padding:22px 28px;background:var(--surface);border:2px dashed var(--gold);border-left:10px solid var(--red)}
+.ticket h4{font-size:1.02rem;margin:0}
+.ticket blockquote{margin:12px 0 0;font-family:var(--serif);font-style:italic;font-size:1.22rem;line-height:1.55}
+.ticket.closed{border-left-color:var(--text)}
+.checks{list-style:none;padding:0;margin:14px 0}
+.checks li{position:relative;padding-left:32px;margin:.55em 0}
+.checks li::before{content:"\2713";position:absolute;left:0;top:0;width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff;font-size:.8rem;text-align:center;line-height:22px;font-weight:700}
+:root[data-theme="dark"] .checks li::before{color:#000}
+
+/* ---------- tier chips ---------- */
+.mk{width:18px;height:18px;flex:none;vertical-align:-4px}
+.mk.t1{color:var(--c1)}.mk.t2{color:var(--c2)}.mk.t3{color:var(--c3)}
+.tier{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-weight:600}
+
+/* ---------- tables ---------- */
+.table-wrap{overflow-x:auto;margin:22px 0}
+table{border-collapse:collapse;width:100%;font-size:.95rem;background:var(--surface)}
+th{text-align:left;font-weight:700;padding:9px 12px;border-bottom:2px solid var(--red);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+thead th{background:#000;color:#fff;border-bottom:3px solid var(--gold)}
+tbody th{border-bottom:1px solid var(--border);font-weight:600}
+caption{caption-side:bottom;text-align:left;color:var(--muted);font-size:.85rem;padding-top:8px}
+
+/* ---------- widgets ---------- */
+.widget{background:var(--surface);border:1px solid var(--border);border-left:5px solid var(--gold);border-radius:4px;margin:30px 0;overflow:hidden}
+.widget-head{padding:14px 22px 15px;background:#000;color:#fff;border-bottom:3px solid var(--gold)}
+.widget-head h4{margin:0 0 3px;font-size:1.3rem;color:#fff}
+.widget-head p{margin:0;color:#D2CCC2;font-size:.9rem;line-height:1.5}
+.widget-body{padding:22px}
+.widget-body p{max-width:none}
+.btn{font:inherit;font-size:.9rem;line-height:1.3;padding:8px 14px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:4px;cursor:pointer;transition:background .15s,color .15s}
+.btn:hover{border-color:var(--text)}
+.btn[aria-pressed="true"]{background:var(--pressed-bg);color:var(--pressed-fg);border-color:var(--pressed-bg);box-shadow:inset 0 -3px 0 var(--gold)}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+input[type=range]{width:100%;accent-color:var(--red)}
+.ctl{display:grid;gap:4px;margin-bottom:14px}
+.ctl label{font-weight:600;font-size:.93rem;display:flex;justify-content:space-between;gap:12px}
+.ctl output{font-family:var(--mono);font-weight:600}
+.bar{display:flex;height:34px;border:1px solid var(--text);overflow:hidden;margin:6px 0}
+.bar>div{display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden}
+.readout{margin-top:14px;padding:12px 16px;background:var(--surface-2);border-left:4px solid var(--text);font-size:.97rem}
+.readout p{margin:0}
+.badge{display:inline-block;padding:1px 9px;border:1.5px solid currentColor;border-radius:99px;font-size:.78rem;font-weight:700;line-height:1.6}
+.badge.tie{color:var(--red)}
+
+/* trio */
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:26px 0}
+.trio>div{border-top:6px solid var(--red);background:var(--surface);padding:14px 16px 16px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.trio>div:nth-child(2){border-top-color:var(--gold)}.trio>div:nth-child(3){border-top-color:var(--text)}
+.trio h4{font-size:1.25rem}
+.trio p{margin:0;font-size:.95rem;line-height:1.55}
+@media (max-width:720px){.trio{grid-template-columns:1fr}}
+
+/* pipeline */
+.pipeline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:26px 0;counter-reset:pl}
+.pipeline>div{position:relative;background:var(--surface);border:1px solid var(--border);padding:16px 18px 18px 18px;border-top:6px solid var(--red)}
+.pipeline>div:nth-child(2){border-top-color:var(--gold)}.pipeline>div:nth-child(3){border-top-color:var(--text)}
+.pipeline>div+div{margin-left:26px}
+.pipeline>div+div::before{content:"";position:absolute;left:-27px;top:50%;width:26px;border-top:2px solid var(--text)}
+.pipeline>div+div::after{content:"";position:absolute;left:-9px;top:calc(50% - 6px);border:6px solid transparent;border-left:8px solid var(--text);border-right:0}
+.pipeline h4{font-size:1.3rem}
+.pipeline p{margin:0;font-size:.93rem;line-height:1.5}
+@media (max-width:720px){.pipeline{grid-template-columns:1fr;gap:26px}.pipeline>div+div{margin-left:0}.pipeline>div+div::before{left:50%;top:-26px;width:0;height:26px;border-top:0;border-left:2px solid var(--text)}.pipeline>div+div::after{left:calc(50% - 6px);top:-10px;border:6px solid transparent;border-top:8px solid var(--text);border-bottom:0}}
+
+/* ---------- figures ---------- */
+figure{margin:28px 0}
+figcaption{color:var(--muted);font-size:.9rem;margin-top:8px;line-height:1.5}
+.fig{background:var(--surface);border:1px solid var(--border);padding:16px}
+.fig svg{display:block;width:100%;height:auto}
+.idea-fig{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:24px;align-items:center}
+.idea-fig svg{max-width:520px;margin:0 auto}
+.tally h4{font-size:1.3rem;margin-bottom:10px}
+.tally ul{list-style:none;padding:0;margin:0 0 12px}
+.tally li{display:flex;align-items:center;gap:10px;margin:6px 0}
+.tally .pred{border-top:2px solid var(--text);padding-top:10px;font-family:var(--display);font-style:italic;font-size:1.5rem;font-weight:800;margin:0}
+@media (max-width:720px){.idea-fig{grid-template-columns:1fr}}
+.formula-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:center;margin:26px 0}
+@media (max-width:720px){.formula-row{grid-template-columns:1fr}}
+.formula{font-family:var(--serif);font-size:1.5rem;background:var(--surface);border:1px solid var(--border);padding:22px 20px;text-align:center;line-height:1.9}
+.rad{border-top:2px solid currentColor;padding:3px 5px 0}
+.svg-text{font-family:var(--sans);fill:var(--text)}
+
+/* ---------- code ---------- */
+details.code{margin:22px 0;border:1px solid var(--text);background:var(--surface)}
+details.code>summary{cursor:pointer;padding:12px 18px;font-weight:700;font-size:.95rem;list-style:none;display:flex;justify-content:space-between;gap:10px;background:var(--surface-2);border-left:5px solid var(--red)}
+details.code>summary::-webkit-details-marker{display:none}
+details.code>summary::after{content:"Show code";font-weight:600;color:var(--muted);font-size:.85rem}
+details.code[open]>summary::after{content:"Hide code"}
+figure.code{position:relative;margin:0;background:#0B0B0B}
+figure.code figcaption{position:static;margin:0;display:flex;align-items:center;justify-content:space-between;background:#000;padding:7px 12px;border-bottom:2px solid #D4AF37;color:#E0BB4A;font-size:.78rem;font-weight:700}
+figure.code figcaption::before{content:"Python"}
+figure.code pre{margin:0;padding:18px 22px;overflow-x:auto;background:#0B0B0B;color:#F1EEE9;font-family:var(--mono);font-size:.86rem;line-height:1.75;tab-size:4;border-left:5px solid #D0121B}
+figure.code pre code{display:block;background:none;padding:0;border-radius:0;font-size:inherit;color:inherit;white-space:pre}
+figure.code.code-open{margin:22px 0;border:1px solid #000}
+.copy{font:inherit;font-size:.78rem;background:#1A1A1A;color:#F1EEE9;border:1px solid #6b6660;padding:3px 12px;border-radius:3px;cursor:pointer}
+.copy:hover{border-color:#E0BB4A;color:#E0BB4A}
+.copy:focus-visible{outline-color:#E0BB4A}
+.tk-c{color:#9F998F;font-style:italic}.tk-s{color:#F2C14E}.tk-k{color:#FF5560;font-weight:700}.tk-n{color:#FF9AA0}.tk-f{color:#FFE6A8}
+
+/* ---------- quiz ---------- */
+.quiz{background:var(--surface);border:1px solid var(--border);border-left:5px solid var(--red);margin:34px 0}
+.quiz-head{padding:12px 22px;background:#000;border-bottom:3px solid var(--red)}
+.quiz-head h4{margin:0;color:#fff;font-size:1.25rem}
+.quiz-body{padding:20px 22px}
+.quiz .q{font-weight:600;margin-bottom:14px;max-width:62ch}
+.quiz .q ul{font-weight:400;margin:8px 0 0}
+.opts{display:grid;gap:8px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;font:inherit;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:4px;cursor:pointer}
+.opt:hover:not([disabled]){border-color:var(--text)}
+.opt .ltr{flex:none;width:26px;height:26px;border:1.5px solid currentColor;border-radius:50%;text-align:center;line-height:23px;font-weight:700;font-size:.85rem}
+.opt.correct{background:var(--ok-tint);border-color:var(--ok);color:var(--text)}
+.opt.wrong{background:var(--red-tint);border-color:var(--red)}
+.opt .res{margin-left:auto;font-weight:700;font-size:.85rem;white-space:nowrap}
+.opt.correct .res{color:var(--ok)}.opt.wrong .res{color:var(--red)}
+.opt[disabled]{cursor:default}
+.fb{margin-top:14px;min-height:1px}
+.fb .fb-msg{padding:12px 16px;border-left:4px solid var(--text);background:var(--surface-2)}
+.fb p{margin:0 0 .5em}
+.fb p:last-child{margin:0}
+.linkbtn{font:inherit;background:none;border:0;padding:0;color:var(--red);text-decoration:underline;cursor:pointer}
+
+/* ---------- explorer (dark panel) ---------- */
+.explorer{--surface:#0D0D0D;--surface-2:#1B1A19;--text:#F3F0EB;--muted:#B5AEA5;--border:#3A3632;--c1:#F0424D;--c2:#E0BB4A;--c3:#EDEAE6;--mark-stroke:#000;--gold-ink:#E0BB4A;--red:#F0424D;--focus:#E0BB4A;--pressed-bg:#E0BB4A;--pressed-fg:#000;background:#000;color:var(--text);border-color:#3A3632;border-left-color:#E0BB4A;container-type:inline-size}
+.ex-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--border)}
+.ex-step{font:inherit;text-align:left;padding:12px 14px;background:transparent;color:var(--muted);border:0;border-right:1px solid var(--border);cursor:pointer;line-height:1.35}
+.ex-step:last-child{border-right:0}
+.ex-step b{display:block;color:inherit;font-size:1.1rem;font-family:var(--display);font-style:italic;font-weight:800}
+.ex-step span{font-size:.8rem}
+.ex-step:hover{color:var(--text)}
+.ex-step[aria-pressed="true"]{color:var(--text);background:#171614;box-shadow:inset 0 -3px 0 #E0BB4A}
+.ex-step i{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border:1.5px solid currentColor;border-radius:50%;font-size:.75rem;font-style:normal;margin-right:7px;font-weight:700}
+@container (max-width:600px){.ex-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.ex-step:nth-child(2){border-right:0}.ex-step:nth-child(-n+2){border-bottom:1px solid var(--border)}}
+.ex-main{display:grid;gap:22px;padding:20px}
+@container (min-width:700px){.ex-main{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);align-items:start}.ex-tbl{grid-column:1 / -1}}
+.ex-svg{display:block;width:100%;height:auto;background:#080808;border:1px solid var(--border);touch-action:none;user-select:none}
+.ex-svg text{font-family:var(--sans)}
+.ex-grid line{stroke:#24211F;stroke-width:1}
+.ex-axis text{fill:#A8A198;font-size:14px}
+.ex-axis .ax-title{fill:#D9D4CC;font-size:17px;font-weight:600}
+.ex-ring{fill:rgba(224,187,74,.07);stroke:#E0BB4A;stroke-width:2.5;stroke-dasharray:9 7}
+.ex-line{stroke:#6F6960;stroke-width:1.2}
+.ex-line.keep{stroke:#E0BB4A;stroke-width:2.2}
+.ex-leg{stroke:#E0BB4A;stroke-width:1.5;stroke-dasharray:4 4}
+.ex-dl{fill:#E9E4DC;font-size:15px;paint-order:stroke;stroke:#080808;stroke-width:4px}
+.pt{cursor:pointer;transition:opacity .2s}
+.pt.dim{opacity:.32}
+.pt text.lbl{fill:#F3F0EB;font-size:16px;font-weight:600;paint-order:stroke;stroke:#080808;stroke-width:4px}
+.pt .selring{fill:none;stroke:#F3F0EB;stroke-width:1.5;stroke-dasharray:3 3}
+.rk circle{fill:#E0BB4A;stroke:#000;stroke-width:1.5}
+.rk text{fill:#000;font-size:13px;font-weight:800;text-anchor:middle;dominant-baseline:central}
+#exQ{cursor:grab}
+#exQ.drag{cursor:grabbing}
+#exQ .starshape{fill:#FFFFFF;stroke:#E0BB4A;stroke-width:2.5}
+#exQ text{fill:#F3F0EB;font-size:17px;font-weight:700;paint-order:stroke;stroke:#080808;stroke-width:4px}
+.ex-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:.85rem;color:var(--muted)}
+.ex-legend .tier{font-weight:500;color:var(--text)}
+.ex-k{margin-bottom:12px}
+.ex-table{font-size:.88rem;background:transparent}
+.ex-table th{border-bottom-color:#E0BB4A;padding:7px 8px}
+.ex-table td{padding:7px 8px;border-bottom-color:#2C2926}
+.ex-table tbody tr{cursor:pointer}
+.ex-table tbody tr:hover{background:#151413}
+.ex-table tbody tr[aria-selected="true"]{background:#1C1A17;outline:1px dashed #6F6960;outline-offset:-1px}
+.ex-table tr.keep td:first-child{box-shadow:inset 4px 0 0 #E0BB4A}
+.ex-table td.num{font-family:var(--mono);white-space:nowrap}
+.ex-side .readout{background:#151413;border-left-color:#E0BB4A;color:var(--text)}
+.ex-calc{margin-top:12px;padding:12px 14px;border:1px solid var(--border);font-size:.9rem;line-height:1.7}
+.ex-calc .eq{font-family:var(--serif);font-size:1.02rem;line-height:2}
+.votebar{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:.9rem}
+.votebar .vl{flex:none}
+.votebar .vb{flex:1;height:16px;background:#1C1A17;border:1px solid var(--border)}
+.votebar .vb i{display:block;height:100%;background:var(--c2)}
+.votebar .vn{width:1.5em;text-align:right;font-family:var(--mono);font-weight:700}
+@container (max-width:520px){.ex-dl,.pt text.lbl,#exQ text{font-size:21px}.ex-axis text{font-size:18px}.ex-axis .ax-title{font-size:22px}.rk text{font-size:16px}}
+.ex-foot{padding:0 20px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:.85rem}
+.explorer .btn{background:#141312;color:var(--text);border-color:#4A4540}
+.explorer .btn:hover{border-color:#E0BB4A}
+
+/* tie lab */
+.krow{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;font:inherit;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:9px 14px;margin-bottom:6px;border-radius:4px;cursor:pointer}
+.krow:hover{border-color:var(--text)}
+.krow[aria-pressed="true"]{border-color:var(--text);box-shadow:inset 5px 0 0 var(--gold);background:var(--surface-2)}
+.krow .kv{font-family:var(--mono);font-weight:700}
+.krow .votes{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.92rem}
+.vchip{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.cmp td:first-child{font-weight:600}
+.slots{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 14px}
+.slot{font:inherit;width:96px;padding:10px 6px;border:1.5px solid var(--text);background:var(--bg);color:var(--text);border-radius:4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.85rem}
+.slot .mk{width:26px;height:26px}
+.slot:hover{background:var(--surface-2)}
+.seg{display:inline-flex;border:1px solid var(--text);border-radius:4px;overflow:hidden}
+.seg .btn{border:0;border-radius:0;border-right:1px solid var(--border)}
+.seg .btn:last-child{border-right:0}
+.field{display:flex;flex-wrap:wrap;gap:6px 24px;margin-bottom:12px;align-items:center}
+.field>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.field .lab{font-weight:600;font-size:.93rem}
+
+/* split */
+.splitbar{display:flex;height:74px;margin:6px 0 16px}
+.splitbar button{font:inherit;border:1px solid var(--text);border-right-width:0;padding:6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--text);background:var(--surface);min-width:0;line-height:1.3}
+.splitbar button:last-child{border-right-width:1px}
+.splitbar button b{font-size:.95rem}
+.splitbar button span{font-size:.8rem}
+.splitbar button[aria-pressed="true"]{background:var(--pressed-bg);color:var(--pressed-fg)}
+.splitbar .s-test{background-image:repeating-linear-gradient(135deg,transparent 0 8px,rgba(127,127,127,.28) 8px 10px)}
+.splitbar .s-test[aria-pressed="true"]{background-image:none}
+
+/* balance bars */
+.hbars{display:grid;gap:12px;margin:8px 0 6px}
+.hb{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:center;font-size:.9rem}
+.hb .track{height:28px;border:1px solid var(--text);display:flex;background:var(--surface)}
+.hb .real{background:var(--text);transition:width .35s}
+.hb .syn{background-image:repeating-linear-gradient(135deg,var(--gold) 0 5px,transparent 5px 10px);border-left:1px dashed var(--text);transition:width .35s}
+.legend-inline{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:.85rem;color:var(--muted);margin-top:10px}
+.sw{display:inline-block;width:16px;height:12px;vertical-align:-1px;margin-right:6px;border:1px solid var(--text)}
+
+/* confusion */
+.cm{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:6px;max-width:560px;align-items:stretch}
+.cm .hd{font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;line-height:1.3}
+.cm .rl{justify-content:flex-end;text-align:right}
+.cm-cell{font:inherit;min-height:66px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.85rem;font-weight:600;padding:4px;border-radius:3px}
+.cm-cell .g{font-size:1.15rem;line-height:1}
+.cm-cell.diag{background:var(--surface-2);border-color:var(--text)}
+.cm-cell.costly{border-style:dashed;border-color:var(--red);border-width:2px}
+.cm-cell.costly2{border-style:dotted;border-color:var(--gold-ink);border-width:2.5px}
+.cm-cell[aria-pressed="true"]{background:var(--pressed-bg);color:var(--pressed-fg);border-color:var(--pressed-bg)}
+.cm-axis{font-size:.82rem;color:var(--muted);margin:6px 0 0}
+
+/* ovr */
+.ovr{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
+.ovr span{width:30px;height:24px;border:1.5px solid var(--text);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;background:var(--surface-2)}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:8px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.two>div{border:1px solid var(--border);padding:12px 14px;background:var(--bg)}
+.big{font-family:var(--display);font-style:italic;font-size:2.3rem;font-weight:800;line-height:1.1}
+
+/* explore accordion */
+details.acc{background:var(--surface);border:1px solid var(--border);border-left:5px solid var(--gold);margin:12px 0}
+details.acc>summary{cursor:pointer;padding:13px 18px;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:12px}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary::after{content:"+";font-size:1.3rem;line-height:1;font-weight:400}
+details.acc[open]>summary::after{content:"\2212"}
+details.acc .acc-body{padding:2px 20px 16px;max-width:68ch}
+details.acc .acc-body p{margin:0 0 .8em}
+.prompt{font-family:var(--mono);font-size:.85rem;background:#0B0B0B;color:#F1EEE9;border-left:5px solid var(--gold);padding:10px 14px;margin:8px 0 12px;line-height:1.6}
+
+/* takeaways */
+.take{list-style:none;padding:0;margin:26px 0;counter-reset:tk;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.take li{counter-increment:tk;position:relative;margin:0;padding:16px 18px 16px 62px;background:var(--surface);border:1px solid var(--border);min-height:84px;border-left:5px solid var(--red)}
+.take li:nth-child(even){border-left-color:var(--gold)}
+.take li::before{content:counter(tk);position:absolute;left:16px;top:12px;width:34px;height:38px;background:#D0121B;color:#fff;font-family:var(--display);font-style:italic;font-weight:800;font-size:1.35rem;text-align:center;line-height:38px;transform:skewX(-8deg)}
+.take li:nth-child(even)::before{background:#000;color:#E0BB4A}
+@media (max-width:720px){.take{grid-template-columns:1fr}}
+
+/* footer */
+footer{background:#000;color:#fff;padding:0 0 52px}
+footer .kit{margin-bottom:44px}
+.foot-inner{padding:0 24px}
+.foot-inner{max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px 40px;justify-content:space-between;align-items:baseline}
+footer .ft{font-family:var(--display);font-style:italic;font-size:1.9rem;font-weight:800}
+footer p{margin:0;color:#E0BB4A;font-family:var(--display);font-style:italic;font-weight:700;font-size:1.15rem}
+@media (max-width:560px){
+  .splitbar button span{display:none}.splitbar button b{font-size:.72rem;text-align:center;word-break:break-word}
+  .cm-cell{font-size:.72rem;min-height:74px}.cm .hd{font-size:.75rem}
+  .krow{grid-template-columns:52px minmax(0,1fr);}.krow>*:last-child{grid-column:2}
+  .slot{width:calc(50% - 5px)}
+}
+@media print{.topbar,.toc,.theme-btn{display:none}.layout{display:block}details.code>*{display:block}}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· DSML Supervised 1 · K-nearest neighbors</span><span class="pn"><a href="../boosting/" title="ML Foundations · Boosting">← Prev</a><a href="../DSML-SL-2/" title="DSML Supervised 2 · KNN with scikit-learn">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip" href="#main">Skip to content</a>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="m1" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="currentColor" stroke="var(--mark-stroke)" stroke-width="1.6"/></symbol>
+  <symbol id="m2" viewBox="0 0 24 24"><path d="M12 2.5 L21.5 12 L12 21.5 L2.5 12 Z" fill="currentColor" stroke="var(--mark-stroke)" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="m3" viewBox="0 0 24 24"><path d="M12 3 L22 21 L2 21 Z" fill="currentColor" stroke="var(--mark-stroke)" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand">K-nearest Neighbors 1 post read</div>
+  <button type="button" class="theme-btn" id="themeBtn" aria-pressed="false"><span class="lbl">Dark mode</span></button>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+</header>
+
+<section class="hero" aria-labelledby="title">
+  <div class="hero-inner">
+    <div>
+      <h1 id="title">K-nearest Neighbors 1 post read</h1>
+      <p class="sub">Learning from nearby data</p>
+      <p class="lead">A new dark store is about to open and nobody has a forecast for it. Find the stores most like it, see which traffic tier they belong to, and let them vote.</p>
+    </div>
+    <svg viewBox="0 0 440 440" role="img" aria-label="A new store, drawn as a star, surrounded by a dashed circle that contains its five nearest neighbours. Four are High traffic circles and one is a Moderate traffic diamond. Farther stores lie outside the circle.">
+      <rect x="1.5" y="1.5" width="437" height="437" fill="#000" stroke="#E0BB4A" stroke-width="3"/>
+      <circle cx="220" cy="220" r="132" fill="rgba(224,187,74,.06)" stroke="#E0BB4A" stroke-width="3" stroke-dasharray="10 8"/>
+      <g stroke="#E0BB4A" stroke-width="1.5" opacity=".7">
+        <line x1="220" y1="220" x2="160" y2="150"/><line x1="220" y1="220" x2="290" y2="175"/>
+        <line x1="220" y1="220" x2="150" y2="285"/><line x1="220" y1="220" x2="285" y2="290"/>
+        <line x1="220" y1="220" x2="228" y2="112"/>
+      </g>
+      <g>
+        <use href="#m1" x="145" y="135" width="30" height="30" style="color:var(--c1)"/>
+        <use href="#m1" x="275" y="160" width="30" height="30" style="color:var(--c1)"/>
+        <use href="#m1" x="135" y="270" width="30" height="30" style="color:var(--c1)"/>
+        <use href="#m1" x="270" y="275" width="30" height="30" style="color:var(--c1)"/>
+        <use href="#m2" x="213" y="97" width="30" height="30" style="color:var(--c2)"/>
+      </g>
+      <g opacity=".85">
+        <use href="#m3" x="45" y="75" width="28" height="28" style="color:var(--c3)"/>
+        <use href="#m2" x="360" y="70" width="28" height="28" style="color:var(--c2)"/>
+        <use href="#m3" x="385" y="290" width="28" height="28" style="color:var(--c3)"/>
+        <use href="#m3" x="66" y="355" width="28" height="28" style="color:var(--c3)"/>
+        <use href="#m2" x="305" y="380" width="28" height="28" style="color:var(--c2)"/>
+        <use href="#m2" x="24" y="226" width="28" height="28" style="color:var(--c2)"/>
+        <use href="#m3" x="392" y="188" width="28" height="28" style="color:var(--c3)"/>
+        <use href="#m1" x="170" y="392" width="28" height="28" style="color:var(--c1)"/>
+      </g>
+      <polygon points="220.0,198.0 225.3,212.7 240.9,213.2 228.6,222.8 232.9,237.8 220.0,229.0 207.1,237.8 211.4,222.8 199.1,213.2 214.7,212.7" fill="#fff" stroke="#E0BB4A" stroke-width="2.5" stroke-linejoin="round" transform="translate(220 220) scale(1.5) translate(-220 -220)"/>
+    </svg>
+  </div>
+</section>
+<div class="kit" aria-hidden="true"></div>
+
+<div class="layout">
+<nav class="toc" aria-label="Contents">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#ticket">The ticket</a></li>
+    <li><a href="#data">Meet the data</a></li>
+    <li><a href="#why-not-lr">Why not logistic regression?</a></li>
+    <li><a href="#idea">Ask your neighbours</a></li>
+    <li><a href="#how">How kNN works</a></li>
+    <li><a href="#choosing-k">Choosing k and ties</a></li>
+    <li><a href="#prep">Preparing the data</a></li>
+    <li><a href="#build">Building it from scratch</a></li>
+    <li><a href="#evaluate">Judging the results</a></li>
+    <li><a href="#limits">Where kNN struggles</a></li>
+    <li><a href="#explore">Explore further</a></li>
+    <li><a href="#summary">Key takeaways</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<!-- ================= THE TICKET ================= -->
+<section class="chapter" id="ticket" aria-labelledby="h-ticket">
+  <h2 id="h-ticket">A ticket from Operations</h2>
+  <p>You have just joined <strong>Orbit Express</strong>, the 10-minute delivery arm of a fast-growing online marketplace, as a <strong>junior ML engineer</strong>. Your first week brings your first ticket.</p>
+
+  <div class="ticket">
+    <h4>Ticket #1 from the Head of Operations</h4>
+    <blockquote>&ldquo;We are opening dark stores faster than we can plan for them. Every store needs the right number of delivery partners: too few and orders are late, too many and we burn cash. Can you build something that looks at a store&rsquo;s delivery numbers and tells us which traffic tier it belongs to?&rdquo;</blockquote>
+  </div>
+
+  <p>Every store falls into one of three traffic tiers, and each tier calls for a different number of delivery partners.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tier</th><th>Meaning</th><th>Delivery partners needed</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tier"><svg class="mk t1" viewBox="0 0 24 24" aria-hidden="true"><use href="#m1"/></svg>Class 1</span></td><td>High traffic</td><td>A high number</td></tr>
+        <tr><td><span class="tier"><svg class="mk t2" viewBox="0 0 24 24" aria-hidden="true"><use href="#m2"/></svg>Class 2</span></td><td>Moderate traffic</td><td>A decent number</td></tr>
+        <tr><td><span class="tier"><svg class="mk t3" viewBox="0 0 24 24" aria-hidden="true"><use href="#m3"/></svg>Class 3</span></td><td>Low traffic</td><td>A very small number</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>What you will be able to do</h3>
+  <ul class="checks">
+    <li>Explain how kNN classifies a new point by looking at its neighbours.</li>
+    <li>Compute distances and take a majority vote, by hand and in code.</li>
+    <li>Explain why the choice of <em>k</em> matters, and why an odd <em>k</em> is not always enough.</li>
+    <li>Prepare data properly for a distance-based model: split, scale and balance.</li>
+    <li>Build kNN from scratch and evaluate it with a confusion matrix.</li>
+  </ul>
+</section>
+
+<!-- ================= DATA ================= -->
+<section class="chapter" id="data" aria-labelledby="h-data">
+  <h2 id="h-data">Meet the data</h2>
+  <p>Before building anything, look at what Operations has provided: one row per store, with the number of deliveries in each product category, plus the tier the store belongs to.</p>
+
+  <div class="table-wrap">
+    <table>
+      <caption>Data dictionary for the Orbit Express store dataset</caption>
+      <thead><tr><th>Feature</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>Region</code></td><td>Where the store is located (1: Tier-1 city, 2: Tier-2 city, 3: Tier-3 city)</td></tr>
+        <tr><td><code>Fresh</code></td><td>Fresh food deliveries</td></tr>
+        <tr><td><code>Milk</code></td><td>Milk product deliveries</td></tr>
+        <tr><td><code>Grocery</code></td><td>Grocery deliveries</td></tr>
+        <tr><td><code>Frozen</code></td><td>Frozen food deliveries</td></tr>
+        <tr><td><code>Detergents_Paper</code></td><td>Washing and paper product deliveries</td></tr>
+        <tr><td><code>Delicassen</code></td><td>Imported products and cooked meat deliveries</td></tr>
+        <tr><td><code>class</code></td><td>Store traffic tier (1 = High, 2 = Moderate, 3 = Low). <strong>This is what we want to predict.</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <details class="code">
+    <summary>Code: load the data</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.read_csv('multiclass.csv')
+df.head()
+
+print(df.shape)
+df.info()</code></pre></figure>
+  </details>
+
+  <h3>Are the three tiers equally represented?</h3>
+  <p>Operations suspects that most stores sit in the Moderate tier. A quick count of stores per tier shows that the tiers are <strong>not</strong> equally represented. This is called <strong>class imbalance</strong>, and we will deal with it later.</p>
+  <p>Imbalance matters because it can make a poor model look good. A &ldquo;lazy&rdquo; rule that predicts the biggest tier for every store is right exactly as often as that tier is common.</p>
+
+  <div class="widget" id="lazyWidget">
+    <div class="widget-head"><h4>The lazy model</h4><p>Drag the slider to change how much of the data belongs to the biggest tier. These are illustrative shares, not the Orbit Express counts.</p></div>
+    <div class="widget-body">
+      <div class="ctl">
+        <label for="lazyR">Share of stores in the biggest tier <output id="lazyO">60%</output></label>
+        <input type="range" id="lazyR" min="34" max="95" value="60" step="1">
+      </div>
+      <div class="bar" role="img" aria-label="Bar showing the biggest tier and all other tiers" id="lazyBar"></div>
+      <div class="readout" aria-live="polite" id="lazyRead"></div>
+    </div>
+  </div>
+
+  <div class="note"><p>With three tiers, the biggest tier always holds at least one third of the stores, so the lazy rule never scores below about 33%. The more imbalanced the data, the more accuracy alone can fool us.</p></div>
+
+  <h3>Drawing the data with two features</h3>
+  <p>Each store has 7 features, but a plot can only show 2 at a time. Plotting <strong>Fresh</strong> against <strong>Grocery</strong>, with every store as a dot coloured by its tier, reveals the shape of the problem: the tiers overlap and do not split cleanly with a straight line.</p>
+
+  <div class="trio">
+    <div><h4>Multi-class</h4><p>There are 3 tiers to predict, not just a yes-or-no split.</p></div>
+    <div><h4>Imbalanced</h4><p>Some tiers have many more stores than others.</p></div>
+    <div><h4>Not linearly separable</h4><p>The tiers overlap, so no single straight line separates them cleanly.</p></div>
+  </div>
+  <p>Keep these three properties in mind. They decide which kind of model is a good fit.</p>
+
+  <details class="code">
+    <summary>Code: plot two features coloured by tier</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>def scatter_two_features(data, f1, f2):
+    tiers = [(1, 'Class 1 (High)', 'tab:red'),
+             (2, 'Class 2 (Moderate)', 'tab:blue'),
+             (3, 'Class 3 (Low)', 'tab:green')]
+    for cls, name, color in tiers:
+        sub = data[data['class'] == cls]
+        plt.scatter(sub[f1], sub[f2], c=color, label=name, alpha=0.7)
+    plt.xlabel(f1)
+    plt.ylabel(f2)
+    plt.title(f'{f1} vs {f2}')
+    plt.legend()
+    plt.show()
+
+scatter_two_features(df, 'Fresh', 'Grocery')</code></pre></figure>
+  </details>
+</section>
+
+<!-- ================= WHY NOT LR ================= -->
+<section class="chapter" id="why-not-lr" aria-labelledby="h-lr">
+  <h2 id="h-lr">Why logistic regression is not an ideal fit</h2>
+  <p>A natural first idea is Logistic Regression. It runs into two problems on this data.</p>
+  <ul>
+    <li><strong>It draws straight boundaries.</strong> To handle overlapping, non-linear tiers we would need polynomial features to bend the boundary, and finding the right polynomial degree takes a lot of tuning.</li>
+    <li><strong>It is a two-class model.</strong> To handle three tiers we would use One-vs-Rest, which trains one model per tier.</li>
+  </ul>
+  <p>Now imagine Orbit Express later has 50 tiers instead of 3. That means 50 separate models, which is expensive and slow.</p>
+
+  <div class="widget">
+    <div class="widget-head"><h4>How the model count grows</h4><p>Change the number of tiers and compare the two approaches.</p></div>
+    <div class="widget-body">
+      <div class="ctl">
+        <label for="ovrR">Number of store tiers <output id="ovrO">3</output></label>
+        <input type="range" id="ovrR" min="3" max="50" value="3" step="1">
+      </div>
+      <div class="two">
+        <div><h4>Logistic Regression with One-vs-Rest</h4><div class="big" id="ovrN">3 models</div><div class="ovr" id="ovrBoxes" aria-hidden="true"></div><p style="margin:0;font-size:.92rem">One model per tier, each with straight boundaries that may need polynomial features.</p></div>
+        <div><h4>kNN</h4><div class="big">1 procedure</div><p style="margin:10px 0 0;font-size:.92rem" id="ovrK">Find the nearest stores and let them vote. The same steps work for 3 tiers or 50.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quiz" data-quiz="q1"></div>
+  <p>Is there a simpler idea? There is, and you already use it in everyday life.</p>
+</section>
+
+<!-- ================= IDEA ================= -->
+<section class="chapter" id="idea" aria-labelledby="h-idea">
+  <h2 id="h-idea">Ask your neighbours</h2>
+  <p>Imagine a new dark store is about to open in a locality. You have no forecast, but you <strong>do</strong> know the 5 most similar stores already running nearby, and 4 of them are High traffic. Your best guess: the new store will also be High traffic.</p>
+  <p>That is the entire idea behind <strong>kNN (k-Nearest Neighbours)</strong>.</p>
+  <div class="key"><p>To classify a new point, find the <em>k</em> points closest to it and let them vote.</p></div>
+
+  <figure>
+    <div class="fig idea-fig">
+      <svg viewBox="0 0 500 330" role="img" aria-labelledby="ideaT ideaD">
+        <title id="ideaT">The five nearest stores vote</title>
+        <desc id="ideaD">A new store shown as a star has five nearest neighbours inside a dashed circle. Four of them are High traffic circles and one belongs to another tier, drawn as a hollow dashed ring. Farther stores lie outside the circle and are dimmed.</desc>
+        <circle cx="250" cy="165" r="128" fill="rgba(201,162,39,.10)" stroke="var(--gold)" stroke-width="3" stroke-dasharray="10 8"/>
+        <g stroke="var(--muted)" stroke-width="1.4">
+          <line x1="250" y1="165" x2="185" y2="105"/><line x1="250" y1="165" x2="325" y2="118"/>
+          <line x1="250" y1="165" x2="190" y2="235"/><line x1="250" y1="165" x2="322" y2="230"/>
+          <line x1="250" y1="165" x2="255" y2="62"/>
+        </g>
+        <use href="#m1" x="168" y="88" width="34" height="34" style="color:var(--c1)"/>
+        <use href="#m1" x="308" y="101" width="34" height="34" style="color:var(--c1)"/>
+        <use href="#m1" x="173" y="218" width="34" height="34" style="color:var(--c1)"/>
+        <use href="#m1" x="305" y="213" width="34" height="34" style="color:var(--c1)"/>
+        <circle cx="255" cy="62" r="14" fill="var(--surface)" stroke="var(--text)" stroke-width="2.5" stroke-dasharray="4 3"/>
+        <g opacity=".5">
+          <use href="#m3" x="30" y="30" width="30" height="30" style="color:var(--c3)"/>
+          <use href="#m2" x="440" y="50" width="30" height="30" style="color:var(--c2)"/>
+          <use href="#m3" x="440" y="270" width="30" height="30" style="color:var(--c3)"/>
+          <use href="#m2" x="30" y="270" width="30" height="30" style="color:var(--c2)"/>
+          <use href="#m1" x="452" y="150" width="30" height="30" style="color:var(--c1)"/>
+        </g>
+        <polygon points="0,-17 4.1,-5.7 16.2,-5.3 6.7,2.2 10,13.8 0,7 -10,13.8 -6.7,2.2 -16.2,-5.3 -4.1,-5.7" transform="translate(250 165) scale(1.15)" fill="var(--text)" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round"/>
+        <text x="250" y="205" text-anchor="middle" class="svg-text" font-size="16" font-weight="700" stroke="var(--surface)" stroke-width="5" paint-order="stroke">New store</text>
+        <text x="255" y="36" text-anchor="middle" class="svg-text" font-size="15">another tier</text>
+      </svg>
+      <div class="tally">
+        <h4>The vote (k = 5)</h4>
+        <ul>
+          <li><svg class="mk t1" viewBox="0 0 24 24" aria-hidden="true"><use href="#m1"/></svg><span><strong>High:</strong> 4 votes</span></li>
+          <li><svg class="mk" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-dasharray="4 3"/></svg><span><strong>Another tier:</strong> 1 vote</span></li>
+        </ul>
+        <p class="pred">Prediction: High</p>
+      </div>
+    </div>
+    <figcaption>The new store takes the tier that most of its 5 nearest neighbours share. Dimmed stores lie outside the neighbourhood and do not vote.</figcaption>
+  </figure>
+
+  <p>kNN needs no straight lines and no polynomial features, and it handles 3 tiers or 50 tiers in exactly the same way.</p>
+</section>
+
+<!-- ================= HOW ================= -->
+<section class="chapter" id="how" aria-labelledby="h-how">
+  <h2 id="h-how">How kNN works</h2>
+  <p>For every new point <i>x</i><sub>q</sub>, kNN follows four steps:</p>
+  <ol>
+    <li><strong>Distance:</strong> measure how far <i>x</i><sub>q</sub> is from every training point.</li>
+    <li><strong>Sort:</strong> order the training points from nearest to farthest.</li>
+    <li><strong>Select:</strong> keep the first <em>k</em> points (<em>k</em> is a number we choose).</li>
+    <li><strong>Vote:</strong> the class that appears most among those <em>k</em> points is the prediction.</li>
+  </ol>
+
+  <h3>How do we measure &ldquo;close&rdquo;?</h3>
+  <p>With two features, the straight-line (Euclidean) distance between points (<i>a</i><sub>1</sub>, <i>a</i><sub>2</sub>) and (<i>b</i><sub>1</sub>, <i>b</i><sub>2</sub>) comes from the right triangle formed by the gap in each feature.</p>
+
+  <div class="formula-row">
+    <div class="formula" role="math" aria-label="d equals the square root of (a1 minus b1) squared plus (a2 minus b2) squared">
+      <i>d</i> = &radic;<span class="rad">(<i>a</i><sub>1</sub> &minus; <i>b</i><sub>1</sub>)&sup2; + (<i>a</i><sub>2</sub> &minus; <i>b</i><sub>2</sub>)&sup2;</span>
+    </div>
+    <div class="fig">
+      <svg viewBox="0 0 360 220" role="img" aria-label="A right triangle. The horizontal side is the gap in the first feature, the vertical side is the gap in the second feature, and the diagonal joining points a and b is the distance d.">
+        <line x1="60" y1="170" x2="290" y2="170" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 5"/>
+        <line x1="290" y1="170" x2="290" y2="50" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 5"/>
+        <line x1="60" y1="170" x2="290" y2="50" stroke="var(--red)" stroke-width="3.5"/>
+        <path d="M274 170 V154 H290" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+        <circle cx="60" cy="170" r="7" fill="var(--text)"/><circle cx="290" cy="50" r="7" fill="var(--text)"/>
+        <text class="svg-text" x="36" y="196" font-size="14" font-weight="700">a</text>
+        <text class="svg-text" x="298" y="44" font-size="14" font-weight="700">b</text>
+        <text class="svg-text" x="175" y="196" font-size="13" text-anchor="middle">|a<tspan font-size="10" dy="3">1</tspan><tspan dy="-3"> &minus; b</tspan><tspan font-size="10" dy="3">1</tspan><tspan dy="-3">|</tspan></text>
+        <text class="svg-text" x="300" y="115" font-size="13">|a<tspan font-size="10" dy="3">2</tspan><tspan dy="-3"> &minus; b</tspan><tspan font-size="10" dy="3">2</tspan><tspan dy="-3">|</tspan></text>
+        <text x="150" y="98" font-size="17" font-weight="700" font-style="italic" fill="var(--red)" style="font-family:var(--serif)">d</text>
+      </svg>
+    </div>
+  </div>
+  <p>With 7 features, we simply add 7 squared differences under the square root.</p>
+
+  <h3>The steps by hand on a toy example</h3>
+  <p>To see every step, shrink the problem to <strong>2 features</strong> (f1, f2) and <strong>6 known stores</strong>. A new store <i>x</i><sub>q</sub> sits at <strong>(2, 4)</strong>. Work through the four steps below. You can also drag the star to see how the neighbourhood changes.</p>
+
+  <div class="widget explorer" id="explorer"></div>
+
+  <p>At the starting position (2, 4) with <em>k</em> = 3, the three nearest stores are S5 (Class 2, distance 1), S6 (Class 2, distance 2) and S1 (Class 1, distance &radic;5 &asymp; 2.24). Class 2 collects two of the three votes, so the new store is predicted to be <strong>Class 2 (Moderate)</strong>.</p>
+
+  <details class="code">
+    <summary>Code: the toy example in pandas</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>toy = pd.DataFrame({
+    'f1': [3, 6, 8, 7, 1, 2],
+    'f2': [6, 4, 2, 5, 4, 2],
+    'y' : [1, 1, 3, 3, 2, 2]
+})
+xq = np.array([2, 4])
+
+# Step 1: distance from xq to every store
+toy['dist'] = np.sqrt((toy['f1'] - xq[0])**2 + (toy['f2'] - xq[1])**2)
+
+# Step 2: sort nearest first
+toy_sorted = toy.sort_values('dist').reset_index(drop=True)
+
+# Step 3 and 4: pick k nearest and take a vote
+k = 3
+neighbors = toy_sorted.head(k)
+votes = neighbors['y'].value_counts()
+print('Predicted tier for xq:', votes.idxmax())</code></pre></figure>
+  </details>
+
+  <div class="quiz" data-quiz="q2"></div>
+  <div class="quiz" data-quiz="q3"></div>
+</section>
+
+<!-- ================= CHOOSING K ================= -->
+<section class="chapter" id="choosing-k" aria-labelledby="h-k">
+  <h2 id="h-k">Choosing k, and what to do about ties</h2>
+  <p><em>k</em> is a number <strong>you</strong> choose, and different values of <em>k</em> can give different answers. Operations has a rule of thumb: &ldquo;Always pick an odd <em>k</em>, then there can never be a tie.&rdquo; Is that true when there are three tiers? Test it on the toy example.</p>
+
+  <div class="widget" id="tieLab"></div>
+
+  <p>At the starting position (2, 4), <em>k</em> = 4 produces a tie: 2 votes for Class 1 and 2 votes for Class 2. That is the classic even-<em>k</em> problem. But <em>k</em> = 5 is odd, and it still produces a tie between Class 1 and Class 2, because the five votes split 2, 2 and 1.</p>
+  <div class="key"><p>An odd <em>k</em> avoids ties for <strong>two classes</strong>. With <strong>three or more classes</strong>, ties can still happen.</p></div>
+
+  <div class="widget" id="sandbox"></div>
+
+  <h3>What do we do about a tie?</h3>
+  <p>Common tie-breakers include:</p>
+  <ul>
+    <li>Pick randomly among the tied classes.</li>
+    <li>Pick the class of the <strong>nearest</strong> neighbour among the tied ones.</li>
+    <li>Reduce <em>k</em> by one and vote again.</li>
+  </ul>
+  <p>The from-scratch function we build later makes its own tie-breaking choice, so watch for it. The tie lab above lets you compare what each rule decides.</p>
+
+  <div class="quiz" data-quiz="q4"></div>
+</section>
+
+<!-- ================= PREP ================= -->
+<section class="chapter" id="prep" aria-labelledby="h-prep">
+  <h2 id="h-prep">Preparing the real data</h2>
+  <p>Back to the real store data. A distance-based model is sensitive to how the data is prepared, so we do three things, in this order:</p>
+
+  <div class="pipeline">
+    <div><h4>1. Split</h4><p>Divide the stores into train, validation and test sets.</p></div>
+    <div><h4>2. Scale</h4><p>Standardise the features. Learn the scaling from the train set only.</p></div>
+    <div><h4>3. Balance</h4><p>Even out the tiers with SMOTE, on the training data only.</p></div>
+  </div>
+
+  <h3>Split: train, validation and test</h3>
+  <p>Each part has its own job. Select one to see it.</p>
+  <div class="widget" id="splitW">
+    <div class="widget-head"><h4>Three sets, three roles</h4><p>The split in the notebook holds out 25% for testing, then takes 25% of what remains for validation.</p></div>
+    <div class="widget-body">
+      <div class="splitbar" role="group" aria-label="Train, validation and test proportions">
+        <button type="button" style="width:56.25%" data-s="train" aria-pressed="true"><b>Train</b><span>about 56%</span></button>
+        <button type="button" style="width:18.75%" data-s="val" aria-pressed="false"><b>Validation</b><span>about 19%</span></button>
+        <button type="button" class="s-test" style="width:25%" data-s="test" aria-pressed="false"><b>Test (locked)</b><span>25%</span></button>
+      </div>
+      <div class="readout" id="splitRead" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <details class="code">
+    <summary>Code: split the data</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>from sklearn.model_selection import train_test_split
+
+X = df.drop(columns='class')
+y = df['class']
+
+X_train_val, X_test, y_train_val, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+X_train, X_val, y_train, y_val = train_test_split(
+    X_train_val, y_train_val, test_size=0.25, random_state=42, stratify=y_train_val)
+
+print('Train     :', X_train.shape)
+print('Validation:', X_val.shape)
+print('Test      :', X_test.shape)</code></pre></figure>
+  </details>
+
+  <h3>Scale: put every feature on a comparable footing</h3>
+  <p>Compare two stores that differ by 5,000 fresh items and by 5 washing products. Because distance adds <em>squared</em> differences, the feature with <strong>big numbers</strong> dominates. The feature with small numbers barely matters, even if it is important.</p>
+
+  <div class="widget" id="scaleW">
+    <div class="widget-head"><h4>Who dominates the distance?</h4><p>Change the size of each difference. The starting values are the lecture&rsquo;s example.</p></div>
+    <div class="widget-body">
+      <div class="ctl"><label for="scA">Difference in Fresh (items) <output id="scAo">5,000</output></label><input type="range" id="scA" min="0" max="10000" step="1" value="5000"></div>
+      <div class="ctl"><label for="scB">Difference in Detergents_Paper (items) <output id="scBo">5</output></label><input type="range" id="scB" min="0" max="10000" step="1" value="5"></div>
+      <div class="btn-row"><button type="button" class="btn" id="scEq">Put both on equal footing</button><button type="button" class="btn" id="scRst">Back to 5,000 and 5</button></div>
+      <div class="hbars" id="scBars"></div>
+      <div class="readout" id="scRead" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <p><strong>Standardisation</strong> puts every feature on a comparable scale (mean 0, spread 1). The scaling is learned from the <strong>train set only</strong> and then applied to validation and test.</p>
+
+  <details class="code">
+    <summary>Code: standardise the features</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>from sklearn.preprocessing import StandardScaler
+
+# Look at how different the raw scales are
+print(X_train.describe().loc[['mean', 'std']].round(1))
+
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)   # learn from train only
+X_val_s   = scaler.transform(X_val)
+X_test_s  = scaler.transform(X_test)
+
+print('\nAfter scaling (train):')
+print(pd.DataFrame(X_train_s, columns=X.columns).describe().loc[['mean', 'std']].round(2))</code></pre></figure>
+  </details>
+
+  <div class="quiz" data-quiz="q5"></div>
+
+  <div class="note">
+    <p><strong>A feature that looks numeric but is not.</strong> <code>Region</code> is stored as 1, 2, 3, but it is really a <em>category</em> (a city tier), not a quantity. Treated as a number, &ldquo;Tier-1 vs Tier-3&rdquo; looks twice as far as &ldquo;Tier-1 vs Tier-2&rdquo;, which may distort distances. A good way to test this is to rerun the whole pipeline without the <code>Region</code> column and compare validation accuracy.</p>
+  </div>
+
+  <h3>Balance: give every tier a fair say</h3>
+  <p>Class imbalance means the majority tier has more voters in every neighbourhood. <strong>SMOTE</strong> creates new <em>synthetic</em> stores for the smaller tiers by mixing existing ones, until all tiers are equally sized.</p>
+
+  <div class="widget" id="balW">
+    <div class="widget-head"><h4>Before and after SMOTE</h4><p>A schematic of the idea. The notebook prints the real counts before and after.</p></div>
+    <div class="widget-body">
+      <div class="btn-row" role="group" aria-label="Choose view">
+        <button type="button" class="btn" data-v="before" aria-pressed="true">Before SMOTE</button>
+        <button type="button" class="btn" data-v="after" aria-pressed="false">After SMOTE</button>
+      </div>
+      <div class="hbars" id="balBars"></div>
+      <div class="legend-inline"><span><i class="sw" style="background:var(--text)"></i>Real training stores</span><span><i class="sw" style="background-image:repeating-linear-gradient(135deg,var(--gold) 0 4px,transparent 4px 8px)"></i>Synthetic stores added by SMOTE</span></div>
+      <div class="readout" id="balRead" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="rule"><p><strong>Rule:</strong> apply SMOTE <strong>only to the training data</strong>. Validation and test should stay exactly as they are in real life.</p></div>
+
+  <details class="code">
+    <summary>Code: balance the training data with SMOTE</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>from imblearn.over_sampling import SMOTE   # if not installed: !pip install -q imbalanced-learn
+
+print('Before SMOTE:\n', y_train.value_counts().sort_index())
+
+X_bal, y_bal = SMOTE(random_state=42).fit_resample(X_train_s, y_train)
+
+print('\nAfter SMOTE:\n', y_bal.value_counts().sort_index())
+
+# plain numpy arrays for our from-scratch code
+y_bal = y_bal.values
+y_val = y_val.values
+y_test = y_test.values</code></pre></figure>
+  </details>
+</section>
+
+<!-- ================= BUILD ================= -->
+<section class="chapter" id="build" aria-labelledby="h-build">
+  <h2 id="h-build">Building kNN from scratch</h2>
+  <p>Time to turn the 4 steps into real code. Start with <strong>one</strong> validation store, then wrap the logic into a function. Select a step to see the line of code that performs it.</p>
+
+  <div class="widget" id="codeWalk"></div>
+
+  <h3>The <code>knn_predict</code> function</h3>
+  <p>Wrapping the single-store logic into a reusable function gives one tool that predicts the class of any query point. It also returns the distances and labels of the neighbours, which is handy for inspection.</p>
+  <figure class="code code-open"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>def knn_predict(X_ref, y_ref, query, k=5):
+    """Predict the class of one query point using k nearest neighbours."""
+    dists = np.sqrt(np.sum((X_ref - query) ** 2, axis=1))
+    nearest_idx = np.argsort(dists)[:k]
+    nearest_labels = y_ref[nearest_idx]
+
+    classes, counts = np.unique(nearest_labels, return_counts=True)
+    prediction = classes[counts.argmax()]      # on a tie, argmax picks the first (smallest label)
+
+    return prediction, dists[nearest_idx], nearest_labels
+
+pred, d, labels = knn_predict(X_bal, y_bal, X_val_s[50], k=5)
+print('Prediction:', pred, '| neighbour labels:', labels)</code></pre></figure>
+  <div class="note"><p><strong>Watch the tie-break.</strong> On a tie, <code>argmax</code> quietly picks the smallest class label. Is that fair? The tie lab earlier shows it can disagree with the nearest tied neighbour.</p></div>
+</section>
+
+<!-- ================= EVALUATE ================= -->
+<section class="chapter" id="evaluate" aria-labelledby="h-eval">
+  <h2 id="h-eval">Judging the results</h2>
+  <p>To evaluate the model, predict every validation store with <em>k</em> = 5, compute the accuracy, print a classification report, and plot a confusion matrix.</p>
+
+  <details class="code">
+    <summary>Code: evaluate on the validation set</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>from sklearn.metrics import ConfusionMatrixDisplay, classification_report
+
+tier_names = ['High', 'Moderate', 'Low']
+
+y_val_pred = [knn_predict(X_bal, y_bal, q, k=5)[0] for q in X_val_s]
+
+print('Validation accuracy:', np.mean(np.array(y_val_pred) == y_val).round(3))
+print()
+print(classification_report(y_val, y_val_pred, target_names=tier_names))
+
+ConfusionMatrixDisplay.from_predictions(y_val, y_val_pred, display_labels=tier_names)
+plt.title('kNN (k=5) on validation stores')
+plt.show()</code></pre></figure>
+  </details>
+
+  <h3>Reading a confusion matrix like an engineer</h3>
+  <p>In a confusion matrix, each row is the <strong>actual</strong> tier and each column is the tier the model <strong>predicted</strong>. The diagonal holds the correct predictions. Every other cell is a specific kind of mistake, and the two mistakes at the corners have very different business costs.</p>
+
+  <div class="widget" id="cmW">
+    <div class="widget-head"><h4>What each cell means</h4><p>Select any cell. The counts in your own run replace the symbols here.</p></div>
+    <div class="widget-body">
+      <div class="cm" id="cmGrid"></div>
+      <p class="cm-axis">Rows are the actual tier. Columns are the predicted tier. Dashed cells mark the two mistakes discussed below.</p>
+      <div class="readout" id="cmRead" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <ul>
+    <li>A wrong <strong>Low</strong> prediction for a truly <strong>High</strong> store means too few delivery partners, so orders arrive late.</li>
+    <li>A wrong <strong>High</strong> prediction for a truly <strong>Low</strong> store means wasted salaries.</li>
+  </ul>
+  <p>Which mistake is worse for Orbit Express is a business judgement, since one costs customer experience and the other costs cash. Reading the matrix tells you which tier the model predicts best, which tier it confuses most, and which of these two mistakes it makes more often.</p>
+
+  <h3>Test day: open the locked box once</h3>
+  <p>After choosing the best <em>k</em> using the validation set, evaluate on the test set exactly <strong>once</strong>. The notebook starts with <code>best_k = 5</code> and replaces it with the <em>k</em> you trust most.</p>
+  <div class="rule"><p><strong>Rule:</strong> the test set is opened only once, at the very end.</p></div>
+
+  <details class="code">
+    <summary>Code: the final test evaluation</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>best_k = 5    # replace with the k you chose using the validation set
+
+# Test day: we open the locked box only ONCE
+y_test_pred = [knn_predict(X_bal, y_bal, q, k=best_k)[0] for q in X_test_s]
+
+print('Test accuracy:', np.mean(np.array(y_test_pred) == y_test).round(3))
+print()
+print(classification_report(y_test, y_test_pred, target_names=tier_names))
+
+ConfusionMatrixDisplay.from_predictions(y_test, y_test_pred, display_labels=tier_names)
+plt.title(f'kNN (k={best_k}) on the test stores')
+plt.show()</code></pre></figure>
+  </details>
+</section>
+
+<!-- ================= LIMITS ================= -->
+<section class="chapter" id="limits" aria-labelledby="h-limits">
+  <h2 id="h-limits">Where kNN struggles</h2>
+  <p>kNN quietly assumes that <strong>the neighbourhood of a point is homogeneous</strong>: the neighbours look like the query. It works well when that is true. It struggles when:</p>
+  <ul>
+    <li>there is <strong>noise or outliers</strong>: a few odd stores near the query can flip the vote;</li>
+    <li>features are <strong>not scaled</strong>: one feature dominates the distance;</li>
+    <li>the data is <strong>very large</strong>: for every new store, we measure the distance to <em>every</em> stored store.</li>
+  </ul>
+
+  <div class="widget" id="costW">
+    <div class="widget-head"><h4>The cost of comparing with everyone</h4><p>Each prediction needs one distance for every stored store.</p></div>
+    <div class="widget-body">
+      <div class="ctl"><label for="costN">Stored stores <output id="costNo">1,000</output></label><input type="range" id="costN" min="0" max="4" step="1" value="1" aria-valuetext="1,000"></div>
+      <div class="ctl"><label for="costM">New stores to predict <output id="costMo">1</output></label><input type="range" id="costM" min="0" max="3" step="1" value="0" aria-valuetext="1"></div>
+      <div class="two">
+        <div><h4>Per prediction</h4><div class="big" id="costP"></div><p style="margin:4px 0 0;font-size:.9rem">distances to measure</p></div>
+        <div><h4>For the whole batch</h4><div class="big" id="costT"></div><p style="margin:4px 0 0;font-size:.9rem">distances to measure</p></div>
+      </div>
+    </div>
+  </div>
+  <p>This is why predictions are slow when the data is large, and it is the topic of the next class.</p>
+
+  <h3>kNN and logistic regression side by side</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>Logistic Regression</th><th>kNN</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Boundary shape</th><td>Straight; needs polynomial features to bend, and the right degree takes tuning</td><td>Handles curved, non-linear data without polynomial features</td></tr>
+        <tr><th scope="row">Three or more tiers</th><td>Two-class model, so One-vs-Rest trains one model per tier</td><td>Handles any number of tiers in the same way</td></tr>
+        <tr><th scope="row">Training</th><td>Fits a model to the data (one per tier under One-vs-Rest)</td><td>No real training step; the training stores are simply kept</td></tr>
+        <tr><th scope="row">Prediction speed</th><td>Not covered in this lecture</td><td>Slower, because each query is compared with all stored points</td></tr>
+        <tr><th scope="row">Noise and scale</th><td>Not covered in this lecture</td><td>Sensitive to noise, and needs scaling because it relies on distance</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ticket closed">
+    <h4>Ticket update</h4>
+    <blockquote>The model can already handle 3 tiers and curved boundaries with no polynomial tuning. But we chose <em>k</em> = 5 without checking whether it is a good choice.</blockquote>
+  </div>
+
+  <div class="quiz" data-quiz="q6"></div>
+</section>
+
+<!-- ================= EXPLORE ================= -->
+<section class="chapter" id="explore" aria-labelledby="h-explore">
+  <h2 id="h-explore">Explore further</h2>
+  <p>Five small investigations deepen the ideas above. In each one, form your own guess first, then check it in code. Suggested prompts for an AI assistant are included, but verify what comes back yourself.</p>
+
+  <details class="acc">
+    <summary>Is accuracy fooling us?</summary>
+    <div class="acc-body">
+      <p>With imbalanced data, can a &ldquo;lazy&rdquo; model that always predicts the biggest tier still get a high accuracy?</p>
+      <div class="prompt">Explain with a tiny numeric example why accuracy can be misleading when one class is much bigger than the others.</div>
+      <p><strong>Verify in code:</strong> compute the accuracy of a &ldquo;predict the majority class for everyone&rdquo; rule using <code>df['class'].value_counts(normalize=True)</code>. Does it match what the AI said?</p>
+    </div>
+  </details>
+  <details class="acc">
+    <summary>Which pair of features separates the tiers best?</summary>
+    <div class="acc-body">
+      <p>Which two of the six delivery features do you think separate the tiers best? Write your pick first.</p>
+      <div class="prompt">Show me how to use seaborn to plot every pair of features in my dataframe, coloured by the 'class' column.</div>
+      <p><strong>Verify:</strong> run the code (drop <code>Region</code> first). Was your pick right? Does any pair separate the tiers with a straight line?</p>
+    </div>
+  </details>
+  <details class="acc">
+    <summary>Should Region be a number here?</summary>
+    <div class="acc-body">
+      <p><code>Region</code> is stored as 1, 2, 3 but is really a category. Does treating it as a number distort distances?</p>
+      <div class="prompt">What is the problem with using an integer-coded categorical feature in a distance-based model, and what are the alternatives?</div>
+      <p><strong>Verify:</strong> after finishing the from-scratch model, rerun the pipeline without the <code>Region</code> column and compare validation accuracy. What changed?</p>
+    </div>
+  </details>
+  <details class="acc">
+    <summary>A smarter tie-break</summary>
+    <div class="acc-body">
+      <p>How would you break a tie so that the closest neighbour gets the last word?</p>
+      <div class="prompt">Modify this kNN function so that when the vote is tied, the class of the nearest tied neighbour is chosen.</div>
+      <p><strong>Verify:</strong> paste <code>knn_predict</code> into the prompt, then test the new function on the toy example with <em>k</em> = 4, where we know there is a tie. Does it pick the class of the closer of the two tied groups?</p>
+    </div>
+  </details>
+  <details class="acc">
+    <summary>Is kNN really better here?</summary>
+    <div class="acc-body">
+      <p>Run two small experiments, using the <strong>validation set only</strong>.</p>
+      <p><strong>(a) Try different <em>k</em> values.</strong> Will a very small <em>k</em> (like 1) or a large <em>k</em> (like 25) work better, and why? Loop over <code>for k in [1, 3, 5, 7, 9, 15, 25]:</code> around the validation code, record the accuracy, plot accuracy against <em>k</em>, and describe what you see.</p>
+      <p><strong>(b) Compare with a Logistic Regression baseline.</strong></p>
+      <div class="prompt">Give me 4 lines of scikit-learn code to fit a Logistic Regression on X_bal, y_bal and score it on X_val_s, y_val.</div>
+      <p>Is kNN actually better on this data, or just different? Store the <em>k</em> you trust most in a variable called <code>best_k</code> for test day.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ================= SUMMARY ================= -->
+<section class="chapter" id="summary" aria-labelledby="h-sum">
+  <h2 id="h-sum">Key takeaways</h2>
+  <ol class="take">
+    <li>kNN classifies a new point by a <strong>majority vote among its <em>k</em> nearest neighbours</strong>.</li>
+    <li>The steps are: <strong>measure distance, sort, select <em>k</em>, vote</strong>.</li>
+    <li>Euclidean distance is the straight-line distance, computed from the gap in every feature.</li>
+    <li>Ties can happen even with an odd <em>k</em> when there are 3 or more classes, so we need a tie-breaking rule.</li>
+    <li>Unlike Logistic Regression, kNN handles multi-class and non-linear data without polynomial features or one model per class.</li>
+    <li>Data preparation matters: <strong>split, scale and balance</strong>, in that order, learning from the train set only.</li>
+    <li>The test set is opened only once, at the very end.</li>
+    <li>kNN assumes a homogeneous neighbourhood and is hurt by noise and unscaled features.</li>
+    <li>Predictions are slow because every new point is compared with all stored points.</li>
+  </ol>
+
+  <div class="ticket closed">
+    <h4>Ticket #1 closed: your reply to the Head of Operations</h4>
+    <blockquote>&ldquo;We can classify a new store into its traffic tier by asking its nearest neighbours. It works for any number of tiers and needs no hand-made rules. Next, we need to choose <em>k</em> carefully and make predictions faster.&rdquo;</blockquote>
+  </div>
+
+  <h3>Coming next: kNN 2</h3>
+  <p>Orbit Express now has thousands of stores, and every prediction compares with all of them. How do we choose <em>k</em> in a principled way, and how do we make kNN faster?</p>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <div class="kit" aria-hidden="true"></div>
+  <div class="foot-inner">
+    <div class="ft">K-nearest Neighbors 1 post read</div>
+    <p>Learning from nearby data</p>
+  </div>
+</footer>
+<script>
+(function(){
+'use strict';
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.prototype.slice.call((r||document).querySelectorAll(s));
+const TIER={1:'High',2:'Moderate',3:'Low'};
+const f=n=>String(Math.round(n*100)/100);
+const nf=n=>Number(n).toLocaleString('en-US');
+const mk=c=>`<svg class="mk t${c}" viewBox="0 0 24 24" aria-hidden="true"><use href="#m${c}"/></svg>`;
+const chip=c=>`<span class="tier">${mk(c)}Class ${c} (${TIER[c]})</span>`;
+const chipS=c=>`<span class="tier">${mk(c)}Class ${c}</span>`;
+
+/* ---------- theme ---------- */
+const root=document.documentElement, tb=$('#themeBtn');
+function paintTheme(){
+  const dark=root.getAttribute('data-theme')==='dark';
+  tb.setAttribute('aria-pressed',String(dark));
+  $('.lbl',tb).textContent=dark?'Light mode':'Dark mode';
+}
+tb.addEventListener('click',()=>{
+  const t=root.getAttribute('data-theme')==='dark'?'light':'dark';
+  root.setAttribute('data-theme',t);
+  try{localStorage.setItem('knn1-theme',t);}catch(e){}
+  paintTheme();
+});
+paintTheme();
+
+/* ---------- progress + contents ---------- */
+const prog=$('#progress');
+function onScroll(){
+  const h=document.documentElement, max=h.scrollHeight-h.clientHeight;
+  prog.style.width=(max>0?Math.min(100,h.scrollTop/max*100):0)+'%';
+}
+addEventListener('scroll',onScroll,{passive:true});onScroll();
+const tocLinks=$$('.toc a');
+if('IntersectionObserver' in window){
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(!e.isIntersecting)return;
+      tocLinks.forEach(l=>l.removeAttribute('aria-current'));
+      const l=tocLinks.find(x=>x.getAttribute('href')==='#'+e.target.id);
+      if(l){
+        l.setAttribute('aria-current','true');
+        const ol=l.closest('ol');
+        if(ol&&getComputedStyle(ol).display==='flex'){ol.scrollLeft=l.offsetLeft-ol.clientWidth/2+l.clientWidth/2;}
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px'});
+  $$('.chapter').forEach(s=>io.observe(s));
+}
+
+/* ---------- code highlighting + copy ---------- */
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const KW=/^(import|from|as|def|return|for|in|print|if|else)$/;
+function hl(src){
+  return esc(src).replace(/(#.*$)|("[^"\n]*"|'[^'\n]*')|(\b[A-Za-z_]\w*(?=\())|(\b[A-Za-z_]\w*\b)|(\b\d+(?:\.\d+)?\b)/gm,(m,c,st,fn,w,n)=>{
+    if(c)return `<span class="tk-c">${c}</span>`;
+    if(st)return `<span class="tk-s">${st}</span>`;
+    if(fn)return KW.test(fn)?`<span class="tk-k">${fn}</span>`:`<span class="tk-f">${fn}</span>`;
+    if(w)return KW.test(w)?`<span class="tk-k">${w}</span>`:w;
+    if(n)return `<span class="tk-n">${n}</span>`;
+    return m;
+  });
+}
+function highlightAll(){$$('figure.code code').forEach(c=>{if(!c.dataset.hl){c.innerHTML=hl(c.textContent);c.dataset.hl='1';}});}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.copy'); if(!b)return;
+  const pre=b.closest('figure').querySelector('pre'); const txt=pre.textContent;
+  const done=()=>{b.textContent='Copied';setTimeout(()=>{b.textContent='Copy';},1600);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,()=>{});}
+  else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(_){}document.body.removeChild(ta);}
+});
+
+/* ---------- quizzes ---------- */
+const QUIZ={
+ q1:{q:'Your teammate suggests using Logistic Regression for this ticket. What would it need in order to handle this non-linear, 3-tier data?',
+  o:['One straight-line boundary and a single model; it works fine as it is','Polynomial features (to bend the boundary) and One-vs-Rest (one model per tier)','Nothing extra; Logistic Regression handles curved multi-class data automatically','Delete the tiers that overlap'],a:1,
+  e:'Logistic Regression draws straight boundaries, so we would need polynomial features to bend them. It is also a two-class model, so One-vs-Rest trains one model per tier. Finding the right polynomial degree takes a lot of tuning.'},
+ q2:{q:'In the toy plane, a new store <i>x</i><sub>q</sub> is at (0, 0). Store A is at (4, 0), Store B is at (0, 1) and Store C is at (5, 0). Which store is nearest to <i>x</i><sub>q</sub>?',
+  o:['Store A','Store B','Store C'],a:1,e:'The distances are 4, 1 and 5, so Store B is nearest.'},
+ q3:{q:'Arrange the statements in the correct order for the kNN algorithm:<ul><li>s1: find the majority vote</li><li>s2: compute Euclidean distances</li><li>s3: sort and select the <i>k</i> nearest points</li><li>s4: assign the class to <i>x</i><sub>q</sub></li></ul>',
+  o:['s2, s1, s3, s4','s2, s3, s4, s1','s2, s3, s1, s4','s2, s4, s3, s1'],a:2,e:'Distance first, then sort and select <i>k</i>, then vote, then assign the class.'},
+ q4:{q:'For a new store with <i>k</i> = 5, the neighbour labels are [1, 2, 1, 2, 3]. What happens?',
+  o:['Class 3 wins because it appears last','Class 1 and Class 2 are tied, so kNN needs a tie-breaking rule','Class 1 wins automatically because it appears first','kNN cannot work with 3 classes'],a:1,
+  e:'Classes 1 and 2 each get 2 votes. kNN needs a tie-breaking rule such as random choice or picking the class of the nearest tied neighbour.'},
+ q5:{q:'Feature A has values in the thousands and feature B has values between 0 and 10. If we do not scale, which feature will dominate the distance between two stores?',
+  o:['Feature B, because small numbers are more precise','Feature A, because its differences are much larger','Both equally','Neither; kNN ignores feature values'],a:1,
+  e:'Distance adds squared differences, so the feature with the larger numbers dominates. Scaling puts both features on a comparable footing.'},
+ q6:{q:'Which statement about kNN is correct?',
+  o:['kNN trains much faster than Logistic Regression, and also predicts faster','kNN is immune to noise and outliers','kNN handles multi-class and non-linear data without extra models or polynomial features','kNN does not need scaling'],a:2,
+  e:'kNN has no real training step, but predictions are slower because we compare with all stored points. It is sensitive to noise, and it needs scaling because it relies on distance.'}
+};
+$$('.quiz').forEach(el=>{
+  const d=QUIZ[el.dataset.quiz]; if(!d)return;
+  el.innerHTML=`<div class="quiz-head"><h4>Check your understanding</h4></div><div class="quiz-body"><div class="q">${d.q}</div><div class="opts" role="group" aria-label="Answer choices">${d.o.map((t,i)=>`<button type="button" class="opt" data-i="${i}"><span class="ltr">${'ABCD'[i]}</span><span>${t}</span><span class="res"></span></button>`).join('')}</div><div class="fb" aria-live="polite"></div></div>`;
+  const opts=$$('.opt',el), fb=$('.fb',el); let solved=false;
+  const lock=()=>{opts.forEach(o=>o.disabled=true);};
+  const showCorrect=()=>{
+    opts.forEach((o,i)=>{if(i===d.a){o.classList.add('correct');$('.res',o).textContent='\u2713 Correct';}});
+  };
+  opts.forEach((o,i)=>o.addEventListener('click',()=>{
+    if(solved)return;
+    if(i===d.a){
+      solved=true;o.classList.remove('wrong');showCorrect();lock();
+      fb.innerHTML=`<div class="fb-msg"><p><strong>Correct.</strong> ${d.e}</p></div>`;
+    }else{
+      o.classList.add('wrong');o.disabled=true;$('.res',o).textContent='\u2717 Not quite';
+      fb.innerHTML=`<div class="fb-msg"><p>Not quite. Try another option, or <button type="button" class="linkbtn" data-reveal>reveal the answer</button>.</p></div>`;
+      $('[data-reveal]',fb).addEventListener('click',()=>{
+        solved=true;showCorrect();lock();
+        fb.innerHTML=`<div class="fb-msg"><p><strong>Answer: ${'ABCD'[d.a]}.</strong> ${d.e}</p></div>`;
+      });
+    }
+  }));
+});
+
+/* ---------- lazy model ---------- */
+(function(){
+  const r=$('#lazyR');
+  function go(){
+    const v=+r.value;
+    $('#lazyO').textContent=v+'%';
+    $('#lazyBar').innerHTML=`<div style="width:${v}%;background:var(--text);color:var(--bg)">Biggest tier ${v}%</div><div style="width:${100-v}%;background:var(--surface-2)">Others ${100-v}%</div>`;
+    $('#lazyRead').innerHTML=`<p>A model that always predicts the biggest tier scores <strong>${v}% accuracy</strong>, yet it is wrong for every store in the other tiers (${100-v}% of stores) and has learned nothing about them.</p>`;
+  }
+  r.addEventListener('input',go);go();
+})();
+
+/* ---------- one-vs-rest ---------- */
+(function(){
+  const r=$('#ovrR');
+  function go(){
+    const n=+r.value;
+    $('#ovrO').textContent=n;
+    $('#ovrN').textContent=n+' models';
+    $('#ovrBoxes').innerHTML=Array.from({length:n},(_,i)=>`<span>${i+1}</span>`).join('');
+    $('#ovrK').textContent=`Find the nearest stores and let them vote. The same steps work for ${n} tiers.`;
+  }
+  r.addEventListener('input',go);go();
+})();
+
+/* ================= TOY EXPLORER ================= */
+const TOY=[
+  {id:'S1',x:3,y:6,c:1},{id:'S2',x:6,y:4,c:1},{id:'S3',x:8,y:2,c:3},
+  {id:'S4',x:7,y:5,c:3},{id:'S5',x:1,y:4,c:2},{id:'S6',x:2,y:2,c:2}
+];
+const state={q:{x:2,y:4},k:3,step:1,sel:'S1'};
+const subs=[];const emit=()=>subs.forEach(fn=>fn());
+function compute(){
+  const arr=TOY.map((p,i)=>({id:p.id,x:p.x,y:p.y,c:p.c,i,d:Math.hypot(p.x-state.q.x,p.y-state.q.y)}));
+  arr.sort((a,b)=>a.d-b.d||a.i-b.i);
+  arr.forEach((p,r)=>{p.rank=r+1;});
+  return arr;
+}
+function voteAt(sorted,k){
+  const counts={1:0,2:0,3:0};
+  sorted.slice(0,k).forEach(p=>{counts[p.c]++;});
+  const max=Math.max(counts[1],counts[2],counts[3]);
+  return {counts,max,tied:[1,2,3].filter(c=>counts[c]===max)};
+}
+function resolve(sorted,k,rule){
+  const v=voteAt(sorted,k);
+  if(v.tied.length===1)return {cls:v.tied[0],k};
+  if(rule==='smallest')return {cls:Math.min.apply(null,v.tied),k};
+  if(rule==='nearest'){const n=sorted.slice(0,k).find(p=>v.tied.indexOf(p.c)>-1);return {cls:n.c,k};}
+  let kk=k-1;
+  while(kk>=1){const w=voteAt(sorted,kk);if(w.tied.length===1)return {cls:w.tied[0],k:kk};kk--;}
+  return {cls:v.tied[0],k:1};
+}
+function setQ(x,y){
+  state.q.x=Math.round(Math.max(-0.5,Math.min(9.5,x))*10)/10;
+  state.q.y=Math.round(Math.max(-0.5,Math.min(7.5,y))*10)/10;
+  emit();
+}
+const ord=n=>({1:'1st',2:'2nd',3:'3rd'}[n]||n+'th');
+const STAR='0,-17 4.1,-5.7 16.2,-5.3 6.7,2.2 10,13.8 0,7 -10,13.8 -6.7,2.2 -16.2,-5.3 -4.1,-5.7';
+const W=716,S=60,OX=44,OY=12;
+const gx=x=>OX+(x+1)*S, gy=y=>OY+(8-y)*S;
+function shape(c){
+  const a='fill="var(--c'+c+')" stroke="var(--mark-stroke)" stroke-width="1.6" stroke-linejoin="round"';
+  if(c===1)return `<circle r="12.5" ${a}/>`;
+  if(c===2)return `<path d="M0 -17 L17 0 L0 17 L-17 0Z" ${a}/>`;
+  return `<path d="M0 -16 L17 13 L-17 13Z" ${a}/>`;
+}
+
+(function(){
+  const ex=$('#explorer');
+  ex.innerHTML=`
+  <div class="widget-head"><h4>Toy explorer: kNN step by step</h4><p>Choose a step, change k, and drag the star (or focus it and press the arrow keys) to move the new store <i>x</i><sub>q</sub>. Select any store to see its distance worked out.</p></div>
+  <div class="ex-steps" role="group" aria-label="The four kNN steps">
+    <button type="button" class="ex-step" data-step="1"><b><i>1</i>Distance</b><span>Measure to every store</span></button>
+    <button type="button" class="ex-step" data-step="2"><b><i>2</i>Sort</b><span>Nearest to farthest</span></button>
+    <button type="button" class="ex-step" data-step="3"><b><i>3</i>Select</b><span>Keep the first k</span></button>
+    <button type="button" class="ex-step" data-step="4"><b><i>4</i>Vote</b><span>Majority class wins</span></button>
+  </div>
+  <div class="ex-main">
+    <div class="ex-plot">
+      <svg class="ex-svg" viewBox="0 0 716 592" role="group" aria-label="Plot of six known stores and the new store. Feature f1 runs along the bottom and feature f2 up the side.">
+        <g class="ex-grid" id="exGrid"></g>
+        <g class="ex-axis" id="exAxis"></g>
+        <g id="exDyn"></g>
+        <g id="exQ" tabindex="0" role="button" aria-roledescription="draggable point"><polygon class="starshape" points="${STAR}"/><text x="23" y="-15"><tspan font-style="italic">x</tspan><tspan dy="5" font-size="12">q</tspan></text></g>
+      </svg>
+      <div class="ex-legend">${chip(1)}${chip(2)}${chip(3)}<span class="tier">New store <i>x</i><sub>q</sub> (star)</span></div>
+    </div>
+    <div class="ex-side">
+      <div class="ex-k ctl"><label for="exK">Number of neighbours, k <output id="exKo">3</output></label><input type="range" id="exK" min="1" max="5" step="1" value="3"></div>
+      <div class="readout" id="exRead" aria-live="polite"></div>
+      <div class="ex-calc" id="exCalc"></div>
+    </div>
+    <div class="ex-tbl table-wrap" style="margin:0"><table class="ex-table"><thead id="exHead"></thead><tbody id="exBody"></tbody></table></div>
+  </div>
+  <div class="ex-foot"><button type="button" class="btn" id="exReset">Reset <i>x</i><sub>q</sub> to (2, 4)</button><span id="exPos"></span></div>`;
+
+  // static grid + axes
+  let g='';
+  for(let x=-1;x<=10;x++)g+=`<line x1="${gx(x)}" y1="${gy(8)}" x2="${gx(x)}" y2="${gy(-1)}"/>`;
+  for(let y=-1;y<=8;y++)g+=`<line x1="${gx(-1)}" y1="${gy(y)}" x2="${gx(10)}" y2="${gy(y)}"/>`;
+  $('#exGrid',ex).innerHTML=g;
+  let a='';
+  for(let x=0;x<=10;x++)a+=`<text x="${gx(x)}" y="${gy(-1)+17}" text-anchor="middle">${x}</text>`;
+  for(let y=0;y<=7;y++)a+=`<text x="${OX-8}" y="${gy(y)+4}" text-anchor="end">${y}</text>`;
+  a+=`<text class="ax-title" x="${gx(4.5)}" y="586" text-anchor="middle">f1</text><text class="ax-title" x="12" y="${gy(3.5)}" text-anchor="middle" transform="rotate(-90 12 ${gy(3.5)})">f2</text>`;
+  $('#exAxis',ex).innerHTML=a;
+
+  const svg=$('.ex-svg',ex), qg=$('#exQ',ex), dyn=$('#exDyn',ex), head=$('#exHead',ex), body=$('#exBody',ex);
+
+  function render(){
+    const sorted=compute(), by={}; sorted.forEach(p=>{by[p.id]=p;});
+    const {step,k,q}=state, keep=new Set(sorted.slice(0,k).map(p=>p.id));
+    const qx=gx(q.x), qy=gy(q.y);
+    $$('.ex-step',ex).forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.step===step)));
+    $('#exK',ex).value=k; $('#exKo',ex).textContent=k;
+
+    let h='';
+    if(step>=3)h+=`<circle class="ex-ring" cx="${qx}" cy="${qy}" r="${(sorted[k-1].d+0.05)*S}"/>`;
+    sorted.forEach(p=>{
+      if(!(step<=2||keep.has(p.id)))return;
+      h+=`<line class="ex-line${step>=3?' keep':''}" x1="${qx}" y1="${qy}" x2="${gx(p.x)}" y2="${gy(p.y)}"/>`;
+      if(step===1)h+=`<text class="ex-dl" x="${(qx+gx(p.x))/2}" y="${(qy+gy(p.y))/2-6}" text-anchor="middle">${f(p.d)}</text>`;
+    });
+    const s=by[state.sel];
+    if(step<=2)h+=`<polyline class="ex-leg" fill="none" points="${qx},${qy} ${gx(s.x)},${qy} ${gx(s.x)},${gy(s.y)}"/>`;
+    TOY.forEach(t=>{
+      const p=by[t.id], dim=step>=3&&!keep.has(t.id), showRank=step===2||(step>=3&&keep.has(t.id));
+      h+=`<g class="pt${dim?' dim':''}" data-id="${t.id}" transform="translate(${gx(t.x)} ${gy(t.y)})" tabindex="0" role="button" aria-label="Store ${t.id} at (${t.x}, ${t.y}), Class ${t.c} ${TIER[t.c]}, distance ${f(p.d)}${state.sel===t.id?', selected':''}">`
+        +(state.sel===t.id?'<circle class="selring" r="26"/>':'')+shape(t.c)
+        +`<text class="lbl" x="0" y="40" text-anchor="middle">${t.id}</text>`
+        +(showRank?`<g class="rk" transform="translate(21 -20)"><circle r="12"/><text>${p.rank}</text></g>`:'')+'</g>';
+    });
+    dyn.innerHTML=h;
+    qg.setAttribute('transform',`translate(${qx} ${qy})`);
+    qg.setAttribute('aria-label',`New store x q at (${f(q.x)}, ${f(q.y)}). Use the arrow keys to move it.`);
+
+    head.innerHTML=`<tr><th>${step>=2?'Rank':'#'}</th><th>Store</th><th>Tier</th><th>Distance</th>${step>=3?'<th>k nearest</th>':''}</tr>`;
+    const rows=step>=2?sorted:TOY.map(t=>by[t.id]);
+    body.innerHTML=rows.map(p=>`<tr data-id="${p.id}" tabindex="0" aria-selected="${state.sel===p.id}" class="${step>=3&&keep.has(p.id)?'keep':''}"><td class="num">${step>=2?p.rank:'&ndash;'}</td><td><b>${p.id}</b> <span class="num">(${p.x}, ${p.y})</span></td><td>${chipS(p.c)}</td><td class="num">${f(p.d)}</td>${step>=3?`<td>${keep.has(p.id)?'Kept':'Left out'}</td>`:''}</tr>`).join('');
+
+    let r='';
+    if(step===1)r=`<p>Straight-line distance from <i>x</i><sub>q</sub> = (${f(q.x)}, ${f(q.y)}) to each of the 6 stores. The number on each line is that distance.</p>`;
+    else if(step===2)r=`<p>Ordered from nearest to farthest: <strong>${sorted.map(p=>p.id).join(', ')}</strong>.</p>`;
+    else if(step===3)r=`<p>Keep the first <strong>k = ${k}</strong> stores: <strong>${sorted.slice(0,k).map(p=>p.id).join(', ')}</strong>. The dashed circle just reaches the ${ord(k)} neighbour, at distance ${f(sorted[k-1].d)}.</p>`;
+    else{
+      const v=voteAt(sorted,k);
+      r=[1,2,3].map(c=>`<div class="votebar"><span class="vl">${chip(c)}</span><span class="vb"><i style="width:${v.counts[c]/k*100}%"></i></span><span class="vn">${v.counts[c]}</span></div>`).join('')
+       +(v.tied.length===1?`<p style="margin-top:10px"><strong>Prediction:</strong> ${chip(v.tied[0])}</p>`
+        :`<p style="margin-top:10px"><strong>Tie</strong> between ${v.tied.map(c=>'Class '+c).join(' and ')}. A tie-breaking rule is needed; compare the options in the tie lab below.</p>`);
+    }
+    $('#exRead',ex).innerHTML=r;
+    const dx=q.x-s.x, dy=q.y-s.y;
+    $('#exCalc',ex).innerHTML=`<div><strong>Worked distance for ${s.id}</strong> at (${s.x}, ${s.y})</div><div class="eq"><i>d</i> = &radic;<span class="rad">(${f(q.x)} &minus; ${s.x})&sup2; + (${f(q.y)} &minus; ${s.y})&sup2;</span> = &radic;<span class="rad">${f(dx*dx)} + ${f(dy*dy)}</span> = &radic;<span class="rad">${f(dx*dx+dy*dy)}</span> &asymp; ${f(s.d)}</div>`;
+    $('#exPos',ex).innerHTML=`<i>x</i><sub>q</sub> is at (${f(q.x)}, ${f(q.y)})`;
+  }
+  subs.push(render);
+
+  $$('.ex-step',ex).forEach(b=>b.addEventListener('click',()=>{state.step=+b.dataset.step;emit();}));
+  $('#exK',ex).addEventListener('input',e=>{state.k=+e.target.value;emit();});
+  $('#exReset',ex).addEventListener('click',()=>{state.q.x=2;state.q.y=4;emit();});
+  function pick(id){state.sel=id;emit();}
+  dyn.addEventListener('click',e=>{const g=e.target.closest('.pt');if(g)pick(g.dataset.id);});
+  dyn.addEventListener('keydown',e=>{const g=e.target.closest('.pt');if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();pick(g.dataset.id);const n=$('.pt[data-id="'+g.dataset.id+'"]',dyn);if(n)n.focus();}});
+  body.addEventListener('click',e=>{const tr=e.target.closest('tr');if(tr)pick(tr.dataset.id);});
+  body.addEventListener('keydown',e=>{const tr=e.target.closest('tr');if(tr&&(e.key==='Enter'||e.key===' ')){e.preventDefault();pick(tr.dataset.id);}});
+
+  // dragging the query point
+  function toData(e){
+    const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
+    const p=pt.matrixTransform(svg.getScreenCTM().inverse());
+    return {x:(p.x-OX)/S-1,y:8-(p.y-OY)/S};
+  }
+  let drag=false;
+  qg.addEventListener('pointerdown',e=>{drag=true;qg.classList.add('drag');try{qg.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();qg.focus();});
+  qg.addEventListener('pointermove',e=>{if(!drag)return;const d=toData(e);setQ(d.x,d.y);});
+  const end=()=>{drag=false;qg.classList.remove('drag');};
+  qg.addEventListener('pointerup',end);qg.addEventListener('pointercancel',end);
+  qg.addEventListener('keydown',e=>{
+    const st=e.shiftKey?0.1:0.5; let dx=0,dy=0;
+    if(e.key==='ArrowLeft')dx=-st;else if(e.key==='ArrowRight')dx=st;else if(e.key==='ArrowUp')dy=st;else if(e.key==='ArrowDown')dy=-st;else return;
+    e.preventDefault();setQ(state.q.x+dx,state.q.y+dy);
+    qg.focus();
+  });
+})();
+
+/* ================= TIE LAB ================= */
+(function(){
+  const tl=$('#tieLab');
+  tl.innerHTML=`<div class="widget-head"><h4>Tie lab</h4><p>The toy example again. Select a value of k to see how the vote changes and what each tie-breaking rule decides. The new store follows the star in the toy explorer above.</p></div>
+  <div class="widget-body"><div id="tlRows"></div><div id="tlCmp" aria-live="polite"></div><div class="btn-row" style="margin:14px 0 0;align-items:center"><button type="button" class="btn" id="tlReset">Reset <i>x</i><sub>q</sub> to (2, 4)</button><span id="tlPos" style="color:var(--muted);font-size:.9rem"></span></div></div>`;
+  function render(){
+    const sorted=compute(), k=state.k;
+    $('#tlRows').innerHTML=[1,2,3,4,5].map(kk=>{
+      const v=voteAt(sorted,kk);
+      const parts=[1,2,3].filter(c=>v.counts[c]>0).sort((a,b)=>v.counts[b]-v.counts[a]||a-b).map(c=>`<span class="vchip">${mk(c)}Class ${c} &times;${v.counts[c]}</span>`).join('');
+      const out=v.tied.length>1?'<span class="badge tie">Tie</span>':`<span>Class ${v.tied[0]} wins</span>`;
+      return `<button type="button" class="krow" data-k="${kk}" aria-pressed="${kk===k}"><span class="kv">k = ${kk}</span><span class="votes">${parts}</span>${out}</button>`;
+    }).join('');
+    const v=voteAt(sorted,k);
+    let c='';
+    if(v.tied.length===1){
+      c=`<div class="readout"><p>At <strong>k = ${k}</strong> there is no tie: <strong>Class ${v.tied[0]}</strong> wins outright, so every tie-breaking rule agrees.</p></div>`;
+    }else{
+      const A=resolve(sorted,k,'smallest'),B=resolve(sorted,k,'nearest'),C=resolve(sorted,k,'reduce');
+      const names=v.tied.map(x=>'Class '+x).join(' and ');
+      c=`<div class="table-wrap" style="margin:14px 0 0"><table class="cmp"><caption>At k = ${k} the vote is tied between ${names}.</caption><thead><tr><th>Tie-breaking rule</th><th>Decision</th></tr></thead><tbody>
+      <tr><td>Smallest class label (what <code>argmax</code> does in our function)</td><td>${chipS(A.cls)}</td></tr>
+      <tr><td>Class of the nearest tied neighbour</td><td>${chipS(B.cls)}</td></tr>
+      <tr><td>Reduce k by one and vote again</td><td>${chipS(C.cls)} (settled at k = ${C.k})</td></tr>
+      <tr><td>Pick randomly among the tied classes</td><td>Either ${v.tied.map(x=>'Class '+x).join(' or ')}, varying from run to run</td></tr></tbody></table></div>`
+      +(A.cls!==B.cls?`<div class="readout"><p>The rules do not always agree. Here the smallest-label rule and the nearest-neighbour rule reach different answers.</p></div>`:'');
+    }
+    $('#tlCmp').innerHTML=c;
+    $('#tlPos').innerHTML=`Current position: (${f(state.q.x)}, ${f(state.q.y)})`;
+  }
+  subs.push(render);
+  tl.addEventListener('click',e=>{
+    const b=e.target.closest('.krow');
+    if(b){state.k=+b.dataset.k;emit();const nb=$('.krow[data-k="'+b.dataset.k+'"]',tl);if(nb)nb.focus();}
+  });
+  $('#tlReset').addEventListener('click',()=>{state.q.x=2;state.q.y=4;emit();});
+})();
+emit();
+
+/* ================= VOTE SANDBOX ================= */
+(function(){
+  const sb=$('#sandbox');
+  const st={tiers:3,k:5,labels:[1,2,1,2,3]};
+  sb.innerHTML=`<div class="widget-head"><h4>Vote sandbox</h4><p>Set the number of tiers and the number of voting neighbours, then select a neighbour to change its class.</p></div>
+  <div class="widget-body"><div class="field"><div><span class="lab">Tiers in the problem</span><span class="seg" role="group" aria-label="Number of tiers"><button type="button" class="btn" data-t="2">2 tiers</button><button type="button" class="btn" data-t="3">3 tiers</button></span></div>
+  <div><span class="lab">Neighbours voting</span><span class="seg" role="group" aria-label="Value of k">${[1,2,3,4,5].map(n=>`<button type="button" class="btn" data-k="${n}">k = ${n}</button>`).join('')}</span></div></div>
+  <div class="slots" id="sbSlots"></div><div class="readout" id="sbRead" aria-live="polite"></div></div>`;
+  function render(){
+    $$('[data-t]',sb).forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.t===st.tiers)));
+    $$('[data-k]',sb).forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.k===st.k)));
+    $('#sbSlots',sb).innerHTML=st.labels.slice(0,st.k).map((l,i)=>`<button type="button" class="slot" data-i="${i}" aria-label="Neighbour ${i+1}, Class ${l}. Select to change its class.">${mk(l)}<span>Neighbour ${i+1}</span><b>Class ${l}</b></button>`).join('');
+    const counts={1:0,2:0,3:0};st.labels.slice(0,st.k).forEach(l=>{counts[l]++;});
+    const cls=st.tiers===2?[1,2]:[1,2,3];
+    const max=Math.max.apply(null,cls.map(c=>counts[c]));
+    const tied=cls.filter(c=>counts[c]===max);
+    const tally=cls.map(c=>`Class ${c}: ${counts[c]}`).join(', ');
+    let verdict,note;
+    if(tied.length>1){
+      verdict=`<strong>Tie</strong> between ${tied.map(c=>'Class '+c).join(' and ')}.`;
+      note=st.k%2===1?'The value of k is odd, yet the vote is tied. With three tiers, the votes can split evenly between tiers.':'An even k with a split vote: a tie-breaking rule is needed.';
+    }else{
+      verdict=`<strong>Class ${tied[0]}</strong> wins.`;
+      note=(st.tiers===2&&st.k%2===1)?'With two tiers and an odd k, the two counts add up to an odd number, so they can never be equal. No tie is possible.':'One class has more votes than any other, so the vote is decisive.';
+    }
+    $('#sbRead',sb).innerHTML=`<p>${tally}. ${verdict}</p><p style="margin-top:6px;color:var(--muted)">${note}</p>`;
+  }
+  sb.addEventListener('click',e=>{
+    const t=e.target.closest('[data-t]'),k=e.target.closest('[data-k]'),s=e.target.closest('.slot');
+    if(t){st.tiers=+t.dataset.t;if(st.tiers===2)st.labels=st.labels.map(l=>l>2?1:l);render();}
+    else if(k){st.k=+k.dataset.k;render();}
+    else if(s){const i=+s.dataset.i;st.labels[i]=st.labels[i]%st.tiers+1;render();const n=$('.slot[data-i="'+i+'"]',sb);if(n)n.focus();}
+  });
+  render();
+})();
+
+/* ================= SPLIT ================= */
+(function(){
+  const w=$('#splitW'),R={
+    train:'<p><strong>Train (about 56% of stores).</strong> The stores kNN looks at when voting.</p>',
+    val:'<p><strong>Validation (about 19%).</strong> The stores we use to check and compare choices such as <em>k</em>.</p>',
+    test:'<p><strong>Test (25%).</strong> A locked box. We open it <strong>only once</strong>, at the very end.</p>'
+  };
+  function sel(k){$$('[data-s]',w).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.s===k)));$('#splitRead').innerHTML=R[k];}
+  w.addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b)sel(b.dataset.s);});
+  sel('train');
+})();
+
+/* ================= SCALE ================= */
+(function(){
+  const A=$('#scA'),B=$('#scB');
+  const pf=p=>p===0?'0%':(p>99.99&&p<100)?'more than 99.99%':(p<0.01)?'less than 0.01%':(Math.round(p*100)/100)+'%';
+  function go(){
+    const a=+A.value,b=+B.value,sa=a*a,sb=b*b,t=sa+sb;
+    const pa=t?sa/t*100:0,pb=t?sb/t*100:0;
+    $('#scAo').textContent=nf(a);$('#scBo').textContent=nf(b);
+    const row=(name,p,sq)=>`<div class="hb" style="grid-template-columns:190px minmax(0,1fr)"><div><strong>${name}</strong><br><span style="font-size:.85rem;color:var(--muted)">squared gap ${nf(sq)}</span></div><div class="track" role="img" aria-label="${name} makes up ${pf(p)} of the squared distance"><div class="real" style="width:${p}%"></div></div></div>`;
+    $('#scBars').innerHTML=row('Fresh',pa,sa)+row('Detergents_Paper',pb,sb);
+    let msg=`<p>Distance between the two stores: about <strong>${nf(Math.round(Math.sqrt(t)*100)/100)}</strong>. Fresh accounts for ${pf(pa)} of the squared distance and Detergents_Paper for ${pf(pb)}.</p>`;
+    if(pa>99)msg+='<p style="margin-top:6px">Detergents_Paper barely matters here, even if it is an important feature.</p>';
+    else if(t>0&&pa>=45&&pa<=55)msg+='<p style="margin-top:6px">Both features now count about equally. This is what scaling aims for.</p>';
+    $('#scRead').innerHTML=msg;
+  }
+  A.addEventListener('input',go);B.addEventListener('input',go);
+  $('#scEq').addEventListener('click',()=>{A.value=1000;B.value=1000;go();});
+  $('#scRst').addEventListener('click',()=>{A.value=5000;B.value=5;go();});
+  go();
+})();
+
+/* ================= BALANCE ================= */
+(function(){
+  const w=$('#balW'),real=[100,62,34],names=['Largest tier','Middle tier','Smallest tier'];
+  $('#balBars').innerHTML=names.map((n,i)=>`<div class="hb"><div><strong>${n}</strong></div><div class="track"><div class="real" style="width:${real[i]}%"></div><div class="syn" style="width:0%"></div></div></div>`).join('');
+  const T={
+    before:'<p>The majority tier has more voters in every neighbourhood, so it has an unfair advantage when neighbours vote.</p>',
+    after:'<p>SMOTE has created synthetic stores for the smaller tiers until all tiers are equally sized. Only the training data is changed; validation and test stay as they are in real life.</p>'
+  };
+  function view(v){
+    $$('[data-v]',w).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===v)));
+    $$('.syn',w).forEach((s,i)=>{s.style.width=(v==='after'?100-real[i]:0)+'%';});
+    $$('.track',w).forEach((t,i)=>t.setAttribute('role','img'));
+    $$('.track',w).forEach((t,i)=>t.setAttribute('aria-label',names[i]+(v==='after'?': all tiers equal after SMOTE':': relative size before SMOTE')));
+    $('#balRead').innerHTML=T[v];
+  }
+  w.addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(b)view(b.dataset.v);});
+  view('before');
+})();
+
+/* ================= CODE WALK ================= */
+(function(){
+  const w=$('#codeWalk');
+  const CW=[
+   {t:'Distance',code:"i = 50                    # try any validation store\nquery = X_val_s[i]\n\n# Step 1: distance to every stored (training) store\ndists = np.sqrt(np.sum((X_bal - query) ** 2, axis=1))",
+    note:'Subtract the query from every training row, square each gap, add the 7 squared gaps together for each store, and take the square root. The result is one distance per stored store.'},
+   {t:'Sort and select',code:"# Step 2: sort, and Step 3: take the k nearest\nk = 5\nnearest_idx = np.argsort(dists)[:k]\n\nprint('Nearest distances:', dists[nearest_idx].round(3))\nprint('Nearest labels   :', y_bal[nearest_idx])",
+    note:'<code>argsort</code> returns the positions of the stores ordered from nearest to farthest. Keeping the first <em>k</em> positions gives the neighbourhood, and the second print shows the labels of those neighbours.'},
+   {t:'Vote',code:"# Step 4: majority vote\nclasses, counts = np.unique(y_bal[nearest_idx], return_counts=True)\nprediction = classes[counts.argmax()]\n\nprint('\\nPredicted tier:', prediction)\nprint('Actual tier   :', y_val[i])",
+    note:'<code>np.unique</code> counts how many neighbours carry each class, and <code>argmax</code> picks the class with the biggest count. On a tie, <code>argmax</code> picks the first one, which is the smallest label. The last line compares the prediction with the store&rsquo;s actual tier.'}
+  ];
+  let cur=0;
+  w.innerHTML=`<div class="widget-head"><h4>One validation store, four steps</h4><p>Each step from the toy example becomes a line or two of NumPy.</p></div><div class="widget-body"><div class="btn-row" role="group" aria-label="Steps">${CW.map((c,i)=>`<button type="button" class="btn" data-i="${i}">${c.t}</button>`).join('')}</div><figure class="code" style="margin:0 0 14px"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code id="cwCode"></code></pre></figure><div class="readout" id="cwNote" aria-live="polite"></div></div>`;
+  function show(i){
+    cur=i;
+    $$('[data-i]',w).forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.i===i)));
+    const c=$('#cwCode',w);c.innerHTML=hl(CW[i].code);c.dataset.hl='1';
+    $('#cwNote').innerHTML='<p>'+CW[i].note+'</p>';
+  }
+  w.addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b)show(+b.dataset.i);});
+  show(0);
+})();
+
+/* ================= CONFUSION MATRIX ================= */
+(function(){
+  const w=$('#cmW'),N=['High','Moderate','Low'];
+  let h='<div></div>'+N.map(n=>`<div class="hd">Predicted ${n}</div>`).join('');
+  for(let i=0;i<3;i++){
+    h+=`<div class="hd rl">Actual ${N[i]}</div>`;
+    for(let j=0;j<3;j++){
+      let cls='cm-cell',g='&#10007;',t='Mistake';
+      if(i===j){cls+=' diag';g='&#10003;';t='Correct';}
+      if(i===0&&j===2){cls+=' costly';t='Too few partners';}
+      if(i===2&&j===0){cls+=' costly2';t='Wasted salaries';}
+      h+=`<button type="button" class="${cls}" data-i="${i}" data-j="${j}" aria-pressed="false" aria-label="Actual ${N[i]}, predicted ${N[j]}: ${t}"><span class="g" aria-hidden="true">${g}</span><span>${t}</span></button>`;
+    }
+  }
+  $('#cmGrid').innerHTML=h;
+  function sel(i,j){
+    $$('.cm-cell',w).forEach(c=>c.setAttribute('aria-pressed',String(+c.dataset.i===i&&+c.dataset.j===j)));
+    let m;
+    if(i===j)m=`<p><strong>Actual ${N[i]}, predicted ${N[j]}.</strong> A correct prediction. The more of the stores that land on the diagonal, the better the model.</p>`;
+    else if(i===0&&j===2)m='<p><strong>Actual High, predicted Low.</strong> A busy store is planned as a quiet one, so it gets too few delivery partners and orders arrive late.</p>';
+    else if(i===2&&j===0)m='<p><strong>Actual Low, predicted High.</strong> A quiet store is planned as a busy one, so it gets more delivery partners than it needs and salaries are wasted.</p>';
+    else m=`<p><strong>Actual ${N[i]}, predicted ${N[j]}.</strong> A mistake. Its count in your own matrix shows how often the model confuses these two tiers.</p>`;
+    $('#cmRead').innerHTML=m;
+  }
+  w.addEventListener('click',e=>{const c=e.target.closest('.cm-cell');if(c)sel(+c.dataset.i,+c.dataset.j);});
+  sel(0,2);
+})();
+
+/* ================= COST ================= */
+(function(){
+  const NS=[100,1000,10000,100000,1000000],MS=[1,100,1000,10000];
+  const n=$('#costN'),m=$('#costM');
+  function go(){
+    const N=NS[+n.value],M=MS[+m.value];
+    $('#costNo').textContent=nf(N);$('#costMo').textContent=nf(M);
+    n.setAttribute('aria-valuetext',nf(N));m.setAttribute('aria-valuetext',nf(M));
+    $('#costP').textContent=nf(N);$('#costT').textContent=nf(N*M);
+  }
+  n.addEventListener('input',go);m.addEventListener('input',go);go();
+})();
+
+highlightAll();
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-SL-1" target="_blank" rel="noopener">github.com/scaler-content/DSML-SL-1</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

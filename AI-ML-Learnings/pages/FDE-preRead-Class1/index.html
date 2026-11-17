@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pre-Read: Forward Deployed Engineering</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#101828;--bg-card:#172032;--bg-card-alt:#1c263a;--bg-surface:#222e44;
+--blue:#2563EB;--blue-light:#60a5fa;--blue-dark:#1d4ed8;
+--copper:#C07040;--copper-light:#d89060;
+--cream:#e8e6e0;--cream-body:#c0bcb4;
+--green-ok:#4caf7a;--red-soft:#c07060;
+--font-display:'DM Serif Display',Georgia,serif;
+--font-body:'Inter',system-ui,sans-serif;
+--font-mono:'JetBrains Mono','Courier New',monospace;
+--max-w:720px;--section-gap:3.5rem;
+}
+html{scroll-behavior:smooth;font-size:16.5px}
+body{font-family:var(--font-body);background:var(--bg);color:var(--cream);line-height:1.78;-webkit-font-smoothing:antialiased}
+a{color:var(--blue-light);text-decoration:none}a:hover{text-decoration:underline}
+.container{max-width:var(--max-w);margin:0 auto;padding:0 1.5rem}
+.section{padding:var(--section-gap) 0}.section+.section{padding-top:0}
+
+.hero{padding:3rem 0 2rem;border-bottom:2px solid var(--blue)}
+.hero-label{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--copper);margin-bottom:1.25rem}
+.hero h1{font-family:var(--font-display);font-size:clamp(1.7rem,4.5vw,2.5rem);line-height:1.15;color:var(--cream)}
+.hero h1 em{font-style:italic;color:var(--blue-light)}
+
+h2{font-family:var(--font-display);font-size:clamp(1.3rem,3.2vw,1.7rem);color:var(--cream);margin-bottom:.6rem;line-height:1.25}
+
+p{color:var(--cream-body);font-size:.95rem;margin-bottom:.85rem}
+p strong{color:var(--cream)}
+p:last-child{margin-bottom:0}
+
+.accent-line{width:40px;height:2px;background:var(--copper);margin:2.5rem 0;border:none}
+
+.scenario-box{background:var(--bg-card);border-left:3px solid var(--blue);border-radius:0 6px 6px 0;padding:1.5rem;margin:1.5rem 0}
+.scenario-box p{color:var(--cream-body);font-size:.95rem}
+
+/* INTERACTIVE: PICK YOUR MOVE */
+.pick-block{background:var(--bg-card);border-radius:8px;padding:1.5rem;margin:1.5rem 0;border:1px solid rgba(255,255,255,.06)}
+.pick-label{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--copper);margin-bottom:.75rem;display:block}
+.pick-q{color:var(--cream);font-size:.95rem;font-weight:500;margin-bottom:1rem;line-height:1.5}
+.pick-opts{display:flex;flex-direction:column;gap:.4rem}
+.pick-opt{background:var(--bg-surface);border:1.5px solid rgba(255,255,255,.08);border-radius:6px;padding:.75rem 1rem;cursor:pointer;transition:all .2s;font-size:.9rem;color:var(--cream-body);user-select:none;line-height:1.5;position:relative}
+.pick-opt:hover:not(.chosen){border-color:var(--cream-body);color:var(--cream)}
+.pick-opt.chosen{border-color:var(--blue);background:rgba(37,99,235,.06);color:var(--cream)}
+.pick-opt.chosen::after{content:'✓';position:absolute;right:1rem;top:50%;transform:translateY(-50%);color:var(--blue-light);font-weight:700}
+.pick-note{margin-top:.85rem;padding:.85rem;border-radius:6px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.12);font-size:.9rem;color:var(--cream-body);display:none;line-height:1.6}
+.pick-note.show{display:block;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* POLL: SHAPE OF THE FAILURE */
+.poll-block{background:var(--bg-card);border-radius:8px;padding:1.5rem;margin:1.5rem 0;border:1px solid rgba(255,255,255,.06)}
+.poll-q{color:var(--cream);font-size:.95rem;font-weight:500;margin-bottom:1rem;line-height:1.5}
+.poll-opt{background:var(--bg-surface);border:1.5px solid rgba(255,255,255,.08);border-radius:6px;padding:.7rem 1rem;cursor:pointer;transition:all .2s;font-size:.9rem;color:var(--cream-body);margin-bottom:.4rem;position:relative;overflow:hidden}
+.poll-opt:hover:not(.voted){border-color:var(--cream-body);color:var(--cream)}
+.poll-opt.voted{border-color:var(--blue);cursor:default}
+.poll-bar{position:absolute;left:0;top:0;bottom:0;background:rgba(37,99,235,.1);width:0;transition:width .6s ease;border-radius:4px}
+.poll-opt-text{position:relative;z-index:1}
+.poll-opt-pct{position:relative;z-index:1;float:right;font-family:var(--font-mono);font-size:.75rem;color:var(--blue-light);opacity:0;transition:opacity .3s}
+.poll-opt.voted .poll-opt-pct{opacity:1}
+.poll-note{font-size:.9rem;color:var(--cream-body);margin-top:.75rem;display:none;line-height:1.6}
+.poll-note.show{display:block;animation:fadeUp .3s ease}
+
+/* CLASS LIST */
+.class-list{margin:1.25rem 0;display:grid;gap:.4rem}
+.class-item{background:var(--bg-card);border-radius:6px;padding:.85rem 1rem;border-left:3px solid var(--blue);font-size:.95rem;color:var(--cream)}
+.class-item:nth-child(even){border-left-color:var(--copper)}
+
+/* BRING LIST */
+.bring-list{margin:1.25rem 0;display:grid;gap:.6rem}
+.bring-item{display:flex;align-items:baseline;gap:.65rem}
+.bring-num{font-family:var(--font-display);font-size:1.1rem;color:var(--copper-light);flex-shrink:0}
+.bring-item p{margin-bottom:0}
+
+/* CTA */
+.cta-section{background:linear-gradient(160deg,#0c1220 0%,#121e34 40%,#0e1628 100%);border-top:2px solid var(--blue);padding:2.5rem 0;margin-top:var(--section-gap)}
+.cta-inner{text-align:center;max-width:480px;margin:0 auto}
+.cta-inner p{color:var(--cream-body);font-size:.95rem}
+.cta-btn-wrap{margin-top:1.5rem;display:flex;justify-content:center}
+.cta-btn{display:inline-block;font-family:var(--font-body);font-weight:700;font-size:1.05rem;color:var(--cream);background:linear-gradient(180deg,#60a5fa 0%,#2563EB 50%,#1d4ed8 100%);padding:.95rem 2.2rem;border-radius:10px;border:2px solid rgba(255,255,255,.1);box-shadow:0 3px 0 0 #14306a,0 5px 14px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.15);text-decoration:none;cursor:pointer;transition:all .15s ease}
+.cta-btn:hover{transform:translateY(-2px);box-shadow:0 5px 0 0 #14306a,0 8px 22px rgba(0,0,0,.5);text-decoration:none}
+.cta-btn:active{transform:translateY(1px);box-shadow:0 1px 0 0 #14306a,0 2px 8px rgba(0,0,0,.3)}
+
+.footer{text-align:center;padding:1.15rem 0;font-size:.68rem;color:var(--cream-body);font-family:var(--font-mono);letter-spacing:.06em;border-top:1px solid rgba(255,255,255,.05)}
+@media(max-width:600px){.section{padding:2.5rem 0}h2{font-size:1.25rem}.cta-btn{padding:.8rem 1.6rem;font-size:.95rem}}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/fde/">Forward Deployed Engineering</a><span class="t">· FDE 1 · The demo that vanishes</span><span class="pn"><a href="../FDE-preRead-Class2/" title="FDE 2 · The problem that changes shape">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><header class="hero">
+  <div class="container">
+    <div class="hero-label">FDE Programme · Pre-Read</div>
+    <h1>The Demo<br><em>That Vanishes</em></h1>
+  </div>
+</header>
+
+<section class="section">
+  <div class="container">
+
+    <p>You've seen this one before.</p>
+
+    <p>It's a Friday. Someone on your team, maybe you, has spent three weeks building a prototype. It works. In the demo, it does the thing. The stakeholders lean forward. Someone says, <strong>"When can we roll this out?"</strong> The room laughs, in a good way.</p>
+
+    <p>Six weeks later, nothing has shipped.</p>
+
+    <p>Not because the prototype broke. Not because priorities shifted. It just... didn't cross over. There was a security review that never got scheduled. A data pipeline — <em>the plumbing that moves data from where it's collected to where it's used</em> — that wasn't quite production-grade. A stakeholder in a different team who was never looped in and would have blocked it anyway. The prototype is still on someone's laptop. The demo video still gets shared in decks. The problem it was going to solve is still there.</p>
+
+    <p>If you've been in this industry for five years or more, and most of you have, you've lived some version of this. Maybe more than once. Maybe you were the one who built the prototype. Maybe you were the one who got asked, <strong>"so what happened to that thing you showed us?"</strong> and didn't have a good answer.</p>
+
+    <p>Sit with that for a second. Not the specific project. The shape of it.</p>
+
+  </div>
+</section>
+
+<!-- INTERACTIVE: What killed your last prototype? -->
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="poll-block" id="poll1">
+      <span class="pick-label">Thinking about that prototype</span>
+      <p class="poll-q">What actually killed it? Not the official story. The real one.</p>
+      <div class="poll-opt" onclick="votePoll('poll1',this,0)"><span class="poll-bar"></span><span class="poll-opt-text">Nobody owned the messy middle — security, infra, integrations</span><span class="poll-opt-pct"></span></div>
+      <div class="poll-opt" onclick="votePoll('poll1',this,1)"><span class="poll-bar"></span><span class="poll-opt-text">A stakeholder who mattered was never in the room</span><span class="poll-opt-pct"></span></div>
+      <div class="poll-opt" onclick="votePoll('poll1',this,2)"><span class="poll-bar"></span><span class="poll-opt-text">It worked in the demo but not with real data or real users</span><span class="poll-opt-pct"></span></div>
+      <div class="poll-opt" onclick="votePoll('poll1',this,3)"><span class="poll-bar"></span><span class="poll-opt-text">Honestly — it just lost momentum and nobody pushed it forward</span><span class="poll-opt-pct"></span></div>
+      <p class="poll-note" id="poll1-note">These four answers show up in roughly equal proportions across experienced engineers. They look different but they share a common root. Class 1 names what that root is.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="accent-line container">
+
+<section class="section">
+  <div class="container">
+
+    <h2>The pattern isn't unusual</h2>
+
+    <p>Industry surveys keep saying different versions of the same thing. The exact numbers move around — 70%, 85%, 90% — but the direction is consistent: <strong>most AI and data prototypes that get built don't reach production.</strong> Most that reach production don't reach the users they were built for. Most that reach users don't stay in use six months later.</p>
+
+    <p>This isn't a story about bad engineers. The people building these prototypes are, by and large, technically excellent. They can code. They know their frameworks. They can spin up a model, wire up an API — <em>the connection layer that lets one system call another</em> — and ship a working demo faster than most.</p>
+
+    <p><strong>So if the problem isn't skill, what is it?</strong></p>
+
+    <p>That's the question this programme exists to answer.</p>
+
+  </div>
+</section>
+
+<hr class="accent-line container">
+
+<section class="section">
+  <div class="container">
+
+    <h2>A small scenario</h2>
+
+    <p>Try this one on.</p>
+
+    <p>You've just joined a mid-sized company. Not a startup, not a giant. Big enough to have real customers, real revenue, real legacy systems — <em>the older software that keeps the business running but nobody wants to touch</em>. Real politics.</p>
+
+    <div class="scenario-box">
+      <p>On your first Monday, your manager walks you over to a workstation and says something like this:</p>
+      <p><strong>"Six months ago, our data team built a prototype that predicts which customers are about to leave us. It works — accuracy is good, the model is solid. But we've never actually used it. It's sitting in a notebook on someone's laptop. Nobody in Customer Success even knows it exists. The CTO wants it live in ninety days. Figure out what needs to happen. You have full support. Where do you start?"</strong></p>
+    </div>
+
+    <p>Take thirty seconds. Actually think about it. What's your first move?</p>
+
+  </div>
+</section>
+
+<!-- INTERACTIVE: Your first move -->
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="pick-block" id="pick1">
+      <span class="pick-label">Your first move</span>
+      <p class="pick-q">Monday morning. The churn prototype. Ninety days. Where do you start?</p>
+      <div class="pick-opts">
+        <div class="pick-opt" onclick="pickMove('pick1',this,0)">Package the model, build an API, set up monitoring — get the technical plumbing moving</div>
+        <div class="pick-opt" onclick="pickMove('pick1',this,1)">Talk to Customer Success first — find out what they actually need and whether churn prediction is even the right question</div>
+        <div class="pick-opt" onclick="pickMove('pick1',this,2)">Map the stakeholders — who owns this, who blocks it, who needs to sign off before anything moves</div>
+        <div class="pick-opt" onclick="pickMove('pick1',this,3)">Look at the data — is what the model was trained on actually what it'll see in production?</div>
+      </div>
+      <div class="pick-note" id="pick1-note">Saved. None of these is wrong, but they reveal very different instincts. In Class 1, you'll meet a scenario like this and watch how a specific discipline approaches the same decision. Hold onto your answer — you'll want to compare.</div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:1rem">
+  <div class="container">
+
+    <p>Some of you picked the technical path. Some went straight to people. Some questioned the problem itself. Some wanted to understand the data before touching anything.</p>
+
+    <p><strong>There isn't one right answer to that scenario.</strong> But there is a method — a repeatable way of walking into that Monday and, ninety days later, having something real and used and defended in front of the CTO.</p>
+
+    <p>That method has a name. It has a discipline behind it. It has people who do it for a living and are paid extremely well to do it — because the companies that need this done are the ones with the biggest gaps between what their AI systems can do in theory and what they actually deliver in practice.</p>
+
+    <p>We're not naming the method or the role in this pre-read. That's what Class 1 is for.</p>
+
+  </div>
+</section>
+
+<hr class="accent-line container">
+
+<section class="section">
+  <div class="container">
+
+    <h2>What will Class 1 do?</h2>
+
+    <p>Class 1 is a working session, not a welcome ceremony. By the end of it, you'll have a clear picture of:</p>
+
+    <div class="class-list">
+      <div class="class-item">What the role actually is, including the parts nobody puts on a job description</div>
+      <div class="class-item">Why this role exists now, when it didn't need to five years ago</div>
+      <div class="class-item">The mindset that separates the people who are good at this from the ones who are technically excellent but keep watching their prototypes die</div>
+      <div class="class-item">Where this role sits next to the ones you already know — engineer, consultant, product manager, solutions architect — and what makes it distinct</div>
+      <div class="class-item">What a realistic week in this role actually looks like, hour by hour, including the parts that aren't glamorous</div>
+    </div>
+
+    <p style="margin-top:1.25rem">We'll do most of this by walking through a real scenario — not the one above, a different one — where you'll get to see the moves in action rather than just hear them described.</p>
+
+  </div>
+</section>
+
+<hr class="accent-line container">
+
+<section class="section">
+  <div class="container">
+
+    <h2>What to bring to class</h2>
+
+    <p>Nothing to prepare. No reading list, no setup. Just three things in your head:</p>
+
+    <div class="bring-list">
+      <div class="bring-item">
+        <span class="bring-num">1.</span>
+        <p><strong>The last time you saw a prototype or a pilot that didn't make it into real use.</strong> What actually stopped it? Not the story people told about what stopped it, but what actually did. If you dig honestly, the real reason is rarely the one that got written down in the retrospective.</p>
+      </div>
+      <div class="bring-item">
+        <span class="bring-num">2.</span>
+        <p><strong>The scenario above: the churn prototype on your first Monday.</strong> Your instinct for the first move. Hold onto that instinct. In Class 1 we'll come back to a version of this decision, and you'll get to see whether your instinct is one a strong practitioner would also make.</p>
+      </div>
+      <div class="bring-item">
+        <span class="bring-num">3.</span>
+        <p><strong>A question you've never quite been able to answer:</strong> what is it, exactly, that some engineers do that makes their work stick — while others, with equal skill, keep watching theirs disappear?</p>
+      </div>
+    </div>
+
+    <p style="margin-top:1.25rem">We'll be answering that one for the next fourteen modules. Class 1 is where it starts.</p>
+
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-inner">
+      <p><strong>See you there.</strong></p>
+<!--       <div class="cta-btn-wrap"><a href="#" class="cta-btn">Attend Class 1 →</a></div> -->
+    </div>
+  </div>
+</section>
+
+<footer class="footer"><div class="container">Forward Deployed Engineering Programme</div></footer>
+
+<script>
+// POLL
+var pollState={};
+function votePoll(pollId,el,idx){
+  if(pollState[pollId])return;pollState[pollId]=true;
+  var opts=document.querySelectorAll('#'+pollId+' .poll-opt');
+  var pcts=[28,22,26,24];
+  opts.forEach(function(o,i){
+    o.classList.add('voted');
+    o.querySelector('.poll-bar').style.width=pcts[i]+'%';
+    o.querySelector('.poll-opt-pct').textContent=pcts[i]+'%';
+    if(i===idx){o.style.borderColor='var(--blue)';o.style.background='rgba(37,99,235,.06)';}
+  });
+  var note=document.getElementById(pollId+'-note');
+  if(note)note.classList.add('show');
+}
+
+// PICK YOUR MOVE
+var pickState={};
+function pickMove(pickId,el,idx){
+  if(pickState[pickId])return;pickState[pickId]=true;
+  var opts=document.querySelectorAll('#'+pickId+' .pick-opt');
+  opts.forEach(function(o){o.style.pointerEvents='none';o.style.opacity='.6';});
+  el.classList.add('chosen');el.style.opacity='1';
+  var note=document.getElementById(pickId+'-note');
+  if(note)note.classList.add('show');
+}
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/FDE-preRead-Class1" target="_blank" rel="noopener">github.com/scaler-content/FDE-preRead-Class1</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

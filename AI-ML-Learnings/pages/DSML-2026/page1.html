@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indexing — How It Works</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #FEFCFA;
+  color: #1A1208;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ─────────────────────────────────────────── */
+.hdr {
+  padding: 22px 40px 18px;
+  border-bottom: 1px solid #EDE8E0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.hdr-title {
+  font-family: 'Lora', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1A1208;
+}
+.hdr-query {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  background: #FFF5EE;
+  border: 1px solid #F9CCA8;
+  color: #C04A10;
+  padding: 7px 16px;
+  border-radius: 8px;
+  letter-spacing: 0.02em;
+}
+.hdr-badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #B07040;
+  background: #FFF5EE;
+  border: 1px solid #F9CCA8;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+/* ── MAIN ────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 0;
+  min-height: 0;
+}
+
+/* ── TABLE PANEL ─────────────────────────────────────── */
+.table-panel {
+  padding: 28px 32px;
+  border-right: 1px solid #EDE8E0;
+  overflow: auto;
+}
+.panel-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9A8070;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-label::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: #CCC;
+}
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+}
+.db-table th {
+  background: #1A1208;
+  color: #fff;
+  padding: 9px 14px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.db-table th:first-child { border-radius: 6px 0 0 0; }
+.db-table th:last-child  { border-radius: 0 6px 0 0; }
+
+.db-table tr.data-row {
+  border-bottom: 1px solid #EDE8E0;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.db-table tr.data-row td {
+  padding: 9px 14px;
+  color: #5A4030;
+  transition: color 0.15s;
+}
+.db-table tr.data-row td:first-child {
+  color: #9A8070;
+  font-size: 11px;
+}
+
+/* Row states */
+.db-table tr.scanning {
+  background: #FFF8E8;
+}
+.db-table tr.scanning td { color: #8A6020; }
+.db-table tr.scanning td:first-child { color: #8A6020; }
+
+.db-table tr.found {
+  background: #EDFAF3;
+  box-shadow: inset 3px 0 0 #22A06B;
+}
+.db-table tr.found td { color: #1A6040; font-weight: 500; }
+
+.db-table tr.dimmed td { color: #CCC8C0; }
+.db-table tr.dimmed { background: transparent; }
+
+.scan-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: transparent;
+  margin-right: 6px;
+  transition: background 0.15s;
+  vertical-align: middle;
+}
+.scanning .scan-dot { background: #E5A020; animation: pulse-dot 0.4s ease infinite; }
+.found    .scan-dot { background: #22A06B; animation: none; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── INDEX PANEL ─────────────────────────────────────── */
+.index-panel {
+  padding: 28px 24px;
+  background: #FEFCFA;
+}
+.index-tree {
+  background: #fff;
+  border: 1px solid #EDE8E0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.index-tree-header {
+  background: #F4F0EA;
+  padding: 10px 16px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: #7A6050;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #EDE8E0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.index-tree-header::before {
+  content: '';
+  display: inline-block;
+  width: 12px; height: 12px;
+  border-radius: 3px;
+  background: #B0A090;
+}
+
+.idx-entry {
+  padding: 10px 16px;
+  border-bottom: 1px solid #F0EBE3;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  transition: background 0.2s;
+  cursor: default;
+}
+.idx-entry:last-child { border-bottom: none; }
+.idx-key {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4A3020;
+  width: 100px;
+  flex-shrink: 0;
+}
+.idx-arrow {
+  color: #C0B0A0;
+  margin: 0 8px;
+  font-size: 12px;
+}
+.idx-rows {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.row-chip {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  background: #F0EBE3;
+  color: #7A6050;
+  padding: 2px 7px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+/* Index states */
+.idx-entry.idx-scanning { background: #FFF5E0; }
+.idx-entry.idx-found {
+  background: #EDFAF3;
+  border-left: 3px solid #22A06B;
+}
+.idx-entry.idx-found .idx-key { color: #1A6040; font-weight: 600; }
+.idx-entry.idx-found .row-chip { background: #C5EDD8; color: #1A6040; font-weight: 600; }
+.idx-entry.idx-dimmed { opacity: 0.3; }
+
+/* ── CONNECTOR LINES ─────────────────────────────────── */
+.connector-area {
+  position: relative;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+  gap: 8px;
+  margin-top: 4px;
+}
+.connector-line {
+  height: 2px;
+  border-radius: 1px;
+  flex: 1;
+  transition: background 0.4s;
+  background: #EDE8E0;
+}
+.connector-line.active { background: linear-gradient(90deg, #22A06B, #90D8B0); }
+.connector-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #B0A090;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── CONTROLS ────────────────────────────────────────── */
+.controls {
+  padding: 20px 40px;
+  border-top: 1px solid #EDE8E0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: #FEFCFA;
+}
+.btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'DM Sans', sans-serif;
+  letter-spacing: 0.01em;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-scan {
+  background: #FFF5EE;
+  color: #C04A10;
+  border-color: #F0B080;
+}
+.btn-scan:hover:not(:disabled) { background: #C04A10; color: #fff; border-color: #C04A10; }
+.btn-idx {
+  background: #EDFAF3;
+  color: #1A7A50;
+  border-color: #90D8B0;
+}
+.btn-idx:hover:not(:disabled) { background: #1A7A50; color: #fff; border-color: #1A7A50; }
+.btn-reset {
+  background: #F4F0EA;
+  color: #7A6050;
+  border-color: #DDD8D0;
+}
+.btn-reset:hover:not(:disabled) { background: #DDD8D0; }
+
+/* ── STATS BAR ───────────────────────────────────────── */
+.stats-bar {
+  display: flex;
+  gap: 0;
+  margin-left: auto;
+  border: 1px solid #EDE8E0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.stat {
+  padding: 8px 20px;
+  text-align: center;
+  border-right: 1px solid #EDE8E0;
+}
+.stat:last-child { border-right: none; }
+.stat-label {
+  font-size: 10px;
+  color: #9A8070;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.stat-val {
+  font-family: 'Lora', serif;
+  font-size: 20px;
+  font-weight: 600;
+  transition: color 0.3s;
+}
+.stat-val.scan-color { color: #C04A10; }
+.stat-val.idx-color  { color: #1A7A50; }
+
+/* ── LOG MESSAGE ─────────────────────────────────────── */
+.log {
+  padding: 12px 40px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: #7A6050;
+  background: #F8F5F0;
+  border-top: 1px solid #EDE8E0;
+  min-height: 40px;
+  transition: all 0.2s;
+}
+.log.active-scan { color: #A05010; background: #FFF8EE; }
+.log.active-idx  { color: #1A7A50; background: #F0FDF6; }
+
+/* ── COMPARISON ─────────────────────────────────────── */
+.comparison {
+  display: none;
+  padding: 14px 40px;
+  background: #fff;
+  border-top: 1px solid #EDE8E0;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.comparison.show { display: flex; }
+.comp-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+.comp-item.scan-item { background: #FFF5EE; border-color: #F0B080; }
+.comp-item.idx-item  { background: #EDFAF3; border-color: #90D8B0; }
+.comp-item .c-label  { font-size: 12px; font-weight: 600; color: #5A4030; }
+.comp-item .c-val    { font-family: 'Lora', serif; font-size: 22px; font-weight: 600; }
+.comp-item.scan-item .c-val { color: #C04A10; }
+.comp-item.idx-item .c-val  { color: #1A7A50; }
+.comp-arrow { font-size: 26px; color: #C0B0A0; }
+.comp-badge {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #EDFAF3;
+  color: #1A7A50;
+  border: 1px solid #90D8B0;
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· SQL Advanced · Indexing, partitioning and functions</span><a href="./">↑ Lesson page</a><span class="pn"><a href="../SQL-8-postread/" title="SQL 8 · JOINs 1: relationships and INNER JOIN">← Prev</a><a href="../MySQL---BigQuery-data-interconverter/" title="MySQL to BigQuery converter">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-title">Indexing — Full Scan vs Index Lookup</div>
+  <div class="hdr-query">SELECT * FROM zomato.orders WHERE city = 'Mumbai'</div>
+  <div class="hdr-badge">zomato.orders · 12 rows</div>
+</div>
+
+<!-- MAIN AREA -->
+<div class="main">
+
+  <!-- TABLE -->
+  <div class="table-panel">
+    <div class="panel-label"><span>database table</span></div>
+    <table class="db-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>order_id</th>
+          <th>customer_id</th>
+          <th>city</th>
+          <th>order_value</th>
+          <th>status</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  <!-- INDEX -->
+  <div class="index-panel">
+    <div class="panel-label"><span>city index (b-tree)</span></div>
+    <div class="index-tree">
+      <div class="index-tree-header">Sorted · Pointer to rows</div>
+      <div id="index-entries"></div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div class="panel-label" style="margin-bottom:10px;"><span>connection</span></div>
+      <div id="conn-status" style="font-family:'DM Mono',monospace;font-size:11px;color:#B0A090;padding:10px 14px;background:#fff;border:1px solid #EDE8E0;border-radius:8px;line-height:1.7;">
+        Index lookup will jump<br>directly to matching rows
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- LOG -->
+<div class="log" id="log">Select an approach below to see how the database finds rows where city = 'Mumbai'</div>
+
+<!-- COMPARISON -->
+<div class="comparison" id="comparison">
+  <div class="comp-item scan-item">
+    <div><div class="c-label">Full table scan</div><div class="c-val" id="c-scan-rows">12</div><div style="font-size:11px;color:#9A8070">rows read</div></div>
+  </div>
+  <div class="comp-arrow">→</div>
+  <div class="comp-item idx-item">
+    <div><div class="c-label">Index lookup</div><div class="c-val" id="c-idx-rows">3</div><div style="font-size:11px;color:#9A8070">rows read</div></div>
+  </div>
+  <div class="comp-badge" id="speedup-badge">4× fewer rows</div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button class="btn btn-scan" id="btn-scan" onclick="runFullScan()">
+    <span>▶</span> Full Table Scan
+  </button>
+  <button class="btn btn-idx" id="btn-idx" onclick="runIndexLookup()">
+    <span>⚡</span> Index Lookup
+  </button>
+  <button class="btn btn-reset" onclick="resetAll()">↺ Reset</button>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-label">Rows Scanned</div>
+      <div class="stat-val" id="stat-scanned">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Matches Found</div>
+      <div class="stat-val" id="stat-found">—</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ROWS = [
+  { id:'ORD001', cid:'C003', city:'Delhi',     val:'₹580', st:'delivered', match:false },
+  { id:'ORD002', cid:'C007', city:'Bangalore', val:'₹210', st:'cancelled', match:false },
+  { id:'ORD003', cid:'C001', city:'Delhi',     val:'₹340', st:'delivered', match:false },
+  { id:'ORD004', cid:'C009', city:'Mumbai',    val:'₹890', st:'delivered', match:true  },
+  { id:'ORD005', cid:'C002', city:'Chennai',   val:'₹125', st:'delivered', match:false },
+  { id:'ORD006', cid:'C011', city:'Mumbai',    val:'₹320', st:'delivered', match:true  },
+  { id:'ORD007', cid:'C004', city:'Bangalore', val:'₹670', st:'delivered', match:false },
+  { id:'ORD008', cid:'C006', city:'Delhi',     val:'₹190', st:'cancelled', match:false },
+  { id:'ORD009', cid:'C010', city:'Chennai',   val:'₹550', st:'delivered', match:false },
+  { id:'ORD010', cid:'C008', city:'Mumbai',    val:'₹430', st:'delivered', match:true  },
+  { id:'ORD011', cid:'C012', city:'Bangalore', val:'₹780', st:'delivered', match:false },
+  { id:'ORD012', cid:'C013', city:'Delhi',     val:'₹130', st:'cancelled', match:false },
+];
+
+const INDEX = [
+  { key:'Bangalore', rows:[2,7,11] },
+  { key:'Chennai',   rows:[5,9]    },
+  { key:'Delhi',     rows:[1,3,8,12] },
+  { key:'Mumbai',    rows:[4,6,10], target:true },
+];
+
+let running = false;
+
+function buildTable() {
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = ROWS.map((r, i) => `
+    <tr class="data-row" id="row-${i}">
+      <td><span class="scan-dot" id="dot-${i}"></span>${i+1}</td>
+      <td>${r.id}</td>
+      <td>${r.cid}</td>
+      <td id="city-${i}">${r.city}</td>
+      <td>${r.val}</td>
+      <td>${r.st}</td>
+    </tr>
+  `).join('');
+}
+
+function buildIndex() {
+  const container = document.getElementById('index-entries');
+  container.innerHTML = INDEX.map((entry, i) => `
+    <div class="idx-entry" id="idx-${i}">
+      <span class="idx-key">${entry.key}</span>
+      <span class="idx-arrow">→</span>
+      <div class="idx-rows">
+        ${entry.rows.map(r => `<span class="row-chip" id="chip-${entry.key}-${r}">row ${r}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setLog(msg, cls='') {
+  const log = document.getElementById('log');
+  log.textContent = msg;
+  log.className = 'log' + (cls ? ' ' + cls : '');
+}
+
+function resetRows() {
+  ROWS.forEach((_, i) => {
+    const tr = document.getElementById('row-'+i);
+    if (tr) tr.className = 'data-row';
+  });
+  INDEX.forEach((_, i) => {
+    const el = document.getElementById('idx-'+i);
+    if (el) el.className = 'idx-entry';
+  });
+  document.getElementById('conn-status').innerHTML = 'Index lookup will jump<br>directly to matching rows';
+  document.getElementById('stat-scanned').textContent = '—';
+  document.getElementById('stat-scanned').className = 'stat-val';
+  document.getElementById('stat-found').textContent = '—';
+  document.getElementById('stat-found').className = 'stat-val';
+  document.getElementById('comparison').className = 'comparison';
+  setLog('Select an approach below to see how the database finds rows where city = \'Mumbai\'');
+}
+
+function setButtons(disabled) {
+  document.getElementById('btn-scan').disabled = disabled;
+  document.getElementById('btn-idx').disabled = disabled;
+}
+
+async function runFullScan() {
+  if (running) return;
+  running = true;
+  setButtons(true);
+  resetRows();
+  await sleep(100);
+
+  let scanned = 0;
+  let found = 0;
+
+  setLog('Starting full table scan… reading every row from row 1 to row 12', 'active-scan');
+
+  // Grey out index panel
+  INDEX.forEach((_, i) => {
+    const el = document.getElementById('idx-'+i);
+    if (el) el.className = 'idx-entry idx-dimmed';
+  });
+
+  for (let i = 0; i < ROWS.length; i++) {
+    const tr = document.getElementById('row-'+i);
+    tr.className = 'data-row scanning';
+    scanned++;
+    document.getElementById('stat-scanned').textContent = scanned;
+    document.getElementById('stat-scanned').className = 'stat-val scan-color';
+
+    setLog(`Scanning row ${i+1} of ${ROWS.length}: city = '${ROWS[i].city}'… ${ROWS[i].match ? '✓ MATCH' : 'no match'}`, 'active-scan');
+    await sleep(ROWS[i].match ? 500 : 200);
+
+    if (ROWS[i].match) {
+      tr.className = 'data-row found';
+      found++;
+      document.getElementById('stat-found').textContent = found;
+      document.getElementById('stat-found').className = 'stat-val idx-color';
+    } else {
+      tr.className = 'data-row dimmed';
+    }
+  }
+
+  setLog(`Full scan complete — read all ${ROWS.length} rows, found ${found} matching rows where city = 'Mumbai'`, 'active-scan');
+  document.getElementById('comparison').className = 'comparison show';
+  running = false;
+  setButtons(false);
+}
+
+async function runIndexLookup() {
+  if (running) return;
+  running = true;
+  setButtons(true);
+  resetRows();
+  await sleep(100);
+
+  setLog('Index lookup: searching sorted city index for \'Mumbai\'…', 'active-idx');
+
+  // Step 1: scan through index entries
+  for (let i = 0; i < INDEX.length; i++) {
+    const el = document.getElementById('idx-'+i);
+    el.className = 'idx-entry idx-scanning';
+    await sleep(280);
+    if (INDEX[i].target) {
+      el.className = 'idx-entry idx-found';
+      setLog(`Found: 'Mumbai' → row pointers [4, 6, 10] — jumping directly to these 3 rows…`, 'active-idx');
+      break;
+    } else {
+      el.className = 'idx-entry idx-dimmed';
+    }
+  }
+
+  await sleep(500);
+
+  // Update connector
+  document.getElementById('conn-status').innerHTML =
+    '<span style="color:#1A7A50;font-weight:600">Found: Mumbai → rows 4, 6, 10</span><br>Jumping directly — no other rows read';
+
+  document.getElementById('stat-scanned').textContent = '3';
+  document.getElementById('stat-scanned').className = 'stat-val idx-color';
+
+  // Step 2: Jump directly to matching rows
+  const matchIndices = [3, 5, 9]; // 0-indexed: rows 4, 6, 10
+  for (const idx of matchIndices) {
+    const tr = document.getElementById('row-'+idx);
+    tr.className = 'data-row found';
+    await sleep(180);
+  }
+
+  // Dim non-matching rows
+  ROWS.forEach((_, i) => {
+    if (!ROWS[i].match) {
+      const tr = document.getElementById('row-'+i);
+      tr.className = 'data-row dimmed';
+    }
+  });
+
+  document.getElementById('stat-found').textContent = '3';
+  document.getElementById('stat-found').className = 'stat-val idx-color';
+
+  setLog(`Index lookup complete — read only 3 rows (index pointed directly to them). 9 rows never touched.`, 'active-idx');
+  document.getElementById('comparison').className = 'comparison show';
+  running = false;
+  setButtons(false);
+}
+
+function resetAll() {
+  if (running) return;
+  resetRows();
+}
+
+buildTable();
+buildIndex();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-2026" target="_blank" rel="noopener">github.com/scaler-content/DSML-2026</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

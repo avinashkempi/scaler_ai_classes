@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pandas 3 · Group Operations &amp; Hierarchical Indexing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f4f9;--surface:#fff;--surface-2:#edecf5;--ink:#1b1930;--text:#34314c;--muted:#6a6883;--border:#e4e2ef;--primary:#4b3fd0;--primary-strong:#3a2fb0;--primary-soft:#ecebfb;--accent:#ef6a45;--accent-soft:#fdece6;--bridge:#0e8f8f;--bridge-soft:#e0f5f4;--success:#2e9e50;--success-soft:#e6f5ea;--danger:#d6465a;--danger-soft:#fbe9ec;--warning:#cf8710;--warning-soft:#fbf0da;--radius-card:14px;--radius-sm:8px;--code-bg:#1a1930;--code-header:#232145;--code-text:#e9e7f6;--code-comment:#8481a3;--code-keyword:#b7a6ff;--code-string:#86e0a8;--code-number:#f2a06a;--code-builtin:#63d5d0;--code-operator:#d9d6ec;--code-line:rgba(155,143,245,.14);--font-head:'Fraunces',Georgia,serif;--font-body:'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;color-scheme:light;}
+:root[data-theme="dark"]{--bg:#131223;--surface:#1c1a2e;--surface-2:#24223a;--ink:#f3f2fb;--text:#cbc9e0;--muted:#918eab;--border:#2e2c46;--primary:#9a8ff5;--primary-strong:#b3aaff;--primary-soft:#211f3a;--accent:#ff8163;--accent-soft:#3a2620;--bridge:#34c9c6;--bridge-soft:#10302f;--success:#46c06e;--success-soft:#12301e;--danger:#f0687a;--danger-soft:#331920;--warning:#e0a53a;--warning-soft:#33280f;color-scheme:dark;}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-theme="dark"]){--bg:#131223;--surface:#1c1a2e;--surface-2:#24223a;--ink:#f3f2fb;--text:#cbc9e0;--muted:#918eab;--border:#2e2c46;--primary:#9a8ff5;--primary-strong:#b3aaff;--primary-soft:#211f3a;--accent:#ff8163;--accent-soft:#3a2620;--bridge:#34c9c6;--bridge-soft:#10302f;--success:#46c06e;--success-soft:#12301e;--danger:#f0687a;--danger-soft:#331920;--warning:#e0a53a;--warning-soft:#33280f;color-scheme:dark;}}
+*{box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:16.5px;line-height:1.65;-webkit-font-smoothing:antialiased;}
+h1,h2,h3,h4{font-family:var(--font-head);color:var(--ink);line-height:1.15;margin:0;}
+p{margin:0 0 1em 0;}a{color:var(--primary);}
+code{font-family:var(--font-mono);background:var(--surface-2);padding:.1rem .4rem;border-radius:5px;font-size:.9em;}
+::selection{background:var(--primary-soft);color:var(--ink);}
+#progress{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--primary),var(--accent));z-index:100;transition:width .1s;}
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:.6rem 1.25rem;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);}
+.topbar .brand{font-family:var(--font-head);font-weight:600;font-size:1.05rem;color:var(--ink);display:flex;gap:.5rem;align-items:baseline;}
+.topbar .brand small{font-family:var(--font-body);font-weight:600;color:var(--primary);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;background:var(--primary-soft);padding:.15rem .5rem;border-radius:100px;}
+.icon-btn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:100px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;}
+.icon-btn:hover{border-color:var(--primary);}
+.wrap{display:grid;grid-template-columns:230px minmax(0,780px);gap:2.5rem;max-width:1080px;margin:0 auto;padding:0 1.25rem 6rem;}
+@media(max-width:900px){.wrap{grid-template-columns:1fr;}.toc{display:none;}}
+.toc{position:sticky;top:70px;align-self:start;padding-top:2rem;font-size:.85rem;max-height:calc(100vh - 90px);overflow-y:auto;}
+.toc-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:.6rem;}
+.toc a{display:block;color:var(--muted);text-decoration:none;padding:.26rem 0 .26rem .7rem;border-left:2px solid var(--border);margin-bottom:.02rem;transition:all .15s;font-size:.83rem;}
+.toc a.active{color:var(--primary);border-left-color:var(--primary);font-weight:600;}
+.toc a:hover{color:var(--ink);}
+main{min-width:0;padding-top:2rem;}
+.hero{padding:1rem 0 2.5rem;}
+.hero .kicker{font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;color:var(--bridge);font-weight:700;margin-bottom:.7rem;}
+.hero h1{font-size:2.6rem;font-weight:600;margin-bottom:.7rem;}
+.hero .sub{font-size:1.12rem;color:var(--muted);max-width:60ch;}
+.recap-row{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.5rem;}
+.recap-chip{font-size:.8rem;background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:.35rem .75rem;border-radius:100px;}
+.section{margin:3.2rem 0;}
+.eyebrow{font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;color:var(--primary);font-weight:700;margin-bottom:.4rem;display:flex;align-items:center;gap:.5rem;}
+.eyebrow .num{background:var(--primary);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.68rem;font-family:var(--font-body);}
+.section h2{font-size:1.8rem;font-weight:600;margin-bottom:.85rem;}
+.section h3{font-size:1.24rem;font-weight:600;margin:1.6rem 0 .6rem;}
+.lede{font-size:1.03rem;}
+.code-card{background:var(--code-bg);border-radius:var(--radius-card);overflow:hidden;margin:1.1rem 0;box-shadow:0 8px 24px -12px rgba(20,15,60,.35);}
+.code-head{display:flex;align-items:center;justify-content:space-between;padding:.5rem .9rem;background:var(--code-header);border-bottom:1px solid rgba(255,255,255,.06);}
+.code-label{font-family:var(--font-mono);font-size:.72rem;color:var(--code-text);opacity:.65;}
+.copy-btn{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--code-text);font-size:.68rem;font-family:var(--font-body);padding:.28rem .6rem;border-radius:6px;cursor:pointer;opacity:.75;}
+.copy-btn:hover{opacity:1;border-color:rgba(255,255,255,.4);}
+.code-body{padding:.95rem 1.1rem;overflow-x:auto;}
+.code-src{margin:0;font-family:var(--font-mono);font-size:.87rem;color:var(--code-text);white-space:pre;line-height:1.65;}
+.tk-c{color:var(--code-comment);font-style:italic;}.tk-s{color:var(--code-string);}.tk-k{color:var(--code-keyword);font-weight:600;}.tk-f{color:var(--code-builtin);}.tk-n{color:var(--code-number);}.tk-o{color:var(--code-operator);}
+.io-block{border-radius:var(--radius-sm);border:1px solid var(--border);overflow:hidden;background:var(--surface);margin:.7rem 0;}
+.io-block .io-tag{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;padding:.4rem .7rem;}
+.io-block.output .io-tag{color:var(--success);background:var(--success-soft);}
+.io-block pre{margin:0;padding:.7rem .8rem;font-family:var(--font-mono);font-size:.85rem;color:var(--ink);white-space:pre-wrap;}
+.reveal{margin:.7rem 0 1.1rem;}
+.reveal-btn{background:var(--primary-soft);color:var(--primary-strong);border:1px dashed var(--primary);padding:.55rem 1rem;border-radius:var(--radius-sm);font-size:.86rem;font-weight:600;cursor:pointer;font-family:var(--font-body);display:inline-flex;align-items:center;gap:.5rem;}
+.reveal-btn:hover{background:var(--primary);color:#fff;}
+.reveal-panel{display:none;margin-top:.6rem;}
+.reveal-panel.shown{display:block;animation:fade .25s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+.callout{border-radius:var(--radius-card);padding:1rem 1.15rem;margin:1.1rem 0;border-left:4px solid;font-size:.95rem;}
+.callout .callout-title{font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem;}
+.callout.bridge{background:var(--bridge-soft);border-color:var(--bridge);}.callout.bridge .callout-title{color:var(--bridge);}
+.callout.warning{background:var(--warning-soft);border-color:var(--warning);}.callout.warning .callout-title{color:var(--warning);}
+.callout.primary{background:var(--primary-soft);border-color:var(--primary);}.callout.primary .callout-title{color:var(--primary-strong);}
+.callout.danger{background:var(--danger-soft);border-color:var(--danger);}.callout.danger .callout-title{color:var(--danger);}
+.callout.success{background:var(--success-soft);border-color:var(--success);}.callout.success .callout-title{color:var(--success);}
+.tbl-wrap{overflow-x:auto;margin:1rem 0;}
+table.op-table{width:100%;border-collapse:collapse;font-size:.92rem;background:var(--surface);border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);}
+table.op-table th{background:var(--surface-2);color:var(--ink);text-align:left;padding:.6rem .8rem;font-weight:700;font-size:.78rem;text-transform:uppercase;}
+table.op-table td{padding:.55rem .8rem;border-top:1px solid var(--border);vertical-align:top;}
+table.op-table td code{font-family:var(--font-mono);background:var(--surface-2);padding:.1rem .4rem;border-radius:5px;font-size:.86rem;}
+.tryit-card{border-radius:var(--radius-card);overflow:hidden;margin:.7rem 0 1.2rem;border:1px solid var(--border);box-shadow:0 8px 24px -14px rgba(20,15,60,.3);}
+.tryit-head{display:flex;align-items:center;justify-content:space-between;padding:.5rem .9rem;background:var(--primary-soft);border-bottom:1px solid var(--border);}
+.tryit-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--primary-strong);}
+.tryit-btns{display:flex;gap:.4rem;}
+.tryit-run,.tryit-reset{border:none;border-radius:6px;font-size:.72rem;font-weight:700;padding:.32rem .7rem;cursor:pointer;font-family:var(--font-body);}
+.tryit-run{background:var(--primary);color:#fff;}.tryit-run:hover{background:var(--primary-strong);}.tryit-run:disabled{opacity:.6;cursor:wait;}
+.tryit-reset{background:transparent;border:1px solid var(--primary);color:var(--primary-strong);}
+.tryit-input{width:100%;min-height:80px;background:var(--code-bg);color:var(--code-text);font-family:var(--font-mono);font-size:.87rem;border:none;padding:.9rem 1.1rem;resize:vertical;line-height:1.6;display:block;}
+.tryit-input:focus{outline:2px solid var(--primary);outline-offset:-2px;}
+.tryit-status{display:none;padding:.5rem .9rem;font-size:.78rem;color:var(--muted);background:var(--surface-2);font-style:italic;}
+.tryit-output-tag{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;padding:.4rem .9rem;background:var(--surface-2);color:var(--muted);display:none;}
+.tryit-output-tag.shown{display:block;}
+.tryit-output{margin:0;padding:.8rem 1.1rem;font-family:var(--font-mono);font-size:.85rem;background:var(--code-bg);color:var(--code-text);white-space:pre-wrap;display:none;min-height:1.4em;}
+.tryit-output.shown{display:block;}
+
+/* split-apply-combine visual */
+.sac-flow{display:flex;flex-direction:column;gap:.5rem;margin:1.2rem 0;}
+.sac-row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;}
+.sac-step{width:90px;background:var(--primary);color:#fff;border-radius:var(--radius-sm);padding:.55rem .7rem;font-weight:700;font-size:.78rem;text-align:center;flex-shrink:0;}
+.sac-step.apply{background:var(--accent);}
+.sac-step.combine{background:var(--bridge);}
+.sac-desc{font-size:.88rem;color:var(--text);}
+.sac-groups{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.3rem;}
+.sac-group{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.3rem .6rem;font-family:var(--font-mono);font-size:.78rem;}
+.sac-group.g1{border-color:var(--primary);background:var(--primary-soft);}
+.sac-group.g2{border-color:var(--bridge);background:var(--bridge-soft);}
+.sac-group.g3{border-color:var(--accent);background:var(--accent-soft);}
+
+/* apply axis diagram */
+.axis-cards{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin:1rem 0;}
+@media(max-width:560px){.axis-cards{grid-template-columns:1fr;}}
+.axis-card{border-radius:var(--radius-sm);border:1px solid var(--border);overflow:hidden;}
+.axis-card .ah{padding:.55rem .85rem;font-weight:700;font-size:.82rem;}
+.axis-card.a0 .ah{background:var(--danger-soft);color:var(--danger);}
+.axis-card.a1 .ah{background:var(--success-soft);color:var(--success);}
+.axis-card .ab{padding:.75rem .85rem;font-size:.85rem;}
+
+/* multi-index visual */
+.mi-table-wrap{overflow-x:auto;margin:1rem 0;}
+.mi-table{border-collapse:collapse;font-size:.83rem;font-family:var(--font-mono);}
+.mi-table th{padding:.42rem .7rem;text-align:center;font-size:.78rem;}
+.mi-table .l1{background:var(--primary);color:#fff;}
+.mi-table .l2{background:var(--primary-soft);color:var(--primary-strong);}
+.mi-table .idx{background:var(--surface-2);color:var(--muted);font-style:italic;text-align:left;}
+.mi-table td{padding:.38rem .7rem;border:1px solid var(--border);background:var(--surface);}
+.mi-table td.idx{background:var(--surface-2);font-weight:700;}
+
+/* productivity table */
+.prod-table{width:100%;border-collapse:collapse;font-size:.88rem;background:var(--surface);}
+.prod-table th{background:var(--surface-2);text-align:left;padding:.5rem .75rem;font-size:.76rem;text-transform:uppercase;font-weight:700;}
+.prod-table td{padding:.5rem .75rem;border-top:1px solid var(--border);}
+.prod-table .bar-cell{width:140px;}
+.prod-bar{height:12px;background:var(--primary);border-radius:6px;}
+
+.quiz{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:1.3rem;margin:1.4rem 0;}
+.quiz-tag{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:.5rem;}
+.quiz-q{font-weight:600;color:var(--ink);margin-bottom:.9rem;font-size:1.02rem;}
+.quiz-opts{display:flex;flex-direction:column;gap:.55rem;}
+.quiz-opt{border:1px solid var(--border);border-radius:var(--radius-sm);padding:.65rem .9rem;cursor:pointer;font-size:.88rem;display:flex;gap:.6rem;align-items:flex-start;background:var(--bg);font-family:var(--font-mono);}
+.quiz-opt:hover{border-color:var(--primary);}
+.quiz-opt.correct{background:var(--success-soft);border-color:var(--success);color:var(--success);}
+.quiz-opt.incorrect{background:var(--danger-soft);border-color:var(--danger);color:var(--danger);}
+.quiz-explain{display:none;margin-top:.9rem;padding:.9rem 1rem;background:var(--surface-2);border-radius:var(--radius-sm);font-size:.9rem;}
+.quiz-explain.shown{display:block;animation:fade .25s ease;}
+
+table.summary{width:100%;border-collapse:collapse;font-size:.89rem;}
+table.summary th{background:var(--surface-2);text-align:left;padding:.55rem .75rem;font-size:.74rem;text-transform:uppercase;color:var(--muted);}
+table.summary td{padding:.6rem .75rem;border-top:1px solid var(--border);vertical-align:top;}
+table.summary td:first-child{font-weight:700;color:var(--ink);}
+table.summary td code{font-family:var(--font-mono);background:var(--surface-2);padding:.1rem .35rem;border-radius:5px;}
+footer{max-width:780px;margin:0 auto;padding:2rem 1.25rem 4rem;color:var(--muted);font-size:.85rem;text-align:center;}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· Pandas 3 · groupby, apply and multi-index</span><span class="pn"><a href="../DSML-Pandas-2/" title="Pandas 2 · Core DataFrame operations">← Prev</a><a href="../DSML-Pandas-4/" title="Pandas 4 · Reshaping and cleaning data">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progress"></div>
+<div class="topbar">
+  <div class="brand">Pandas 3 <small>Post-read</small></div>
+  <button class="icon-btn" id="themeToggle" title="Toggle theme">🌗</button>
+</div>
+
+<div class="wrap">
+  <nav class="toc">
+    <div class="toc-title">On this page</div>
+    <a href="#hook">The IMDB scenario</a>
+    <a href="#load">Loading the data</a>
+    <a href="#isin">isin() and nunique()</a>
+    <a href="#merge">Merging the datasets</a>
+    <a href="#apply">apply()</a>
+    <a href="#apply-axis">apply() with axis=</a>
+    <a href="#groupby">groupby: Split-Apply-Combine</a>
+    <a href="#agg">Group aggregation</a>
+    <a href="#filter">Group filtering</a>
+    <a href="#group-apply">Group apply — risky movies</a>
+    <a href="#multiindex">Multi-index</a>
+    <a href="#flatten">Flattening multi-index</a>
+    <a href="#productivity">Calculating productivity</a>
+    <a href="#summary">Session summary</a>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="kicker">Pandas Module · Lecture 3</div>
+      <h1>Group Operations &amp; Hierarchical Indexing</h1>
+      <p class="sub">From the McKinsey single-table world to real two-file IMDB data — merging, applying functions row-by-row, splitting into groups, aggregating, filtering groups, and working with multi-level column structures.</p>
+      <div class="recap-row">
+        <span class="recap-chip">merge() join types</span>
+        <span class="recap-chip">groupby basics</span>
+        <span class="recap-chip">Boolean masking &amp; isin()</span>
+        <span class="recap-chip">drop_duplicates / sort_values</span>
+      </div>
+    </section>
+
+    <!-- HOOK -->
+    <section class="section" id="hook">
+      <div class="eyebrow"><span class="num">1</span>Scenario</div>
+      <h2>The IMDB scenario</h2>
+      <p class="lede">In Lectures 1 and 2 we worked with the McKinsey survey — a single neat table. Real analytical work is rarely that tidy. Today's data comes from IMDB, split across <b>two separate files</b> — exactly how data arrives in practice.</p>
+      <div class="callout primary">
+        <div class="callout-title">📋 What the client wants</div>
+        An analytics firm client wants to understand movie trends. Questions range from simple to deep:
+        <ul style="margin:.5rem 0 0;padding-left:1.2rem;font-size:.93rem;">
+          <li>Top 10 most popular movies (by popularity column)?</li>
+          <li>Highest rated movies (by vote_average)?</li>
+          <li>How many movies released per year?</li>
+          <li><b>Who are the most productive directors?</b> ← the deep question we build toward today</li>
+          <li><b>Which directors produce high-budget films?</b> ← the other deep question</li>
+        </ul>
+        The first three need only <code>sort_values</code> and basic filtering. The last two need the full toolkit: merging, <code>apply</code>, and <code>groupby</code>.
+      </div>
+    </section>
+
+    <!-- LOAD -->
+    <section class="section" id="load">
+      <div class="eyebrow"><span class="num">2</span>Setup</div>
+      <h2>Loading the two datasets</h2>
+      <div class="code-card"><div class="code-head"><span class="code-label">python</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">import pandas as pd
+
+movies    = pd.read_csv('movies.csv',    index_col=0)
+directors = pd.read_csv('directors.csv', index_col=0)</pre></div></div>
+      <div class="callout primary">
+        <div class="callout-title">💡 index_col=0</div>
+        When a CSV was exported from a DataFrame, the first column is often just the row number saved as data (Pandas calls it <code>Unnamed: 0</code>). Passing <code>index_col=0</code> tells <code>read_csv</code> to use that first column as the row index instead of a regular data column — so it never appears as a column in your DataFrame.
+      </div>
+      <div class="io-block output"><div class="io-tag">Shapes</div><pre>movies.shape    → (1465, 11)
+directors.shape → (2349, 3)</pre></div>
+      <p>1465 movies, but the directors file has 2349 rows — one per director in the IMDB database. Not every IMDB director has a movie in our movies file, so the movies directors are a <em>subset</em> of the directors file.</p>
+    </section>
+
+    <!-- ISIN / NUNIQUE -->
+    <section class="section" id="isin">
+      <div class="eyebrow"><span class="num">3</span>Pre-merge checks</div>
+      <h2>isin() and nunique()</h2>
+
+      <h3>nunique() — count distinct values</h3>
+      <div class="code-card"><div class="code-head"><span class="code-label">python</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">movies['director_id'].nunique()   # → 199
+directors['id'].nunique()         # → 2349</pre></div></div>
+      <p style="font-size:.9rem;color:var(--muted);"><code>nunique()</code> counts <em>distinct</em> values. <code>unique()</code> (from Lecture 1) lists them; <code>nunique()</code> just gives the count.</p>
+
+      <h3>isin() — membership check across a whole column</h3>
+      <p>Verify that every <code>director_id</code> in movies appears in the directors table:</p>
+      <div class="code-card"><div class="code-head"><span class="code-label">python</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">movies['director_id'].isin(directors['id'])
+# Returns True/False per row
+
+movies['director_id'].isin(directors['id']).all()
+# → True  (every director_id exists in the directors table)</pre></div></div>
+
+      <div style="display:flex;gap:.9rem;flex-wrap:wrap;align-items:flex-start;margin:1rem 0;">
+        <div style="flex:1 1 180px;background:var(--surface-2);border-radius:var(--radius-sm);padding:.8rem 1rem;font-size:.85rem;">
+          <div style="font-weight:700;color:var(--ink);margin-bottom:.4rem;">Python <code>in</code></div>
+          Checks <em>one element</em> at a time against a list:<br><code style="font-size:.8rem;">3 in [1,2,3]  # True</code>
+        </div>
+        <div style="font-size:1.4rem;color:var(--muted);align-self:center;">vs</div>
+        <div style="flex:1 1 240px;background:var(--bridge-soft);border:1px solid var(--bridge);border-radius:var(--radius-sm);padding:.8rem 1rem;font-size:.85rem;">
+          <div style="font-weight:700;color:var(--bridge);margin-bottom:.4rem;">Pandas <code>isin()</code></div>
+          Checks <em>every value</em> in the column at once, returning a full boolean Series — the vectorised equivalent.
+        </div>
+      </div>
+      <div class="callout bridge">
+        <div class="callout-title">🌉 SQL bridge</div>
+        <code>movies['director_id'].isin(directors['id'])</code> ≈ <code>SELECT * FROM movies WHERE director_id IN (SELECT id FROM directors);</code>
+      </div>
+      <div class="tryit-card" data-tryit>
+        <div class="tryit-head"><span class="tryit-label">🐍 Try it yourself</span><div class="tryit-btns"><button class="tryit-run">▶ Run</button><button class="tryit-reset">Reset</button></div></div>
+        <textarea class="tryit-input" spellcheck="false">import pandas as pd
+
+movies = pd.DataFrame({'title':['Inception','Avatar','Signs'],
+                       'director_id':[4,1,8]})
+directors = pd.DataFrame({'id':[1,4,7,8],'name':['James Cameron','Nolan','Woody Allen','Shyamalan']})
+
+print("nunique director_ids:", movies['director_id'].nunique())
+print("isin check:", movies['director_id'].isin(directors['id']).tolist())
+print("all present:", movies['director_id'].isin(directors['id']).all())</textarea>
+        <div class="tryit-status"></div><div class="tryit-output-tag"></div><pre class="tryit-output"></pre>
+      </div>
+    </section>
+
+    <!-- MERGE -->
+    <section class="section" id="merge">
+      <div class="eyebrow"><span class="num">4</span>Joining data</div>
+      <h2>Merging the datasets</h2>
+      <p class="lede">We need director details alongside movie details. The join type follows from the business requirement:</p>
+      <ul style="font-size:.93rem;padding-left:1.2rem;margin:.6rem 0 1rem;">
+        <li>Every movie matters — keep all rows from <code>movies</code> ✓</li>
+        <li>Only directors who appear in our movies file — don't keep all 2349 directors ✓</li>
+        <li>→ <b>Left join</b> with <code>movies</code> on the left.</li>
+      </ul>
+      <div class="code-card"><div class="code-head"><span class="code-label">python</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">data = movies.merge(directors, how='left', left_on='director_id', right_on='id')
+
+# Both tables had a column called 'id' → Pandas disambiguates as id_x and id_y
+# id_y is the same information as director_id → drop both
+data.drop(['director_id', 'id_y'], axis=1, inplace=True)
+data.head()</pre></div></div>
+      <div class="callout primary">
+        <div class="callout-title">💡 Suffix disambiguation</div>
+        When both tables share a column name that isn't the merge key, Pandas appends <code>_x</code> (from the left table) and <code>_y</code> (from the right). Check for these after every merge — they're a sign of a column to investigate and likely drop.
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-tag">Quiz 1</div>
+        <div class="quiz-q">How do you filter movies released in 2015, 2016, or 2012?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" data-correct="true">A) movies['year'].isin([2015, 2016, 2012])</div>
+          <div class="quiz-opt" data-correct="false">B) movies['year'].in([2015, 2016, 2012])</div>
+          <div class="quiz-opt" data-correct="false">C) movies['year'] == ([2015, 2016, 2012])</div>
+        </div>
+        <div class="quiz-explain"><code>isin()</code> checks each value against a list and returns a boolean Series. Option B is invalid — <code>.in</code> is not a Pandas method (<code>in</code> is a Python keyword and cannot be called as a method). Option C compares the column to a list object, which doesn't produce row-wise membership — it compares shapes.</div>
+      </div>
+    </section>
+
+    <!-- APPLY -->
+    <section class="section" id="apply">
+      <div class="eyebrow"><span class="num">5</span>Row-wise functions</div>
+      <h2>apply() — run a function across every value</h2>
+      <p class="lede">The client wants the gender column recoded: Male → 0, Female → 1. We know how to write a function for one value. <code>apply()</code> runs it across every value in the column — no loop needed.</p>
+
+      <div style="background:var(--surface-2);border-radius:var(--radius-sm);padding:.9rem 1rem;margin:1rem 0;font-size:.88rem;">
+        <b>The assembly-line analogy:</b> if the column is a stack of exam papers, <code>apply(encode)</code> is like handing the stack to a teaching assistant with the instruction "run each sheet through this grading rubric." Every sheet gets the same treatment; you get back a graded stack.
+      </div>
+
+      <div class="code-card"><div class="code-head"><span class="code-label">python</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">def encode(value):
+    if value == "Male":
+        return 0
+    else:
+        return 1
+
+data['gender'] = data['gender'].apply(encode)</pre></div></div>
+      <p>Every value in the column passed through <code>encode</code>, one by one, and the results replaced the original values.</p>
+
+      <div class="callout bridge">
+        <div class="callout-title">🌉 SQL bridge</div>
+        <code>data['gender'].apply(encode)</code> ≈ <code>SELECT CASE WHEN gender='Male' THEN 0 ELSE 1 END AS gender FROM data;</code>
+      </div>
+    </section>
+
+    <!-- APPLY AXIS -->
+    <section class="section" id="apply-axis">
+      <div class="eyebrow"><span class="num">6</span>Row-wise functions</div>
+      <h2>apply() with axis= — column vs row direction</h2>
+      <p class="lede">When you apply to multiple columns, <code>axis=</code> decides whether the function runs down each column or across each row.</p>
+
+      <div class="axis-cards">
+        <div class="axis-card a0">
+          <div class="ah">axis=0 (default) — collapse rows within each column</div>
+          <div class="ab">Function receives one entire column at a time. Result: one value per column.<br><br><code>data[['revenue','budget']].apply(sum)</code><br>→ total revenue, total budget</div>
+        </div>
+        <div class="axis-card a1">
+          <div class="ah">axis=1 — collapse columns within each row</div>
+          <div class="ab">Function receives one entire row at a time. Result: one value per row.<br><br><code>data[['revenue','budget']].apply(sum, axis=1)</code><br>→ revenue+budget for each movie</div>
+        </div>
+      </div>
+
+      <div class="code-card"><div class="code-head"><span class="code-label">python — profit column (custom function, axis=1)</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">def prof(row):
+    return row['revenue'] - row['budget']
+
+data['profit'] = data[['revenue', 'budget']].apply(prof, axis=1)</pre></div></div>
+      <p style="font-size:.9rem;color:var(--muted);">Each row passes through <code>prof</code> with <code>axis=1</code>. Within each row, <code>row['revenue']</code> and <code>row['budget']</code> are that row's values — so each movie gets its own profit calculation.</p>
+
+      <div class="tryit-card" data-tryit>
+        <div class="tryit-head"><span class="tryit-label">🐍 Try it yourself</span><div class="tryit-btns"><button class="tryit-run">▶ Run</button><button class="tryit-reset">Reset</button></div></div>
+        <textarea class="tryit-input" spellcheck="false">import pandas as pd
+
+data = pd.DataFrame({
+    'title':   ['Inception','Avatar','Titanic'],
+    'revenue': [836836967, 2787965087, 1845034188],
+    'budget':  [160000000, 237000000, 200000000],
+    'gender':  ['Male','Male','Male']
+})
+
+# apply: encode gender
+def encode(v): return 0 if v=="Male" else 1
+data['gender_enc'] = data['gender'].apply(encode)
+
+# apply axis=0: sum of each column
+print("axis=0 sums:")
+print(data[['revenue','budget']].apply(sum))
+
+# apply axis=1: profit per row
+def prof(row): return row['revenue'] - row['budget']
+data['profit'] = data[['revenue','budget']].apply(prof, axis=1)
+print("\nWith profit:")
+print(data[['title','revenue','budget','profit']])</textarea>
+        <div class="tryit-status"></div><div class="tryit-output-tag"></div><pre class="tryit-output"></pre>
+      </div>
+    </section>
+
+    <!-- GROUPBY -->
+    <section class="section" id="groupby">
+      <div class="eyebrow"><span class="num">7</span>Group operations</div>
+      <h2>groupby(): Split-Apply-Combine</h2>
+      <p class="lede"><code>apply()</code> processes one row at a time. When the question shifts to <em>"do something to each group of rows"</em> — "how many movies per director?", "average rating per director?" — we need <code>groupby()</code>.</p>
+
+      <div class="sac-flow">
+        <div class="sac-row">
+          <div class="sac-step">Split</div>
+          <div>
+            <div class="sac-desc">Break the DataFrame into groups by column values</div>
+            <div class="sac-groups">
+              <span class="sac-group g1">Nolan: [Inception, Dark Knight]</span>
+              <span class="sac-group g2">Spielberg: [Jaws, ET, …]</span>
+              <span class="sac-group g3">Allen: [Annie Hall, Manhattan, …]</span>
+            </div>
+          </div>
+        </div>
+        <div class="sac-row">
+          <div class="sac-step apply">Apply</div>
+          <div class="sac-desc">Compute something within each group independently — count, mean, max, custom function</div>
+        </div>
+        <div class="sac-row">
+          <div class="sac-step combine">Combine</div>
+          <div class="sac-desc">Stitch all group results back into a single output</div>
+        </div>
+      </div>
+
+      <div style="background:var(--surface-2);border-radius:var(--radius-sm);padding:.9rem 1rem;margin:1rem 0;font-size:.88rem;">
+        <b>Teacher analogy:</b> A stack of mixed-subject exam papers. <b>Split</b>: sort into piles by subject. <b>Apply</b>: grade each pile, count each pile, find the top scorer in each pile. <b>Combine</b>: produce one report with all results.
+      </div>
+
+      <div class="code-card"><div class="code-head"><span class="code-label">python — creating a GroupBy object</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">data.groupby('director_name')
+# → DataFrameGroupBy object — groups created, nothing computed yet
+
+data.groupby('director_name').ngroups      # → 199
+data.groupby('director_name').groups       # dict: group name → row indices
+data.groupby('director_name').get_group('Christopher Nolan')  # single group as DataFrame</pre></div></div>
+      <div class="callout primary">
+        <div class="callout-title">💡 GroupBy object ≠ DataFrame</div>
+        <code>data.groupby('director_name')</code> returns a <code>DataFrameGroupBy</code> object — think of it as the sorted piles of exam papers, waiting for you to decide what to do with each pile. Nothing is computed until you chain an operation like <code>.count()</code>, <code>.mean()</code>, or <code>.filter()</code>.
+      </div>
+    </section>
+
+    <!-- AGGREGATION -->
+    <section class="section" id="agg">
+      <div class="eyebrow"><span class="num">8</span>Group operations</div>
+      <h2>Group-based aggregation</h2>
+      <p class="lede">Aggregation collapses each group to a single summary number.</p>
+
+      <div class="code-card"><div class="code-head"><span class="code-label">python — count movies per director</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">data.groupby('director_name')['title'].count()</pre></div></div>
+      <div class="io-block output"><div class="io-tag">Output (excerpt)</div><pre>director_name
+Adam McKay                      6
+Woody Allen                    18
+Steven Spielberg               26
+...
+Name: title, Length: 199, dtype: int64</pre></div>
+
+      <div class="code-card"><div class="code-head"><span class="code-label">python — multiple aggregations in one call</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src"># First and last year each director released a movie
+data.groupby('director_name')['year'].aggregate(['min', 'max'])
+
+# Multi-column aggregation with a dict
+data.groupby('director_name').agg({'vote_average': ['mean', 'min', 'max']})</pre></div></div>
+      <div class="callout primary">
+        <div class="callout-title">💡 .agg and .aggregate are the same method</div>
+        Use whichever you prefer. <code>.agg</code> is just the shorter alias.
+      </div>
+      <div class="callout bridge">
+        <div class="callout-title">🌉 SQL bridge</div>
+        <code>data.groupby('director_name')['title'].count()</code> ≈ <code>SELECT director_name, COUNT(title) FROM data GROUP BY director_name;</code>
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-tag">Quiz 2</div>
+        <div class="quiz-q">How do you calculate the average monthly_rating for each employee?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" data-correct="false">A) data.groupby('emp_id')</div>
+          <div class="quiz-opt" data-correct="false">B) data.groupby('monthly_rating')</div>
+          <div class="quiz-opt" data-correct="true">C) data.groupby('emp_id')['monthly_rating'].mean()</div>
+          <div class="quiz-opt" data-correct="false">D) data.groupby('monthly_rating').mean()</div>
+        </div>
+        <div class="quiz-explain">Group by <code>emp_id</code> (not rating), select <code>monthly_rating</code> within each group, apply <code>.mean()</code>. Option A only creates groups without computing anything. Option B groups by the column we want to average (wrong column). Option D groups by the rating value itself, which makes no sense.</div>
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-tag">Quiz 3</div>
+        <div class="quiz-q">What does <code>data.groupby('director_name')['duration'].mean()</code> return?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" data-correct="true">A) The average duration for each unique director</div>
+          <div class="quiz-opt" data-correct="false">B) The DataFrame sorted alphabetically by director_name</div>
+          <div class="quiz-opt" data-correct="false">C) The average duration for all movies combined</div>
+        </div>
+        <div class="quiz-explain"><code>groupby('director_name')</code> splits by director, <code>['duration']</code> selects that column within each group, <code>.mean()</code> computes the average within each group. Result: one mean duration per director.</div>
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-tag">Quiz 4</div>
+        <div class="quiz-q">For each year, which code gives average, min, and max vote_average?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" data-correct="true">A) data.groupby('year').agg({'vote_average': ['mean', 'min', 'max']})</div>
+          <div class="quiz-opt" data-correct="false">B) data.groupby['year'].agg({'vote_average': ['mean', 'min', 'max']})</div>
+          <div class="quiz-opt" data-correct="false">C) data.groupby('year').agg(('vote_average': ['mean', 'min', 'max']))</div>
+        </div>
+        <div class="quiz-explain">Option B uses square brackets on <code>groupby</code> — but <code>groupby</code> is a method and requires parentheses <code>()</code>. Option C uses parentheses inside <code>.agg()</code> instead of curly braces <code>{}</code> — invalid Python syntax. Only A is syntactically valid.</div>
+      </div>
+
+      <div class="tryit-card" data-tryit>
+        <div class="tryit-head"><span class="tryit-label">🐍 Try it yourself</span><div class="tryit-btns"><button class="tryit-run">▶ Run</button><button class="tryit-reset">Reset</button></div></div>
+        <textarea class="tryit-input" spellcheck="false">import pandas as pd
+
+data = pd.DataFrame({
+    'director': ['Nolan','Nolan','Allen','Allen','Allen','Spielberg'],
+    'title':    ['Inception','Dark Knight','Annie Hall','Manhattan','Stardust','Avatar'],
+    'year':     [2010,2008,1977,1979,1980,2009],
+    'budget':   [160,185,4,9,10,237],
+    'rating':   [8.8,9.0,8.2,8.0,7.5,7.2]
+})
+
+print("movies per director:")
+print(data.groupby('director')['title'].count())
+
+print("\nyear range per director:")
+print(data.groupby('director')['year'].agg(['min','max']))
+
+print("\nrating stats per director:")
+print(data.groupby('director')['rating'].agg(['mean','min','max']).round(2))</textarea>
+        <div class="tryit-status"></div><div class="tryit-output-tag"></div><pre class="tryit-output"></pre>
+      </div>
+    </section>
+
+    <!-- GROUP FILTER -->
+    <section class="section" id="filter">
+      <div class="eyebrow"><span class="num">9</span>Group operations</div>
+      <h2>Group-based filtering</h2>
+      <p class="lede">Group-based filtering keeps or discards <b>entire groups</b> based on a condition — not individual rows. Client definition: a high-budget director has at least one movie with budget over $100 million.</p>
+
+      <div style="background:var(--surface-2);border-radius:var(--radius-sm);padding:.9rem 1rem;margin:1rem 0;font-size:.88rem;">
+        <b>VIP pass analogy:</b> Each director (group) is checked: "Does this director have at least one film costing over $100M?" If yes, the entire group (all their films) gets the VIP pass into our result. If no, all their films are excluded.
+      </div>
+
+      <h3>Three-step approach</h3>
+      <div class="code-card"><div class="code-head"><span class="code-label">python</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src"># Step 1: max budget per director
+data_dir_budget = data.groupby("director_name")["budget"].max().reset_index()
+
+# Step 2: names of high-budget directors
+names = data_dir_budget.loc[data_dir_budget["budget"] >= 100_000_000, "director_name"]
+
+# Step 3: filter full dataset to those directors only
+data.loc[data['director_name'].isin(names)]</pre></div></div>
+
+      <h3>One-line approach with filter() + lambda</h3>
+      <div class="code-card"><div class="code-head"><span class="code-label">python — equivalent in one line</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">data.groupby('director_name').filter(lambda x: x["budget"].max() >= 100_000_000)</pre></div></div>
+      <p>What happens:</p>
+      <ul style="font-size:.93rem;padding-left:1.2rem;margin:.5rem 0 1rem;">
+        <li>The DataFrame is grouped by director.</li>
+        <li><code>.filter()</code> evaluates the lambda on each group <code>x</code>.</li>
+        <li>Groups returning <code>True</code> (≥1 movie with budget ≥ $100M) pass through.</li>
+        <li>Groups returning <code>False</code> are discarded entirely.</li>
+        <li>The result is a regular flat DataFrame — not a GroupBy object.</li>
+      </ul>
+      <div class="callout bridge">
+        <div class="callout-title">🌉 SQL bridge</div>
+        <code>.filter(lambda x: x["budget"].max() >= 100M)</code> ≈ <code>SELECT * FROM data WHERE director_name IN (SELECT director_name FROM data GROUP BY director_name HAVING MAX(budget) >= 100000000);</code>
+      </div>
+      <div class="tryit-card" data-tryit>
+        <div class="tryit-head"><span class="tryit-label">🐍 Try it yourself</span><div class="tryit-btns"><button class="tryit-run">▶ Run</button><button class="tryit-reset">Reset</button></div></div>
+        <textarea class="tryit-input" spellcheck="false">import pandas as pd
+
+data = pd.DataFrame({
+    'director': ['Nolan','Nolan','Allen','Allen','Cameron'],
+    'title':    ['Inception','Dark Knight','Annie Hall','Manhattan','Avatar'],
+    'budget':   [160,185,4,9,237]  # millions
+})
+
+# One-line group filter: directors with at least one budget >= 100
+high_budget = data.groupby('director').filter(lambda x: x['budget'].max() >= 100)
+print("High-budget directors' movies:")
+print(high_budget)</textarea>
+        <div class="tryit-status"></div><div class="tryit-output-tag"></div><pre class="tryit-output"></pre>
+      </div>
+    </section>
+
+    <!-- GROUP APPLY -->
+    <section class="section" id="group-apply">
+      <div class="eyebrow"><span class="num">10</span>Group operations</div>
+      <h2>Group-based apply — risky movies</h2>
+      <p class="lede">Aggregation collapses each group to a number. Filtering keeps or drops groups. <b>Group apply</b> runs a custom function inside each group and writes the result back — so every row gets a value derived from its group's aggregate.</p>
+      <p><b>The question:</b> which movies are risky — meaning their budget exceeded the average revenue of that director's other movies?</p>
+
+      <div class="code-card"><div class="code-head"><span class="code-label">python</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">def func(x):
+    # x is one director's group of movies
+    # revenue.mean() is that director's average revenue — group-level
+    # budget is each movie's individual budget — row-level
+    x["risky"] = x["budget"] - x["revenue"].mean() >= 0
+    return x
+
+data_risky = data.groupby("director_name", group_keys=False).apply(func)</pre></div></div>
+
+      <div class="callout primary">
+        <div class="callout-title">💡 group_keys=False</div>
+        Setting <code>group_keys=False</code> prevents the group key (director name) from appearing as an extra index level in the result. Without it, the director name becomes an outer index layer on top of the normal row index.
+      </div>
+
+      <p>What the function does step by step:</p>
+      <ol style="font-size:.93rem;padding-left:1.2rem;margin:.5rem 0 1rem;">
+        <li><code>x["revenue"].mean()</code> — computes the <b>mean revenue for this director's movies only</b> (group-level)</li>
+        <li><code>x["budget"] - ...</code> — subtracts that mean from <b>each individual movie's budget</b> (row-level)</li>
+        <li><code>≥ 0</code> — if the movie cost more than the director's average revenue, it's flagged risky</li>
+        <li><code>return x</code> — returns the modified group; Pandas combines all groups back into one DataFrame</li>
+      </ol>
+
+      <div class="code-card"><div class="code-head"><span class="code-label">python — view risky movies</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">data_risky.loc[data_risky["risky"]]</pre></div></div>
+      <div class="tryit-card" data-tryit>
+        <div class="tryit-head"><span class="tryit-label">🐍 Try it yourself</span><div class="tryit-btns"><button class="tryit-run">▶ Run</button><button class="tryit-reset">Reset</button></div></div>
+        <textarea class="tryit-input" spellcheck="false">import pandas as pd
+
+data = pd.DataFrame({
+    'director': ['Nolan','Nolan','Nolan','Allen','Allen'],
+    'title':    ['Inception','Dark Knight','Tenet','Annie Hall','Manhattan'],
+    'budget':   [160, 185, 200, 4, 9],     # millions
+    'revenue':  [836, 1004, 363, 38, 39]   # millions
+})
+
+def flag_risky(x):
+    x = x.copy()
+    x['avg_revenue'] = x['revenue'].mean()
+    x['risky'] = x['budget'] - x['revenue'].mean() >= 0
+    return x
+
+result = data.groupby('director', group_keys=False).apply(flag_risky)
+print(result[['director','title','budget','revenue','avg_revenue','risky']])</textarea>
+        <div class="tryit-status"></div><div class="tryit-output-tag"></div><pre class="tryit-output"></pre>
+      </div>
+    </section>
+
+    <!-- MULTI-INDEX -->
+    <section class="section" id="multiindex">
+      <div class="eyebrow"><span class="num">11</span>Hierarchical indexing</div>
+      <h2>Multi-index — hierarchical column structure</h2>
+      <p class="lede">When you aggregate multiple columns with multiple functions, the result naturally has a two-level column structure. This is a <b>Multi-Index DataFrame</b>.</p>
+
+      <div class="code-card"><div class="code-head"><span class="code-label">python — multi-column, multi-function aggregation</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">data_agg = data.groupby(['director_name'])[["year", "title"]].aggregate(
+    {"year": ['min', 'max'], "title": "count"}
+)
+
+data_agg.columns
+# MultiIndex([( 'year',   'min'),
+#             ( 'year',   'max'),
+#             ('title', 'count')], )
+
+data_agg["year"]  # returns both sub-columns (min and max) under 'year'</pre></div></div>
+
+      <div class="mi-table-wrap">
+        <table class="mi-table">
+          <tr>
+            <th class="idx" rowspan="2">director_name</th>
+            <th class="l1" colspan="2">year</th>
+            <th class="l1">title</th>
+          </tr>
+          <tr>
+            <th class="l2">min</th>
+            <th class="l2">max</th>
+            <th class="l2">count</th>
+          </tr>
+          <tr><td class="idx">Christopher Nolan</td><td>2008</td><td>2010</td><td>2</td></tr>
+          <tr><td class="idx">James Cameron</td><td>1997</td><td>2009</td><td>2</td></tr>
+          <tr><td class="idx">Woody Allen</td><td>1977</td><td>1980</td><td>3</td></tr>
+        </table>
+      </div>
+
+      <div style="background:var(--surface-2);border-radius:var(--radius-sm);padding:.9rem 1rem;margin:1rem 0;font-size:.88rem;">
+        <b>Filing cabinet analogy:</b> A normal DataFrame has one label per drawer (column name). A multi-index DataFrame has two labels: the cabinet <em>section</em> (year, title) and the <em>drawer</em> within that section (min, max, count).
+      </div>
+    </section>
+
+    <!-- FLATTEN -->
+    <section class="section" id="flatten">
+      <div class="eyebrow"><span class="num">12</span>Hierarchical indexing</div>
+      <h2>Flattening multi-index columns</h2>
+      <p class="lede">Two-level column names are useful for grouping but awkward for further computation. Flatten to single-level names like <code>year_min</code>, <code>year_max</code>, <code>title_count</code>.</p>
+
+      <h3>Approach 1 — join tuple elements with underscore</h3>
+      <div class="code-card"><div class="code-head"><span class="code-label">python</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">data_agg.columns = ['_'.join(col) for col in data_agg.columns]
+# Each column name is a tuple like ('year', 'min')
+# '_'.join turns it into 'year_min'
+data_agg.head()</pre></div></div>
+
+      <h3>Approach 2 — named aggregation (specify output names directly)</h3>
+      <div class="code-card"><div class="code-head"><span class="code-label">python</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src">data.groupby('director_name')[['year', 'title']].aggregate(
+    year_max=('year', 'max'),
+    year_min=('year', 'min'),
+    title_count=('title', 'count')
+)</pre></div></div>
+      <p style="font-size:.9rem;color:var(--muted);">Both approaches produce flat column names. Named aggregation is more explicit; the list-comprehension approach is useful when you already have a multi-index result and need to flatten it retroactively.</p>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ reset_index() without inplace</div>
+        After a groupby aggregation, the grouping column becomes the row index. <code>data_agg.reset_index()</code> promotes it back to a column — but like <code>rename()</code> and <code>drop()</code>, it returns a copy. The original is unchanged unless you reassign or pass <code>inplace=True</code>.
+      </div>
+      <div class="tryit-card" data-tryit>
+        <div class="tryit-head"><span class="tryit-label">🐍 Try it yourself</span><div class="tryit-btns"><button class="tryit-run">▶ Run</button><button class="tryit-reset">Reset</button></div></div>
+        <textarea class="tryit-input" spellcheck="false">import pandas as pd
+
+data = pd.DataFrame({
+    'director': ['Nolan','Nolan','Allen','Allen','Allen','Cameron'],
+    'title':    ['Inception','Dark Knight','Annie Hall','Manhattan','Stardust','Avatar'],
+    'year':     [2010,2008,1977,1979,1980,2009]
+})
+
+# Multi-index agg
+data_agg = data.groupby('director')[['year','title']].aggregate(
+    {'year':['min','max'], 'title':'count'})
+
+print("Multi-index columns:", data_agg.columns.tolist())
+
+# Flatten
+data_agg.columns = ['_'.join(c) for c in data_agg.columns]
+data_agg = data_agg.reset_index()
+print("\nFlattened:")
+print(data_agg)
+
+# Named aggregation (approach 2)
+print("\nNamed aggregation:")
+print(data.groupby('director')[['year','title']].aggregate(
+    year_min=('year','min'), year_max=('year','max'), movie_count=('title','count')))</textarea>
+        <div class="tryit-status"></div><div class="tryit-output-tag"></div><pre class="tryit-output"></pre>
+      </div>
+    </section>
+
+    <!-- PRODUCTIVITY -->
+    <section class="section" id="productivity">
+      <div class="eyebrow"><span class="num">13</span>Putting it together</div>
+      <h2>Calculating director productivity</h2>
+      <p class="lede"><b>Productivity definition:</b> movies per year of active career. Steven Spielberg made the most movies overall — but does a long career make him more productive than a director who made fewer films in a shorter time?</p>
+
+      <div class="code-card"><div class="code-head"><span class="code-label">python — full pipeline</span><button class="copy-btn">Copy</button></div><div class="code-body"><pre class="code-src"># 1. Count movies and career span per director
+data_agg = data.groupby(['director_name'])[["year", "title"]].aggregate(
+    {"year": ['min', 'max'], "title": "count"})
+data_agg.columns = ['_'.join(col) for col in data_agg.columns]
+data_agg = data_agg.reset_index()
+
+# 2. Career span in years
+data_agg["yrs_active"] = data_agg["year_max"] - data_agg["year_min"]
+
+# 3. Productivity rate
+data_agg["movie_per_yr"] = data_agg["title_count"] / data_agg["yrs_active"]
+
+# 4. Rank directors
+data_agg.sort_values("movie_per_yr", ascending=False)</pre></div></div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ Division by zero</div>
+        A director whose films all landed in one year has <code>yrs_active = 0</code>, making <code>movie_per_yr</code> infinite (<code>inf</code> — Pandas doesn't crash, it just stores infinity). A quick fix: <code>yrs_active = (year_max - year_min) + 1</code>, treating a single active year as 1 rather than 0, or filter out single-year directors before ranking.
+      </div>
+
+      <p>Conclusion: <b>Tyler Perry</b> turns out to be the most productive by this measure — the highest number of movies per year of active career. Steven Spielberg made the most movies overall, but his long career reduces his per-year rate.</p>
+
+      <div class="tryit-card" data-tryit>
+        <div class="tryit-head"><span class="tryit-label">🐍 Try it yourself — full productivity pipeline</span><div class="tryit-btns"><button class="tryit-run">▶ Run</button><button class="tryit-reset">Reset</button></div></div>
+        <textarea class="tryit-input" spellcheck="false">import pandas as pd
+
+data = pd.DataFrame({
+    'director': ['Nolan','Nolan','Allen','Allen','Allen','Cameron','Cameron'],
+    'title':    ['Inception','Dark Knight','Annie Hall','Manhattan','Stardust','Avatar','Titanic'],
+    'year':     [2010,2008,1977,1979,1980,2009,1997]
+})
+
+data_agg = data.groupby('director')[['year','title']].aggregate(
+    {'year':['min','max'], 'title':'count'})
+data_agg.columns = ['_'.join(c) for c in data_agg.columns]
+data_agg = data_agg.reset_index()
+
+data_agg['yrs_active'] = data_agg['year_max'] - data_agg['year_min']
+# +1 fix for zero-division
+data_agg['yrs_for_calc'] = data_agg['yrs_active'].replace(0, 1)
+data_agg['movie_per_yr'] = data_agg['title_count'] / data_agg['yrs_for_calc']
+
+print(data_agg[['director','title_count','yrs_active','movie_per_yr']].sort_values(
+    'movie_per_yr', ascending=False).round(3))</textarea>
+        <div class="tryit-status"></div><div class="tryit-output-tag"></div><pre class="tryit-output"></pre>
+      </div>
+    </section>
+
+    <!-- SUMMARY -->
+    <section class="section" id="summary">
+      <div class="eyebrow"><span class="num">14</span>Recap</div>
+      <h2>Session summary</h2>
+      <div class="tbl-wrap"><table class="summary">
+        <tr><th>Concept</th><th>Key takeaway</th><th>SQL parallel</th></tr>
+        <tr><td>nunique()</td><td>Count distinct values in a column — like unique() but returns a number</td><td>COUNT(DISTINCT col)</td></tr>
+        <tr><td>isin()</td><td>Vectorised membership check across a column; returns boolean Series</td><td>WHERE col IN (...)</td></tr>
+        <tr><td>Left merge</td><td>Keep all rows from left table, bring in matching rows from right</td><td>LEFT JOIN</td></tr>
+        <tr><td>Suffix disambiguation</td><td>Pandas adds _x, _y when both tables share a non-key column name</td><td>Table aliases</td></tr>
+        <tr><td>apply(fn)</td><td>Run any function across every value in a column (or every row with axis=1)</td><td>CASE WHEN / UDF</td></tr>
+        <tr><td>apply(fn, axis=0)</td><td>Function runs down each column — one value per column</td><td>Aggregate per column</td></tr>
+        <tr><td>apply(fn, axis=1)</td><td>Function runs across each row — one value per row</td><td>Row-level calculation</td></tr>
+        <tr><td>groupby()</td><td>Split-Apply-Combine: group → compute within each group → combine results</td><td>GROUP BY</td></tr>
+        <tr><td>GroupBy object</td><td>The "sorted piles" — nothing computed yet. Chain .count(), .mean(), etc.</td><td>N/A</td></tr>
+        <tr><td>.agg({'col': ['fn1','fn2']})</td><td>Multiple aggregations in one call; produces multi-index columns</td><td>SELECT AVG(c), MIN(c), MAX(c)</td></tr>
+        <tr><td>.filter(lambda x: cond)</td><td>Keep or discard entire groups based on a group-level condition</td><td>HAVING clause</td></tr>
+        <tr><td>Group apply</td><td>Custom function per group; writes group aggregate back to every row</td><td>Window functions + UDF</td></tr>
+        <tr><td>group_keys=False</td><td>Prevents group key from becoming an extra index level in apply result</td><td>N/A</td></tr>
+        <tr><td>Multi-index columns</td><td>Two-level column labels from grouped agg; access top level with df['col']</td><td>N/A (flatten to present)</td></tr>
+        <tr><td>Flattening columns</td><td><code>'_'.join(col) for col in df.columns</code> or named aggregation</td><td>Column aliases in SELECT</td></tr>
+        <tr><td>Productivity pattern</td><td>groupby → agg (min/max/count) → flatten → derive new column → sort</td><td>Subquery + derived column</td></tr>
+      </table></div>
+    </section>
+  </main>
+</div>
+<footer>Pandas 3 · Group Operations &amp; Hierarchical Indexing — interactive post-read</footer>
+
+<script>
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function hpy(src){
+  var p=/(#.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\b(if|else|for|in|not|True|False|None|return|def|import|from|as|lambda)\b|\b(pd|groupby|apply|aggregate|agg|filter|merge|isin|nunique|unique|count|mean|min|max|sum|std|sort_values|reset_index|drop|rename|get_group|ngroups|groups|columns|head|print|round)\b|\b(\d+\.?\d*)\b|(\*\*|\/\/|==|!=|>=|<=|[+\-*\/%=<>])/gm;
+  var out="",last=0,m;
+  while((m=p.exec(src))){
+    out+=esc(src.slice(last,m.index));
+    if(m[1]) out+='<span class="tk-c">'+esc(m[1])+'</span>';
+    else if(m[2]) out+='<span class="tk-s">'+esc(m[2])+'</span>';
+    else if(m[3]) out+='<span class="tk-k">'+esc(m[3])+'</span>';
+    else if(m[4]) out+='<span class="tk-f">'+esc(m[4])+'</span>';
+    else if(m[5]) out+='<span class="tk-n">'+esc(m[5])+'</span>';
+    else if(m[6]) out+='<span class="tk-o">'+esc(m[6])+'</span>';
+    last=p.lastIndex;
+  }
+  return out+esc(src.slice(last));
+}
+document.querySelectorAll(".code-src").forEach(function(el){
+  var r=el.textContent;el.innerHTML=hpy(r);el.setAttribute("data-raw",r);
+});
+document.querySelectorAll(".copy-btn").forEach(function(btn){
+  btn.addEventListener("click",function(){
+    var s=btn.closest(".code-card").querySelector(".code-src");
+    navigator.clipboard.writeText(s?s.getAttribute("data-raw"):btn.closest(".code-card").querySelector("pre").textContent)
+      .then(function(){var o=btn.textContent;btn.textContent="Copied!";setTimeout(function(){btn.textContent=o;},1200);});
+  });
+});
+document.querySelectorAll(".reveal-btn").forEach(function(btn){
+  var show=btn.textContent;
+  btn.addEventListener("click",function(){
+    var p=this.nextElementSibling,s=p.classList.contains("shown");
+    p.classList.toggle("shown",!s);this.textContent=s?show:show.replace("▶","▲").replace("Show","Hide");
+  });
+});
+document.getElementById("themeToggle").addEventListener("click",function(){
+  var r=document.documentElement,a=r.getAttribute("data-theme");
+  r.setAttribute("data-theme",(a?a==="dark":window.matchMedia("(prefers-color-scheme:dark)").matches)?"light":"dark");
+});
+var prog=document.getElementById("progress"),secs=document.querySelectorAll(".section"),links=document.querySelectorAll(".toc a");
+window.addEventListener("scroll",function(){
+  var h=document.documentElement;prog.style.width=h.scrollTop/(h.scrollHeight-h.clientHeight)*100+"%";
+  var cur="";secs.forEach(function(s){if(s.getBoundingClientRect().top<=140)cur=s.id;});
+  links.forEach(function(a){a.classList.toggle("active",a.getAttribute("href")==="#"+cur);});
+},{passive:true});
+document.querySelectorAll("[data-quiz]").forEach(function(quiz){
+  var opts=quiz.querySelectorAll(".quiz-opt"),exp=quiz.querySelector(".quiz-explain"),done=false;
+  opts.forEach(function(opt){
+    opt.addEventListener("click",function(){
+      if(done)return;done=true;
+      var ok=opt.getAttribute("data-correct")==="true";
+      opt.classList.add(ok?"correct":"incorrect");
+      if(!ok)opts.forEach(function(o){if(o.getAttribute("data-correct")==="true")o.classList.add("correct");});
+      exp.classList.add("shown");
+    });
+  });
+});
+var pyP=null;
+function loadPy(){
+  return new Promise(function(res,rej){
+    if(window.loadPyodide){res();return;}
+    var s=document.createElement("script");s.src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js";
+    s.onload=res;s.onerror=rej;document.head.appendChild(s);
+  });
+}
+function ensurePy(){
+  if(!pyP)pyP=loadPy().then(function(){return window.loadPyodide({indexURL:"https://cdn.jsdelivr.net/pyodide/v0.26.4/full/"});});
+  return pyP;
+}
+async function run(cell){
+  var ta=cell.querySelector(".tryit-input"),btn=cell.querySelector(".tryit-run");
+  var st=cell.querySelector(".tryit-status"),ot=cell.querySelector(".tryit-output-tag"),oc=cell.querySelector(".tryit-output");
+  btn.disabled=true;st.style.display="block";
+  st.textContent=window.__pyL?"Running…":"Loading Python runtime (first run only)…";
+  try{
+    var py=await ensurePy();window.__pyL=true;
+    if(!window.__pdL){st.textContent="Loading pandas…";await py.loadPackage("pandas");window.__pdL=true;}
+    st.textContent="Running…";
+    var buf="";
+    py.setStdout({batched:function(s){buf+=s+"\n";}});
+    py.setStderr({batched:function(s){buf+=s+"\n";}});
+    var ns=py.globals.get("dict")();
+    try{py.runPython(ta.value,{globals:ns});}catch(e){buf+=String(e);}finally{ns.destroy();}
+    oc.textContent=buf||"(no output)";oc.classList.add("shown");ot.classList.add("shown");st.style.display="none";
+  }catch(e){st.textContent="Could not load runtime: "+e.message;}
+  finally{btn.disabled=false;}
+}
+document.querySelectorAll("[data-tryit]").forEach(function(cell){
+  var ta=cell.querySelector(".tryit-input");ta.setAttribute("data-orig",ta.value);
+  cell.querySelector(".tryit-run").addEventListener("click",function(){run(cell);});
+  cell.querySelector(".tryit-reset").addEventListener("click",function(){
+    ta.value=ta.getAttribute("data-orig");
+    var oc=cell.querySelector(".tryit-output"),ot=cell.querySelector(".tryit-output-tag");
+    oc.classList.remove("shown");ot.classList.remove("shown");oc.textContent="";
+  });
+});
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-Pandas-3" target="_blank" rel="noopener">github.com/scaler-content/DSML-Pandas-3</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

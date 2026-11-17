@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hierarchical clustering post read</title>
+<style>
+
+:root{
+  --bg:#fafaf9;--panel:#ffffff;--alt:#f4f4f5;--line:#d4d4d8;--ink:#18181b;--body:#3f3f46;--muted:#62626b;
+  --or:#ea580c;--or-d:#c2410c;--or-l:#fed7aa;--or-xl:#fff7ed;--ch:#27272a;--gr:#a1a1aa;
+  --r:14px;--shadow:0 1px 2px rgba(24,24,27,.06),0 6px 20px rgba(24,24,27,.05);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--body);font:17px/1.7 Georgia,"Iowan Old Style","Times New Roman",serif}
+h1,h2,h3,h4,nav,.ui,button,label,table,.tag,.stat,summary,input{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--or-d)}
+:focus-visible{outline:3px solid var(--or);outline-offset:2px;border-radius:4px}
+#bar{position:fixed;top:0;left:0;height:3px;width:0;background:var(--or);z-index:60}
+nav{position:sticky;top:0;z-index:50;background:rgba(250,250,249,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav .in{max-width:1000px;margin:auto;display:flex;align-items:center;gap:6px;padding:10px 20px;overflow-x:auto;white-space:nowrap}
+nav b{color:var(--ink);font-size:14px;margin-right:10px}
+nav a{font-size:13px;text-decoration:none;color:var(--muted);padding:5px 10px;border-radius:99px}
+nav a:hover,nav a.on{background:var(--ink);color:#fff}
+header.hero{background:linear-gradient(135deg,#27272a 0%,#3f3f46 100%);color:#fff;padding:84px 20px 76px;position:relative;overflow:hidden}
+header.hero:after{content:"";position:absolute;right:-90px;top:-90px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(234,88,12,.85),rgba(234,88,12,0) 68%)}
+.hero .in{max-width:820px;margin:auto;position:relative;z-index:1}
+.tag{display:inline-block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#fdba74;font-weight:700}
+.hero h1{font-size:clamp(34px,6vw,58px);line-height:1.08;margin:14px 0 18px;letter-spacing:-.02em}
+.hero p{font-size:20px;color:#e4e4e7;max-width:640px;margin:0}
+main{max-width:820px;margin:auto;padding:0 20px 40px}
+section{padding:56px 0 8px}
+section>.kick{font:700 12px system-ui;letter-spacing:.14em;text-transform:uppercase;color:var(--or-d)}
+h2{font-size:clamp(26px,4vw,36px);line-height:1.2;color:var(--ink);margin:6px 0 18px;letter-spacing:-.01em}
+h3{font-size:21px;color:var(--ink);margin:30px 0 8px}
+p{margin:0 0 16px}
+.lead{font-size:19px;color:var(--ink)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:22px;margin:24px 0}
+.card h4{margin:0 0 4px;font-size:16px;color:var(--ink)}
+.card .cap{font:14px/1.5 system-ui;color:var(--muted);margin:0 0 14px}
+.story{border-left:5px solid var(--or);background:var(--or-xl);border-radius:0 var(--r) var(--r) 0;padding:22px 24px;margin:20px 0}
+.story blockquote{margin:12px 0;padding:0 0 0 16px;border-left:3px solid var(--or-l);color:var(--ink);font-style:italic}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.mini{background:var(--alt);border-radius:12px;padding:16px;font:15px/1.5 system-ui}
+.mini b{display:block;color:var(--ink);margin-bottom:4px}
+.mini .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--or);color:#fff;font-weight:700;font-size:13px;margin-bottom:8px}
+.formula{background:var(--ch);color:#f4f4f5;border-radius:12px;padding:18px 20px;margin:18px 0;overflow-x:auto;font:italic 19px/1.8 "Cambria Math",Cambria,Georgia,serif;text-align:center}
+.formula small{display:block;font:13px system-ui;color:#d4d4d8;font-style:normal;margin-top:6px}
+.formula em{color:#fdba74}
+.call{border:1px solid var(--or-l);background:var(--or-xl);border-radius:12px;padding:14px 18px;margin:18px 0;font:15px/1.6 system-ui;color:var(--ink)}
+.call b{color:var(--or-d)}
+.stats{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:18px 0}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.stat .v{font-size:28px;font-weight:800;color:var(--ink);line-height:1.1}
+.stat .v.o{color:var(--or-d)}
+.stat .l{font-size:13px;color:var(--muted);margin-top:4px}
+canvas{display:block;width:100%;border-radius:10px;background:#fff;border:1px solid var(--line)}
+.ctrls{display:grid;gap:10px 18px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-top:14px;font:14px system-ui}
+.ctrls label{display:block;color:var(--ink);font-weight:600}
+.ctrls label span{float:right;color:var(--or-d);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--or)}
+input[type=number]{width:100%;padding:8px 10px;border:1px solid var(--gr);border-radius:8px;font-size:15px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--alt);padding:4px;border-radius:99px;margin-bottom:12px}
+.seg button,.btn{font-size:14px;font-weight:600;border:0;background:transparent;color:var(--body);padding:7px 14px;border-radius:99px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.btn{background:var(--or);color:#fff;border-radius:10px}
+.btn:hover{background:var(--or-d)}
+.btn.ghost{background:var(--alt);color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font:13px system-ui;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.read{font:14px/1.6 system-ui;color:var(--ink);background:var(--alt);border-radius:10px;padding:10px 14px;margin-top:12px;min-height:44px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--alt);color:var(--ink);font-weight:700}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff;margin:16px 0}
+.tw table{min-width:520px}
+.tw tr:last-child td{border-bottom:0}
+.sb{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--alt);min-width:120px}
+.sb span{display:block;height:100%}
+.c0{background:var(--or)}.c1{background:var(--ch)}.c2{background:var(--gr)}
+details{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin:16px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:700;font-size:15px;color:var(--ink)}
+details[open] summary{border-bottom:1px solid var(--line)}
+pre{margin:0;padding:16px;overflow-x:auto;background:#27272a;color:#f4f4f5;border-radius:0 0 12px 12px;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace}
+pre.out{background:#3f3f46;color:#fed7aa;border-radius:0;border-top:1px solid #52525b}
+.q{border:1px solid var(--line);border-left:5px solid var(--or);border-radius:12px;background:#fff;padding:18px 20px;margin:26px 0}
+.q .qh{font:700 12px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--or-d)}
+.q p.qt{font:600 17px/1.5 system-ui;color:var(--ink);margin:6px 0 12px}
+.q button.o{display:block;width:100%;text-align:left;font:15px/1.45 system-ui;color:var(--ink);background:var(--alt);border:2px solid transparent;border-radius:10px;padding:11px 14px;margin:8px 0;cursor:pointer}
+.q button.o:hover:not(:disabled){border-color:var(--gr)}
+.q button.o.ok{border-color:var(--ch);background:#e4e4e7}
+.q button.o.bad{border-color:var(--or);background:var(--or-xl)}
+.q .fb{font:15px/1.6 system-ui;margin-top:10px;display:none;padding:12px 14px;border-radius:10px;background:var(--alt);color:var(--ink)}
+.q .fb b{color:var(--or-d)}
+.flow{display:block;margin:auto;max-width:100%}
+ul.chk{list-style:none;padding:0;margin:0}
+ul.chk li{position:relative;padding:10px 0 10px 34px;border-bottom:1px solid var(--line);font-size:16.5px}
+ul.chk li:before{content:"";position:absolute;left:4px;top:17px;width:14px;height:14px;border-radius:4px;background:var(--or)}
+footer{background:var(--ch);color:#d4d4d8;text-align:center;padding:34px 20px;font:14px system-ui;margin-top:40px}
+footer b{color:#fff;display:block;font-size:16px;margin-bottom:4px}
+@media(max-width:600px){body{font-size:16px}.card{padding:16px}header.hero{padding:60px 20px 54px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+.heat td{text-align:center;font-variant-numeric:tabular-nums}
+.heat td:first-child,.heat th:first-child{text-align:left}
+.lg{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}
+.lg figure{margin:0}
+.lg figcaption{font:12px/1.4 system-ui;color:var(--muted);margin-top:4px}
+.lg h5{font:700 13px system-ui;margin:14px 0 6px;color:var(--ink);grid-column:1/-1}
+.mtx td,.mtx th{text-align:center;padding:7px 10px;font-variant-numeric:tabular-nums}
+.mtx td.min{background:var(--or);color:#fff;font-weight:700}
+.log{font:14px/1.7 system-ui;color:var(--ink);margin-top:10px}
+@media(max-width:700px){.lg{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· DSML Unsupervised 7 · Hierarchical clustering</span><span class="pn"><a href="../DSML-UnSL-6/" title="DSML Unsupervised 6 · Gaussian mixture models">← Prev</a><a href="../DSML-UnSL-8/" title="DSML Unsupervised 8 · DBSCAN for fraud review">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="bar"></div>
+<nav aria-label="Sections"><div class="in" id="nav"><b>HC</b></div></nav>
+
+<header class="hero"><div class="in">
+  <span class="tag">Building data relationships</span>
+  <h1>Hierarchical clustering post read</h1>
+  <p>One tree, every level of detail: how nested groups let brand teams read the broad view and category teams read the fine one, from a single fit.</p>
+</div></header>
+
+<main>
+
+<section id="story" data-t="Story">
+  <div class="kick">The problem</div>
+  <h2>Three segments or six?</h2>
+  <div class="story">
+    <p>Anjali at <b>ShopSphere</b> gave Vikram, head of customer relations, a segmentation that finally spoke the language of probabilities. Then two emails arrived on the same morning.</p>
+    <blockquote><b>Brand marketing director:</b> "For national campaigns we need <b>three</b> broad customer groups. Anything more is too much to plan around."</blockquote>
+    <blockquote><b>Category heads (electronics, fashion, grocery):</b> "Three is far too coarse. To decide what to stock and who to target, we need <b>five or six</b> distinct groups."</blockquote>
+    <p>Anjali's first thought was to run her model twice, with three clusters and with six. The results didn't line up: a customer in segment 2 of the three-way split could land in any of several segments of the six-way split. The two teams would get two unrelated pictures of the same customers.</p>
+    <p>Vikram sees it immediately: "What I want is for the six groups to be <b>pieces of the three</b>. Like chapters inside parts of a book. Brand marketing reads the parts, the category teams read the chapters, but it is one book."</p>
+  </div>
+  <p class="lead">K-Means and GMM both force you to <b>fix the number of groups first</b>, and every new K gives a fresh, unrelated answer. What Anjali needs is <b>one tree</b>, from which any level of detail can be read off afterwards. That method is <b>hierarchical clustering</b>.</p>
+</section>
+
+<section id="why" data-t="Why a tree">
+  <div class="kick">1 · The idea</div>
+  <h2>Why a tree?</h2>
+  <p>K-Means and GMM answer "give me exactly K groups". Change K, and you get a <b>new</b> clustering, not a refinement of the old one. <b>Hierarchical clustering</b> builds a structure where groups are <b>nested</b>:</p>
+  <div class="grid g3">
+    <div class="mini"><span class="n">↑</span><b>At the top</b>Everyone is in <b>one</b> big group.</div>
+    <div class="mini"><span class="n">↕</span><b>Going down</b>Groups split into smaller groups.</div>
+    <div class="mini"><span class="n">↓</span><b>At the bottom</b>Each customer is <b>alone</b>.</div>
+  </div>
+  <p style="margin-top:16px">Any horizontal slice through this structure gives a clustering, and a deeper slice <b>refines</b> a shallower one. We don't commit to K up front. We pick it afterwards by looking at the tree.</p>
+  <div class="card">
+    <h4>One tree, any K</h4>
+    <p class="cap">A simulated dataset of five blobs. Slide K and compare hierarchical clustering (Ward) with K-Means. The check underneath tests whether every cluster at K sits entirely inside one cluster at K−1.</p>
+    <div class="seg" role="group" aria-label="Method"><button data-m="h" aria-pressed="true">Hierarchical (Ward)</button><button data-m="k" aria-pressed="false">K-Means (fresh fit for each K)</button></div>
+    <canvas id="cvTree" role="img" aria-label="Scatter plot of simulated customers coloured by cluster for the chosen K and method"></canvas>
+    <div class="ctrls"><label>Number of clusters K <span id="trK"></span><input id="trS" type="range" min="1" max="8" step="1" value="3"></label></div>
+    <div class="read" id="trR" aria-live="polite"></div>
+  </div>
+  <h3>Two ways to build the tree</h3>
+  <div class="grid g2">
+    <div class="mini"><b>Agglomerative (bottom-up)</b>Start with every point as its own cluster and repeatedly <b>merge the two closest clusters</b>. This is the popular, widely used approach, and the focus of this post.</div>
+    <div class="mini"><b>Divisive (top-down)</b>Start with one cluster and repeatedly <b>split</b> it. The exact version is impractical: there are about 2<sup>n−1</sup> ways to split n points into two groups. Real implementations use heuristics, such as repeatedly splitting with K-Means at K = 2 (bisecting K-Means). Divisive methods are much rarer.</div>
+  </div>
+</section>
+
+<section id="agg" data-t="Agglomerative">
+  <div class="kick">2 · The algorithm</div>
+  <h2>Agglomerative clustering, step by step</h2>
+  <ol>
+    <li><b>Start:</b> every point is its own cluster. With n points there are n clusters.</li>
+    <li><b>Merge:</b> find the two <b>closest</b> clusters and merge them. Now there are n − 1 clusters.</li>
+    <li><b>Repeat</b> until only <b>one</b> cluster is left.</li>
+  </ol>
+  <div class="call">Each merge removes exactly one cluster, so going from n clusters to 1 takes <b>n − 1 merges</b>.</div>
+  <h3>The proximity matrix</h3>
+  <p>To find "the two closest clusters" we keep a table of distances between every pair of clusters: the <b>proximity matrix</b>. For n points it is an n × n table with zeros on the diagonal. After each merge, the rows and columns of the two merged clusters are replaced by one new row and column, and the new cluster's distances to the others are recalculated, which needs a rule for <b>distance between clusters</b> (the linkage, covered below).</p>
+  <p>Let's do it by hand on five customers described by two features: two close pairs (A, B) and (C, D), and one loner E.</p>
+  <div class="tw"><table class="heat"><thead><tr><th></th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead><tbody>
+    <tr><th>A</th><td>0.00</td><td>0.63</td><td>5.66</td><td>6.37</td><td>8.02</td></tr>
+    <tr><th>B</th><td>0.63</td><td>0.00</td><td>5.10</td><td>5.81</td><td>7.41</td></tr>
+    <tr><th>C</th><td>5.66</td><td>5.10</td><td>0.00</td><td>0.72</td><td>5.32</td></tr>
+    <tr><th>D</th><td>6.37</td><td>5.81</td><td>0.72</td><td>0.00</td><td>5.46</td></tr>
+    <tr><th>E</th><td>8.02</td><td>7.41</td><td>5.32</td><td>5.46</td><td>0.00</td></tr></tbody></table></div>
+  <p>Proximity matrix of Euclidean distances, for points A(1.0, 1.0), B(1.6, 1.2), C(5.0, 5.0), D(5.4, 5.6), E(9.0, 1.5).</p>
+  <div class="card">
+    <h4>Merge stepper</h4>
+    <p class="cap">Pick a linkage and step through the merges. The matrix shows distances between the <i>current</i> clusters; the highlighted cell is the closest pair, which merges next.</p>
+    <div class="seg" role="group" aria-label="Linkage" id="stL"><button data-l="single" aria-pressed="true">Single</button><button data-l="complete" aria-pressed="false">Complete</button><button data-l="average" aria-pressed="false">Average</button></div>
+    <div class="grid g2" style="align-items:start">
+      <canvas id="cvSt" role="img" aria-label="Five customers A to E with merged clusters outlined"></canvas>
+      <div><div class="tw" style="margin-top:0"><table class="mtx" id="stM"></table></div></div>
+    </div>
+    <div class="ctrls"><label>Merges performed <span id="stV"></span><input id="stS" type="range" min="0" max="4" step="1" value="0"></label></div>
+    <div class="log" id="stLog" aria-live="polite"></div>
+  </div>
+  <p>The first merges join the closest pairs (A with B, and C with D). Then the groups merge, and the loner E joins last, at a large distance. With 5 points there are <b>4 merges</b>; in general, n − 1. Hand-written merge heights match scipy's exactly, so nothing magical happens inside the library.</p>
+  <div class="tw"><table class="heat"><thead><tr><th>Linkage</th><th>Merge 1</th><th>Merge 2</th><th>Merge 3</th><th>Merge 4</th></tr></thead><tbody>
+    <tr><td><b>Single</b></td><td>A+B · 0.63</td><td>C+D · 0.72</td><td>AB+CD · 5.10</td><td>E+ABCD · 5.32</td></tr>
+    <tr><td><b>Complete</b></td><td>A+B · 0.63</td><td>C+D · 0.72</td><td>E+CD · 5.46</td><td>AB+ECD · 8.02</td></tr>
+    <tr><td><b>Average</b></td><td>A+B · 0.63</td><td>C+D · 0.72</td><td>E+CD · 5.39</td><td>AB+ECD · 6.39</td></tr></tbody></table></div>
+  <p class="cap ui" style="font-size:14px;color:var(--muted)">Merge heights from the lecture's hand-built function; they match scipy's <code>linkage</code>. Note how the linkage changes <i>which</i> clusters join third.</p>
+  <details><summary>Code: merge function written by hand</summary>
+<pre>def agglomerate(points, linkage="single"):
+    """Merge the two closest clusters again and again, and record each merge."""
+    D = squareform(pdist(points))
+    clusters = {i: [i] for i in range(len(points))}
+    next_id, merges = len(points), []
+    while len(clusters) &gt; 1:
+        best = None
+        keys = list(clusters)
+        for i in range(len(keys)):
+            for j in range(i + 1, len(keys)):
+                A, B = clusters[keys[i]], clusters[keys[j]]
+                block = D[np.ix_(A, B)]        # all distances between members of A and B
+                d = {"single": block.min(), "complete": block.max(), "average": block.mean()}[linkage]
+                if best is None or d &lt; best[0]:
+                    best = (d, keys[i], keys[j])
+        d, a, b = best
+        merges.append(("".join(names[k] for k in clusters[a]), "".join(names[k] for k in clusters[b]), d))
+        clusters[next_id] = clusters.pop(a) + clusters.pop(b)
+        next_id += 1
+    return merges</pre></details>
+  <div class="q" data-q="0"></div>
+</section>
+
+<section id="dendro" data-t="Dendrogram">
+  <div class="kick">3 · Reading the tree</div>
+  <h2>The dendrogram: the whole history in one picture</h2>
+  <p>A <b>dendrogram</b> records every merge. Its leaves at the bottom are the individual customers. Going up, branches join when clusters merge, and the <b>height</b> at which two branches join is the <b>distance between the two clusters</b> at that moment.</p>
+  <ul>
+    <li>Branches that join <b>low</b> are very similar. Branches that join <b>high</b> are dissimilar.</li>
+    <li>Long vertical lines mean "these groups were far apart when they merged", so they are natural places to stop.</li>
+  </ul>
+  <h3>Choosing K by cutting</h3>
+  <p>Draw a <b>horizontal line</b> across the dendrogram. The number of vertical lines it crosses is the number of clusters. Cutting <b>high</b> gives few, broad clusters; cutting <b>low</b> gives many, fine clusters. That one tree supports every level of detail.</p>
+  <div class="card">
+    <h4>Dendrogram of five customers</h4>
+    <p class="cap">Drag the cut line. Branches below the line are coloured by the cluster they belong to. The table is the linkage matrix for the chosen linkage.</p>
+    <div class="seg" role="group" aria-label="Linkage" id="dnL"><button data-l="single" aria-pressed="false">Single</button><button data-l="complete" aria-pressed="false">Complete</button><button data-l="average" aria-pressed="true">Average</button></div>
+    <canvas id="cvDn" role="img" aria-label="Dendrogram of customers A to E with a horizontal cut line"></canvas>
+    <div class="ctrls"><label>Cut height <span id="dnV"></span><input id="dnS" type="range" min="0" max="9" step="0.05" value="4"></label></div>
+    <div class="read" id="dnR" aria-live="polite"></div>
+    <div class="tw"><table class="heat" id="dnT"></table></div>
+  </div>
+  <h3>The linkage matrix</h3>
+  <p><code>scipy.cluster.hierarchy.linkage</code> returns an (n−1) × 4 matrix <code>Z</code>. Each row is one merge:</p>
+  <div class="tw"><table><thead><tr><th>Column</th><th>Meaning</th></tr></thead><tbody>
+    <tr><td><b>0, 1</b></td><td>The two clusters merged. IDs 0 to n−1 are the original points. A cluster created by merge number m gets the ID n + m (so 5, 6, … in the toy example; 2500, 2501, … for ShopSphere).</td></tr>
+    <tr><td><b>2</b></td><td>The distance (height) at which they merged.</td></tr>
+    <tr><td><b>3</b></td><td>The number of points in the new cluster.</td></tr></tbody></table></div>
+  <p>With average linkage and a cut at height 4, the lecture's result is clusters {A, B}, {C, D} and {E}. In the table above, IDs 5 and 6 are the clusters made by the first two merges (A+B and C+D).</p>
+  <div class="q" data-q="1"></div>
+  <div class="q" data-q="2"></div>
+</section>
+
+<section id="link" data-t="Linkage">
+  <div class="kick">4 · Distance between clusters</div>
+  <h2>Linkage: what "close" means for groups</h2>
+  <p>Between two single points the distance is clear. Between two <b>clusters</b> we must choose a rule, called the <b>linkage</b>. Let A and B be two clusters.</p>
+  <div class="tw"><table><thead><tr><th>Linkage</th><th>Distance between A and B</th><th>Behaviour</th></tr></thead><tbody>
+    <tr><td><b>Single</b></td><td>The <b>closest</b> pair of points, one from each</td><td>Can follow elongated or curved shapes, but suffers from <b>chaining</b>: a thin bridge of points can chain two clusters together</td></tr>
+    <tr><td><b>Complete</b></td><td>The <b>farthest</b> pair of points, one from each</td><td>Compact clusters of similar diameter; sensitive to outliers</td></tr>
+    <tr><td><b>Average</b></td><td>The <b>mean of all pairwise distances</b> between points in A and points in B</td><td>A compromise between single and complete</td></tr>
+    <tr><td><b>Ward</b></td><td>The <b>increase in total within-cluster variance</b> that merging would cause</td><td>Merges the pair that keeps clusters tight, much like K-Means. Tends to give compact, similarly sized clusters</td></tr></tbody></table></div>
+  <div class="formula">Δ(A, B) = |A| |B| / (|A| + |B|) · ‖<em>μ</em><sub>A</sub> − <em>μ</em><sub>B</sub>‖²<small>Ward linkage. (scipy reports a scaled square root of Δ as the height, but it grows with Δ, so the picture reads the same way.)</small></div>
+  <div class="call"><b>Common confusion.</b> Average linkage is <i>not</i> "distance between cluster centres". Using only the centres is a different method (centroid linkage).</div>
+  <div class="card">
+    <h4>Same two datasets, four linkages</h4>
+    <p class="cap">Two interlocking half-moons, and two round blobs joined by a thin bridge of noisy points. Each tree is cut into 2 clusters. Computed live on freshly simulated, smaller versions of the lecture's datasets; the numbers under each plot are the cluster sizes.</p>
+    <div class="lg" id="lg"></div>
+  </div>
+  <ul>
+    <li><b>Moons:</b> single linkage can follow each crescent because it only needs a chain of close neighbours. Ward, complete and average cut the moons with a roughly straight boundary, as K-Means would.</li>
+    <li><b>Blobs with a bridge:</b> single linkage tends to be fooled by <b>chaining</b>: the bridge links the two blobs, so it may merge them into one huge cluster and split off a tiny group instead. Ward and complete, which look at overall compactness, separate the blobs more sensibly.</li>
+    <li>There is <b>no best linkage in general</b>. Single follows shapes but chains through noise. Ward is stable and compact but assumes round-ish groups. Choose based on the shape you expect, and check results. (These are typical results; check the plots from your own run.)</li>
+  </ul>
+  <div class="q" data-q="3"></div>
+</section>
+
+<section id="shop" data-t="ShopSphere tree">
+  <div class="kick">5 · One fit, two levels</div>
+  <h2>Back to ShopSphere</h2>
+  <p>Anjali builds the tree for the real customer data. The plan: use <code>ID</code> as the index (an identifier, not a feature), scale the features to 0–1, build the linkage with <b>Ward</b>, read the dendrogram, choose a <b>broad</b> and a <b>fine</b> cut, and check that the fine groups are nested inside the broad ones.</p>
+  <div class="stats">
+    <div class="stat"><div class="v">2,500</div><div class="l">customers × 6 features</div></div>
+    <div class="stat"><div class="v">2,499</div><div class="l">rows in the linkage matrix (n − 1 merges)</div></div>
+    <div class="stat"><div class="v o">15.13</div><div class="l">height of the final merge (all 2,500 customers)</div></div>
+  </div>
+  <p>With 2,500 customers each leaf would be a single person, so the dendrogram is truncated to show only the <b>last merged branches</b>. These are the final six merges of the tree, straight from the linkage matrix:</p>
+  <div class="tw"><table class="heat"><thead><tr><th>Merge #</th><th>Cluster a</th><th>Cluster b</th><th>Height</th><th>Size</th></tr></thead><tbody>
+    <tr><td>2494</td><td>4987</td><td>4988</td><td>4.64</td><td>610</td></tr>
+    <tr><td>2495</td><td>4978</td><td>4992</td><td>4.89</td><td>714</td></tr>
+    <tr><td>2496</td><td>4969</td><td>4989</td><td>4.96</td><td>618</td></tr>
+    <tr><td>2497</td><td>4991</td><td>4995</td><td>6.80</td><td>1176</td></tr>
+    <tr><td>2498</td><td>4993</td><td>4996</td><td>11.71</td><td>1786</td></tr>
+    <tr><td>2499</td><td>4994</td><td>4997</td><td>15.13</td><td>2500</td></tr></tbody></table></div>
+  <div class="card">
+    <h4>The top of the ShopSphere tree</h4>
+    <p class="cap">Built from the six merges above and the group sizes in the fine cut. The five fine groups are shown as collapsed branches (their internal merges, all below height 4.9, are not drawn). Drag the cut line, or use the presets.</p>
+    <div class="seg" role="group" aria-label="Presets" id="spP"><button data-h="4.925">Fine cut (5 groups)</button><button data-h="9">Broad cut (3 groups)</button><button data-h="13">2 groups</button></div>
+    <canvas id="cvSp" role="img" aria-label="Top of the ShopSphere dendrogram with a movable horizontal cut"></canvas>
+    <div class="ctrls"><label>Cut height <span id="spV"></span><input id="spS" type="range" min="4.7" max="16" step="0.05" value="4.925"></label></div>
+    <div class="read" id="spR" aria-live="polite"></div>
+  </div>
+  <h3>Nested by construction</h3>
+  <p>Cutting the <b>same tree</b> into 3 broad groups and 5 fine groups, then cross-tabulating, shows each fine group has customers in <b>one</b> broad column only. That is the nesting guarantee: <b>finer cuts of one tree always refine coarser cuts</b>. It is exactly what Vikram asked for, and what running K-Means or GMM twice could not provide. (scipy and sklearn agree exactly on the five-group cut, ARI = 1.0, since they build the same Ward tree.)</p>
+  <div class="card">
+    <h4>Broad group → fine group</h4>
+    <p class="cap">Counts of customers. Hover or focus a band to highlight.</p>
+    <svg id="svSk" viewBox="0 0 640 300" role="img" aria-label="Flow diagram: broad group 0 contains fine group 0 (714), broad 1 contains fine 1 (610), broad 2 contains fine 2, 3 and 4 (558, 195 and 423)" style="width:100%;height:auto"></svg>
+    <div class="tw"><table class="heat" id="tCt"></table></div>
+  </div>
+  <details><summary>Code: build the tree and cut it twice</summary>
+<pre>df = df.set_index("ID")
+features = df.select_dtypes("number")
+X = MinMaxScaler().fit_transform(features.values)
+Z = sch.linkage(X, method="ward")            # (2499, 4)
+
+def cut_height(Z, K):
+    return (Z[-K, 2] + Z[-(K - 1), 2]) / 2
+
+broad = sch.fcluster(Z, t=3, criterion="maxclust") - 1
+fine  = sch.fcluster(Z, t=5, criterion="maxclust") - 1
+
+ct = pd.crosstab(pd.Series(fine, name="fine"), pd.Series(broad, name="broad"))
+(ct.gt(0).sum(axis=1) == 1).all()            # True: every fine group lies inside ONE broad group</pre></details>
+  <div class="q" data-q="4"></div>
+</section>
+
+<section id="evid" data-t="Evidence for the cut">
+  <div class="kick">6 · How many groups?</div>
+  <h2>Evidence for the cut</h2>
+  <p>Three lenses, as before: the <b>gaps</b> between merge heights, the <b>silhouette</b>, and <b>business sense</b>.</p>
+  <div class="call"><b>Gap rule.</b> If the merge that takes us from K clusters to K−1 happens at a much greater height than the merge from K+1 to K, then the K clusters were truly distinct, and stopping at K is natural.</div>
+  <div class="card">
+    <h4>Gaps and silhouette by K</h4>
+    <p class="cap">Switch metric, then hover or tab to a point. The silhouette is computed on the scaled customer features only, with no labels in the matrix.</p>
+    <div class="seg" role="group" aria-label="Metric" id="evM"><button data-m="gap" aria-pressed="true">Gap in merge heights</button><button data-m="sil" aria-pressed="false">Silhouette</button></div>
+    <svg id="svEv" viewBox="0 0 640 300" role="img" aria-label="Line chart of the selected metric for K = 2 to 11" style="width:100%;height:auto"></svg>
+    <div class="read" id="evR" aria-live="polite">Hover or tab to a point.</div>
+    <div class="tw"><table class="heat" id="evT"></table></div>
+  </div>
+  <ul>
+    <li>A large gap and a high silhouette at the same K both point to a natural number of groups. If they disagree, the business need breaks the tie.</li>
+    <li>Here the largest gap is at k=3 (4.913) and the silhouette is highest at k=2 (0.269), with k=3 close behind (0.249). The gap at k=5 is tiny (0.066), so the five-group fine cut rests on business need rather than on a natural break.</li>
+    <li>For a tree we do not need a single answer. Brand marketing wants a <b>small</b> K and the category teams want a <b>larger</b> K, so we choose <b>two cuts</b> from the same tree.</li>
+  </ul>
+  <div class="call"><b>Evaluation pitfall.</b> In an earlier version of the notebook, cluster labels were written back into the same DataFrame that the silhouette function used, so the labels leaked into the features and inflated the scores. Keep labels <i>out</i> of the feature matrix when evaluating, otherwise the evaluation is meaningless.</div>
+  <details><summary>Code: gap table and silhouette</summary>
+<pre>heights = {k: Z[-(k - 1), 2] for k in range(2, 13)}     # height of the merge that goes from k clusters to k-1
+sil = {k: silhouette_score(X, sch.fcluster(Z, t=k, criterion="maxclust")) for k in range(2, 11)}</pre></details>
+</section>
+
+<section id="prof" data-t="Segment profiles">
+  <div class="kick">7 · Reading the segments</div>
+  <h2>Segment profiles for each team</h2>
+  <p>For the brand team, the broad segments. For the category teams, the fine ones, each labelled with its parent. Averages are in the original units so they are easy to read, for example real spend amounts instead of 0–1 values.</p>
+  <div class="card">
+    <h4>Average behaviour per segment</h4>
+    <div class="seg" role="group" aria-label="Level" id="pfL"><button data-v="broad" aria-pressed="true">Broad (brand team)</button><button data-v="fine" aria-pressed="false">Fine (category teams)</button></div>
+    <div class="tw"><table class="heat" id="pfT"></table></div>
+    <div class="ctrls"><label>Compare segments on <select id="pfF" style="width:100%;padding:8px;border:1px solid var(--gr);border-radius:8px;font-size:15px"></select></label></div>
+    <svg id="svPf" viewBox="0 0 640 240" role="img" aria-label="Bar chart comparing fine segments on the selected feature" style="width:100%;height:auto"></svg>
+  </div>
+  <h3>What defines each fine segment?</h3>
+  <p>This time the features are the <b>scaled</b> (0–1) means, so all features can be compared in one heatmap. Each row is a fine segment, with its broad parent in the label. Darker orange means <b>higher</b>; the numbers are printed so colour is never the only cue.</p>
+  <div class="tw"><table class="heat" id="hmT"></table></div>
+  <ul>
+    <li><b>Fine 0</b> (parent broad 0) is high on clicks, visits and discount amount.</li>
+    <li><b>Fine 1</b> (parent broad 1) has the highest spend and almost no discount.</li>
+    <li><b>Fines 2, 3, 4</b> all sit in broad 2 and share low spend, then add their own twist: fine 3 is long-registered (0.65), fine 4 has low profile information (0.19), fine 2 has high profile information (0.43).</li>
+  </ul>
+  <p>A fine segment inherits the character of its parent and adds a twist. Name segments from <b>your</b> own table: a tree built on other data will show its own pattern.</p>
+  <h3>A visual check</h3>
+  <p>Projecting the fine segments to 2D with PCA and UMAP gives a view of the tree's structure. If each fine segment forms a visibly distinct region, and the fine segments of one broad group sit near each other, the tree matches the structure in the data. Overlaps at the borders are normal, and for those customers the segment is a judgement call. Remember that gaps and sizes in UMAP pictures are not meaningful.</p>
+  <details><summary>Code: profiles and centroids</summary>
+<pre>profile = features.copy()
+profile["broad"], profile["fine"] = broad, fine
+parent = ct.idxmax(axis=1)                    # broad group that contains each fine group
+
+b = profile.drop(columns="fine").groupby("broad").mean().round(2)
+f = profile.drop(columns="broad").groupby("fine").mean().round(2)
+centroids = scaled_df.assign(fine=fine).groupby("fine").mean()</pre></details>
+</section>
+
+<section id="kmpp" data-t="vs K-Means++">
+  <div class="kick">8 · Head to head</div>
+  <h2>Hierarchical vs K-Means++</h2>
+  <p>Ward linkage minimises the same kind of quantity K-Means minimises (within-cluster variance), but <b>greedily, from the bottom up</b>, whereas K-Means optimises all clusters together by iterating. Compared at the same K = 5 on ShopSphere:</p>
+  <div class="stats">
+    <div class="stat"><div class="v">248.9</div><div class="l">WCSS, Ward (fine cut)</div></div>
+    <div class="stat"><div class="v o">229.5</div><div class="l">WCSS, K-Means++</div></div>
+    <div class="stat"><div class="v">0.145</div><div class="l">silhouette, Ward</div></div>
+    <div class="stat"><div class="v o">0.193</div><div class="l">silhouette, K-Means++</div></div>
+    <div class="stat"><div class="v">0.557</div><div class="l">agreement between the two (ARI)</div></div>
+  </div>
+  <div class="card">
+    <h4>Where do the Ward fine groups go in K-Means++?</h4>
+    <p class="cap">Counts of customers. Darker cells hold more customers.</p>
+    <div class="tw"><table class="heat" id="tKm"></table></div>
+  </div>
+  <p>K-Means++ optimises WCSS directly, so its WCSS is usually the same or a little lower than Ward's. If the agreement score is high, the two methods found largely the same groups; here the moderate ARI of 0.557 means they share a core but disagree on many customers. The practical difference is <b>what you get</b>:</p>
+  <div class="tw"><table><thead><tr><th></th><th>K-Means++</th><th>Hierarchical (Ward)</th></tr></thead><tbody>
+    <tr><td><b>Decide K</b></td><td>Before fitting</td><td>After fitting (cut the tree)</td></tr>
+    <tr><td><b>Different K</b></td><td>A new, unrelated clustering</td><td>Another cut of the same tree, nested</td></tr>
+    <tr><td><b>Randomness</b></td><td>Depends on initialisation (use <code>n_init</code>)</td><td>Deterministic</td></tr>
+    <tr><td><b>Output</b></td><td>Clusters and centroids</td><td>A full tree and a dendrogram</td></tr>
+    <tr><td><b>New points</b></td><td>Easy (<code>predict</code>)</td><td>No built-in way</td></tr>
+    <tr><td><b>Cost</b></td><td>Roughly linear in n</td><td>At least quadratic in n</td></tr></tbody></table></div>
+</section>
+
+<section id="limits" data-t="Limitations">
+  <div class="kick">9 · Honest limits</div>
+  <h2>What the tree cannot do</h2>
+  <h3>1. Cost grows quickly with data size</h3>
+  <p>The proximity matrix stores a distance for every <b>pair</b> of points, so memory grows as O(n²). A straightforward implementation takes O(n³) time (about n merges, each scanning a matrix of size n²). Priority queues reduce this to O(n² log n), and optimised libraries get close to O(n²) for common linkages, but memory stays quadratic.</p>
+  <div class="grid g2">
+    <div class="card" style="margin:12px 0">
+      <h4>Measured: Ward linkage time</h4>
+      <p class="cap">Random data, 6 features.</p>
+      <svg id="svTm" viewBox="0 0 320 230" role="img" aria-label="Line chart of Ward linkage seconds for n = 500, 1000, 2000 and 4000" style="width:100%;height:auto"></svg>
+      <div class="tw"><table class="heat"><thead><tr><th>n</th><th>seconds</th><th>vs previous (n doubles)</th></tr></thead><tbody>
+        <tr><td>500</td><td>0.009</td><td></td></tr><tr><td>1000</td><td>0.032</td><td>3.7×</td></tr><tr><td>2000</td><td>0.396</td><td>12.3×</td></tr><tr><td>4000</td><td>1.212</td><td>3.1×</td></tr></tbody></table></div>
+    </div>
+    <div class="card" style="margin:12px 0">
+      <h4>Memory for the distance table</h4>
+      <p class="cap">n(n−1)/2 distances at 8 bytes each.</p>
+      <div class="ctrls" style="grid-template-columns:1fr"><label>Customers n <span id="mmN"></span><input id="mmS" type="range" min="3" max="6" step="0.01" value="3.4"></label></div>
+      <div class="stat" style="margin-top:12px"><div class="v o" id="mmG"></div><div class="l">gigabytes just for pairwise distances</div></div>
+      <div class="tw"><table class="heat"><thead><tr><th>n</th><th>memory</th></tr></thead><tbody>
+        <tr><td>2,500</td><td>0.02 GB</td></tr><tr><td>10,000</td><td>0.40 GB</td></tr><tr><td>100,000</td><td>40.00 GB</td></tr><tr><td>1,000,000</td><td>4,000.00 GB</td></tr></tbody></table></div>
+    </div>
+  </div>
+  <p>When n doubles, time grows by a factor of about 4 or more (the measured ratios are irregular, which is normal for small timings). Memory explains why hierarchical clustering is practical for thousands of customers but not for millions. For ShopSphere's real customer base, Anjali would cluster a <b>sample</b> or a set of <b>pre-clustered summaries</b> (for example, many small K-Means clusters), and then build the tree on those.</p>
+  <div class="q" data-q="5"></div>
+
+  <h3>2. Merges are greedy and cannot be undone</h3>
+  <p>Once two clusters merge, they stay together, even if a later merge would have suggested a better arrangement. Nothing in the algorithm revisits earlier decisions, and no global objective is optimised by the <b>whole tree</b>. (Ward greedily minimises the variance increase at each step, but does not guarantee the best clustering overall.)</p>
+
+  <h3>3. Noise and outliers</h3>
+  <p>Outliers either merge very late (complete, Ward, average) and appear as tiny branches, or distort results through chaining (single). Cutting the ShopSphere tree into 12 groups:</p>
+  <div class="card">
+    <h4>Cluster sizes at 12 groups</h4>
+    <p class="cap">Dashed line: 2% of customers (50). No group falls below it; the smallest has 87 customers (3.48%).</p>
+    <svg id="svSz" viewBox="0 0 640 250" role="img" aria-label="Bar chart of the 12 cluster sizes, none below 2 percent of customers" style="width:100%;height:auto"></svg>
+    <div class="read" id="szR" aria-live="polite">Hover or tab to a bar.</div>
+  </div>
+  <p>Small branches that stay separate until very high in the tree are unusual customers. The tree handles them by giving them a <b>branch of their own</b> or <b>attaching them to a group</b>, but it has no way to say "this customer belongs to no group". They remain part of the tree.</p>
+
+  <h3>4. No <code>predict</code> for new points</h3>
+  <p>Hierarchical clustering produces labels for the customers it was fitted on, and nothing else. A new customer cannot be dropped into the tree without refitting, or without an extra rule such as "assign the new customer to the nearest cluster centroid". Refitting changes the tree, and with it the segments, so a common practical approach is nearest-centroid assignment to the existing segments, refitting the tree periodically.</p>
+  <div class="q" data-q="6"></div>
+</section>
+
+<section id="wrap" data-t="Takeaways">
+  <div class="kick">10 · Wrap-up</div>
+  <h2>Back to Vikram's desk</h2>
+  <p>Anjali presents one tree to both teams.</p>
+  <div class="grid g2">
+    <div class="mini"><b>Brand marketing</b>Reads the tree at the top: <b>three broad segments</b> for national campaigns.</div>
+    <div class="mini"><b>The category heads</b>Read it lower down: <b>five finer segments</b>, each sitting inside exactly one of the three broad ones. The two views never contradict each other.</div>
+    <div class="mini"><b>K chosen after fitting</b>The dendrogram, the gaps between merge heights, the silhouette (computed on clean features) and business needs together support the two cuts.</div>
+    <div class="mini"><b>The tail of the tree</b>A few branches stay tiny and separate right up to the top: customers who behave unlike anyone else. The tree must put them <i>somewhere</i>; it cannot say they belong to no group.</div>
+  </div>
+  <div class="story" style="margin-top:22px"><p>Then the fraud team reports a new pattern: resellers and scripted bots sit <b>right next to real customers</b> in feature space, and form odd-shaped trails, not neat round groups. Anjali sees that two things are needed: a method that can follow <b>curved, irregular shapes</b>, and one that can say <b>"this point is noise"</b>. Neither Ward nor K-Means nor GMM can.</p></div>
+  <h3>Key takeaways</h3>
+  <ul class="chk">
+    <li><b>Hierarchical clustering</b> builds a tree of <b>nested</b> groups, so K is chosen <b>after</b> fitting, by cutting the tree.</li>
+    <li><b>Agglomerative</b> (bottom-up): start with n clusters and merge the two closest, for n−1 merges. <b>Divisive</b> (top-down) splitting is rarely used, because exact splitting is intractable.</li>
+    <li>The <b>proximity matrix</b> holds all pairwise distances. The <b>dendrogram</b> records every merge, with the <b>height</b> equal to the distance at which two clusters merged. Cutting at a height gives a clustering.</li>
+    <li><b>Linkage</b> defines distance between clusters: <b>single</b> (closest pair, can chain), <b>complete</b> (farthest pair), <b>average</b> (mean of all pairwise distances), <b>Ward</b> (smallest increase in within-cluster variance, compact and K-Means-like).</li>
+    <li>A finer cut of one tree <b>always refines</b> a coarser cut. K-Means and GMM at different K do not give this.</li>
+    <li><b>Limitations:</b> about O(n²) memory and at least quadratic time, so it is impractical for very large data. Merges are greedy and irreversible. It is sensitive to noise and outliers, and has no <code>predict</code> for new points.</li>
+    <li>Keep labels out of the feature matrix when evaluating.</li>
+  </ul>
+  <h3>Where this leads</h3>
+  <div class="mini"><b>Finding dense regions and spotting noise</b>The fraud team's problem calls for <b>DBSCAN</b>, which finds clusters as <b>dense regions</b> of any shape and explicitly labels points in sparse areas as <b>noise</b>, with no need to choose the number of clusters in advance.</div>
+</section>
+</main>
+
+<footer><b>Hierarchical clustering post read</b>Building data relationships</footer>
+
+<script id="core">
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(r){let u=0;while(!u)u=r();const v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function agg(P,link){const n=P.length,N=2*n,D=new Float64Array(N*N),sq=link==='ward';
+ for(let i=0;i<n;i++)for(let j=0;j<n;j++){const d=Math.hypot(P[i][0]-P[j][0],P[i][1]-P[j][1]);D[i*N+j]=sq?d*d:d}
+ let act=[...Array(n).keys()];const size=new Array(N).fill(1),mem=[];for(let i=0;i<n;i++)mem[i]=[i];const out=[];
+ for(let m=0;m<n-1;m++){let bi=-1,bj=-1,bd=Infinity;for(let x=0;x<act.length;x++)for(let y=x+1;y<act.length;y++){const d=D[act[x]*N+act[y]];if(d<bd){bd=d;bi=act[x];bj=act[y]}}
+  const c=n+m;for(const k of act){if(k===bi||k===bj)continue;const dak=D[bi*N+k],dbk=D[bj*N+k],na=size[bi],nb=size[bj],nk=size[k];let d;
+   if(link==='single')d=Math.min(dak,dbk);else if(link==='complete')d=Math.max(dak,dbk);else if(link==='average')d=(na*dak+nb*dbk)/(na+nb);else d=((na+nk)*dak+(nb+nk)*dbk-nk*bd)/(na+nb+nk);
+   D[c*N+k]=D[k*N+c]=d}
+  size[c]=size[bi]+size[bj];mem[c]=mem[bi].concat(mem[bj]);out.push({a:Math.min(bi,bj),b:Math.max(bi,bj),h:sq?Math.sqrt(bd):bd,size:size[c],mem:mem[c]});act=act.filter(k=>k!==bi&&k!==bj);act.push(c)}
+ return out}
+function relabel(lab){const m={};let k=0;return lab.map(v=>(v in m)?m[v]:(m[v]=k++))}
+function cutK(M,n,K){const lab=[...Array(n).keys()];for(let m=0;m<n-K;m++){const g=M[m].mem[0];M[m].mem.forEach(i=>lab[i]=g)}return relabel(lab)}
+function cutH(M,n,h){const lab=[...Array(n).keys()];for(let m=0;m<M.length;m++){if(M[m].h>h)break;const g=M[m].mem[0];M[m].mem.forEach(i=>lab[i]=g)}return relabel(lab)}
+function kmeans(X,k,restarts,seed){const r=rng(seed);let best=null;for(let t=0;t<restarts;t++){let cen=[X[Math.floor(r()*X.length)].slice()];while(cen.length<k){const d=X.map(p=>Math.min(...cen.map(c=>(p[0]-c[0])**2+(p[1]-c[1])**2)));let s=d.reduce((a,b)=>a+b,0)*r(),i=0;while(s>d[i]&&i<d.length-1){s-=d[i];i++}cen.push(X[i].slice())}
+ let lab=new Array(X.length).fill(0),inertia=0;for(let it=0;it<100;it++){let ch=false;inertia=0;X.forEach((p,i)=>{let b=0,bd=1e18;cen.forEach((c,j)=>{const d=(p[0]-c[0])**2+(p[1]-c[1])**2;if(d<bd){bd=d;b=j}});inertia+=bd;if(lab[i]!==b){lab[i]=b;ch=true}});
+ cen=cen.map((c,j)=>{let sx=0,sy=0,m=0;X.forEach((p,i)=>{if(lab[i]===j){sx+=p[0];sy+=p[1];m++}});return m?[sx/m,sy/m]:c});if(!ch)break}
+ if(!best||inertia<best.inertia)best={labels:lab,centers:cen,inertia}}return best}
+function nestedOK(a,b){const m={};a.forEach((v,i)=>{(m[v]=m[v]||new Set()).add(b[i])});return Object.values(m).every(s=>s.size===1)}
+function makeBlobs(){const r=rng(11),C=[[-5,3],[-3,0],[4,3],[5,-1],[0,-5]],P=[];C.forEach(c=>{for(let i=0;i<30;i++)P.push([c[0]+.8*gauss(r),c[1]+.8*gauss(r)])});return P}
+function makeMoons(n){const r=rng(3),P=[];for(let i=0;i<n/2;i++){const t=Math.PI*r();P.push([Math.cos(t)+.06*gauss(r),Math.sin(t)+.06*gauss(r)])}for(let i=0;i<n/2;i++){const t=Math.PI*r();P.push([1-Math.cos(t)+.06*gauss(r),.5-Math.sin(t)+.06*gauss(r)])}return P}
+function makeBridge(){const r=rng(1),P=[];for(let i=0;i<100;i++)P.push([-3+.9*gauss(r),.9*gauss(r)]);for(let i=0;i<100;i++)P.push([3+.9*gauss(r),.9*gauss(r)]);for(let i=0;i<15;i++)P.push([-1.8+3.6*r(),.15*gauss(r)]);return P}
+</script>
+
+<script>
+const $=id=>document.getElementById(id),f2=(v,d=2)=>(+v).toFixed(d);
+const PAL=['#ea580c','#27272a','#a1a1aa','#fdba74','#71717a','#c2410c','#d4d4d8','#52525b'];
+const secs=[...document.querySelectorAll('section[data-t]')];
+$('nav').insertAdjacentHTML('beforeend',secs.map(s=>`<a href="#${s.id}">${s.dataset.t}</a>`).join(''));
+const links=[...document.querySelectorAll('nav a')];
+function onScroll(){const h=document.documentElement;$('bar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';let cur=secs[0].id;secs.forEach(s=>{if(s.getBoundingClientRect().top<140)cur=s.id});links.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+cur))}
+addEventListener('scroll',onScroll,{passive:true});onScroll();
+const redraws=[];
+function cv(id,ar,draw){const c=$(id);const f=()=>{const w=c.parentElement.clientWidth,h=Math.round(w*ar),d=devicePixelRatio||1;c.width=w*d;c.height=h*d;c.style.height=h+'px';const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,w,h);draw(x,w,h)};redraws.push(f);f();return f}
+addEventListener('resize',()=>redraws.forEach(f=>f()));
+const seg=(root,cb)=>{const bs=root.querySelectorAll('button');bs.forEach(b=>b.addEventListener('click',()=>{bs.forEach(o=>o.setAttribute('aria-pressed',o===b));cb(b)}))};
+function bounds(P,pad){let a=1e9,b=-1e9,c=1e9,d=-1e9;P.forEach(p=>{a=Math.min(a,p[0]);b=Math.max(b,p[0]);c=Math.min(c,p[1]);d=Math.max(d,p[1])});return{x0:a-pad,x1:b+pad,y0:c-pad,y1:d+pad}}
+function mapper(B,w,h,m){const s=Math.min((w-2*m)/(B.x1-B.x0),(h-2*m)/(B.y1-B.y0)),ox=(w-s*(B.x1-B.x0))/2,oy=(h-s*(B.y1-B.y0))/2;return p=>[ox+(p[0]-B.x0)*s,h-oy-(p[1]-B.y0)*s]}
+function dots(x,w,h,P,lab,B,r,m){const M=mapper(B,w,h,m||10);P.forEach((p,i)=>{const q=M(p);x.fillStyle=PAL[lab[i]%PAL.length];x.globalAlpha=.8;x.beginPath();x.arc(q[0],q[1],r||3,0,6.3);x.fill()});x.globalAlpha=1}
+const NAMES=['A','B','C','D','E'],TP=[[1,1],[1.6,1.2],[5,5],[5.4,5.6],[9,1.5]],TD=TP.map(p=>TP.map(q=>Math.hypot(p[0]-q[0],p[1]-q[1])));
+
+/* ---- W1 one tree any K ---- */
+const BL=makeBlobs(),BM=agg(BL,'ward'),BB=bounds(BL,1.2);let trM='h';const KMC={};
+const kmFor=k=>KMC[k]||(KMC[k]=kmeans(BL,k,10,42).labels);
+const drawTree=cv('cvTree',.62,(x,w,h)=>{const K=+$('trS').value;dots(x,w,h,BL,trM==='h'?cutK(BM,BL.length,K):kmFor(K),BB,4)});
+function updTree(){const K=+$('trS').value;$('trK').textContent=K;let t;
+ if(K===1)t='K = 1: everyone is in one group.';else{const cur=trM==='h'?cutK(BM,BL.length,K):kmFor(K),prev=trM==='h'?cutK(BM,BL.length,K-1):kmFor(K-1),ok=nestedOK(cur,prev);
+  t=`Is every cluster at K=${K} inside a single cluster at K=${K-1}? <b>${ok?'Yes':'No'}</b>. `+(trM==='h'?'For a tree this is always yes: going from K−1 to K just splits one branch.':ok?'It happens to hold here, but nothing guarantees it for K-Means.':'K-Means re-fitted at each K gives a new, unrelated partition, so some clusters straddle the previous groups.')}
+ $('trR').innerHTML=t;drawTree()}
+$('trS').addEventListener('input',updTree);seg(document.querySelector('#why .seg'),b=>{trM=b.dataset.m;updTree()});updTree();
+
+/* ---- W2 stepper ---- */
+let stL='single';const STM={single:agg(TP,'single'),complete:agg(TP,'complete'),average:agg(TP,'average')};
+const clBlock=(A,B)=>{const v=[];A.forEach(i=>B.forEach(j=>v.push(TD[i][j])));return v};
+const clDist=(A,B,l)=>{const v=clBlock(A,B);return l==='single'?Math.min(...v):l==='complete'?Math.max(...v):v.reduce((a,b)=>a+b,0)/v.length};
+function stState(s){const M=STM[stL];let act=[0,1,2,3,4];const mem={};act.forEach(i=>mem[i]=[i]);for(let m=0;m<s;m++){const g=M[m];act=act.filter(k=>k!==g.a&&k!==g.b);act.push(5+m);mem[5+m]=g.mem}return{act,mem}}
+const lbl=m=>m.map(i=>NAMES[i]).join('');
+const drawSt=cv('cvSt',.8,(x,w,h)=>{const s=+$('stS').value,{act,mem}=stState(s),B={x0:-.5,x1:10,y0:-.2,y1:7},Mp=mapper(B,w,h,24);
+ act.forEach((id,ci)=>{const m=mem[id],col=PAL[ci%3===0?0:ci%3];x.strokeStyle=col;x.globalAlpha=.22;x.lineWidth=34;x.lineCap='round';m.forEach((i,a)=>m.forEach((j,b)=>{if(b>a){const p=Mp(TP[i]),q=Mp(TP[j]);x.beginPath();x.moveTo(p[0],p[1]);x.lineTo(q[0],q[1]);x.stroke()}}));if(m.length===1){const p=Mp(TP[m[0]]);x.fillStyle=col;x.beginPath();x.arc(p[0],p[1],17,0,6.3);x.fill()}x.globalAlpha=1});
+ TP.forEach((p,i)=>{const q=Mp(p);let ci=act.findIndex(id=>mem[id].includes(i));x.fillStyle=PAL[ci%3===0?0:ci%3];x.beginPath();x.arc(q[0],q[1],9,0,6.3);x.fill();x.fillStyle='#fff';x.font='bold 11px system-ui';x.textAlign='center';x.fillText(NAMES[i],q[0],q[1]+4)})});
+function updSt(){const s=+$('stS').value,{act,mem}=stState(s),M=STM[stL];$('stV').textContent=s+' of 4';
+ let best=null;for(let i=0;i<act.length;i++)for(let j=i+1;j<act.length;j++){const d=clDist(mem[act[i]],mem[act[j]],stL);if(!best||d<best[0])best=[d,i,j]}
+ let t='<thead><tr><th></th>'+act.map(id=>`<th>${lbl(mem[id])}</th>`).join('')+'</tr></thead><tbody>';
+ act.forEach((ida,i)=>{t+=`<tr><th>${lbl(mem[ida])}</th>`+act.map((idb,j)=>{const d=i===j?0:clDist(mem[ida],mem[idb],stL),hl=best&&s<4&&((i===best[1]&&j===best[2])||(i===best[2]&&j===best[1]));return`<td${hl?' class="min"':''}>${d.toFixed(2)}</td>`}).join('')+'</tr>'});
+ $('stM').innerHTML=t+'</tbody>';
+ const lg=M.slice(0,s).map((g,i)=>{const A=i2m(g.a,i),Bm=i2m(g.b,i);return`merge ${i+1}: <b>${lbl(A)}</b> + <b>${lbl(Bm)}</b> at distance ${g.h.toFixed(2)}`});
+ $('stLog').innerHTML=(lg.length?lg.join('<br>'):'Every customer is its own cluster.')+(s<4?`<br><span style="color:var(--or-d)">Next: ${lbl(mem[act[best[1]]])} + ${lbl(mem[act[best[2]]])} at ${best[0].toFixed(2)}</span>`:'<br>Done: one cluster left.');drawSt()}
+function i2m(id,upTo){if(id<5)return[id];return STM[stL][id-5].mem}
+$('stS').addEventListener('input',updSt);seg($('stL'),b=>{stL=b.dataset.l;updSt()});updSt();
+
+/* ---- W3 dendrogram toy ---- */
+let dnL='average';
+function dendro(x,w,h,M,n,cut,hmax,labels){const m={l:40,r:12,t:14,b:30},X=i=>m.l+(i+.5)/n*(w-m.l-m.r),Y=v=>h-m.b-v/hmax*(h-m.b-m.t);
+ const root=n+M.length-1,order=[];(function dfs(id){if(id<n)order.push(id);else{dfs(M[id-n].a);dfs(M[id-n].b)}})(root);
+ const px={},ht=id=>id<n?0:M[id-n].h;order.forEach((id,i)=>px[id]=X(i));(function pos(id){if(id<n)return;const g=M[id-n];pos(g.a);pos(g.b);px[id]=(px[g.a]+px[g.b])/2})(root);
+ x.strokeStyle='#e4e4e7';x.fillStyle='#62626b';x.font='11px system-ui';x.textAlign='right';const st=hmax>10?4:1;for(let v=0;v<=hmax;v+=st){x.beginPath();x.moveTo(m.l,Y(v));x.lineTo(w-m.r,Y(v));x.stroke();x.fillText(v,m.l-6,Y(v)+4)}
+ let ci=0;const clusters=[];
+ (function draw(id,col,pid){let c=col;if(c===null&&ht(id)<=cut){c=PAL[ci%PAL.length];ci++;clusters.push([])}
+  if(id<n){if(c)clusters[clusters.length-1].push(id)}else{const g=M[id-n];draw(g.a,c,id);draw(g.b,c,id);x.strokeStyle=c||'#a1a1aa';x.lineWidth=2.5;x.beginPath();x.moveTo(px[g.a],Y(ht(g.a)));x.lineTo(px[g.a],Y(g.h));x.lineTo(px[g.b],Y(g.h));x.lineTo(px[g.b],Y(ht(g.b)));x.stroke()}
+  if(id<n&&c){}})(root,null,-1);
+ x.fillStyle='#18181b';x.font='bold 13px system-ui';x.textAlign='center';order.forEach(id=>x.fillText(labels?labels[id]:id,px[id],h-m.b+18));
+ x.strokeStyle='#dc2626';x.setLineDash([6,4]);x.lineWidth=2;x.beginPath();x.moveTo(m.l,Y(cut));x.lineTo(w-m.r,Y(cut));x.stroke();x.setLineDash([]);return clusters}
+let DNC=[];const drawDn=cv('cvDn',.5,(x,w,h)=>{DNC=dendro(x,w,h,STM[dnL],5,+$('dnS').value,9,NAMES)});
+function updDn(){const cut=+$('dnS').value,M=STM[dnL];$('dnV').textContent=f2(cut);drawDn();
+ const lab=cutH(M,5,cut),k=Math.max(...lab)+1,groups=[...Array(k)].map(()=>[]);lab.forEach((g,i)=>groups[g].push(NAMES[i]));
+ $('dnR').innerHTML=`A cut at height <b>${f2(cut)}</b> crosses <b>${k}</b> branch${k>1?'es':''}: ${groups.map(g=>'{'+g.join(', ')+'}').join(' ')}`;
+ $('dnT').innerHTML='<thead><tr><th>row</th><th>a</th><th>b</th><th>height</th><th>size</th></tr></thead><tbody>'+M.map((g,i)=>`<tr><td>${i}</td><td>${g.a}</td><td>${g.b}</td><td>${g.h.toFixed(2)}</td><td>${g.size}</td></tr>`).join('')+'</tbody>'}
+$('dnS').addEventListener('input',updDn);seg($('dnL'),b=>{dnL=b.dataset.l;updDn()});updDn();
+
+/* ---- W4 linkage grid ---- */
+(function(){const sets=[['Two interlocking half-moons',makeMoons(200)],['Two round blobs joined by a thin bridge',makeBridge()]],L=['single','complete','average','ward'];let html='';
+ sets.forEach((s,si)=>{html+=`<h5>${s[0]}</h5>`+L.map(l=>`<figure><canvas id="lg${si}${l}" role="img" aria-label="${s[0]}, ${l} linkage, cut into two clusters"></canvas><figcaption id="lc${si}${l}"></figcaption></figure>`).join('')});$('lg').innerHTML=html;
+ sets.forEach((s,si)=>{const P=s[1],B=bounds(P,.3);L.forEach(l=>{const M=agg(P,l),lab=cutK(M,P.length,2),sz=[0,1].map(c=>lab.filter(v=>v===c).length).sort((a,b)=>b-a);$('lc'+si+l).innerHTML=`<b>${l[0].toUpperCase()+l.slice(1)}</b>: ${sz[0]} / ${sz[1]}`;cv('lg'+si+l,1,(x,w,h)=>dots(x,w,h,P,lab,B,2.6,6))})})})();
+
+/* ---- W5 ShopSphere top tree ---- */
+const SP={leaves:[['F0',714],['F1',610],['F2',558],['F3',195],['F4',423]],merges:[{h:4.957,k:[3,4]},{h:6.799,k:[2,'n0']},{h:11.712,k:[1,'n1']},{h:15.132,k:[0,'n2']}]};
+const BROAD={0:[0],1:[1],2:[2,3,4]};
+function spClusters(h){const comp=[0,1,2,3,4].map(i=>[i]);let nodes=[...comp];const ref={};
+ const nd=[...[0,1,2,3,4].map(i=>({l:[i]}))];
+ const parts=[0,1,2,3,4].map(i=>[i]),merged={};SP.merges.forEach((m,mi)=>{const a=m.k.map(k=>typeof k==='number'?[k]:merged[k]);merged['n'+mi]=a[0].concat(a[1])});
+ let groups=[0,1,2,3,4].map(i=>[i]);SP.merges.forEach((m,mi)=>{if(m.h<=h){const a=m.k.map(k=>typeof k==='number'?k:null);const set=merged['n'+mi];groups=groups.filter(g=>!g.every(i=>set.includes(i)));groups.push(set)}});return groups}
+const drawSp=cv('cvSp',.62,(x,w,h)=>{const cut=+$('spS').value,m={l:40,r:12,t:14,b:34},Y=v=>h-m.b-v/16*(h-m.b-m.t),X=i=>m.l+(i+.5)/5*(w-m.l-m.r);
+ x.strokeStyle='#e4e4e7';x.fillStyle='#62626b';x.font='11px system-ui';x.textAlign='right';[0,4,8,12,16].forEach(v=>{x.beginPath();x.moveTo(m.l,Y(v));x.lineTo(w-m.r,Y(v));x.stroke();x.fillText(v,m.l-6,Y(v)+4)});
+ const groups=spClusters(cut),colOf={};groups.forEach((g,i)=>g.forEach(l=>colOf[l]=PAL[i%PAL.length]));
+ const nx={};SP.leaves.forEach((l,i)=>nx[i]=X(i));const mer={};SP.merges.forEach((mg,mi)=>{const xs=mg.k.map(k=>typeof k==='number'?nx[k]:mer[k].x);const ys=mg.k.map(k=>typeof k==='number'?4.6:mer[k].h);mer['n'+mi]={x:(xs[0]+xs[1])/2,h:mg.h};x.strokeStyle=mg.h<=cut?(colOf[mg.k[0]]||'#a1a1aa'):'#a1a1aa';x.lineWidth=2.5;x.beginPath();x.moveTo(xs[0],Y(ys[0]));x.lineTo(xs[0],Y(mg.h));x.lineTo(xs[1],Y(mg.h));x.lineTo(xs[1],Y(ys[1]));x.stroke()});
+ SP.leaves.forEach((l,i)=>{const cx=nx[i],bw=Math.min(54,(w-m.l-m.r)/5*.8);x.fillStyle=colOf[i];x.globalAlpha=.85;x.beginPath();x.moveTo(cx,Y(4.6));x.lineTo(cx-bw/2,Y(0));x.lineTo(cx+bw/2,Y(0));x.closePath();x.fill();x.globalAlpha=1;x.fillStyle='#18181b';x.font='bold 12px system-ui';x.textAlign='center';x.fillText('fine '+i,cx,h-m.b+16);x.font='11px system-ui';x.fillStyle='#fff';x.fillText(l[1],cx,Y(0)-6)});
+ x.strokeStyle='#dc2626';x.setLineDash([6,4]);x.lineWidth=2;x.beginPath();x.moveTo(m.l,Y(cut));x.lineTo(w-m.r,Y(cut));x.stroke();x.setLineDash([])});
+function updSp(){const cut=+$('spS').value,g=spClusters(cut);$('spV').textContent=f2(cut);
+ $('spR').innerHTML=`A cut at <b>${f2(cut)}</b> gives <b>${g.length}</b> groups: ${g.map(s=>'{'+s.map(i=>'fine '+i).join(' + ')+'} ('+s.reduce((a,i)=>a+SP.leaves[i][1],0)+' customers)').join(' · ')}`;drawSp()}
+$('spS').addEventListener('input',updSp);document.querySelectorAll('#spP button').forEach(b=>b.addEventListener('click',()=>{$('spS').value=b.dataset.h;updSp()}));updSp();
+
+/* sankey */
+(function(){const ct=[[714,0,0],[0,610,0],[0,0,558],[0,0,195],[0,0,423]],bt=[714,610,1176],W=640,H=300,gap=14,sc=(H-40-gap*4)/2500;
+ let s='',y=20;const bp=[],fp=[];[0,1,2].forEach(b=>{bp.push(y);y+=bt[b]*sc+gap});y=20;[0,1,2,3,4].forEach(f=>{const v=ct[f].reduce((a,c)=>a+c,0);fp.push(y);y+=v*sc+gap});
+ const by=[...bp];ct.forEach((row,f)=>row.forEach((v,b)=>{if(!v)return;const y0=by[b],y1=fp[f],hh=v*sc;by[b]+=hh;s+=`<path class="sk" tabindex="0" data-t="Fine ${f} sits in broad ${b}: ${v} customers" d="M150 ${y0} C300 ${y0},300 ${y1},490 ${y1} L490 ${y1+hh} C300 ${y1+hh},300 ${y0+hh},150 ${y0+hh} Z" fill="${PAL[b===0?0:b===1?1:2]}" opacity=".55" style="cursor:pointer"/>`}));
+ [0,1,2].forEach(b=>{s+=`<rect x="120" y="${bp[b]}" width="30" height="${bt[b]*sc}" fill="${PAL[b===0?0:b===1?1:2]}"/><text x="112" y="${bp[b]+bt[b]*sc/2+4}" text-anchor="end" font-family="system-ui" font-size="13" font-weight="700" fill="#18181b">broad ${b} · ${bt[b]}</text>`});
+ [0,1,2,3,4].forEach(f=>{const v=ct[f].reduce((a,c)=>a+c,0);s+=`<rect x="490" y="${fp[f]}" width="30" height="${v*sc}" fill="#3f3f46"/><text x="528" y="${fp[f]+v*sc/2+4}" font-family="system-ui" font-size="13" font-weight="700" fill="#18181b">fine ${f} · ${v}</text>`});
+ $('svSk').innerHTML=s;document.querySelectorAll('.sk').forEach(p=>{p.addEventListener('mouseenter',()=>p.setAttribute('opacity',.95));p.addEventListener('focus',()=>p.setAttribute('opacity',.95));p.addEventListener('mouseleave',()=>p.setAttribute('opacity',.55));p.addEventListener('blur',()=>p.setAttribute('opacity',.55));p.setAttribute('aria-label',p.dataset.t)});
+ $('tCt').innerHTML='<thead><tr><th>fine \\ broad</th><th>0</th><th>1</th><th>2</th></tr></thead><tbody>'+ct.map((r,f)=>`<tr><td>${f}</td>`+r.map(v=>`<td style="background:${v?'rgba(234,88,12,'+(.15+.6*v/714)+')':'transparent'}">${v}</td>`).join('')+'</tr>').join('')+'</tbody>'})();
+
+/* ---- W6 gap/silhouette ---- */
+const EV={k:[2,3,4,5,6,7,8,9,10,11],h:[15.132,11.712,6.799,4.957,4.891,4.639,4.526,4.104,3.679,3.372],gap:[3.420,4.913,1.842,.066,.252,.113,.421,.426,.307,.053],sil:[.269,.249,.175,.145,.128,.113,.118,.106,.106,null]};
+let evM='gap';
+function drawEv(){const W=640,H=300,m={l:54,r:20,t:20,b:44},v=EV[evM],vals=v.filter(a=>a!==null),hi=Math.max(...vals)*1.12,X=i=>m.l+i/9*(W-m.l-m.r),Y=a=>H-m.b-a/hi*(H-m.b-m.t);let s='';
+ for(let g=0;g<=4;g++){const a=hi*g/4;s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(a)}" y2="${Y(a)}" stroke="#e4e4e7"/><text x="${m.l-8}" y="${Y(a)+4}" text-anchor="end" font-family="system-ui" font-size="11" fill="#62626b">${a.toFixed(evM==='gap'?1:2)}</text>`}
+ s+=`<text x="${(W+m.l)/2}" y="${H-6}" text-anchor="middle" font-family="system-ui" font-size="12" fill="#62626b">number of clusters k</text>`;
+ const pts=v.map((a,i)=>a===null?null:[X(i),Y(a)]).filter(Boolean);s+=`<polyline fill="none" stroke="#27272a" stroke-width="2.5" points="${pts.map(p=>p.join(',')).join(' ')}"/>`;
+ const mx=Math.max(...vals);v.forEach((a,i)=>{if(a===null)return;const top=a===mx;s+=`<text x="${X(i)}" y="${H-m.b+18}" text-anchor="middle" font-family="system-ui" font-size="12" fill="#3f3f46">${EV.k[i]}</text><circle class="ep" tabindex="0" data-i="${i}" cx="${X(i)}" cy="${Y(a)}" r="${top?9:7}" fill="${top?'#ea580c':'#fff'}" stroke="${top?'#c2410c':'#27272a'}" stroke-width="3" aria-label="k ${EV.k[i]}, ${evM==='gap'?'gap':'silhouette'} ${a}" style="cursor:pointer"/>`});
+ $('svEv').innerHTML=s;document.querySelectorAll('.ep').forEach(c=>['mouseenter','focus','click'].forEach(e=>c.addEventListener(e,()=>{const i=+c.dataset.i;$('evR').innerHTML=`<b>k = ${EV.k[i]}</b> · merge height ${EV.h[i]} · gap ${EV.gap[i]} · silhouette ${EV.sil[i]===null?'not computed':EV.sil[i]}`})))}
+$('evT').innerHTML='<thead><tr><th>k</th><th>height of merge k→k−1</th><th>gap to next lower merge</th><th>silhouette</th></tr></thead><tbody>'+EV.k.map((k,i)=>`<tr><td>${k}</td><td>${EV.h[i]}</td><td>${EV.gap[i]}</td><td>${EV.sil[i]===null?'—':EV.sil[i]}</td></tr>`).join('')+'</tbody>';
+seg($('evM'),b=>{evM=b.dataset.m;drawEv()});drawEv();
+
+/* ---- W7 profiles ---- */
+const FEAT=['n_clicks','n_visits','amount_spent','amount_discount','days_since_registration','profile_information'];
+const BR=[[573.58,124.55,1359.94,1078.72,200.36,199.05,714],[253.30,69.31,3153.29,77.75,197.12,213.60,610],[389.16,89.27,610.73,130.64,203.35,195.73,1176]];
+const FN=[[573.58,124.55,1359.94,1078.72,200.36,199.05,714,0],[253.30,69.31,3153.29,77.75,197.12,213.60,610,1],[399.39,87.10,599.50,127.51,145.70,251.33,558,2],[422.67,98.09,604.03,137.16,332.34,225.48,195,2],[360.22,88.07,628.64,131.78,219.93,108.67,423,2]];
+const SC=[[.44,.46,.21,.44,.39,.34],[.17,.24,.48,.03,.38,.37],[.29,.31,.09,.05,.28,.43],[.31,.35,.09,.06,.65,.39],[.26,.31,.10,.05,.43,.19]];
+let pfV='broad';
+function drawPf(){const rows=pfV==='broad'?BR:FN,f=FEAT.indexOf($('pfF').value);
+ $('pfT').innerHTML='<thead><tr><th>'+pfV+'</th>'+FEAT.map(c=>`<th>${c}</th>`).join('')+'<th>customers</th>'+(pfV==='fine'?'<th>parent (broad)</th>':'')+'</tr></thead><tbody>'+rows.map((r,i)=>`<tr><td>${i}</td>`+r.slice(0,6).map(v=>`<td>${v.toFixed(2)}</td>`).join('')+`<td>${r[6]}</td>`+(pfV==='fine'?`<td>${r[7]}</td>`:'')+'</tr>').join('')+'</tbody>';
+ const W=640,H=240,m={l:20,r:20,t:30,b:50},vals=rows.map(r=>r[f]),mx=Math.max(...vals)*1.15,bw=Math.min(70,(W-m.l-m.r)/rows.length*.6);let s=`<line x1="${m.l}" x2="${W-m.r}" y1="${H-m.b}" y2="${H-m.b}" stroke="#a1a1aa"/>`;
+ rows.forEach((r,i)=>{const cx=m.l+(i+.5)/rows.length*(W-m.l-m.r),hh=r[f]/mx*(H-m.b-m.t),par=pfV==='fine'?r[7]:i;s+=`<rect x="${cx-bw/2}" y="${H-m.b-hh}" width="${bw}" height="${hh}" rx="4" fill="${PAL[par===0?0:par===1?1:2]}"/><text x="${cx}" y="${H-m.b-hh-6}" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="700" fill="#18181b">${r[f].toFixed(1)}</text><text x="${cx}" y="${H-m.b+18}" text-anchor="middle" font-family="system-ui" font-size="12" fill="#3f3f46">${pfV} ${i}</text>`+(pfV==='fine'?`<text x="${cx}" y="${H-m.b+34}" text-anchor="middle" font-family="system-ui" font-size="11" fill="#62626b">(broad ${r[7]})</text>`:'')});
+ $('svPf').innerHTML=s}
+$('pfF').innerHTML=FEAT.map(c=>`<option>${c}</option>`).join('');$('pfF').value='amount_spent';$('pfF').addEventListener('change',drawPf);seg($('pfL'),b=>{pfV=b.dataset.v;drawPf()});drawPf();
+const heatC=(v,mx)=>`background:rgba(234,88,12,${(.06+.8*v/mx).toFixed(2)});${v/mx>.6?'color:#fff;font-weight:700':''}`;
+$('hmT').innerHTML='<thead><tr><th>fine segment</th>'+FEAT.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+SC.map((r,i)=>`<tr><td>fine ${i} (in broad ${FN[i][7]})</td>`+r.map(v=>`<td style="${heatC(v,.7)}">${v.toFixed(2)}</td>`).join('')+'</tr>').join('')+'</tbody>';
+
+/* ---- W8 kmeans++ crosstab ---- */
+const KX=[[596,33,48,37,0],[0,44,33,43,490],[0,340,160,58,0],[2,1,0,192,0],[0,9,225,189,0]];
+$('tKm').innerHTML='<thead><tr><th>Ward fine \\ K-Means++</th>'+[0,1,2,3,4].map(i=>`<th>${i}</th>`).join('')+'</tr></thead><tbody>'+KX.map((r,i)=>`<tr><td>${i}</td>`+r.map(v=>`<td style="${heatC(v,600)}">${v}</td>`).join('')+'</tr>').join('')+'</tbody>';
+
+/* ---- W9 timing, memory, sizes ---- */
+(function(){const n=[500,1000,2000,4000],t=[.009,.032,.396,1.212],W=320,H=230,m={l:44,r:14,t:16,b:36},X=v=>m.l+(Math.log2(v/500))/3*(W-m.l-m.r),Y=v=>H-m.b-v/1.4*(H-m.b-m.t);let s='';
+ [0,.4,.8,1.2].forEach(v=>s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e4e4e7"/><text x="${m.l-6}" y="${Y(v)+4}" text-anchor="end" font-family="system-ui" font-size="11" fill="#62626b">${v}</text>`);
+ s+=`<polyline fill="none" stroke="#27272a" stroke-width="2.5" points="${n.map((v,i)=>X(v)+','+Y(t[i])).join(' ')}"/>`+n.map((v,i)=>`<circle cx="${X(v)}" cy="${Y(t[i])}" r="6" fill="#ea580c" stroke="#c2410c" stroke-width="2"/><text x="${X(v)}" y="${H-m.b+16}" text-anchor="middle" font-family="system-ui" font-size="11" fill="#3f3f46">${v}</text>`).join('')+`<text x="${m.l-34}" y="${m.t+8}" font-family="system-ui" font-size="11" fill="#62626b">seconds</text>`;$('svTm').innerHTML=s})();
+function updMm(){const e=+$('mmS').value,n=Math.round(Math.pow(10,e)),gb=n*(n-1)/2*8/1e9;$('mmN').textContent=n.toLocaleString();$('mmG').textContent=gb<10?gb.toFixed(2):gb<1000?gb.toFixed(0):gb.toLocaleString(undefined,{maximumFractionDigits:0})}
+$('mmS').addEventListener('input',updMm);updMm();
+(function(){const v=[174,182,162,196,254,87,269,260,298,195,169,254],W=640,H=250,m={l:44,r:14,t:16,b:36},mx=320,X=i=>m.l+(i+.5)/12*(W-m.l-m.r),Y=a=>H-m.b-a/mx*(H-m.b-m.t);let s='';
+ [0,100,200,300].forEach(a=>s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(a)}" y2="${Y(a)}" stroke="#e4e4e7"/><text x="${m.l-6}" y="${Y(a)+4}" text-anchor="end" font-family="system-ui" font-size="11" fill="#62626b">${a}</text>`);
+ v.forEach((a,i)=>{const sm=a===Math.min(...v);s+=`<rect class="sz" tabindex="0" data-i="${i}" x="${X(i)-16}" y="${Y(a)}" width="32" height="${H-m.b-Y(a)}" rx="4" fill="${sm?'#ea580c':'#52525b'}" aria-label="group ${i}: ${a} customers, ${(a/25).toFixed(2)} percent" style="cursor:pointer"/><text x="${X(i)}" y="${H-m.b+16}" text-anchor="middle" font-family="system-ui" font-size="11" fill="#3f3f46">${i}</text>`});
+ s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(50)}" y2="${Y(50)}" stroke="#dc2626" stroke-dasharray="6 4" stroke-width="2"/><text x="${W-m.r}" y="${Y(50)-6}" text-anchor="end" font-family="system-ui" font-size="11" fill="#dc2626">2% = 50 customers</text>`;$('svSz').innerHTML=s;
+ document.querySelectorAll('.sz').forEach(r=>['mouseenter','focus','click'].forEach(e=>r.addEventListener(e,()=>{const a=v[+r.dataset.i];$('szR').innerHTML=`<b>Group ${r.dataset.i}</b>: ${a} customers (${(a/25).toFixed(2)}%)`})))})();
+
+/* ---- quizzes ---- */
+const Q=[
+{q:"ShopSphere's data has 2,500 customers. How many merges are needed to build the full tree, and so how many rows will the linkage matrix have?",o:["2,500","2,499","1,250","5,000"],a:1,e:"Each merge reduces the number of clusters by exactly one, and we go from 2,500 clusters to 1, so there are 2,499 merges. The linkage matrix has one row per merge, so it has 2,499 rows (shape (2499, 4))."},
+{q:"A tree of 6 points has merges at heights 1, 2, 3, 10 and 12 (in order). How many clusters do you get if you cut the dendrogram at height 5?",o:["2","5","4","3"],a:3,e:"A cut at height 5 keeps every merge below 5 (the ones at heights 1, 2 and 3) and does not perform the merges at 10 and 12. Starting from 6 clusters, three merges leave 6 − 3 = 3 clusters. Equivalently, a line at height 5 crosses three vertical branches."},
+null,
+{q:"ShopSphere's data has two dense groups of customers connected by a thin trail of borderline customers. A teammate uses single linkage and gets one giant cluster plus a few tiny ones. What happened, and what would you try?",o:["Chaining through the trail merged the groups, so try Ward or complete linkage","The data has no real structure, so clustering should be dropped entirely","Single linkage works best here, so the teammate should simply add more clusters","The dendrogram is broken, so the customer data must be relabelled and refit"],a:0,e:"Single linkage measures cluster distance by the closest pair of points. A trail of intermediate customers makes two distant groups look close, one small step at a time, so the groups chain together. Ward and complete linkage consider the overall spread of a merged cluster, so they resist chaining."},
+null,
+{q:"Anjali's tree works on 10,000 customers. The company asks her to do the same on 100,000 customers. Roughly how much more memory does the pairwise distance table need?",o:["About 10 times more","About the same","About 100 times more","About 1,000 times more"],a:2,e:"The number of pairwise distances is n(n−1)/2, which grows with n². Making n ten times larger makes the table about 10² = 100 times larger: about 0.4 GB for 10,000 customers and about 40 GB for 100,000. The time grows by an even larger factor."},
+{q:"Tomorrow, 200 new customers register at ShopSphere. Anjali wants to place them in the broad and fine segments she just built with hierarchical clustering. What is the correct statement?",o:["She can call predict on the fitted AgglomerativeClustering object to label them","There is no built-in way, so she must refit or assign each to the nearest centroid","New customers can never be clustered once a hierarchical tree has been built","She should convert the dendrogram into a GMM automatically and use its predict"],a:1,e:"AgglomerativeClustering has fit_predict (labels for the fitted data), but no predict for new data. Refitting changes the tree, and with it the segments, so a common practical approach is a nearest-centroid assignment to the existing segments, refitting the tree periodically."}];
+const QI=[];document.querySelectorAll('.q').forEach(el=>{let k=+el.dataset.q;const d=Q[k];if(!d){el.remove();return}
+ el.innerHTML=`<div class="qh">Check your understanding</div><p class="qt">${d.q}</p><div class="opts" role="group" aria-label="Answer choices">${d.o.map((t,i)=>`<button class="o" data-i="${i}">${t}</button>`).join('')}</div><div class="fb" aria-live="polite"></div>`;
+ el.querySelectorAll('.o').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;el.querySelectorAll('.o').forEach(o=>{o.disabled=true;if(+o.dataset.i===d.a)o.classList.add('ok')});if(i!==d.a)b.classList.add('bad');const fb=el.querySelector('.fb');fb.style.display='block';fb.innerHTML=`<b>${i===d.a?'Correct.':'Not quite.'}</b> ${i===d.a?'':'The right answer is highlighted. '}${d.e}`}))});
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-UnSL-7" target="_blank" rel="noopener">github.com/scaler-content/DSML-UnSL-7</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

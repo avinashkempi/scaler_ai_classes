@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logistic Regression post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#122A43;
+    --blue:#2C5F7C;
+    --blue-mid:#3E7A9E;
+    --blue-soft:#B9D4E3;
+    --blue-wash:#EAF1F5;
+    --brown:#8A5A34;
+    --brown-deep:#5E3A20;
+    --brown-soft:#D9B98C;
+    --brown-wash:#F3E9DA;
+    --cream:#F6F1E6;
+    --paper:#FCFAF4;
+    --ink:#241C14;
+    --ink-soft:#544738;
+    --rule:#D8CBB4;
+    --good:#2C5F7C;
+    --bad:#8A5A34;
+    --serif:'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --sans:'IBM Plex Sans', -apple-system, Segoe UI, Helvetica, Arial, sans-serif;
+    --mono:'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    --maxw: 700px;
+    --wide: 920px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth; scroll-padding-top:90px;}
+  body{
+    margin:0;
+    background:var(--cream);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:17px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--brown-soft); color:var(--brown-deep);}
+
+  a{color:var(--blue-mid);}
+
+  /* ---------- Reading progress ---------- */
+  .progress-rail{
+    position:fixed; top:0; left:0; height:3px; width:0%;
+    background:linear-gradient(90deg, var(--blue-mid), var(--brown));
+    z-index:200; transition:width .1s linear;
+  }
+
+  /* ---------- Top nav ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:150;
+    background:rgba(246,241,230,.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--rule);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 24px;
+  }
+  .topbar .brand{
+    font-family:var(--serif); font-weight:600; font-size:1.05rem; color:var(--navy);
+    display:flex; align-items:baseline; gap:8px; white-space:nowrap;
+  }
+  .topbar .brand small{font-family:var(--sans); font-weight:500; font-size:.68rem; color:var(--brown); letter-spacing:.03em;}
+  .toc-toggle{
+    display:none; border:1px solid var(--rule); background:var(--paper);
+    color:var(--navy); font-family:var(--sans); font-size:.85rem; padding:7px 12px;
+    border-radius:7px; cursor:pointer;
+  }
+  nav.toc{display:flex; gap:2px; flex-wrap:wrap; justify-content:flex-end;}
+  nav.toc a{
+    font-size:.78rem; color:var(--ink-soft); text-decoration:none; padding:6px 10px;
+    border-radius:20px; white-space:nowrap; transition:background .15s, color .15s;
+  }
+  nav.toc a:hover{background:var(--blue-wash); color:var(--navy);}
+  nav.toc a.active{background:var(--navy); color:var(--paper);}
+
+  @media (max-width:980px){
+    nav.toc{
+      display:none; position:absolute; top:100%; left:0; right:0;
+      background:var(--paper); flex-direction:column; padding:10px 18px 16px;
+      border-bottom:1px solid var(--rule); box-shadow:0 12px 24px rgba(20,15,5,.08);
+    }
+    nav.toc.open{display:flex;}
+    nav.toc a{padding:9px 4px; border-radius:0; border-bottom:1px solid var(--blue-wash);}
+    .toc-toggle{display:inline-block;}
+  }
+
+  /* ---------- Hero ---------- */
+  header.hero{
+    max-width:var(--wide); margin:0 auto; padding:64px 24px 40px;
+  }
+  .kicker{
+    font-family:var(--mono); font-size:.72rem; color:var(--brown);
+    letter-spacing:.04em; margin-bottom:18px;
+  }
+  h1.title{
+    font-family:var(--serif); font-weight:600; color:var(--navy);
+    font-size:clamp(2.1rem, 5vw, 3.15rem); line-height:1.08; margin:0 0 18px;
+    max-width:14ch;
+  }
+  .dek{
+    font-family:var(--serif); font-style:italic; font-size:1.28rem; color:var(--ink-soft);
+    max-width:44ch; margin:0 0 28px; line-height:1.5;
+  }
+  .hero-meta{display:flex; gap:22px; flex-wrap:wrap; font-size:.86rem; color:var(--ink-soft);}
+  .hero-meta span{display:flex; align-items:center; gap:7px;}
+  .hero-meta b{color:var(--navy); font-weight:600;}
+  .dot{width:6px; height:6px; border-radius:50%; background:var(--brown);}
+  .hero-rule{height:3px; width:64px; background:linear-gradient(90deg,var(--blue-mid),var(--brown)); margin:30px 0 0; border-radius:3px;}
+
+  /* ---------- Layout shells ---------- */
+  main{max-width:var(--wide); margin:0 auto; padding:0 24px 40px;}
+  section.chapter{padding:56px 0; border-top:1px solid var(--rule);}
+  section.chapter:first-of-type{border-top:none;}
+  .prose{max-width:var(--maxw);}
+  .eyebrow-num{
+    font-family:var(--mono); font-size:.74rem; color:var(--blue-mid); margin-bottom:10px; display:block;
+  }
+  h2.h2{
+    font-family:var(--serif); font-weight:600; color:var(--navy);
+    font-size:clamp(1.55rem, 3vw, 2.05rem); margin:0 0 20px; line-height:1.18; max-width:var(--maxw);
+  }
+  h3.h3{
+    font-family:var(--serif); font-weight:600; color:var(--brown-deep);
+    font-size:1.28rem; margin:34px 0 14px; max-width:var(--maxw);
+  }
+  p{max-width:var(--maxw); margin:0 0 18px;}
+  ul, ol{max-width:var(--maxw); padding-left:1.3em; margin:0 0 18px;}
+  li{margin-bottom:8px;}
+  strong{color:var(--navy); font-weight:600;}
+  code.inline{
+    font-family:var(--mono); font-size:.86em; background:var(--blue-wash); color:var(--brown-deep);
+    padding:.12em .4em; border-radius:5px;
+  }
+
+  /* ---------- Analogy / callout ---------- */
+  .analogy{
+    max-width:var(--maxw); background:var(--blue-wash); border-left:3px solid var(--blue-mid);
+    padding:18px 22px; border-radius:2px; margin:22px 0; font-size:.98rem;
+  }
+  .analogy .tag{font-family:var(--mono); font-size:.7rem; color:var(--blue); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:6px;}
+  .callout{
+    max-width:var(--maxw); background:var(--brown-wash); border-left:3px solid var(--brown);
+    padding:18px 22px; border-radius:2px; margin:22px 0; font-size:.96rem;
+  }
+  .callout .tag{font-family:var(--mono); font-size:.7rem; color:var(--brown); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:6px;}
+  .observe{
+    max-width:var(--maxw); border:1px dashed var(--rule); padding:14px 18px; border-radius:8px;
+    margin:20px 0; font-size:.93rem; color:var(--ink-soft); background:var(--paper);
+  }
+  .observe b{color:var(--navy);}
+
+  /* ---------- Formula block ---------- */
+  .formula{
+    max-width:var(--maxw); background:var(--navy); color:var(--paper); border-radius:10px;
+    padding:22px 26px; margin:22px 0; overflow-x:auto;
+  }
+  .formula .math{
+    font-family:var(--serif); font-style:italic; font-size:1.25rem; letter-spacing:.01em;
+  }
+  .formula .label{font-family:var(--mono); font-size:.68rem; color:var(--blue-soft); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; display:block; font-style:normal;}
+  .formula sup{font-size:.68em;}
+  .formula sub{font-size:.68em;}
+
+  /* ---------- Code block ---------- */
+  .code-wrap{max-width:var(--maxw); margin:18px 0 26px;}
+  details.code{
+    border:1px solid var(--rule); border-radius:9px; overflow:hidden; background:var(--paper);
+  }
+  details.code summary{
+    list-style:none; cursor:pointer; padding:10px 16px; display:flex; align-items:center; gap:10px;
+    font-family:var(--mono); font-size:.78rem; color:var(--brown-deep); background:var(--brown-wash);
+    user-select:none;
+  }
+  details.code summary::-webkit-details-marker{display:none;}
+  details.code summary::before{content:"▸"; font-size:.7rem; transition:transform .15s;}
+  details.code[open] summary::before{transform:rotate(90deg);}
+  details.code summary .fname{opacity:.7; font-weight:500;}
+  pre.code-body{
+    margin:0; padding:16px 18px; font-family:var(--mono); font-size:.82rem; line-height:1.6;
+    color:#EDE7DA; background:#1B1712; overflow-x:auto;
+  }
+  pre.code-body .cm{color:#8FA3AE;}
+  pre.code-body .kw{color:#8FC7E8;}
+  pre.code-body .st{color:#D9B98C;}
+  pre.code-body .fn{color:#E7C79A;}
+  .out{
+    font-family:var(--mono); font-size:.8rem; background:#F1E9D8; color:var(--brown-deep);
+    padding:10px 16px; border-top:1px dashed var(--rule); white-space:pre-wrap;
+  }
+
+  /* ---------- Quiz ---------- */
+  .quiz{
+    max-width:var(--maxw); border:1px solid var(--rule); border-radius:12px; background:var(--paper);
+    padding:22px 24px 20px; margin:28px 0; position:relative;
+  }
+  .quiz .qtag{
+    font-family:var(--mono); font-size:.7rem; color:var(--brown); text-transform:uppercase;
+    letter-spacing:.05em; margin-bottom:10px; display:flex; align-items:center; gap:8px;
+  }
+  .quiz .qtag svg{width:14px; height:14px;}
+  .quiz .qtext{font-family:var(--serif); font-size:1.08rem; color:var(--navy); margin-bottom:16px; line-height:1.45;}
+  .quiz .opt{
+    display:block; width:100%; text-align:left; background:var(--blue-wash); border:1px solid transparent;
+    border-radius:8px; padding:11px 14px; margin-bottom:9px; font-family:var(--sans); font-size:.92rem;
+    color:var(--ink); cursor:pointer; transition:all .12s;
+  }
+  .quiz .opt:hover{border-color:var(--blue-mid);}
+  .quiz .opt.correct{background:#DEEBD1; border-color:#5C8A3E; color:#31501F;}
+  .quiz .opt.incorrect{background:#F1D9CE; border-color:var(--brown); color:var(--brown-deep);}
+  .quiz .opt[disabled]{cursor:default;}
+  .quiz .explain{
+    display:none; margin-top:14px; padding-top:14px; border-top:1px dashed var(--rule);
+    font-size:.92rem; color:var(--ink-soft);
+  }
+  .quiz .explain.show{display:block;}
+  .quiz .explain b{color:var(--navy);}
+  .quiz .retry{
+    display:none; margin-top:12px; font-family:var(--mono); font-size:.72rem; color:var(--blue-mid);
+    background:none; border:1px solid var(--blue-soft); padding:6px 12px; border-radius:20px; cursor:pointer;
+  }
+  .quiz .retry.show{display:inline-block;}
+
+  /* ---------- Data table ---------- */
+  .table-wrap{max-width:var(--wide); overflow-x:auto; margin:22px 0;}
+  table.data{
+    border-collapse:collapse; width:100%; font-size:.84rem; font-family:var(--mono); min-width:560px;
+  }
+  table.data th{
+    text-align:left; padding:9px 12px; background:var(--navy); color:var(--blue-soft);
+    font-weight:500; font-size:.72rem; text-transform:uppercase; letter-spacing:.03em;
+  }
+  table.data td{padding:8px 12px; border-bottom:1px solid var(--rule); color:var(--ink-soft);}
+  table.data tr:nth-child(even) td{background:var(--blue-wash);}
+  table.data td.pos{color:var(--blue); font-weight:600;}
+  table.data td.neg{color:var(--brown); font-weight:600;}
+
+  .feat-list{max-width:var(--maxw); list-style:none; padding:0; margin:20px 0;}
+  .feat-list li{
+    display:flex; gap:14px; padding:10px 0; border-bottom:1px solid var(--rule); align-items:baseline;
+  }
+  .feat-list code{
+    font-family:var(--mono); font-size:.82rem; color:var(--brown-deep); background:var(--brown-wash);
+    padding:2px 8px; border-radius:5px; flex-shrink:0; white-space:nowrap;
+  }
+  .feat-list span{font-size:.92rem; color:var(--ink-soft);}
+
+  /* ---------- Diagram: flow ---------- */
+  .flow{
+    max-width:var(--wide); display:flex; align-items:stretch; gap:0; margin:28px 0 10px;
+    overflow-x:auto; padding-bottom:8px;
+  }
+  .flow-step{
+    flex:1 1 0; min-width:118px; background:var(--paper); border:1px solid var(--rule); border-radius:10px;
+    padding:14px 12px; text-align:center; cursor:pointer; transition:border-color .15s, transform .15s;
+    position:relative;
+  }
+  .flow-step:hover, .flow-step.active{border-color:var(--blue-mid); transform:translateY(-2px);}
+  .flow-step .fi{font-size:1.5rem; margin-bottom:6px;}
+  .flow-step .ft{font-family:var(--sans); font-weight:600; font-size:.78rem; color:var(--navy);}
+  .flow-arrow{flex:0 0 26px; display:flex; align-items:center; justify-content:center; color:var(--brown); font-size:1.1rem;}
+  .flow-detail{
+    max-width:var(--wide); background:var(--blue-wash); border-radius:10px; padding:16px 20px;
+    font-size:.88rem; color:var(--ink-soft); min-height:1.4em;
+  }
+  .flow-detail b{color:var(--navy);}
+
+  /* ---------- Interactive: sigmoid ---------- */
+  .interactive-card{
+    max-width:var(--wide); border:1px solid var(--rule); border-radius:14px; background:var(--paper);
+    padding:26px 28px; margin:30px 0; box-shadow:0 1px 0 rgba(20,15,5,.03);
+  }
+  .interactive-card .ic-head{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px;}
+  .interactive-card .ic-title{font-family:var(--serif); font-weight:600; color:var(--navy); font-size:1.15rem;}
+  .badge-live{
+    font-family:var(--mono); font-size:.65rem; color:var(--blue); border:1px solid var(--blue-soft);
+    padding:3px 9px; border-radius:20px; letter-spacing:.04em;
+  }
+  .ic-body{display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; margin-top:16px;}
+  .ic-chart{flex:1 1 380px; min-width:280px;}
+  .ic-controls{flex:1 1 260px; min-width:240px; display:flex; flex-direction:column; gap:18px;}
+  canvas{max-width:100%; display:block;}
+  .slider-row label{
+    display:flex; justify-content:space-between; font-family:var(--mono); font-size:.78rem;
+    color:var(--brown-deep); margin-bottom:6px;
+  }
+  .slider-row input[type=range]{
+    width:100%; accent-color:var(--blue-mid); height:4px;
+  }
+  .toggle-row{display:flex; align-items:center; gap:10px; font-size:.85rem; color:var(--ink-soft);}
+  .toggle-row input{accent-color:var(--brown);}
+  .reset-btn{
+    align-self:flex-start; font-family:var(--mono); font-size:.72rem; background:var(--navy); color:var(--paper);
+    border:none; padding:8px 16px; border-radius:20px; cursor:pointer;
+  }
+  .reset-btn:hover{background:var(--blue);}
+  .ic-readout{
+    font-family:var(--mono); font-size:.82rem; color:var(--navy); background:var(--blue-wash);
+    padding:10px 14px; border-radius:8px;
+  }
+  .ic-readout .rk{color:var(--ink-soft);}
+  .legend-row{display:flex; gap:16px; flex-wrap:wrap; font-size:.76rem; color:var(--ink-soft); margin-top:10px;}
+  .legend-row .sw{display:inline-block; width:14px; height:3px; margin-right:6px; vertical-align:middle; border-radius:2px;}
+
+  /* ---------- Tabs (likelihood vs probability) ---------- */
+  .tabs{max-width:var(--maxw); margin:22px 0;}
+  .tab-buttons{display:flex; gap:8px; margin-bottom:14px;}
+  .tab-btn{
+    font-family:var(--sans); font-weight:600; font-size:.86rem; padding:9px 18px; border-radius:20px;
+    border:1px solid var(--rule); background:var(--paper); color:var(--ink-soft); cursor:pointer;
+  }
+  .tab-btn.active{background:var(--navy); color:var(--paper); border-color:var(--navy);}
+  .tab-panel{display:none; background:var(--paper); border:1px solid var(--rule); border-radius:10px; padding:20px 22px; font-size:.94rem; color:var(--ink-soft);}
+  .tab-panel.active{display:block;}
+  .tab-panel b{color:var(--navy);}
+
+  /* ---------- Log loss calculator ---------- */
+  .preset-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .preset-btn{
+    font-family:var(--mono); font-size:.7rem; background:var(--brown-wash); color:var(--brown-deep);
+    border:1px solid var(--brown-soft); padding:6px 10px; border-radius:8px; cursor:pointer;
+  }
+  .preset-btn:hover{background:var(--brown-soft);}
+  .loss-bar-track{width:100%; height:14px; background:var(--blue-wash); border-radius:8px; overflow:hidden; margin-top:6px;}
+  .loss-bar-fill{height:100%; width:0%; background:linear-gradient(90deg, var(--blue-mid), var(--brown)); transition:width .18s ease, background .18s ease;}
+  .loss-verdict{font-family:var(--serif); font-style:italic; font-size:.95rem; color:var(--ink-soft); margin-top:10px; min-height:1.4em;}
+
+  /* ---------- Convex demo ---------- */
+  .convex-grid{display:flex; gap:24px; flex-wrap:wrap; margin-top:16px;}
+  .convex-cell{flex:1 1 260px; min-width:240px;}
+  .convex-cell h4{font-family:var(--sans); font-weight:600; font-size:.82rem; color:var(--navy); margin:0 0 8px;}
+  .convex-cell svg{width:100%; height:auto; background:var(--blue-wash); border-radius:10px;}
+  .walk-btn{
+    margin-top:10px; font-family:var(--mono); font-size:.72rem; background:var(--navy); color:var(--paper);
+    border:none; padding:7px 14px; border-radius:20px; cursor:pointer;
+  }
+  .convex-note{font-size:.78rem; color:var(--ink-soft); margin-top:8px;}
+
+  /* ---------- Coefficient chart ---------- */
+  .coef-chart{max-width:var(--wide); margin:22px 0;}
+  .coef-row{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+  .coef-name{width:150px; flex-shrink:0; font-family:var(--mono); font-size:.78rem; color:var(--ink-soft); text-align:right;}
+  .coef-track{flex:1; position:relative; height:22px; background:var(--blue-wash); border-radius:5px;}
+  .coef-mid{position:absolute; left:50%; top:-3px; bottom:-3px; width:1px; background:var(--rule);}
+  .coef-fill{position:absolute; top:0; bottom:0; border-radius:5px;}
+  .coef-fill.pos{background:var(--blue-mid); left:50%;}
+  .coef-fill.neg{background:var(--brown); right:50%;}
+  .coef-val{width:60px; flex-shrink:0; font-family:var(--mono); font-size:.78rem;}
+  .coef-val.pos{color:var(--blue);}
+  .coef-val.neg{color:var(--brown-deep);}
+
+  /* ---------- Stat cards ---------- */
+  .stat-row{display:flex; gap:16px; flex-wrap:wrap; max-width:var(--wide); margin:20px 0;}
+  .stat-card{
+    flex:1 1 150px; background:var(--paper); border:1px solid var(--rule); border-radius:12px;
+    padding:18px 20px;
+  }
+  .stat-card .sv{font-family:var(--serif); font-weight:600; font-size:1.9rem; color:var(--navy);}
+  .stat-card .sl{font-size:.78rem; color:var(--ink-soft); margin-top:4px;}
+  .stat-card.accent .sv{color:var(--brown);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaway-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:14px; max-width:var(--wide); margin-top:20px;}
+  .takeaway-card{
+    background:var(--paper); border:1px solid var(--rule); border-radius:12px; padding:16px 18px;
+    font-size:.88rem; color:var(--ink-soft); line-height:1.5;
+  }
+  .takeaway-card b{display:block; color:var(--navy); font-family:var(--serif); font-size:.98rem; margin-bottom:6px;}
+
+  /* ---------- Footer ---------- */
+  footer{
+    border-top:1px solid var(--rule); padding:38px 24px 50px; max-width:var(--wide); margin:0 auto;
+    text-align:center; color:var(--ink-soft); font-size:.82rem;
+  }
+  footer .fmark{font-family:var(--serif); font-style:italic; color:var(--brown); font-size:.95rem; margin-bottom:6px;}
+
+  :focus-visible{outline:2px solid var(--blue-mid); outline-offset:2px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+
+  @media (max-width:640px){
+    .topbar{padding:12px 16px;}
+    header.hero{padding:44px 16px 28px;}
+    main{padding:0 16px 30px;}
+    .interactive-card{padding:20px 16px;}
+    .ic-body{gap:18px;}
+    .coef-name{width:104px; font-size:.68rem;}
+  }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML with AI 11 · Logistic regression from zero</span><span class="pn"><a href="../ML-with-AI-workflows-8/" title="ML with AI 8 · Logistic regression: log-odds and trust">← Prev</a><a href="../logistic-regression/" title="ML Foundations 5 · Logistic regression">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="progress-rail" id="progressRail"></div>
+
+<div class="topbar">
+  <div class="brand">Logistic Regression <small>POST READ</small></div>
+  <button class="toc-toggle" id="tocToggle" aria-expanded="false" aria-controls="tocNav">Contents ▾</button>
+  <nav class="toc" id="tocNav">
+    <a href="#problem">The Problem</a>
+    <a href="#why-not-linear">Why Not Linear</a>
+    <a href="#sigmoid">Sigmoid</a>
+    <a href="#likelihood">Likelihood</a>
+    <a href="#logloss">Log-Loss</a>
+    <a href="#mse">Convexity</a>
+    <a href="#pipeline">Pipeline</a>
+    <a href="#accuracy">Accuracy</a>
+    <a href="#takeaways">Takeaways</a>
+  </nav>
+</div>
+
+<header class="hero">
+  <span class="kicker">CLASSIFICATION · FROM FIRST PRINCIPLES</span>
+  <h1 class="title">Logistic Regression, From Zero to One</h1>
+  <p class="dek">How a hospital's no-show problem leads, step by step, to the sigmoid curve, the loss function behind modern language models, and a working classifier.</p>
+  <div class="hero-meta">
+    <span><span class="dot"></span> <b>Reading level:</b> intro machine learning</span>
+    <span><span class="dot"></span> <b>Prerequisites:</b> linear regression, gradient descent</span>
+    <span><span class="dot"></span> <b>Includes:</b> 6 checks, 4 interactive figures</span>
+  </div>
+  <div class="hero-rule"></div>
+</header>
+
+<main>
+
+  <!-- ================= THE PROBLEM ================= -->
+  <section class="chapter" id="problem">
+    <div class="prose">
+      <span class="eyebrow-num">01</span>
+      <h2 class="h2">The Problem at Sunrise General Hospital</h2>
+      <p>Sunrise General Hospital runs a busy outpatient department. Every day, doctors set aside a fixed number of appointment slots — but a large fraction of patients who book a slot simply never show up. The slot goes to waste: no other patient can use it, and the doctor's time sits idle.</p>
+      <p>The hospital's operations team wants to identify, in advance, which booked patients are unlikely to show up — so the front desk can send an earlier reminder, or in high-risk cases, double-book the slot.</p>
+    </div>
+
+    <div class="analogy">
+      <span class="tag">Notice the shape of this problem</span>
+      For every booked appointment, the outcome is one of exactly two things: the patient <em>shows up</em>, or they <em>don't</em>. There's no in-between value to predict. This is a <strong>classification problem</strong>, not a regression problem — and it's worth seeing exactly where regression falls short before reaching for something new.
+    </div>
+
+    <div class="prose">
+      <h3 class="h3">A representative dataset</h3>
+      <p>To work with this hands-on, we generate a synthetic dataset that mimics a real appointment log. Each row is one booked appointment; the columns are features the front desk already records at booking time.</p>
+    </div>
+
+    <ul class="feat-list">
+      <li><code>days_lead_time</code><span>How many days in advance the appointment was booked</span></li>
+      <li><code>distance_km</code><span>How far the patient lives from the hospital</span></li>
+      <li><code>prior_no_shows</code><span>How many times this patient has missed an appointment before</span></li>
+      <li><code>reminder_sent</code><span>Whether an SMS reminder was sent (1) or not (0)</span></li>
+      <li><code>age</code><span>The patient's age</span></li>
+      <li><code>showed_up</code><span>The target — 1 if the patient showed up, 0 if they did not</span></li>
+    </ul>
+
+    <div class="table-wrap">
+      <table class="data" id="dataPreview">
+        <thead><tr><th>lead_time</th><th>distance_km</th><th>prior_no_shows</th><th>reminder_sent</th><th>age</th><th>showed_up</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="code-wrap">
+      <details class="code">
+        <summary><span>▸ Generating the dataset</span><span class="fname">numpy · pandas</span></summary>
+        <pre class="code-body"><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+
+rng = np.random.default_rng(<span class="fn">42</span>)
+n_patients = <span class="fn">800</span>
+
+days_lead_time  = rng.integers(<span class="fn">0</span>, <span class="fn">30</span>, size=n_patients)
+distance_km     = rng.uniform(<span class="fn">0.5</span>, <span class="fn">40</span>, size=n_patients)
+prior_no_shows  = rng.poisson(<span class="fn">0.6</span>, size=n_patients)
+reminder_sent   = rng.integers(<span class="fn">0</span>, <span class="fn">2</span>, size=n_patients)
+age             = rng.integers(<span class="fn">5</span>, <span class="fn">90</span>, size=n_patients)
+
+<span class="cm"># A hidden "true" relationship used only to generate labels realistically.</span>
+<span class="cm"># Longer lead time, distance, and prior no-shows push toward NOT showing up.</span>
+<span class="cm"># A reminder pushes toward showing up.</span>
+z_true = (
+    <span class="fn">1.8</span>
+    - <span class="fn">0.04</span> * days_lead_time
+    - <span class="fn">0.05</span> * distance_km
+    - <span class="fn">0.9</span>  * prior_no_shows
+    + <span class="fn">1.1</span>  * reminder_sent
+    + <span class="fn">0.01</span> * age
+)
+prob_show = <span class="fn">1</span> / (<span class="fn">1</span> + np.exp(-z_true))
+showed_up = rng.binomial(<span class="fn">1</span>, prob_show)</pre>
+      </details>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card"><div class="sv">496</div><div class="sl">patients showed up</div></div>
+      <div class="stat-card accent"><div class="sv">304</div><div class="sl">patients did not</div></div>
+      <div class="stat-card"><div class="sv">62% / 38%</div><div class="sl">class balance</div></div>
+    </div>
+
+    <div class="observe">
+      <b>Observe —</b> the two classes are not perfectly balanced: more patients show up than not. This matters later, when we look at what "accuracy" can hide on imbalanced data.
+    </div>
+  </section>
+
+  <!-- ================= WHY NOT LINEAR ================= -->
+  <section class="chapter" id="why-not-linear">
+    <div class="prose">
+      <span class="eyebrow-num">02</span>
+      <h2 class="h2">Why Not Just Use Linear Regression?</h2>
+      <p>Linear regression predicts a continuous quantity as a weighted sum of features:</p>
+    </div>
+
+    <div class="formula">
+      <span class="label">Linear regression's prediction</span>
+      <span class="math">ŷ = w<sup>T</sup>x + b</span>
+    </div>
+
+    <div class="prose">
+      <p>Here <i>x</i> is the feature vector for one patient, <i>w</i> is the learned weight vector, and <i>b</i> the learned bias. The output ŷ can be <em>any</em> real number, from −∞ to ∞.</p>
+      <p>Now look at the target: <code class="inline">showed_up</code> is either 0 or 1. Nothing in between. Run linear regression on it directly, and the model can output values like −2.3 or 4.7 — numbers that mean nothing as a class label.</p>
+      <p>What's needed is a function that takes the same weighted sum <i>z = w<sup>T</sup>x + b</i> linear regression already computes, and maps it into a range we can meaningfully read as belonging to one of two classes.</p>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <div class="qtag">◆ Check your understanding</div>
+      <div class="qtext">A hospital administrator fits plain linear regression directly on <code class="inline">showed_up</code> (1 for "showed up", 0 for "no-show"). For a particular patient, the model outputs ŷ = 1.34. What's the main issue?</div>
+      <div class="opts">
+        <button class="opt">The model is perfectly correct; 1.34 rounds to 1, so it means "will show up."</button>
+        <button class="opt" data-correct>1.34 falls outside the {0, 1} range we're trying to predict, so it can't be directly read as a class or a probability.</button>
+        <button class="opt">The issue is only that the number should be negative.</button>
+        <button class="opt">There is no issue — linear regression works equally well for classification and regression.</button>
+      </div>
+      <div class="explain"><b>Why:</b> Linear regression has no built-in mechanism to keep its output between 0 and 1. Since the target is categorical (show / no-show), the model's output needs to be restricted to a meaningful range — ideally one that can be read as a probability.</div>
+      <button class="retry">try again</button>
+    </div>
+
+    <div class="prose">
+      <h3 class="h3">A first attempt: thresholding</h3>
+    </div>
+    <div class="analogy">
+      <span class="tag">Analogy — the smoke detector</span>
+      A smoke detector continuously measures smoke density, but it doesn't report the exact reading — it does one of two things: stay silent, or sound the alarm. Below a threshold, silence; at or above it, alarm.
+    </div>
+    <div class="prose">
+      <p>The same idea can be applied here: take the raw weighted sum <i>z = w<sup>T</sup>x + b</i> and pass it through a <strong>step function</strong>.</p>
+    </div>
+    <div class="formula">
+      <span class="label">The step function</span>
+      <span class="math">f(z) = 1 &nbsp;if&nbsp; z ≥ 0,&nbsp;&nbsp; f(z) = 0 &nbsp;if&nbsp; z &lt; 0</span>
+    </div>
+    <p class="prose" style="max-width:var(--maxw)"><i>z</i> is the raw score computed from a patient's features; <i>f(z)</i> is the predicted class — 1 for "will show up," 0 for "will not."</p>
+
+    <div class="quiz" data-quiz>
+      <div class="qtag">◆ Check your understanding</div>
+      <div class="qtext">What's the core mathematical problem with using the step function above, if we want to train the weights <i>w</i> and <i>b</i> with gradient descent?</div>
+      <div class="opts">
+        <button class="opt">The step function is too simple to compute.</button>
+        <button class="opt" data-correct>It's non-differentiable at the threshold, so there's no meaningful gradient to update <i>w</i> and <i>b</i> with.</button>
+        <button class="opt">The step function only works for continuous targets.</button>
+        <button class="opt">There is no problem — gradient descent works fine with the step function.</button>
+      </div>
+      <div class="explain"><b>Why:</b> Gradient descent updates weights using the derivative of the loss with respect to the weights. The step function jumps suddenly at z = 0 and is flat everywhere else — its derivative is either zero or undefined, which gives gradient descent nothing to work with. What's needed is a <em>smooth</em> function instead of a hard switch.</div>
+      <button class="retry">try again</button>
+    </div>
+  </section>
+
+  <!-- ================= SIGMOID ================= -->
+  <section class="chapter" id="sigmoid">
+    <div class="prose">
+      <span class="eyebrow-num">03</span>
+      <h2 class="h2">The Sigmoid Function: a Smooth Switch</h2>
+    </div>
+    <div class="analogy">
+      <span class="tag">Analogy — the dimmer switch</span>
+      Instead of a smoke detector's hard on/off alarm, picture a dimmer switch on a light. As you turn the knob, the light doesn't jump instantly from off to fully on — it brightens smoothly and continuously. That smoothness is exactly what's needed: a function that transitions gradually from 0 to 1 as <i>z</i> increases.
+    </div>
+    <div class="prose">
+      <p>This is exactly what the <strong>sigmoid function</strong> does — also called the <em>logistic</em> function, which is where "logistic regression" gets its name:</p>
+    </div>
+
+    <div class="formula">
+      <span class="label">The sigmoid function</span>
+      <span class="math">σ(z) = 1 / (1 + e<sup>−z</sup>)</span>
+    </div>
+
+    <div class="prose">
+      <p>Here <i>z = w<sup>T</sup>x + b</i> is the same raw weighted score as before, <i>e</i> ≈ 2.718 is Euler's number, and σ(z) is always strictly between 0 and 1.</p>
+      <p>As <i>z</i> → ∞, σ(z) → 1. As <i>z</i> → −∞, σ(z) → 0. At <i>z</i> = 0, σ(z) = 0.5 exactly. The transition between these extremes is smooth and differentiable everywhere — exactly what gradient descent needs.</p>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <div class="qtag">◆ Check your understanding</div>
+      <div class="qtext">A patient's raw score is <i>z</i> = −8 — a very negative number, meaning the features strongly suggest they will <em>not</em> show up. What would you expect σ(z) to be?</div>
+      <div class="opts">
+        <button class="opt">Close to 1</button>
+        <button class="opt" data-correct>Close to 0</button>
+        <button class="opt">Exactly 0.5</button>
+        <button class="opt">A negative number</button>
+      </div>
+      <div class="explain"><b>Why:</b> As z becomes a large negative number, e<sup>−z</sup> becomes very large, which makes the denominator 1 + e<sup>−z</sup> very large — pushing σ(z) close to 0. That matches intuition: a strongly negative raw score should mean a low predicted probability of showing up.</div>
+      <button class="retry">try again</button>
+    </div>
+
+    <div class="interactive-card">
+      <div class="ic-head">
+        <div class="ic-title">Sigmoid explorer</div>
+        <div class="badge-live">● interactive</div>
+      </div>
+      <p style="max-width:none; font-size:.9rem; color:var(--ink-soft); margin-bottom:0;">In a real model, <i>z = w·x + b</i> — so the shape of the curve depends on the learned weight <i>w</i> (how steep the transition is) and bias <i>b</i> (where the transition happens). Drag the sliders to see it live, and toggle the step function to compare the two.</p>
+      <div class="ic-body">
+        <div class="ic-chart">
+          <canvas id="sigCanvas" width="560" height="360" role="img" aria-label="Sigmoid curve plot, updates with the weight and bias sliders"></canvas>
+          <div class="legend-row">
+            <span><span class="sw" style="background:var(--blue-mid)"></span>sigmoid σ(z)</span>
+            <span><span class="sw" style="background:var(--brown); opacity:.8"></span>step function (for comparison)</span>
+            <span><span class="sw" style="background:var(--rule)"></span>0.5 threshold</span>
+          </div>
+        </div>
+        <div class="ic-controls">
+          <div class="slider-row">
+            <label><span>weight (w)</span><span id="wVal">1.00</span></label>
+            <input type="range" id="wSlider" min="-3" max="3" step="0.1" value="1">
+          </div>
+          <div class="slider-row">
+            <label><span>bias (b)</span><span id="bVal">0.0</span></label>
+            <input type="range" id="bSlider" min="-10" max="10" step="0.5" value="0">
+          </div>
+          <label class="toggle-row"><input type="checkbox" id="stepToggle"> show step function overlay</label>
+          <div class="ic-readout">
+            <span class="rk">crossover (50% point):</span> <span id="crossVal">x = 0.00</span><br>
+            <span class="rk">steepness:</span> <span id="steepVal">moderate</span>
+          </div>
+          <button class="reset-btn" id="sigReset">reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="observe">
+      <b>Observe —</b> increasing |w| makes the transition steeper — the model becomes more decisive. Shifting <i>b</i> slides the whole curve left or right along the feature axis, changing <em>where</em> the 50% crossover sits.
+    </div>
+
+    <div class="prose">
+      <h3 class="h3">Reading sigmoid output as a probability</h3>
+      <p>Because σ(z) always lies strictly between 0 and 1, it can be read directly as a probability: σ(z) is the model's estimate of the probability that the patient shows up, given their features.</p>
+      <p>If the model outputs σ(z) = 0.82 for a patient, that means an estimated 82% chance they show up — and correspondingly, 18% chance they don't. The front desk can then pick a threshold — say, call anyone whose predicted probability is below 0.4 — to prioritize reminder calls.</p>
+    </div>
+  </section>
+
+  <!-- ================= LIKELIHOOD ================= -->
+  <section class="chapter" id="likelihood">
+    <div class="prose">
+      <span class="eyebrow-num">04</span>
+      <h2 class="h2">Likelihood vs. Probability</h2>
+      <p>Before figuring out <em>how</em> to train <i>w</i> and <i>b</i>, two ideas that sound similar need to be told apart: probability and likelihood.</p>
+    </div>
+
+    <div class="tabs">
+      <div class="tab-buttons">
+        <button class="tab-btn active" data-tab="prob">Probability</button>
+        <button class="tab-btn" data-tab="like">Likelihood</button>
+      </div>
+      <div class="tab-panel active" data-panel="prob">
+        <b>The locked suitcase, forward:</b> Given a <em>fixed</em> 4-digit combination — say 4-2-7-1 — what's the chance a random guess opens it? Here the combination is fixed, and the reasoning is about the outcome.
+      </div>
+      <div class="tab-panel" data-panel="like">
+        <b>The locked suitcase, reversed:</b> Given that the suitcase just <em>opened</em> on a particular guess, how plausible is it that a particular combination was the true one? Here the outcome (it opened) is fixed, and the reasoning is about which explanation best accounts for it.
+      </div>
+    </div>
+
+    <p class="prose">In logistic regression, the "combination" is the pair of parameters (<i>w, b</i>), and the "outcome" is the labeled data already collected — which patients showed up, which didn't. The question flips around: instead of assuming <i>w</i> and <i>b</i> and asking how probable the data is, ask — <em>given the data already observed, which values of w and b make that data most plausible?</em> This is <strong>Maximum Likelihood Estimation (MLE)</strong>.</p>
+
+    <h3 class="h3" style="margin-top:8px;">Setting up the likelihood</h3>
+    <p class="prose">For a single patient <i>i</i>, let <i>x<sub>i</sub></i> be their feature vector, <i>y<sub>i</sub></i> the actual outcome (1 if shown up, 0 if not), and <i>p<sub>i</sub></i> = σ(w<sup>T</sup>x<sub>i</sub> + b) the model's predicted probability they show up.</p>
+    <p class="prose">If <i>y<sub>i</sub></i> = 1, <i>p<sub>i</sub></i> should be large. If <i>y<sub>i</sub></i> = 0, (1 − <i>p<sub>i</sub></i>) should be large. Both cases collapse into one expression:</p>
+
+    <div class="formula">
+      <span class="label">Per-patient likelihood</span>
+      <span class="math">P(y<sub>i</sub> | x<sub>i</sub>) = p<sub>i</sub><sup>y<sub>i</sub></sup> · (1 − p<sub>i</sub>)<sup>1 − y<sub>i</sub></sup></span>
+    </div>
+    <p class="prose">Since each appointment's outcome is independent of the others, the likelihood of the entire dataset of <i>n</i> patients, for a given (<i>w, b</i>), is the product of every individual term:</p>
+    <div class="formula">
+      <span class="label">Dataset likelihood</span>
+      <span class="math">L(w, b) = ∏<sub>i=1</sub><sup>n</sup> p<sub>i</sub><sup>y<sub>i</sub></sup> · (1 − p<sub>i</sub>)<sup>1 − y<sub>i</sub></sup></span>
+    </div>
+    <p class="prose">MLE says: choose the <i>w</i> and <i>b</i> that make L(<i>w, b</i>) as large as possible.</p>
+
+    <div class="quiz" data-quiz>
+      <div class="qtag">◆ Check your understanding</div>
+      <div class="qtext">For a patient who actually showed up (y<sub>i</sub> = 1), the expression p<sub>i</sub><sup>y<sub>i</sub></sup>(1−p<sub>i</sub>)<sup>1−y<sub>i</sub></sup> simplifies to which of the following?</div>
+      <div class="opts">
+        <button class="opt">1 − p<sub>i</sub></button>
+        <button class="opt" data-correct>p<sub>i</sub></button>
+        <button class="opt">p<sub>i</sub>(1 − p<sub>i</sub>)</button>
+        <button class="opt">1, regardless of p<sub>i</sub></button>
+      </div>
+      <div class="explain"><b>Why:</b> When y<sub>i</sub> = 1, the exponent on p<sub>i</sub> is 1 and the exponent on (1−p<sub>i</sub>) is 1−1 = 0. Anything raised to the power 0 is 1, so the expression reduces to just p<sub>i</sub> — confirming that for patients who showed up, the goal is for p<sub>i</sub> itself to be large.</div>
+      <button class="retry">try again</button>
+    </div>
+  </section>
+
+  <!-- ================= LOG LOSS ================= -->
+  <section class="chapter" id="logloss">
+    <div class="prose">
+      <span class="eyebrow-num">05</span>
+      <h2 class="h2">From Likelihood to Log-Loss</h2>
+      <p>Multiplying together hundreds of probabilities, each less than 1, produces an extremely small number — awkward to work with numerically and to differentiate. So instead of maximizing L(<i>w, b</i>) directly, its logarithm is maximized instead. Since log is an increasing function, maximizing one is the same as maximizing the other — but the product turns into a far friendlier sum:</p>
+    </div>
+
+    <div class="formula">
+      <span class="label">Log-likelihood</span>
+      <span class="math">log L(w, b) = Σ<sub>i=1</sub><sup>n</sup> [ y<sub>i</sub> log(p<sub>i</sub>) + (1 − y<sub>i</sub>) log(1 − p<sub>i</sub>) ]</span>
+    </div>
+
+    <p class="prose">By convention, loss functions are things we <em>minimize</em>, so the sign gets flipped. For a single patient <i>i</i>, this gives the <strong>log-loss</strong> — also called binary cross-entropy:</p>
+
+    <div class="formula">
+      <span class="label">Log-loss (binary cross-entropy)</span>
+      <span class="math">L<sub>i</sub> = − [ y<sub>i</sub> log(p<sub>i</sub>) + (1 − y<sub>i</sub>) log(1 − p<sub>i</sub>) ]</span>
+    </div>
+    <p class="prose">Minimizing total log-loss over all patients is exactly equivalent to maximizing the likelihood — this is the loss function logistic regression actually trains on, in place of the squared error used in linear regression.</p>
+
+    <div class="interactive-card">
+      <div class="ic-head">
+        <div class="ic-title">Log-loss calculator</div>
+        <div class="badge-live">● interactive</div>
+      </div>
+      <p style="max-width:none; font-size:.9rem; color:var(--ink-soft); margin-bottom:0;">Set the true label and the model's predicted probability, and watch what the loss does.</p>
+      <div class="ic-body">
+        <div class="ic-controls" style="flex:1 1 260px;">
+          <div class="toggle-row" style="gap:16px;">
+            <span class="rk" style="font-family:var(--mono); font-size:.78rem; color:var(--brown-deep);">true label yᵢ:</span>
+            <label><input type="radio" name="yval" value="1" checked> showed up (1)</label>
+            <label><input type="radio" name="yval" value="0"> no-show (0)</label>
+          </div>
+          <div class="slider-row">
+            <label><span>predicted probability pᵢ</span><span id="pVal">0.95</span></label>
+            <input type="range" id="pSlider" min="0.01" max="0.99" step="0.01" value="0.95">
+          </div>
+          <div class="preset-row">
+            <button class="preset-btn" data-y="1" data-p="0.95">confident & correct</button>
+            <button class="preset-btn" data-y="1" data-p="0.5">unsure</button>
+            <button class="preset-btn" data-y="1" data-p="0.05">confident & wrong</button>
+          </div>
+        </div>
+        <div class="ic-chart" style="flex:1 1 300px;">
+          <div class="ic-readout">
+            <span class="rk">Lᵢ =</span> <span id="lossVal" style="font-size:1.1rem; font-weight:600;">0.051</span>
+          </div>
+          <div class="loss-bar-track"><div class="loss-bar-fill" id="lossBar"></div></div>
+          <div class="loss-verdict" id="lossVerdict">Confident and correct — loss stays small.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="observe">
+      <b>Observe —</b> when the model is confident <em>and</em> correct, the loss is tiny. When the model is confident but <em>wrong</em>, the loss explodes upward. Log-loss punishes confident mistakes far more heavily than it punishes simple uncertainty.
+    </div>
+
+    <div class="quiz" data-quiz>
+      <div class="qtag">◆ Check your understanding</div>
+      <div class="qtext">A patient did <strong>not</strong> show up (y<sub>i</sub> = 0), and the model predicted p<sub>i</sub> = 0.9 — very confident they <em>would</em> show up. What would you expect the log-loss for this patient to be?</div>
+      <div class="opts">
+        <button class="opt">Very small, close to 0</button>
+        <button class="opt" data-correct>Very large</button>
+        <button class="opt">Exactly 0.5</button>
+        <button class="opt">Negative</button>
+      </div>
+      <div class="explain"><b>Why:</b> Substituting into the formula, the (1−y<sub>i</sub>)log(1−p<sub>i</sub>) term becomes log(1 − 0.9) = log(0.1), a large negative number — so the overall loss, after the negative sign, becomes large and positive. This is exactly the confident-wrong case the loss function is meant to penalize heavily.</div>
+      <button class="retry">try again</button>
+    </div>
+  </section>
+
+  <!-- ================= CONVEXITY / MSE ================= -->
+  <section class="chapter" id="mse">
+    <div class="prose">
+      <span class="eyebrow-num">06</span>
+      <h2 class="h2">Why Not Reuse Mean Squared Error?</h2>
+      <p>A natural question: linear regression used Mean Squared Error (MSE) as its loss. Why not reuse it here, with the sigmoid output plugged in?</p>
+    </div>
+
+    <div class="analogy">
+      <span class="tag">Analogy — two hiking trails</span>
+      Picture two trails down a mountain. One is shaped like a single smooth bowl — wherever you start, walking downhill always leads to the one true bottom. The other is full of small dips and false valleys — walking downhill might strand you in a shallow dip that isn't the true lowest point at all.
+    </div>
+
+    <p class="prose">The first trail is what mathematicians call a <strong>convex</strong> function; the second is <strong>non-convex</strong>. Gradient descent is a "walk downhill" algorithm, so it's only guaranteed to find the true minimum when the loss surface is convex. Combine MSE with the sigmoid function, and the resulting loss surface becomes non-convex — riddled with false valleys gradient descent can get stuck in. Log-loss, paired with sigmoid, stays convex — which is precisely why it, not MSE, is the loss function logistic regression trains on.</p>
+
+    <div class="interactive-card">
+      <div class="ic-head"><div class="ic-title">Walking downhill</div><div class="badge-live">● interactive</div></div>
+      <div class="convex-grid">
+        <div class="convex-cell">
+          <h4>MSE + sigmoid — non-convex</h4>
+          <svg id="svgNonConvex" viewBox="0 0 300 160"><path d="M10,60 C 50,140 80,40 110,110 C 140,150 170,60 200,120 C 230,150 260,70 290,60" stroke="var(--brown)" stroke-width="3" fill="none"/><circle id="ballNC" r="7" fill="var(--navy)"/></svg>
+          <button class="walk-btn" data-ball="ballNC" data-path="nc">walk downhill</button>
+          <p class="convex-note">Starting points can strand the walk in a shallow local dip — never reaching the true lowest point.</p>
+        </div>
+        <div class="convex-cell">
+          <h4>Log-loss + sigmoid — convex</h4>
+          <svg id="svgConvex" viewBox="0 0 300 160"><path d="M10,20 C 90,150 210,150 290,20" stroke="var(--blue-mid)" stroke-width="3" fill="none"/><circle id="ballC" r="7" fill="var(--navy)"/></svg>
+          <button class="walk-btn" data-ball="ballC" data-path="c">walk downhill</button>
+          <p class="convex-note">One smooth bowl — walking downhill from anywhere reliably reaches the true minimum.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="prose">
+      <h3 class="h3">Where else does this loss function show up?</h3>
+      <p>The log-loss just derived isn't a niche formula for small two-class problems. In its generalized multi-class form — <strong>cross-entropy loss</strong> — it's the exact loss function used to train large language models.</p>
+      <p>When such a model predicts the next word in a sentence, it isn't choosing between two classes like "show" or "no-show" — it's choosing among tens of thousands of possible next tokens. But the underlying question is identical in spirit: <em>given what the model predicted as probable, how surprised should we be by what actually occurred?</em> A confident, correct prediction scores a very low loss; a confident, wrong prediction scores a very high loss — the same behavior seen above, just scaled from two classes to tens of thousands.</p>
+    </div>
+
+    <div class="callout">
+      <span class="tag">In one sentence</span>
+      Two-class logistic regression is, in this sense, the smallest possible version of the same mathematical idea that sits at the core of today's large language models.
+    </div>
+
+    <div class="prose">
+      <h3 class="h3">Optimization: nothing new to learn</h3>
+      <p>Because log-loss is convex and differentiable, the same gradient descent machinery built for linear regression — compute a gradient, update weights by a learning rate, iterate until convergence — applies here without modification. Only the loss function itself, and so the specific gradient formula, changes.</p>
+    </div>
+    <div class="analogy">
+      <span class="tag">Analogy — the leash</span>
+      Just as with linear regression, a <strong>regularization</strong> term can be added to the loss to discourage weights from growing too large and overfitting to quirks in the training data. Think of it as a leash on each weight — it doesn't stop the weight from moving toward a useful value, but it resists it wandering unnecessarily far, which helps the model generalize to patients it hasn't seen before.
+    </div>
+
+    <div class="callout">
+      <span class="tag">AI as a diagnostics partner</span>
+      Once a model like this is trained, it's increasingly common to paste a summary of its coefficients, feature list, and performance numbers into an AI assistant and ask it to help interpret the results — which features seem to be pulling predictions in which direction, whether a coefficient's sign matches domain intuition, and what additional features might be worth exploring. Used this way, the AI isn't replacing that judgment — it's a fast way to generate hypotheses worth double-checking against the data itself.
+    </div>
+  </section>
+
+  <!-- ================= PIPELINE ================= -->
+  <section class="chapter" id="pipeline">
+    <div class="prose">
+      <span class="eyebrow-num">07</span>
+      <h2 class="h2">Putting It All Together with <code class="inline">sklearn</code></h2>
+      <p>With the theory in place, here's the full pipeline trained on the Sunrise General appointment data. Click each stage to see what it does.</p>
+    </div>
+
+    <div class="flow" id="pipelineFlow">
+      <div class="flow-step active" data-step="0"><div class="fi">🗂️</div><div class="ft">appointments</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step" data-step="1"><div class="fi">✂️</div><div class="ft">train / val / test split</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step" data-step="2"><div class="fi">📏</div><div class="ft">feature scaling</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step" data-step="3"><div class="fi">🎯</div><div class="ft">fit LogisticRegression</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step" data-step="4"><div class="fi">🔮</div><div class="ft">predict</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step" data-step="5"><div class="fi">✅</div><div class="ft">evaluate</div></div>
+    </div>
+    <div class="flow-detail" id="flowDetail"></div>
+
+    <div class="code-wrap">
+      <details class="code">
+        <summary><span>▸ Split, scale, fit</span><span class="fname">sklearn</span></summary>
+        <pre class="code-body"><span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler
+<span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LogisticRegression
+
+feature_cols = [<span class="st">"days_lead_time"</span>, <span class="st">"distance_km"</span>, <span class="st">"prior_no_shows"</span>, <span class="st">"reminder_sent"</span>, <span class="st">"age"</span>]
+X = appointments[feature_cols]
+y = appointments[<span class="st">"showed_up"</span>]
+
+X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=<span class="fn">0.3</span>, random_state=<span class="fn">42</span>)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=<span class="fn">0.5</span>, random_state=<span class="fn">42</span>)
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_val_scaled   = scaler.transform(X_val)
+X_test_scaled  = scaler.transform(X_test)
+
+model = LogisticRegression()
+model.fit(X_train_scaled, y_train)</pre>
+        <div class="out">X_train, X_val, X_test shapes → (560, 5)  (120, 5)  (120, 5)</div>
+      </details>
+    </div>
+
+    <p class="prose">Reading the coefficients works exactly as it did for linear regression: a <strong>positive</strong> coefficient means that (scaled) feature pushes the predicted probability of showing up <em>higher</em>; a <strong>negative</strong> coefficient pushes it <em>lower</em>. The magnitude shows how strong that pull is, relative to the other scaled features.</p>
+
+    <div class="coef-chart" id="coefChart"></div>
+    <p class="convex-note" style="max-width:var(--maxw);">Coefficients from the actual fitted model (scaled features, seed 42). <span style="color:var(--blue-mid)">Blue</span> pulls toward showing up; <span style="color:var(--brown)">brown</span> pulls toward a no-show — matching the reminder / distance / prior no-show intuition built into the dataset.</p>
+  </section>
+
+  <!-- ================= ACCURACY ================= -->
+  <section class="chapter" id="accuracy">
+    <div class="prose">
+      <span class="eyebrow-num">08</span>
+      <h2 class="h2">Evaluating the Model: Accuracy</h2>
+      <p>With predictions in hand, the simplest way to score them is <strong>accuracy</strong> — the fraction of patients whose predicted class matched their actual outcome.</p>
+    </div>
+
+    <div class="formula">
+      <span class="label">Accuracy</span>
+      <span class="math">Accuracy = (correctly predicted patients) / (total patients)</span>
+    </div>
+
+    <div class="code-wrap">
+      <details class="code">
+        <summary><span>▸ Computing accuracy</span><span class="fname">from scratch + sklearn</span></summary>
+        <pre class="code-body"><span class="kw">def</span> <span class="fn">accuracy</span>(y_true, y_pred):
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    <span class="kw">return</span> np.mean(y_true == y_pred)
+
+<span class="kw">from</span> sklearn.metrics <span class="kw">import</span> accuracy_score</pre>
+        <div class="out">Train accuracy: 0.7107
+Validation accuracy: 0.7417</div>
+      </details>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card"><div class="sv">71.1%</div><div class="sl">train accuracy</div></div>
+      <div class="stat-card accent"><div class="sv">74.2%</div><div class="sl">validation accuracy</div></div>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <div class="qtag">◆ Check your understanding</div>
+      <div class="qtext">Recall the two classes in this dataset are imbalanced — more patients show up than not. Suppose 85% of all patients show up, and a lazy model simply predicts "will show up" for every single patient, regardless of features. What accuracy would this lazy model achieve, and what does that imply?</div>
+      <div class="opts">
+        <button class="opt">Roughly 50% accuracy, and accuracy is always a reliable metric.</button>
+        <button class="opt" data-correct>Roughly 85% accuracy — showing accuracy alone can look impressively high even for a model that's learned nothing useful, when classes are imbalanced.</button>
+        <button class="opt">0% accuracy, since it never uses the features.</button>
+        <button class="opt">Accuracy can't be computed for imbalanced datasets.</button>
+      </div>
+      <div class="explain"><b>Why:</b> Since 85% of patients show up regardless of what's predicted, a model that blindly always predicts "will show up" is correct 85% of the time by default. In imbalanced settings, a high accuracy number should always be checked against class balance — it doesn't by itself prove a model has learned anything about the minority class, which is often the group that matters most.</div>
+      <button class="retry">try again</button>
+    </div>
+  </section>
+
+  <!-- ================= TAKEAWAYS ================= -->
+  <section class="chapter" id="takeaways">
+    <div class="prose">
+      <span class="eyebrow-num">09</span>
+      <h2 class="h2">Key Takeaways</h2>
+    </div>
+    <div class="takeaway-grid">
+      <div class="takeaway-card"><b>Why classification needs a new model</b>Categorical outcomes don't fit linear regression's unbounded output — a bounded, interpretable value is needed instead.</div>
+      <div class="takeaway-card"><b>Step function, first try</b>Bounds the output, but is non-differentiable — which breaks gradient-based training.</div>
+      <div class="takeaway-card"><b>Sigmoid, the fix</b>σ(z) = 1/(1+e⁻ᶻ) smoothly bounds output between 0 and 1, and is differentiable everywhere.</div>
+      <div class="takeaway-card"><b>Sigmoid output = probability</b>Read directly as the estimated probability of belonging to the positive class.</div>
+      <div class="takeaway-card"><b>Likelihood vs. probability</b>Likelihood asks which parameters best explain data already observed — the reverse of probability's fixed-parameter question.</div>
+      <div class="takeaway-card"><b>MLE → log-loss</b>Taking logs and flipping the sign turns Maximum Likelihood Estimation into the log-loss (binary cross-entropy) function.</div>
+      <div class="takeaway-card"><b>Why log-loss, not MSE</b>Log-loss heavily penalizes confident, wrong predictions, and stays convex with sigmoid — unlike MSE.</div>
+      <div class="takeaway-card"><b>The same idea, at scale</b>Generalized to many classes as cross-entropy, this loss is the training objective behind modern large language models.</div>
+      <div class="takeaway-card"><b>Optimization carries over</b>Gradient descent and regularization work unchanged from linear regression — only the loss function differs.</div>
+      <div class="takeaway-card"><b>AI as a co-pilot</b>Useful for interpreting a trained model's coefficients and behavior — not for replacing that judgment.</div>
+      <div class="takeaway-card"><b>The full pipeline</b>Split → scale → fit → predict → evaluate, implemented end-to-end with <code class="inline">sklearn</code>.</div>
+      <div class="takeaway-card"><b>Accuracy's limits</b>Simple, but can be misleading on imbalanced data — a model that ignores the minority class can still score deceptively high.</div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="fmark">Logistic Regression post read</div>
+  <div>An interactive learning article · sigmoid, likelihood, log-loss, and an end-to-end classifier</div>
+</footer>
+
+<script>
+(function(){
+  // ---------- progress rail + scroll spy ----------
+  const rail = document.getElementById('progressRail');
+  const tocLinks = document.querySelectorAll('nav.toc a');
+  const sections = document.querySelectorAll('section.chapter[id]');
+  function onScroll(){
+    const h = document.documentElement;
+    const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    rail.style.width = scrolled + '%';
+    let current = '';
+    sections.forEach(s=>{
+      const r = s.getBoundingClientRect();
+      if(r.top <= 120) current = s.id;
+    });
+    tocLinks.forEach(l=>l.classList.toggle('active', l.getAttribute('href') === '#'+current));
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  const tocToggle = document.getElementById('tocToggle');
+  const tocNav = document.getElementById('tocNav');
+  tocToggle.addEventListener('click', ()=>{
+    const open = tocNav.classList.toggle('open');
+    tocToggle.setAttribute('aria-expanded', open);
+  });
+  tocLinks.forEach(l=>l.addEventListener('click', ()=>{ tocNav.classList.remove('open'); }));
+
+  // ---------- data preview table ----------
+  const rows = [
+    {a:2,b:12.43,c:1,d:1,e:15,f:1},
+    {a:23,b:36.78,c:2,d:0,e:28,f:0},
+    {a:19,b:31.36,c:0,d:0,e:17,f:0},
+    {a:13,b:4.87,c:1,d:0,e:39,f:1},
+    {a:12,b:39.88,c:0,d:0,e:33,f:1},
+    {a:25,b:35.23,c:0,d:0,e:49,f:0},
+  ];
+  const tbody = document.querySelector('#dataPreview tbody');
+  rows.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.a}</td><td>${r.b}</td><td>${r.c}</td><td>${r.d}</td><td>${r.e}</td><td class="${r.f? 'pos':'neg'}">${r.f}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // ---------- quizzes ----------
+  document.querySelectorAll('[data-quiz]').forEach(q=>{
+    const opts = q.querySelectorAll('.opt');
+    const explain = q.querySelector('.explain');
+    const retry = q.querySelector('.retry');
+    function reset(){
+      opts.forEach(o=>{ o.classList.remove('correct','incorrect'); o.disabled=false; });
+      explain.classList.remove('show');
+      retry.classList.remove('show');
+    }
+    opts.forEach(o=>{
+      o.addEventListener('click', ()=>{
+        const isCorrect = o.hasAttribute('data-correct');
+        opts.forEach(x=>x.disabled=true);
+        if(isCorrect){ o.classList.add('correct'); }
+        else{
+          o.classList.add('incorrect');
+          q.querySelector('.opt[data-correct]').classList.add('correct');
+        }
+        explain.classList.add('show');
+        retry.classList.add('show');
+      });
+    });
+    retry.addEventListener('click', reset);
+  });
+
+  // ---------- sigmoid explorer ----------
+  const canvas = document.getElementById('sigCanvas');
+  const ctx = canvas.getContext('2d');
+  const wSlider = document.getElementById('wSlider');
+  const bSlider = document.getElementById('bSlider');
+  const wVal = document.getElementById('wVal');
+  const bVal = document.getElementById('bVal');
+  const crossVal = document.getElementById('crossVal');
+  const steepVal = document.getElementById('steepVal');
+  const stepToggle = document.getElementById('stepToggle');
+
+  function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+
+  function drawSigmoid(){
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+    const w = parseFloat(wSlider.value), b = parseFloat(bSlider.value);
+    wVal.textContent = w.toFixed(2);
+    bVal.textContent = b.toFixed(1);
+
+    const xMin=-10, xMax=10;
+    const padL=44, padR=16, padT=16, padB=34;
+    const plotW = W-padL-padR, plotH = H-padT-padB;
+    function toPx(x){ return padL + (x-xMin)/(xMax-xMin)*plotW; }
+    function toPy(y){ return padT + (1-y)*plotH; }
+
+    // axes
+    ctx.strokeStyle = '#D8CBB4'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, toPy(0.5)); ctx.lineTo(W-padR, toPy(0.5)); ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(toPx(0), padT); ctx.lineTo(toPx(0), H-padB); ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+
+    ctx.strokeStyle = '#B9A98A'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(padL, H-padB); ctx.lineTo(W-padR, H-padB); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, H-padB); ctx.stroke();
+
+    ctx.fillStyle = '#544738'; ctx.font = '11px IBM Plex Mono, monospace';
+    ctx.fillText('0', toPx(0)-3, H-padB+16);
+    ctx.fillText('10', toPx(10)-12, H-padB+16);
+    ctx.fillText('-10', toPx(-10), H-padB+16);
+    ctx.fillText('1.0', 6, toPy(1)+4);
+    ctx.fillText('0.5', 6, toPy(0.5)+4);
+    ctx.fillText('0.0', 6, toPy(0)+4);
+
+    // step overlay
+    if(stepToggle.checked){
+      ctx.strokeStyle = '#8A5A34'; ctx.lineWidth = 2.2; ctx.globalAlpha=.85;
+      ctx.beginPath();
+      const crossX = -b/ (w===0?0.0001:w);
+      ctx.moveTo(toPx(xMin), toPy(w>=0?0:1));
+      ctx.lineTo(toPx(crossX), toPy(w>=0?0:1));
+      ctx.lineTo(toPx(crossX), toPy(w>=0?1:0));
+      ctx.lineTo(toPx(xMax), toPy(w>=0?1:0));
+      ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+
+    // sigmoid curve
+    ctx.strokeStyle = '#3E7A9E'; ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    for(let px=0; px<=plotW; px++){
+      const x = xMin + (px/plotW)*(xMax-xMin);
+      const z = w*x+b;
+      const y = sigmoid(z);
+      const cx = padL+px, cy = toPy(y);
+      if(px===0) ctx.moveTo(cx,cy); else ctx.lineTo(cx,cy);
+    }
+    ctx.stroke();
+
+    // crossover marker
+    const crossX = w===0 ? NaN : -b/w;
+    if(!isNaN(crossX) && crossX>=xMin && crossX<=xMax){
+      ctx.fillStyle = '#122A43';
+      ctx.beginPath(); ctx.arc(toPx(crossX), toPy(0.5), 4.5, 0, Math.PI*2); ctx.fill();
+      crossVal.textContent = 'x = ' + crossX.toFixed(2);
+    } else {
+      crossVal.textContent = 'off-screen';
+    }
+    const aw = Math.abs(w);
+    steepVal.textContent = aw < 0.4 ? 'very gradual' : aw < 1.2 ? 'moderate' : aw < 2.2 ? 'steep' : 'near-vertical';
+  }
+  [wSlider,bSlider,stepToggle].forEach(el=>el.addEventListener('input', drawSigmoid));
+  document.getElementById('sigReset').addEventListener('click', ()=>{
+    wSlider.value=1; bSlider.value=0; stepToggle.checked=false; drawSigmoid();
+  });
+  drawSigmoid();
+
+  // ---------- log-loss calculator ----------
+  const pSlider = document.getElementById('pSlider');
+  const pVal = document.getElementById('pVal');
+  const lossVal = document.getElementById('lossVal');
+  const lossBar = document.getElementById('lossBar');
+  const lossVerdict = document.getElementById('lossVerdict');
+  function currentY(){ return parseInt(document.querySelector('input[name="yval"]:checked').value); }
+  function updateLoss(){
+    const p = parseFloat(pSlider.value);
+    const y = currentY();
+    pVal.textContent = p.toFixed(2);
+    const loss = -(y*Math.log(p) + (1-y)*Math.log(1-p));
+    lossVal.textContent = loss.toFixed(3);
+    const pct = Math.min(100, (loss/4.5)*100);
+    lossBar.style.width = pct+'%';
+    const correct = (y===1 && p>0.5) || (y===0 && p<0.5);
+    if(loss < 0.5) lossVerdict.textContent = 'Confident and correct — loss stays small.';
+    else if(loss < 1.2) lossVerdict.textContent = correct ? 'Roughly right, but not very confident.' : 'Uncertain, and leaning the wrong way.';
+    else lossVerdict.textContent = 'Confident and wrong — loss grows sharply.';
+    lossBar.style.background = correct
+      ? 'linear-gradient(90deg, var(--blue-mid), var(--blue-mid))'
+      : 'linear-gradient(90deg, var(--brown), var(--brown-deep))';
+  }
+  pSlider.addEventListener('input', updateLoss);
+  document.querySelectorAll('input[name="yval"]').forEach(r=>r.addEventListener('change', updateLoss));
+  document.querySelectorAll('.preset-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      pSlider.value = btn.dataset.p;
+      document.querySelector(`input[name="yval"][value="${btn.dataset.y}"]`).checked = true;
+      updateLoss();
+    });
+  });
+  updateLoss();
+
+  // ---------- convex demo ----------
+  const paths = {
+    nc: {d:"M10,60 C 50,140 80,40 110,110 C 140,150 170,60 200,120 C 230,150 260,70 290,60", stops:[[35,0.35],[220,0.5]]},
+    c:  {d:"M10,20 C 90,150 210,150 290,20", stops:[[150,1]]}
+  };
+  document.querySelectorAll('.walk-btn').forEach(btn=>{
+    let frame;
+    btn.addEventListener('click', ()=>{
+      const ball = document.getElementById(btn.dataset.ball);
+      const svg = ball.closest('svg');
+      const path = svg.querySelector('path');
+      const total = path.getTotalLength();
+      const key = btn.dataset.path;
+      // convex: always settles at the middle (the one true minimum)
+      // non-convex: randomly settles at one of two dips, rarely the true lowest one
+      const targetFrac = key==='c' ? 0.5 : (Math.random()<0.65 ? 0.36 : 0.68);
+      let t = 0.02;
+      if(frame) cancelAnimationFrame(frame);
+      function step(){
+        t = Math.min(targetFrac, t + 0.006);
+        const pt = path.getPointAtLength(t*total);
+        ball.setAttribute('cx', pt.x); ball.setAttribute('cy', pt.y);
+        if(t < targetFrac) frame = requestAnimationFrame(step);
+      }
+      step();
+    });
+  });
+  // place balls at start
+  document.querySelectorAll('.convex-cell svg').forEach(svg=>{
+    const path = svg.querySelector('path');
+    const ball = svg.querySelector('circle[id^="ball"]');
+    const total = path.getTotalLength();
+    const pt = path.getPointAtLength(total*0.02);
+    ball.setAttribute('cx', pt.x); ball.setAttribute('cy', pt.y);
+  });
+
+  // ---------- likelihood tabs ----------
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const tabs = btn.closest('.tabs');
+      tabs.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      tabs.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      tabs.querySelector(`.tab-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
+    });
+  });
+
+  // ---------- pipeline flow ----------
+  const flowDetails = [
+    "The full synthetic dataset: 800 booked appointments, 5 features, and the showed_up target.",
+    "70% of patients go to training, then the remaining 30% is split evenly into validation and test sets (560 / 120 / 120 patients) — so model quality can be checked on data it never trained on.",
+    "StandardScaler rescales every feature to a common range, fit only on the training set and then applied to validation and test — this keeps coefficient magnitudes comparable to each other.",
+    "LogisticRegression learns the weight vector w and bias b that minimize log-loss on the scaled training features.",
+    "For each patient, the model computes σ(w·x + b) and reads it off as a predicted class.",
+    "Predictions are compared against the true showed_up labels to compute accuracy on both the training and validation sets."
+  ];
+  const flowSteps = document.querySelectorAll('.flow-step');
+  const flowDetail = document.getElementById('flowDetail');
+  function setFlow(i){
+    flowSteps.forEach(s=>s.classList.toggle('active', s.dataset.step===String(i)));
+    flowDetail.innerHTML = '<b>' + flowSteps[i].querySelector('.ft').textContent + ':</b> ' + flowDetails[i];
+  }
+  flowSteps.forEach(s=>s.addEventListener('click', ()=>setFlow(parseInt(s.dataset.step))));
+  setFlow(0);
+
+  // ---------- coefficient chart ----------
+  const coefs = [
+    {name:'reminder_sent', v:0.683},
+    {name:'age', v:0.091},
+    {name:'days_lead_time', v:-0.361},
+    {name:'distance_km', v:-0.582},
+    {name:'prior_no_shows', v:-0.586},
+  ];
+  const maxAbs = Math.max(...coefs.map(c=>Math.abs(c.v)));
+  const coefChart = document.getElementById('coefChart');
+  coefs.forEach(c=>{
+    const pct = (Math.abs(c.v)/maxAbs*48).toFixed(1);
+    const cls = c.v>=0?'pos':'neg';
+    const row = document.createElement('div');
+    row.className='coef-row';
+    row.innerHTML = `
+      <div class="coef-name">${c.name}</div>
+      <div class="coef-track"><div class="coef-mid"></div><div class="coef-fill ${cls}" style="width:${pct}%"></div></div>
+      <div class="coef-val ${cls}">${c.v>0?'+':''}${c.v.toFixed(3)}</div>`;
+    coefChart.appendChild(row);
+  });
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/ML-with-AI-workflows-11" target="_blank" rel="noopener">github.com/scaler-content/ML-with-AI-workflows-11</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

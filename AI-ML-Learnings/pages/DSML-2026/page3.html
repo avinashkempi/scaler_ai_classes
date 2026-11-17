@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Functions — How It Works</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #FAFAFE;
+  color: #0A0A1A;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.hdr {
+  padding: 20px 40px 16px;
+  border-bottom: 1px solid #DAD8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.hdr-title { font-family:'Lora',serif; font-size:20px; font-weight:600; }
+.hdr-sig {
+  font-family:'DM Mono',monospace; font-size:12px;
+  background:#EEEAFF; border:1px solid #B8B0F0; color:#3A30C0;
+  padding:7px 14px; border-radius:8px;
+}
+
+/* MAIN */
+.main {
+  flex:1;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 24px;
+  padding: 28px 40px;
+}
+
+/* TOP: FUNCTION MACHINE */
+.machine-area {
+  display: grid;
+  grid-template-columns: 200px 1fr 200px;
+  gap: 0;
+  align-items: center;
+  min-height: 280px;
+}
+
+/* INPUT SIDE */
+.input-side { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; padding-right: 24px; }
+.input-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #8080B0; text-align: right; }
+.input-display {
+  font-family: 'Lora', serif;
+  font-size: 48px;
+  font-weight: 600;
+  color: #3A30C0;
+  text-align: right;
+  line-height: 1;
+  transition: all 0.2s;
+}
+.input-sub { font-size: 12px; color: #8080B0; text-align: right; font-family:'DM Mono',monospace; }
+
+.slider-wrap { display: flex; flex-direction: column; gap: 6px; width: 100%; align-items: flex-end; }
+.slider-wrap label { font-size: 11px; color: #8080B0; }
+input[type=range] {
+  width: 160px;
+  -webkit-appearance: none;
+  height: 4px;
+  background: linear-gradient(90deg, #5B48F0, #B0A8FF);
+  border-radius: 2px;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #5B48F0;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(91,72,240,0.4);
+}
+.quick-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.qbtn {
+  font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px;
+  border: 1px solid; cursor: pointer; font-family:'DM Mono',monospace;
+  transition: all 0.15s;
+}
+
+/* FUNCTION BOX (center) */
+.fn-box {
+  border: 2px solid #5B48F0;
+  border-radius: 18px;
+  background: #fff;
+  padding: 20px 24px;
+  position: relative;
+  box-shadow: 0 4px 24px rgba(91,72,240,0.1);
+}
+.fn-box-label {
+  position: absolute;
+  top: -13px; left: 50%;
+  transform: translateX(-50%);
+  background: #5B48F0;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.fn-name {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: #3A30C0;
+  text-align: center;
+  margin-bottom: 18px;
+  margin-top: 4px;
+}
+
+/* CASE WHEN branches */
+.branches { display: flex; flex-direction: column; gap: 8px; }
+.branch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #E0DCF8;
+  background: #FAFAFE;
+  transition: all 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+.branch::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: #E0DCF8;
+  transition: background 0.25s;
+}
+.branch.active {
+  background: #EEEAFF;
+  border-color: #5B48F0;
+  transform: scale(1.02);
+  box-shadow: 0 2px 12px rgba(91,72,240,0.15);
+}
+.branch.active::before { background: #5B48F0; }
+.branch.inactive { opacity: 0.35; }
+
+.cond {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #5A5070;
+  flex: 1;
+}
+.branch.active .cond { color: #3A30C0; font-weight: 500; }
+
+.then-arrow { color: #B0A8E0; font-size: 12px; flex-shrink: 0; }
+.branch.active .then-arrow { color: #5B48F0; }
+
+.result-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  transition: all 0.25s;
+}
+
+/* Tier colors */
+.badge-gold   { background: #FFF8E0; color: #9A7010; border: 1px solid #F0D070; }
+.badge-silver { background: #F0F0F0; color: #606060; border: 1px solid #C0C0C0; }
+.badge-bronze { background: #FFF2E8; color: #9A5020; border: 1px solid #E0A070; }
+.badge-new    { background: #EEF2FF; color: #4060C0; border: 1px solid #A0B0F0; }
+.branch.active .badge-gold   { background: #F0C000; color: #4A3000; border-color: #D0A000; }
+.branch.active .badge-silver { background: #C0C0C0; color: #fff;    border-color: #A0A0A0; }
+.branch.active .badge-bronze { background: #D07020; color: #fff;    border-color: #B05010; }
+.branch.active .badge-new    { background: #5B48F0; color: #fff;    border-color: #3A30C0; }
+
+/* INPUT ARROW (left side) */
+.in-arrow-wrap {
+  display: flex; align-items: center; justify-content: flex-end; gap: 0;
+  padding-right: 0;
+}
+.arrow-shaft { flex:1; height:2px; background: linear-gradient(90deg, transparent, #5B48F0); }
+.arrow-head { width:0; height:0; border-top:5px solid transparent; border-bottom:5px solid transparent; border-left:8px solid #5B48F0; }
+
+/* OUTPUT ARROW (right side) */
+.out-arrow-wrap { display:flex; align-items:center; gap:0; }
+.out-arrow-head { width:0; height:0; border-top:5px solid transparent; border-bottom:5px solid transparent; border-left:8px solid #5B48F0; }
+.out-arrow-shaft { flex:1; height:2px; background: linear-gradient(90deg, #5B48F0, transparent); }
+
+/* OUTPUT SIDE */
+.output-side { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-left: 24px; }
+.output-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #8080B0; }
+.output-tier {
+  font-family: 'Lora', serif;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1;
+  transition: all 0.3s;
+}
+.tier-gold   { color: #D0900A; }
+.tier-silver { color: #707070; }
+.tier-bronze { color: #B05520; }
+.tier-new    { color: #4060C0; }
+
+.output-desc {
+  font-size: 12px;
+  color: #8080B0;
+  font-family: 'DM Mono', monospace;
+  line-height: 1.6;
+}
+
+/* BOTTOM: result table */
+.bottom-area { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+.result-section {
+  border: 1px solid #DAD8F0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.rs-header {
+  background: #F0EEFF;
+  padding: 10px 16px;
+  border-bottom: 1px solid #DAD8F0;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #4A40A0;
+  font-weight: 500;
+}
+.rs-body { padding: 14px 16px; }
+
+.fn-query {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #4A4060;
+  line-height: 2;
+}
+.fn-query .kw { color: #1565C0; }
+.fn-query .fn-call { color: #5B48F0; font-weight: 600; }
+.fn-query .active-line {
+  background: #EEEAFF;
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin: 0 -4px;
+}
+
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+}
+.result-table th {
+  background: #F0EEFF;
+  color: #4A40A0;
+  padding: 7px 12px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 10px;
+  border-bottom: 1px solid #DAD8F0;
+}
+.result-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid #EEEAF8;
+  color: #3A3060;
+}
+.result-table tr:last-child td { border-bottom: none; }
+.result-table .tier-cell { font-weight: 600; }
+.result-table tr.highlight-row td { background: #EEEAFF; }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· SQL Advanced · Indexing, partitioning and functions</span><a href="./">↑ Lesson page</a><span class="pn"><a href="../SQL-8-postread/" title="SQL 8 · JOINs 1: relationships and INNER JOIN">← Prev</a><a href="../MySQL---BigQuery-data-interconverter/" title="MySQL to BigQuery converter">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="hdr">
+  <div class="hdr-title">Functions — Input → Logic → Output</div>
+  <div class="hdr-sig">GetLoyaltyTier(order_count INT) RETURNS VARCHAR(20)</div>
+</div>
+
+<div class="main">
+
+  <!-- MACHINE AREA -->
+  <div class="machine-area">
+
+    <!-- LEFT: INPUT -->
+    <div class="input-side">
+      <div class="input-label">Input</div>
+      <div class="input-display" id="input-num">67</div>
+      <div class="input-sub" id="input-sub">order_count</div>
+      <div class="slider-wrap">
+        <label>Drag to change order count</label>
+        <input type="range" min="0" max="100" value="67" id="order-slider" oninput="updateFunction(this.value)">
+      </div>
+      <div class="quick-btns">
+        <button class="qbtn" style="background:#FFF8E0;color:#9A7010;border-color:#F0D070" onclick="setVal(67)">67 orders</button>
+        <button class="qbtn" style="background:#F0F0F0;color:#606060;border-color:#C0C0C0" onclick="setVal(22)">22 orders</button>
+        <button class="qbtn" style="background:#FFF2E8;color:#9A5020;border-color:#E0A070" onclick="setVal(7)">7 orders</button>
+        <button class="qbtn" style="background:#EEF2FF;color:#4060C0;border-color:#A0B0F0" onclick="setVal(2)">2 orders</button>
+      </div>
+    </div>
+
+    <!-- ARROW LEFT -->
+    <div style="display:flex;flex-direction:column;gap:0;width:100%">
+      <div style="display:flex;align-items:center;margin-bottom:16px;margin-left:0">
+        <div class="arrow-shaft" style="width:40px"></div>
+        <div class="arrow-head"></div>
+      </div>
+
+      <!-- FUNCTION BOX -->
+      <div class="fn-box">
+        <div class="fn-box-label">Scalar Function</div>
+        <div class="fn-name">GetLoyaltyTier( order_count )</div>
+
+        <div class="branches">
+          <div class="branch" id="branch-0">
+            <span class="cond">order_count ≥ 50</span>
+            <span class="then-arrow">→</span>
+            <span class="result-badge badge-gold">GOLD</span>
+          </div>
+          <div class="branch" id="branch-1">
+            <span class="cond">order_count ≥ 20</span>
+            <span class="then-arrow">→</span>
+            <span class="result-badge badge-silver">SILVER</span>
+          </div>
+          <div class="branch" id="branch-2">
+            <span class="cond">order_count ≥ 5</span>
+            <span class="then-arrow">→</span>
+            <span class="result-badge badge-bronze">BRONZE</span>
+          </div>
+          <div class="branch" id="branch-3">
+            <span class="cond">else</span>
+            <span class="then-arrow">→</span>
+            <span class="result-badge badge-new">NEW</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ARROW RIGHT -->
+      <div style="display:flex;align-items:center;margin-top:16px">
+        <div class="out-arrow-head"></div>
+        <div class="out-arrow-shaft" style="width:40px"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: OUTPUT -->
+    <div class="output-side">
+      <div class="output-label">Output</div>
+      <div class="output-tier tier-gold" id="output-tier">Gold</div>
+      <div class="output-desc" id="output-desc">loyalty_tier<br>returned to SELECT</div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM: query + result table -->
+  <div class="bottom-area">
+
+    <div class="result-section">
+      <div class="rs-header">Used inside a SELECT — exactly like any built-in function</div>
+      <div class="rs-body">
+        <div class="fn-query">
+          <span class="kw">SELECT</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;customer_id,<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">COUNT</span>(*) <span class="kw">AS</span> total_orders,<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="fn-call active-line">GetLoyaltyTier(<span class="kw">COUNT</span>(*))</span> <span class="kw">AS</span> tier<br>
+          <span class="kw">FROM</span> zomato.orders<br>
+          <span class="kw">GROUP BY</span> customer_id;
+        </div>
+        <div style="margin-top:12px;padding:8px 10px;background:#F0EEFF;border-radius:6px;font-family:'DM Mono',monospace;font-size:10px;color:#5A50A0">
+          The function is called once per row — each customer gets their own tier computed inline.
+        </div>
+      </div>
+    </div>
+
+    <div class="result-section">
+      <div class="rs-header">Result — customers with computed tiers</div>
+      <div class="rs-body" style="padding:0">
+        <table class="result-table">
+          <thead>
+            <tr><th>customer_id</th><th>total_orders</th><th>tier</th></tr>
+          </thead>
+          <tbody id="result-tbody">
+            <tr class="highlight-row" id="demo-row">
+              <td>C001</td>
+              <td id="demo-orders">67</td>
+              <td class="tier-cell" id="demo-tier">Gold ★</td>
+            </tr>
+            <tr><td>C002</td><td>22</td><td class="tier-cell" style="color:#707070">Silver</td></tr>
+            <tr><td>C003</td><td>7</td>  <td class="tier-cell" style="color:#B05520">Bronze</td></tr>
+            <tr><td>C004</td><td>2</td>  <td class="tier-cell" style="color:#4060C0">New</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const TIERS = [
+  { min:50, name:'Gold',   cls:'tier-gold',   desc:'≥ 50 orders — Top customer',    sym:'★' },
+  { min:20, name:'Silver', cls:'tier-silver', desc:'≥ 20 orders — Loyal customer',  sym:'◆' },
+  { min:5,  name:'Bronze', cls:'tier-bronze', desc:'≥ 5 orders — Regular customer', sym:'●' },
+  { min:0,  name:'New',    cls:'tier-new',    desc:'< 5 orders — New customer',     sym:'' },
+];
+
+function getTier(count) {
+  count = parseInt(count);
+  if (count >= 50) return 0;
+  if (count >= 20) return 1;
+  if (count >= 5)  return 2;
+  return 3;
+}
+
+function updateFunction(val) {
+  val = parseInt(val);
+  document.getElementById('input-num').textContent = val;
+  document.getElementById('order-slider').value = val;
+
+  const ti = getTier(val);
+  const tier = TIERS[ti];
+
+  // Update branches
+  for (let i = 0; i < 4; i++) {
+    const b = document.getElementById('branch-'+i);
+    b.className = 'branch' + (i === ti ? ' active' : ' inactive');
+  }
+
+  // Update output
+  const outEl = document.getElementById('output-tier');
+  outEl.textContent = tier.name;
+  outEl.className = 'output-tier ' + tier.cls;
+  document.getElementById('output-desc').innerHTML = tier.desc + '<br>returned to SELECT';
+
+  // Update demo row
+  document.getElementById('demo-orders').textContent = val;
+  const demoTier = document.getElementById('demo-tier');
+  const colors = { 'tier-gold':'#D0900A','tier-silver':'#707070','tier-bronze':'#B05520','tier-new':'#4060C0' };
+  demoTier.textContent = tier.name + (tier.sym ? ' '+tier.sym : '');
+  demoTier.style.color = colors[tier.cls] || '';
+}
+
+function setVal(v) {
+  updateFunction(v);
+}
+
+// Init
+updateFunction(67);
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-2026" target="_blank" rel="noopener">github.com/scaler-content/DSML-2026</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

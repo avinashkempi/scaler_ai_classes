@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assumptions & Polynomial Regression — Lecture Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red-deep:     #2D0A0A;
+    --red-mid:      #7A1A1A;
+    --red-soft:     #B03030;
+    --red-pale:     #D4807A;
+    --red-mist:     #F2D0CC;
+    --blush:        #FDF5F4;
+    --blush-mid:    #F5E0DC;
+    --crimson:      #C0392B;
+    --crimson-light:#E87A6A;
+    --charcoal:     #1A0808;
+    --text-body:    #38100E;
+    --text-muted:   #7D3D38;
+    --white:        #FFFFFF;
+    --sidebar-w:    280px;
+    --green-pos:    #2E7D32;
+    --red-neg:      #C62828;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--blush);
+    color: var(--text-body);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--red-deep);
+    position: fixed;
+    top: 0; left: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transition: transform .3s ease;
+  }
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--red-soft); border-radius: 4px; }
+
+  .sidebar-header {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    position: sticky; top: 0;
+    background: var(--red-deep);
+    z-index: 1;
+  }
+  .sidebar-header .course-label {
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--red-pale);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .sidebar-header h1 {
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    color: var(--white);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .progress-bar-wrap {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .progress-label {
+    font-size: 11px;
+    color: var(--red-pale);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .progress-track {
+    height: 4px;
+    background: rgba(255,255,255,.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--red-pale), var(--crimson-light));
+    border-radius: 2px;
+    transition: width .4s ease;
+    width: 0%;
+  }
+
+  .nav-list { list-style: none; padding: 12px 0 80px; }
+  .nav-item a {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 20px;
+    text-decoration: none;
+    color: rgba(255,255,255,.6);
+    font-size: 12.5px;
+    line-height: 1.4;
+    transition: all .2s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item a:hover { color: var(--white); background: rgba(255,255,255,.05); }
+  .nav-item.active a {
+    color: var(--crimson-light);
+    border-left-color: var(--crimson);
+    background: rgba(255,255,255,.07);
+    font-weight: 500;
+  }
+  .nav-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    flex-shrink: 0;
+    margin-top: 5px;
+    transition: background .3s;
+  }
+  .nav-item.visited .nav-dot { background: var(--crimson-light); border-color: var(--crimson-light); }
+  .nav-item .nav-type {
+    font-size: 9.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--red-pale);
+    margin-top: 2px;
+    opacity: .7;
+  }
+
+  /* ── MAIN ────────────────────────────────────────── */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    max-width: 860px;
+    padding: 48px 52px 120px;
+  }
+
+  /* ── SECTION CARDS ───────────────────────────────── */
+  .section-card {
+    background: var(--white);
+    border-radius: 12px;
+    border: 1px solid var(--red-mist);
+    margin-bottom: 36px;
+    overflow: hidden;
+    scroll-margin-top: 32px;
+    box-shadow: 0 2px 8px rgba(45,10,10,.06);
+    transition: box-shadow .2s;
+  }
+  .section-card:hover { box-shadow: 0 4px 20px rgba(45,10,10,.11); }
+
+  .card-header {
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--blush-mid);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .card-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: var(--red-mist);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+  .card-meta { flex: 1; }
+  .card-type {
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--red-soft);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .card-title {
+    font-family: 'Lora', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--red-deep);
+    line-height: 1.3;
+  }
+  .card-duration {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .card-body { padding: 24px 28px 28px; }
+
+  /* ── TYPOGRAPHY ──────────────────────────────────── */
+  .card-body h2 {
+    font-family: 'Lora', serif;
+    font-size: 18px;
+    color: var(--red-mid);
+    margin: 28px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1.5px solid var(--red-mist);
+  }
+  .card-body h3 {
+    font-family: 'Lora', serif;
+    font-size: 15.5px;
+    color: var(--red-deep);
+    margin: 22px 0 10px;
+    font-style: italic;
+  }
+  .card-body h4 {
+    font-family: 'Lora', serif;
+    font-size: 14px;
+    color: var(--red-mid);
+    margin: 16px 0 8px;
+    font-weight: 700;
+  }
+  .card-body p { margin-bottom: 12px; font-size: 14.5px; }
+  .card-body ul, .card-body ol { margin: 8px 0 14px 20px; font-size: 14.5px; }
+  .card-body li { margin-bottom: 5px; }
+  .card-body strong { color: var(--red-deep); font-weight: 600; }
+  .card-body em { color: var(--red-soft); }
+
+  /* ── CALLOUTS ────────────────────────────────────── */
+  .callout-ask {
+    background: #FFF3F2;
+    border-left: 3px solid var(--crimson);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: #5C1010;
+  }
+  .callout-ask .callout-label {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--crimson);
+    margin-bottom: 4px;
+  }
+  .callout-note {
+    background: #FDF0EE;
+    border-left: 3px solid var(--red-soft);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: var(--red-deep);
+  }
+  .callout-note .callout-label {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--red-soft);
+    margin-bottom: 4px;
+  }
+  .callout-viz {
+    background: #FFF8F7;
+    border: 1.5px dashed var(--red-pale);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: var(--red-deep);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .callout-viz .viz-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .callout-viz .viz-body { flex: 1; }
+  .callout-viz .viz-label {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--red-soft);
+    margin-bottom: 5px;
+  }
+  .callout-viz a { color: var(--red-mid); font-weight: 600; word-break: break-all; }
+
+  /* ── TABLE ───────────────────────────────────────── */
+  .card-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 16px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--red-mist);
+  }
+  .card-body th {
+    background: var(--red-mid);
+    color: var(--white);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: .04em;
+  }
+  .card-body td { padding: 9px 14px; border-top: 1px solid var(--blush-mid); font-size: 13px; }
+  .card-body tr:nth-child(even) td { background: var(--blush); }
+
+  /* ── CODE ────────────────────────────────────────── */
+  .card-body pre {
+    background: var(--charcoal);
+    color: #F4C0B8;
+    border-radius: 8px;
+    padding: 16px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    overflow-x: auto;
+    margin: 14px 0;
+    line-height: 1.6;
+  }
+  .card-body code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--blush-mid);
+    color: var(--red-mid);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+  }
+  .card-body pre code { background: none; color: inherit; padding: 0; }
+
+  .output-wrap { margin: -6px 0 14px; }
+  .output-label {
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--red-pale);
+    font-weight: 600;
+    margin-bottom: 5px;
+  }
+  .output-block {
+    background: #FBF5F4;
+    border: 1px solid var(--red-mist);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-body);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  /* ── EQUATION ────────────────────────────────────── */
+  .equation {
+    background: var(--blush-mid);
+    border: 1.5px solid var(--red-mist);
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin: 14px 0;
+    text-align: center;
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    font-style: italic;
+    color: var(--red-deep);
+    letter-spacing: .03em;
+  }
+
+  /* ── ASSUMPTION CARDS ────────────────────────────── */
+  .assumption-list { display: flex; flex-direction: column; gap: 14px; margin: 16px 0; }
+  .assumption-item {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: var(--blush);
+    border: 1px solid var(--red-mist);
+    border-radius: 10px;
+    padding: 16px 18px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .assumption-item:hover { border-color: var(--red-soft); box-shadow: 0 2px 10px rgba(45,10,10,.07); }
+  .assumption-badge {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--red-mid);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .assumption-body h4 {
+    font-family: 'Lora', serif;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--red-deep);
+    margin-bottom: 4px;
+  }
+  .assumption-body p { font-size: 13.5px; color: var(--text-body); margin: 0; line-height: 1.6; }
+  .assumption-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-bottom: 6px;
+  }
+  .tag-ok { background: #E8F5E9; color: #2E7D32; }
+  .tag-warn { background: #FFF3E0; color: #E65100; }
+  .tag-critical { background: #FFEBEE; color: #C62828; }
+
+  /* ── VIF TABLE ───────────────────────────────────── */
+  .vif-row-danger td:first-child { color: var(--red-neg); font-weight: 700; }
+  .vif-row-danger td:last-child { color: var(--red-neg); font-weight: 700; }
+  .vif-row-warning td:last-child { color: #E65100; font-weight: 600; }
+  .vif-row-ok td:last-child { color: var(--green-pos); font-weight: 600; }
+
+  /* ── BIAS-VARIANCE GRID ──────────────────────────── */
+  .bv-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .bv-card {
+    border-radius: 10px;
+    padding: 16px;
+    border: 1.5px solid var(--red-mist);
+  }
+  .bv-card.overfit { background: #FFF0EE; border-color: var(--crimson); }
+  .bv-card.underfit { background: #FFF8F0; border-color: #E65100; }
+  .bv-card.good    { background: #F0FFF4; border-color: #2E7D32; }
+  .bv-card h4 {
+    font-family: 'Lora', serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .bv-card.overfit h4  { color: var(--crimson); }
+  .bv-card.underfit h4 { color: #E65100; }
+  .bv-card.good h4     { color: #2E7D32; }
+  .bv-card ul { margin: 0 0 0 16px; font-size: 13px; }
+  .bv-card li { margin-bottom: 3px; }
+
+  /* ── DEGREE COMPARISON ───────────────────────────── */
+  .degree-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .degree-card {
+    background: var(--blush);
+    border: 1.5px solid var(--red-mist);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    transition: all .2s;
+  }
+  .degree-card:hover { border-color: var(--red-soft); transform: translateY(-2px); }
+  .degree-card .deg-label {
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--red-deep);
+    margin-bottom: 8px;
+  }
+  .degree-card .deg-eq {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+  .degree-card .deg-scores { font-size: 12.5px; }
+  .deg-score-row { display: flex; justify-content: space-between; padding: 3px 0; border-top: 1px solid var(--red-mist); }
+  .deg-score-row span:first-child { color: var(--text-muted); }
+  .deg-score-row span:last-child  { font-weight: 600; color: var(--red-deep); }
+  .degree-card.best { border-color: var(--green-pos); background: #F0FFF4; }
+  .degree-card.best .deg-label { color: #2E7D32; }
+
+  /* ── TARGET SHOOTING ─────────────────────────────── */
+  .target-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .target-card {
+    border: 1.5px solid var(--red-mist);
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: var(--blush);
+  }
+  .target-card h4 {
+    font-family: 'Lora', serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--red-deep);
+    margin-bottom: 6px;
+  }
+  .target-card p { font-size: 12.5px; color: var(--text-muted); margin: 0; line-height: 1.5; }
+  .target-icon { font-size: 22px; margin-bottom: 6px; }
+
+  /* ── SUMMARY GRID ────────────────────────────────── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .summary-item {
+    background: var(--blush);
+    border: 1px solid var(--red-mist);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--red-deep);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .summary-item::before {
+    content: '▸';
+    color: var(--red-soft);
+    font-size: 11px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── FLOW STEPS ──────────────────────────────────── */
+  .flow-steps { margin: 16px 0; }
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 13px 0;
+    border-bottom: 1px dashed var(--red-mist);
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-num {
+    width: 30px; height: 30px;
+    background: var(--red-mid);
+    border-radius: 50%;
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .flow-content h4 { font-family: 'Lora', serif; font-size: 13.5px; font-weight: 700; color: var(--red-deep); margin-bottom: 3px; }
+  .flow-content p  { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  /* ── HAMBURGER ───────────────────────────────────── */
+  #hamburger {
+    display: none;
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 200;
+    background: var(--red-deep);
+    border: none; border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    flex-direction: column; gap: 5px;
+  }
+  #hamburger span { display: block; width: 20px; height: 2px; background: #fff; border-radius: 1px; }
+  #overlay { display: none; }
+
+  @media (max-width: 768px) {
+    #hamburger { display: flex; }
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; padding: 24px 18px 80px; max-width: 100%; }
+    #overlay {
+      display: block; position: fixed; inset: 0;
+      background: rgba(0,0,0,.4); z-index: 99;
+      opacity: 0; pointer-events: none; transition: opacity .3s;
+    }
+    #overlay.active { opacity: 1; pointer-events: all; }
+    .bv-grid, .degree-cards, .target-grid, .summary-grid { grid-template-columns: 1fr; }
+    .card-body { padding: 18px 18px 22px; }
+    .card-header { padding: 18px 18px 14px; }
+  }
+
+  /* ── BACK TO TOP ─────────────────────────────────── */
+  #back-top {
+    position: fixed; bottom: 32px; right: 32px;
+    background: var(--red-mid); color: #fff;
+    border: none; border-radius: 50%;
+    width: 44px; height: 44px; font-size: 18px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(45,10,10,.3);
+    opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 50;
+  }
+  #back-top.visible { opacity: 1; pointer-events: all; }
+  #back-top:hover { background: var(--red-deep); }
+
+  .card-body a { color: var(--red-soft); text-decoration: underline; text-underline-offset: 3px; }
+  .card-body a:hover { color: var(--red-deep); }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform: none; } }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations 4 · Assumptions, VIF and polynomials</span><span class="pn"><a href="../Linear-Regression-3/" title="ML Foundations 3 · Multivariate linear regression">← Prev</a><a href="../Maths-postread-Regression/" title="Math Companion · Linear regression derivations">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><button id="hamburger" aria-label="Open menu" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</button>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="course-label">ML Foundations · Lecture 4</div>
+    <h1>Assumptions, Residuals & Polynomial Regression</h1>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-label">
+      <span>Progress</span><span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item" data-target="s-recap"><a href="#s-recap"><span class="nav-dot"></span><span><div>Recap</div><div class="nav-type">Review</div></span></a></li>
+    <li class="nav-item" data-target="s-assumptions"><a href="#s-assumptions"><span class="nav-dot"></span><span><div>Assumptions Overview</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-linearity"><a href="#s-linearity"><span class="nav-dot"></span><span><div>1. Linearity</div><div class="nav-type">Assumption</div></span></a></li>
+    <li class="nav-item" data-target="s-multicollinearity"><a href="#s-multicollinearity"><span class="nav-dot"></span><span><div>2. No Multicollinearity</div><div class="nav-type">Assumption</div></span></a></li>
+    <li class="nav-item" data-target="s-vif"><a href="#s-vif"><span class="nav-dot"></span><span><div>VIF — Detecting & Fixing</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-normality"><a href="#s-normality"><span class="nav-dot"></span><span><div>3. Errors Normally Distributed</div><div class="nav-type">Assumption</div></span></a></li>
+    <li class="nav-item" data-target="s-independence"><a href="#s-independence"><span class="nav-dot"></span><span><div>4. Error Independence</div><div class="nav-type">Assumption</div></span></a></li>
+    <li class="nav-item" data-target="s-homoscedasticity"><a href="#s-homoscedasticity"><span class="nav-dot"></span><span><div>5. Homoscedasticity</div><div class="nav-type">Assumption</div></span></a></li>
+    <li class="nav-item" data-target="s-polynomial"><a href="#s-polynomial"><span class="nav-dot"></span><span><div>Polynomial Regression</div><div class="nav-type">Technique</div></span></a></li>
+    <li class="nav-item" data-target="s-polycode"><a href="#s-polycode"><span class="nav-dot"></span><span><div>Polynomial Code Walkthrough</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-biasvariance"><a href="#s-biasvariance"><span class="nav-dot"></span><span><div>Bias-Variance Tradeoff</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-wrap"><a href="#s-wrap"><span class="nav-dot"></span><span><div>Wrap Up</div><div class="nav-type">Summary</div></span></a></li>
+  </ul>
+</nav>
+
+<!-- MAIN -->
+<main id="main">
+
+  <!-- RECAP -->
+  <section class="section-card" id="s-recap">
+    <div class="card-header">
+      <div class="card-icon">🔁</div>
+      <div class="card-meta">
+        <div class="card-type">Review</div>
+        <div class="card-title">Recap from Lecture 3</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Last session, we moved from theory to a full end-to-end ML workflow:</p>
+      <ul>
+        <li>Train-test split and why it matters</li>
+        <li>Feature engineering and scaling (Min-Max, Z-score)</li>
+        <li>Handling missing values via median imputation</li>
+        <li>One-hot encoding for categorical variables</li>
+        <li>Evaluating with R² and Adjusted R²</li>
+        <li>StatsModels for p-values, confidence intervals, and diagnostics</li>
+      </ul>
+      <div class="callout-note">
+        <div class="callout-label">📌 Key Takeaway</div>
+        Data preprocessing is not optional — it directly determines the quality of your model. Model evaluation should always use <strong>test data</strong>, never the training set alone.
+      </div>
+      <h3>Today's Central Question</h3>
+      <blockquote style="border-left: 3px solid var(--crimson); padding: 10px 16px; margin: 14px 0; background: #FFF3F2; border-radius: 0 8px 8px 0; font-family: 'Lora', serif; font-style: italic; color: var(--red-deep); font-size: 15px;">
+        A model with good performance isn't always a good model.
+      </blockquote>
+      <p>Today we learn to <em>verify</em> a model — checking if it satisfies the statistical assumptions that make its predictions trustworthy, and what to do when reality is more curved than a straight line.</p>
+    </div>
+  </section>
+
+  <!-- ASSUMPTIONS OVERVIEW -->
+  <section class="section-card" id="s-assumptions">
+    <div class="card-header">
+      <div class="card-icon">📜</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">The 5 Assumptions of Linear Regression</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Linear Regression makes five core assumptions about your data. Violating them doesn't always break the model — but it means your predictions, coefficients, and p-values may not be trustworthy.</p>
+      <div class="assumption-list">
+        <div class="assumption-item">
+          <div class="assumption-badge">1</div>
+          <div class="assumption-body">
+            <span class="assumption-tag tag-critical">Critical</span>
+            <h4>Linearity</h4>
+            <p>The relationship between each feature and the target must be linear.</p>
+          </div>
+        </div>
+        <div class="assumption-item">
+          <div class="assumption-badge">2</div>
+          <div class="assumption-body">
+            <span class="assumption-tag tag-critical">Critical</span>
+            <h4>No Multicollinearity</h4>
+            <p>Input features must not be linearly dependent on each other.</p>
+          </div>
+        </div>
+        <div class="assumption-item">
+          <div class="assumption-badge">3</div>
+          <div class="assumption-body">
+            <span class="assumption-tag tag-warn">Important</span>
+            <h4>Normally Distributed Errors</h4>
+            <p>Residuals should follow a bell-shaped (Gaussian) distribution.</p>
+          </div>
+        </div>
+        <div class="assumption-item">
+          <div class="assumption-badge">4</div>
+          <div class="assumption-body">
+            <span class="assumption-tag tag-warn">Important</span>
+            <h4>Error Independence</h4>
+            <p>Residuals must not show patterns or correlate with each other.</p>
+          </div>
+        </div>
+        <div class="assumption-item">
+          <div class="assumption-badge">5</div>
+          <div class="assumption-body">
+            <span class="assumption-tag tag-warn">Important</span>
+            <h4>Homoscedasticity</h4>
+            <p>Residuals must have roughly constant variance across all predicted values.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ASSUMPTION 1: LINEARITY -->
+  <section class="section-card" id="s-linearity">
+    <div class="card-header">
+      <div class="card-icon">📈</div>
+      <div class="card-meta">
+        <div class="card-type">Assumption 1</div>
+        <div class="card-title">Linearity</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Linear Regression assumes the relationship between each independent variable and the target is a <strong>straight line</strong>. If your data follows a curve, an exponential, or a wave — a straight line cannot capture it.</p>
+      <h3>How to Check</h3>
+      <ul>
+        <li>Scatter plots of each feature vs. the target</li>
+        <li>Residual plots — if a pattern exists in the residuals, linearity is violated</li>
+      </ul>
+      <h3>How to Fix</h3>
+      <p>When the linearity assumption is violated, we use <strong>Polynomial Regression</strong> — transforming features into higher-order terms to model curved relationships. We'll cover this in detail later in this lecture.</p>
+      <div class="callout-note">
+        <div class="callout-label">📌 Examples of Non-Linear Relationships</div>
+        <ul style="margin-top:6px">
+          <li>Electricity consumption vs. year (follows an S-curve)</li>
+          <li>Sales vs. advertising spend (diminishing returns)</li>
+          <li>Blood pressure vs. BMI (non-linear health relationship)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ASSUMPTION 2: MULTICOLLINEARITY -->
+  <section class="section-card" id="s-multicollinearity">
+    <div class="card-header">
+      <div class="card-icon">🔗</div>
+      <div class="card-meta">
+        <div class="card-type">Assumption 2</div>
+        <div class="card-title">No Multicollinearity</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Multicollinearity occurs when one or more of your independent features can be predicted from other independent features. In other words, the features are not truly "independent."</p>
+
+      <h3>Why Is This a Problem?</h3>
+      <p>Consider four features x₁, x₂, x₃, x₄. The model tries to find the unique contribution of each. But if:</p>
+      <div class="equation">x₂ = 3·x₃ + 2·x₄</div>
+      <p>Then x₂ carries no new information — it's already explained by x₃ and x₄. The model can't isolate x₂'s true effect, so its coefficient becomes <strong>unreliable and unstable</strong>.</p>
+
+      <h3>Real-World Example</h3>
+      <p>In the Cars24 dataset, <code>year</code> and <code>age</code> are almost perfectly correlated — age is simply the current year minus the model year. Including both confuses the model about which one actually drives the price.</p>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Think about it</div>
+        Should there ever be a dependency among independent variables? No — by definition, if x₁ can be derived from x₂ and x₃, then x₁ is not truly independent. One of them is redundant.
+      </div>
+
+      <h3>Symptoms of Multicollinearity</h3>
+      <ul>
+        <li>Coefficients that are unexpectedly large or have the wrong sign</li>
+        <li>High standard errors for coefficients despite a good overall R²</li>
+        <li>A high Condition Number in the StatsModels summary (e.g., &gt; 1000)</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- VIF -->
+  <section class="section-card" id="s-vif">
+    <div class="card-header">
+      <div class="card-icon">🔬</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">VIF — Detecting & Fixing Multicollinearity</div>
+        <div class="card-duration">⏱ 20 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>How VIF Works</h3>
+      <p>The <strong>Variance Inflation Factor (VIF)</strong> measures how much each feature can be predicted by all the others. For each feature xⱼ, it:</p>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-content"><h4>Treat xⱼ as the target</h4><p>Build a regression model using all other features as inputs to predict xⱼ</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-content"><h4>Record the R²</h4><p>A high R² means xⱼ is well-explained by the others — it's redundant</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-content"><h4>Compute VIF</h4><p>VIF = 1 / (1 − R²). High R² → VIF approaches infinity</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-content"><h4>Repeat for all features</h4><p>Remove the highest-VIF feature and recalculate until all VIFs are acceptable</p></div>
+        </div>
+      </div>
+      <div class="equation">VIF = 1 / (1 − R²ⱼ)</div>
+
+      <h3>VIF Thresholds</h3>
+      <table>
+        <tr><th>VIF Value</th><th>Interpretation</th><th>Action</th></tr>
+        <tr class="vif-row-danger"><td>&gt; 10</td><td>Very High Multicollinearity</td><td>Remove this feature</td></tr>
+        <tr class="vif-row-warning"><td>5 – 10</td><td>High Multicollinearity</td><td>Consider removing</td></tr>
+        <tr class="vif-row-ok"><td>&lt; 5</td><td>Acceptable</td><td>Keep the feature</td></tr>
+      </table>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          Watch VIF iteratively eliminate collinear features from a dataset:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-regression/vif-iterative-feature-elimination/" target="_blank">VIF Iterative Feature Elimination →</a>
+        </div>
+      </div>
+
+      <h3>Initial VIF Calculation</h3>
+      <pre><code>from statsmodels.stats.outliers_influence import variance_inflation_factor
+import statsmodels.api as sm
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+
+X = df[df.columns.drop('selling_price')]
+y = df["selling_price"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=2)
+
+scaler = StandardScaler()
+X_tr_scaled = scaler.fit_transform(X_train)
+
+vif = pd.DataFrame()
+X_t = pd.DataFrame(X_tr_scaled, columns=X_train.columns)
+vif['Features'] = X_t.columns
+vif['VIF'] = [variance_inflation_factor(X_t.values, i) for i in range(X_t.shape[1])]
+vif['VIF'] = round(vif['VIF'], 2)
+vif = vif.sort_values(by="VIF", ascending=False)
+print(vif)</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output — sorted by VIF</div>
+        <div class="output-block">       Features      VIF
+year             1392.20   ← Remove first
+model             120.72
+make               85.64
+engine             12.42
+max_power_hp        9.47
+km_driven           2.88
+fuel_type           2.33
+seller_type         1.98
+transmission        1.92
+owner_type_Second   1.29
+owner_type_Third    1.13
+...</div>
+      </div>
+
+      <p><code>year</code> has a VIF of <strong>1392</strong> — nearly perfectly predicted by <code>age</code> (which is derived from it). Remove it first.</p>
+
+      <h3>Iterative Elimination Loop</h3>
+      <pre><code>vif_thr = 5
+r2_thr  = 0.85
+feats_removed = ['year']
+
+while True:
+    X_t = pd.DataFrame(X_tr_scaled, columns=X_train.columns)[cols2]
+    vif['VIF'] = [variance_inflation_factor(X_t.values, i)
+                  for i in range(X_t.shape[1])]
+    vif = vif.sort_values(by="VIF", ascending=False)
+
+    cols2 = vif["Features"][1:].values   # drop highest VIF
+    X2    = pd.DataFrame(X_tr_scaled, columns=X_train.columns)[cols2]
+    X2_sm = sm.add_constant(X2)
+    sm_model = sm.OLS(list(y_train), X2_sm).fit()
+
+    if (vif.iloc[0]['VIF'] < vif_thr) or (sm_model.rsquared_adj < r2_thr):
+        print('Reached threshold')
+        break
+
+    feats_removed.append(vif.iloc[0]['Features'])</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output — stopping condition reached</div>
+        <div class="output-block">Reached threshold
+Highest VIF remaining : max_power_hp = 4.99
+Final Adj. R²         : 0.8997
+Features removed      : ['year', 'model', 'make']</div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">✅ Result</div>
+        We removed 3 features (<code>year</code>, <code>model</code>, <code>make</code>) with no meaningful drop in R². The model went from 15 features down to 9, with all remaining VIFs below 10 and Adjusted R² still at ~90%.
+      </div>
+
+      <h3>AI-Powered Interpretation of VIF Results</h3>
+      <p>Rather than manually narrating why features were removed and what the final summary means, we can prompt an LLM to explain it in plain English for a non-technical audience:</p>
+      <pre><code>from groq import Groq
+client = Groq()
+
+prompt = f"""
+You are helping a student interpret a multiple linear regression fitted after
+removing multicollinear features using VIF.
+
+Features removed due to high VIF: {feats_removed}
+Final Adjusted R²: {final_adj_r2:.4f}
+Regression Summary:
+{summary_text}
+
+In simple terms, explain:
+1. Why removing these features was necessary
+2. Whether the model still explains the data well
+3. Any red flags a student should watch for in this summary
+"""
+
+response = client.chat.completions.create(
+    model="llama-3.3-70b-versatile",
+    max_tokens=500,
+    messages=[{"role": "user", "content": prompt}]
+)
+print(response.choices[0].message.content)</code></pre>
+
+      <div class="callout-ask">
+        <div class="callout-label">💡 Why This Pattern Is Useful</div>
+        VIF elimination is iterative — you run it many times. Having an LLM auto-summarize the result at each stage helps communicate decisions to stakeholders without requiring them to read regression tables.
+      </div>
+    </div>
+  </section>
+
+  <!-- ASSUMPTION 3: NORMALITY OF ERRORS -->
+  <section class="section-card" id="s-normality">
+    <div class="card-header">
+      <div class="card-icon">🔔</div>
+      <div class="card-meta">
+        <div class="card-type">Assumption 3</div>
+        <div class="card-title">Errors Are Normally Distributed</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>The residuals (errors) of a well-specified linear regression model should follow a <strong>bell-shaped (Gaussian) distribution</strong> centered at zero. This ensures that our statistical tests (p-values, confidence intervals) are valid.</p>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Why Does This Matter?</div>
+        If residuals are <em>not</em> normally distributed, it often signals the presence of outliers, a skewed target variable, or a misspecified model (e.g., a linear model on non-linear data).
+      </div>
+
+      <h3>Check with a Histogram of Residuals</h3>
+      <pre><code>X_sm   = sm.add_constant(X_tr_scaled)
+sm_model = sm.OLS(y_train, X_sm).fit()
+
+Y_hat  = sm_model.predict(X_sm)
+errors = Y_hat - y_train
+
+import seaborn as sns
+sns.histplot(errors)
+plt.xlabel("Residuals")
+plt.title("Histogram of Residuals")</code></pre>
+      <p>A histogram that looks roughly bell-shaped and symmetric around zero is a good sign.</p>
+
+      <h3>Confirm with the Shapiro-Wilk Test</h3>
+      <pre><code>from scipy import stats
+res = stats.shapiro(errors)
+print(res.statistic)</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">0.8500353693962097</div>
+      </div>
+
+      <table>
+        <tr><th>Shapiro-Wilk Statistic</th><th>Interpretation</th></tr>
+        <tr><td>Close to <strong>1.0</strong></td><td>Strong normality — assumption satisfied</td></tr>
+        <tr><td>0.85 – 0.95</td><td>Moderate normality — acceptable in large datasets</td></tr>
+        <tr><td>Below <strong>0.8</strong></td><td>Significant departure from normality — investigate outliers</td></tr>
+      </table>
+      <p>Our value of <strong>0.85</strong> indicates a high enough level of normality for the Cars24 dataset.</p>
+    </div>
+  </section>
+
+  <!-- ASSUMPTION 4: ERROR INDEPENDENCE -->
+  <section class="section-card" id="s-independence">
+    <div class="card-header">
+      <div class="card-icon">🔀</div>
+      <div class="card-meta">
+        <div class="card-type">Assumption 4</div>
+        <div class="card-title">Error Terms Must Be Independent</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>If you plot a scatter of residuals vs. the target variable, there should be <strong>no visible pattern</strong>. Random scatter around zero is ideal.</p>
+
+      <h3>When Is This Violated?</h3>
+      <p>This assumption is most commonly violated in <strong>time series data</strong>, where errors at time <em>t</em> are correlated with errors at time <em>t−1</em> (called autocorrelation). For cross-sectional datasets like Cars24, this is rarely an issue.</p>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Check: Durbin-Watson Test</div>
+        The Durbin-Watson statistic in StatsModels output tests for autocorrelation in residuals. A value close to <strong>2.0</strong> indicates no autocorrelation. Values near 0 or 4 suggest a problem. Our Cars24 model returned <strong>2.000</strong> — perfect.
+      </div>
+
+      <p>We'll explore autocorrelation and its remedies in depth when we cover <strong>Time Series Analysis</strong> later in the course.</p>
+    </div>
+  </section>
+
+  <!-- ASSUMPTION 5: HOMOSCEDASTICITY -->
+  <section class="section-card" id="s-homoscedasticity">
+    <div class="card-header">
+      <div class="card-icon">📉</div>
+      <div class="card-meta">
+        <div class="card-type">Assumption 5</div>
+        <div class="card-title">Homoscedasticity — Constant Error Variance</div>
+        <div class="card-duration">⏱ 6 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p><strong>Homoscedasticity</strong> means the residuals have roughly the same spread (variance) across all levels of the predicted values. Its opposite — <strong>heteroscedasticity</strong> — is when variance increases or decreases as predictions grow.</p>
+
+      <h3>Visual Check: Residuals vs. Predicted Values</h3>
+      <pre><code>Y_hat  = sm_model.predict(X_sm)
+errors = Y_hat - y_train
+
+sns.scatterplot(x=Y_hat, y=errors)
+plt.xlabel("Predicted Selling Price")
+plt.ylabel("Residuals")
+plt.title("Predicted Values vs Residuals")</code></pre>
+
+      <p>A good plot shows a <strong>horizontal band</strong> of roughly constant width. If the band fans out (cone shape), heteroscedasticity is present.</p>
+      <p>For our Cars24 data: the spread of errors stays approximately constant from left to right — the assumption is satisfied.</p>
+
+      <h3>Goldfeld-Quandt Test</h3>
+      <p>Beyond visual inspection, the <strong>Goldfeld-Quandt Test</strong> formally tests for heteroscedasticity by comparing the variance of residuals in the lower half vs. the upper half of the data:</p>
+      <pre><code>from statsmodels.compat import lzip
+import statsmodels.stats.api as sms
+
+name = ['F statistic', 'p-value']
+test = sms.het_goldfeldquandt(y_train, X2_sm)
+lzip(name, test)</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">[('F statistic', 1.000), ('p-value', 0.353)]</div>
+      </div>
+
+      <table>
+        <tr><th>Metric</th><th>Value</th><th>Interpretation</th></tr>
+        <tr><td>F statistic</td><td>1.00</td><td>Variance is equal between groups — no heteroscedasticity</td></tr>
+        <tr><td>p-value</td><td>0.353</td><td>Above 0.05 → fail to reject null → homoscedasticity holds</td></tr>
+      </table>
+
+      <div class="callout-note">
+        <div class="callout-label">🔧 If You Find Heteroscedasticity</div>
+        <ul style="margin-top:6px">
+          <li>Apply transformations to the target: <code>log(y)</code>, <code>√y</code>, or Box-Cox</li>
+          <li>Remove outliers — they often inflate variance in specific regions</li>
+          <li>Consider weighted least squares regression</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- POLYNOMIAL REGRESSION CONCEPT -->
+  <section class="section-card" id="s-polynomial">
+    <div class="card-header">
+      <div class="card-icon">📐</div>
+      <div class="card-meta">
+        <div class="card-type">Technique</div>
+        <div class="card-title">Polynomial Regression</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>When data follows a curve — not a straight line — Linear Regression's first assumption (linearity) is violated. We need to model non-linear patterns.</p>
+
+      <h3>Examples of Non-Linear Real-World Data</h3>
+      <ul>
+        <li><strong>US Electricity Consumption vs. Year</strong> — follows an S-curve, not a line</li>
+        <li><strong>Seasonal sales vs. month</strong> — sinusoidal pattern with peaks and troughs</li>
+        <li><strong>Blood Pressure vs. BMI</strong> — non-linear health relationship</li>
+      </ul>
+
+      <h3>The Idea: Transform Features</h3>
+      <p>Instead of using raw features x directly, we create <strong>polynomial features</strong> — new columns that are powers of the original:</p>
+      <div class="equation">ϕ(x) = [1, x, x², x³, … , xᵈ]</div>
+      <p>Then we fit a regular Linear Regression on these transformed features. The model equation becomes:</p>
+      <div class="equation">ŷ = w₀ + w₁x + w₂x² + w₃x³ + … + wₐxᵈ</div>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Key Insight</div>
+        Polynomial Regression is still <em>Linear</em> Regression — linear in the <strong>parameters</strong> (the w values). The non-linearity comes from the transformed features, not the model structure. This means we can still use the same OLS / Gradient Descent machinery.
+      </div>
+
+      <h3>Choosing the Degree</h3>
+      <table>
+        <tr><th>Degree</th><th>Equation Form</th><th>Shape</th></tr>
+        <tr><td>1</td><td>w₀ + w₁x</td><td>Straight line (standard LR)</td></tr>
+        <tr><td>2</td><td>w₀ + w₁x + w₂x²</td><td>Parabola (quadratic curve)</td></tr>
+        <tr><td>3</td><td>w₀ + w₁x + w₂x² + w₃x³</td><td>Cubic curve (inflection point)</td></tr>
+        <tr><td>n</td><td>…</td><td>Increasingly flexible — but risks overfitting</td></tr>
+      </table>
+
+      <div class="callout-ask">
+        <div class="callout-label">⚠️ The Danger of High Degrees</div>
+        A very high-degree polynomial can perfectly fit training data (R² ≈ 1) but fail dramatically on test data. This is <strong>overfitting</strong> — the model memorized the training noise instead of learning the true pattern.
+      </div>
+    </div>
+  </section>
+
+  <!-- POLYNOMIAL CODE -->
+  <section class="section-card" id="s-polycode">
+    <div class="card-header">
+      <div class="card-icon">💻</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Polynomial Regression — US Electricity Consumption</div>
+        <div class="card-duration">⏱ 7 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Dataset: US electricity consumption from 1949–1999 (51 rows, 2 columns: <code>Year</code> and <code>Consumption</code>). The data follows a non-linear upward curve.</p>
+
+      <h3>Load and Split</h3>
+      <pre><code>import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline
+from sklearn import metrics
+
+elec_cons = pd.read_csv("total-electricity-consumption-us.csv")
+
+# Split by index (every 5th point → test)
+size  = len(elec_cons.index)
+index = range(0, size, 5)
+train = elec_cons[~elec_cons.index.isin(index)]
+test  = elec_cons[ elec_cons.index.isin(index)]
+
+X_train = train.Year.values.reshape(-1, 1)
+y_train = train.Consumption
+X_test  = test.Year.values.reshape(-1, 1)
+y_test  = test.Consumption
+
+print(f"Train: {len(train)} rows | Test: {len(test)} rows")</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Train: 40 rows | Test: 11 rows</div>
+      </div>
+
+      <h3>Fit Degrees 1, 2, and 3</h3>
+      <pre><code>degrees = [1, 2, 3]
+r2_train, r2_test = [], []
+
+for degree in degrees:
+    pipeline = Pipeline([
+        ('poly', PolynomialFeatures(degree=degree)),
+        ('model', LinearRegression())
+    ])
+    pipeline.fit(X_train, y_train)
+    r2_train.append(metrics.r2_score(y_train, pipeline.predict(X_train)))
+    r2_test.append(metrics.r2_score(y_test,  pipeline.predict(X_test)))
+
+for d, tr, te in zip(degrees, r2_train, r2_test):
+    print(f"Degree {d}: Train R² = {tr:.3f}, Test R² = {te:.3f}")</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Degree 1: Train R² = 0.963, Test R² = 0.966
+Degree 2: Train R² = 0.999, Test R² = 0.999
+Degree 3: Train R² = 0.999, Test R² = 0.999</div>
+      </div>
+
+      <div class="degree-cards">
+        <div class="degree-card">
+          <div class="deg-label">Degree 1</div>
+          <div class="deg-eq">ŷ = w₀ + w₁·year</div>
+          <div class="deg-scores">
+            <div class="deg-score-row"><span>Train R²</span><span>0.963</span></div>
+            <div class="deg-score-row"><span>Test R²</span><span>0.966</span></div>
+          </div>
+          <p style="font-size:11.5px; color:var(--text-muted); margin-top:8px">Straight line — misses the curvature</p>
+        </div>
+        <div class="degree-card best">
+          <div class="deg-label">Degree 2 ✓</div>
+          <div class="deg-eq">ŷ = w₀ + w₁·year + w₂·year²</div>
+          <div class="deg-scores">
+            <div class="deg-score-row"><span>Train R²</span><span>0.999</span></div>
+            <div class="deg-score-row"><span>Test R²</span><span>0.999</span></div>
+          </div>
+          <p style="font-size:11.5px; color:#2E7D32; margin-top:8px">Near-perfect fit — captures the curve</p>
+        </div>
+        <div class="degree-card">
+          <div class="deg-label">Degree 3</div>
+          <div class="deg-eq">ŷ = w₀ + w₁·year + w₂·year² + w₃·year³</div>
+          <div class="deg-scores">
+            <div class="deg-score-row"><span>Train R²</span><span>0.999</span></div>
+            <div class="deg-score-row"><span>Test R²</span><span>0.999</span></div>
+          </div>
+          <p style="font-size:11.5px; color:var(--text-muted); margin-top:8px">No improvement over degree 2 — unnecessary complexity</p>
+        </div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">✅ Lesson</div>
+        Degree 2 is the sweet spot here. Degree 3 adds complexity without any gain — and at higher degrees it would start overfitting. <strong>Always evaluate on test data</strong> to find the right degree.
+      </div>
+    </div>
+  </section>
+
+  <!-- BIAS-VARIANCE TRADEOFF -->
+  <section class="section-card" id="s-biasvariance">
+    <div class="card-header">
+      <div class="card-icon">⚖️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Bias-Variance Tradeoff</div>
+        <div class="card-duration">⏱ 12 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>This is one of the most fundamental concepts in all of machine learning. Every model navigates a tension between two types of error:</p>
+
+      <h3>The Student Analogy</h3>
+      <div class="bv-grid">
+        <div class="bv-card overfit">
+          <h4>🎓 The Over-Studier (Overfitting)</h4>
+          <ul>
+            <li>Memorized every question in the textbook</li>
+            <li>Performs perfectly on practice problems</li>
+            <li>Fails when the exam has new question variants</li>
+            <li><strong>Train R² = high, Test R² = low</strong></li>
+          </ul>
+        </div>
+        <div class="bv-card underfit">
+          <h4>😴 The Under-Studier (Underfitting)</h4>
+          <ul>
+            <li>Only skimmed chapter headings</li>
+            <li>Can't answer even the practice problems</li>
+            <li>Fails both practice and the exam</li>
+            <li><strong>Train R² = low, Test R² = low</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>In Model Terms</h3>
+      <table>
+        <tr><th>Scenario</th><th>Train R²</th><th>Test R²</th><th>Problem</th></tr>
+        <tr><td>Underfitting</td><td>Low</td><td>Low</td><td>Model too simple — misses the real pattern</td></tr>
+        <tr><td>Overfitting</td><td>High</td><td>Low</td><td>Model too complex — memorizes training noise</td></tr>
+        <tr style="background:#F0FFF4"><td><strong>Just Right</strong></td><td><strong>Good</strong></td><td><strong>Good</strong></td><td><strong>Generalizes well to new data</strong></td></tr>
+      </table>
+
+      <h3>Bias vs. Variance</h3>
+      <div class="target-grid">
+        <div class="target-card">
+          <div class="target-icon">🎯</div>
+          <h4>Low Bias, Low Variance</h4>
+          <p>Aiming at the right spot and hitting it consistently. This is the goal.</p>
+        </div>
+        <div class="target-card">
+          <div class="target-icon">🎯</div>
+          <h4>High Bias, Low Variance</h4>
+          <p>Consistently hitting the wrong spot. Underfitting — model is too simple.</p>
+        </div>
+        <div class="target-card">
+          <div class="target-icon">🎯</div>
+          <h4>Low Bias, High Variance</h4>
+          <p>Aimed correctly but scattering all over. Overfitting — model is too sensitive to training data.</p>
+        </div>
+        <div class="target-card">
+          <div class="target-icon">🎯</div>
+          <h4>High Bias, High Variance</h4>
+          <p>Wrong spot and inconsistent. The worst case — both errors compound.</p>
+        </div>
+      </div>
+
+      <h3>Connecting to Polynomial Degree</h3>
+      <p>Recall our polynomial model with one feature x and four powers:</p>
+      <div class="equation">ŷ = w₀ + w₁x + w₂x² + w₃x³ + w₄x⁴</div>
+      <table>
+        <tr><th>Model</th><th>Non-zero weights</th><th>Complexity</th><th>Risk</th></tr>
+        <tr><td>M1</td><td>w₁, w₂, w₃, w₄ ≠ 0</td><td>Highest</td><td>Overfitting</td></tr>
+        <tr><td>M2</td><td>w₁, w₂ ≠ 0; w₃ = w₄ = 0</td><td>Medium</td><td>Balanced</td></tr>
+        <tr><td>M3</td><td>w₁ ≠ 0; w₂ = w₃ = w₄ = 0</td><td>Lowest</td><td>Underfitting</td></tr>
+      </table>
+      <p>The more non-zero higher-order weights, the more the model can contort to fit training data — increasing variance and risking overfitting.</p>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          Slide the complexity dial and watch the U-shaped error curve — find the sweet spot:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-regression/bias-variance-tradeoff-curve-complexity-slider-u-curve/" target="_blank">Bias-Variance Tradeoff — Complexity Slider & U-Curve →</a>
+        </div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 The Goal</div>
+        Find the model complexity where <strong>both train and test errors are acceptably low</strong>. This is the generalization sweet spot — the model has learned the true pattern, not the noise.
+      </div>
+    </div>
+  </section>
+
+  <!-- WRAP UP -->
+  <section class="section-card" id="s-wrap">
+    <div class="card-header">
+      <div class="card-icon">✅</div>
+      <div class="card-meta">
+        <div class="card-type">Summary</div>
+        <div class="card-title">Wrapping Up</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Today we shifted from <em>building</em> models to <em>understanding and validating</em> them. A model with a high R² is not automatically a trustworthy model — the assumptions beneath it must hold.</p>
+      <div class="summary-grid">
+        <div class="summary-item">5 assumptions of Linear Regression</div>
+        <div class="summary-item">VIF for detecting & removing multicollinearity</div>
+        <div class="summary-item">Shapiro-Wilk test for error normality</div>
+        <div class="summary-item">Durbin-Watson for error independence</div>
+        <div class="summary-item">Goldfeld-Quandt for homoscedasticity</div>
+        <div class="summary-item">Polynomial feature transformation</div>
+        <div class="summary-item">Choosing polynomial degree via test R²</div>
+        <div class="summary-item">Bias-Variance tradeoff framework</div>
+        <div class="summary-item">Underfitting vs. overfitting diagnosis</div>
+        <div class="summary-item">AI-assisted model interpretation with Groq</div>
+      </div>
+      <blockquote style="border-left: 3px solid var(--crimson); padding: 10px 16px; margin: 20px 0 0; background: #FFF3F2; border-radius: 0 8px 8px 0; font-family: 'Lora', serif; font-style: italic; color: var(--red-deep); font-size: 14.5px;">
+        A good machine learning model is not just one that performs well on training data — it must generalize well to unseen data. That's the ultimate test.
+      </blockquote>
+    </div>
+  </section>
+
+</main>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script>
+  // ── SCROLL / PROGRESS ─────────────────────────────
+  const sections    = document.querySelectorAll('.section-card');
+  const navItems    = document.querySelectorAll('.nav-item');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct  = document.getElementById('progress-pct');
+  const visited = new Set();
+
+  function onScroll() {
+    let current = '';
+    sections.forEach(sec => {
+      if (sec.getBoundingClientRect().top <= 120) {
+        current = sec.id;
+        visited.add(sec.id);
+      }
+    });
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.target === current);
+      if (visited.has(item.dataset.target)) item.classList.add('visited');
+    });
+    const pct = Math.round((visited.size / sections.length) * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent  = pct + '%';
+    document.getElementById('back-top').classList.toggle('visible', window.scrollY > 400);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // ── MOBILE SIDEBAR ─────────────────────────────────
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('active');
+  }
+  document.querySelectorAll('.nav-item a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth <= 768) toggleSidebar(); });
+  });
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Linear-Regression-4" target="_blank" rel="noopener">github.com/scaler-content/Linear-Regression-4</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

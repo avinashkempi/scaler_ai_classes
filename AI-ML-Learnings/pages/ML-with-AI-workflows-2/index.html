@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear Regression intro post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --paper:#fbf8f6;
+    --paper-2:#f3ece9;
+    --ink:#211a19;
+    --ink-soft:#5d504e;
+    --ink-faint:#8c7c79;
+    --red-900:#4a0d16;
+    --red-800:#6e131e;
+    --red-700:#8f1a25;
+    --red-600:#a8202c;
+    --red-500:#c23843;
+    --red-400:#d5626b;
+    --red-300:#e48d93;
+    --red-200:#f0bcc0;
+    --red-100:#f8dcde;
+    --red-050:#fcedee;
+    --line:#e4d8d4;
+    --shadow:rgba(74,13,22,.14);
+    --code-bg:#211a19;
+    --code-ink:#f3ece9;
+    --code-accent:#e48d93;
+    --focus:#a8202c;
+    --font-display:'Fraunces',Georgia,'Times New Roman',serif;
+    --font-body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#181110;
+      --paper-2:#211817;
+      --ink:#f2e8e6;
+      --ink-soft:#cbb7b3;
+      --ink-faint:#9a8481;
+      --red-900:#fbe6e7;
+      --red-800:#f6cbcd;
+      --red-700:#eda3a8;
+      --red-600:#e37079;
+      --red-500:#dd5c65;
+      --red-400:#c94750;
+      --red-300:#a3333b;
+      --red-200:#5c2126;
+      --red-100:#3c1519;
+      --red-050:#2b1013;
+      --line:#3a2b29;
+      --shadow:rgba(0,0,0,.4);
+      --code-bg:#0f0a09;
+      --code-ink:#f2e8e6;
+      --code-accent:#e37079;
+      --focus:#e37079;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#181110;--paper-2:#211817;--ink:#f2e8e6;--ink-soft:#cbb7b3;--ink-faint:#9a8481;
+    --red-900:#fbe6e7;--red-800:#f6cbcd;--red-700:#eda3a8;--red-600:#e37079;--red-500:#dd5c65;
+    --red-400:#c94750;--red-300:#a3333b;--red-200:#5c2126;--red-100:#3c1519;--red-050:#2b1013;
+    --line:#3a2b29;--shadow:rgba(0,0,0,.4);--code-bg:#0f0a09;--code-ink:#f2e8e6;--code-accent:#e37079;--focus:#e37079;
+  }
+
+  /* ============ RESET / BASE ============ */
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
+  }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  img,svg{max-width:100%;display:block;}
+  a{color:var(--red-600);}
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:2px;}
+
+  h1,h2,h3,h4{
+    font-family:var(--font-display);
+    font-weight:600;
+    color:var(--ink);
+    line-height:1.15;
+    margin:0 0 .5em;
+  }
+  p{margin:0 0 1.1em;color:var(--ink);}
+  ul,ol{margin:0 0 1.1em;padding-left:1.3em;}
+  li{margin-bottom:.4em;}
+  strong{font-weight:700;}
+  em.term{font-style:italic;color:var(--red-700);}
+  code.inline{font-family:var(--font-mono);font-size:.88em;color:var(--red-700);background:var(--red-050);padding:.05em .38em;border-radius:4px;}
+
+  .colw{max-width:700px;margin-inline:auto;padding-inline:24px;}
+  .diaw{max-width:840px;margin-inline:auto;padding-inline:24px;}
+
+  /* ============ PROGRESS BAR ============ */
+  #progress{position:fixed;top:0;left:0;height:3px;background:var(--red-600);width:0%;z-index:100;transition:width .08s linear;}
+
+  /* ============ HERO ============ */
+  header.hero{
+    padding:76px 0 56px;
+    background:
+      radial-gradient(ellipse 900px 500px at 85% -10%, var(--red-100), transparent 60%),
+      var(--paper);
+    border-bottom:1px solid var(--line);
+  }
+  .hero-kicker{
+    font-family:var(--font-mono);
+    font-size:.8rem;
+    color:var(--red-600);
+    letter-spacing:.02em;
+    margin-bottom:1.1em;
+  }
+  .hero h1{
+    font-size:clamp(2.1rem,5vw,3.4rem);
+    letter-spacing:-.01em;
+    max-width:11.5ch;
+  }
+  .hero .dek{
+    font-size:clamp(1.05rem,2vw,1.25rem);
+    color:var(--ink-soft);
+    max-width:46ch;
+    margin-bottom:1.6em;
+  }
+  .hero p.lede{font-size:1.05rem;max-width:64ch;}
+  .hero-visual{margin-top:2.6rem;}
+  .hero-line{
+    stroke-dasharray:600;
+    stroke-dashoffset:600;
+    animation:draw 1.6s ease-out .2s forwards;
+  }
+  @keyframes draw{to{stroke-dashoffset:0;}}
+  @media (prefers-reduced-motion: reduce){.hero-line{animation:none;stroke-dashoffset:0;}}
+
+  .toc{
+    margin-top:2.4rem;
+    display:flex;
+    flex-wrap:wrap;
+    gap:.5rem .9rem;
+    padding-top:1.6rem;
+    border-top:1px solid var(--line);
+  }
+  .toc a{
+    font-family:var(--font-mono);
+    font-size:.82rem;
+    color:var(--ink-soft);
+    text-decoration:none;
+    padding:.25rem 0;
+    border-bottom:1px solid transparent;
+  }
+  .toc a:hover, .toc a:focus-visible{color:var(--red-600);border-bottom-color:var(--red-400);}
+
+  /* ============ SECTIONS ============ */
+  main{display:block;}
+  section{padding:60px 0;border-bottom:1px solid var(--line);}
+  section:last-of-type{border-bottom:none;}
+
+  .section-head{display:flex;align-items:baseline;gap:.85rem;margin-bottom:1.5rem;}
+  .section-num{
+    font-family:var(--font-mono);
+    font-size:.95rem;
+    color:var(--paper);
+    background:var(--red-600);
+    width:2.1rem;height:2.1rem;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    flex:none;
+  }
+  .section-head h2{font-size:clamp(1.5rem,3vw,2rem);margin:0;}
+  .section-sub{font-family:var(--font-mono);font-size:.78rem;color:var(--red-600);text-transform:uppercase;letter-spacing:.06em;margin:2.4rem 0 .5rem;}
+  h3.sub-head{font-size:1.25rem;margin-top:0;}
+
+  /* interlude band */
+  .interlude{background:var(--red-050);border-top:1px solid var(--red-200);border-bottom:1px solid var(--red-200);}
+  .interlude .section-head{border:none;}
+  .interlude .tag{
+    display:inline-block;font-family:var(--font-mono);font-size:.78rem;color:var(--red-700);
+    background:var(--red-100);border:1px solid var(--red-200);border-radius:999px;padding:.3rem .8rem;margin-bottom:1rem;
+  }
+
+  /* ============ CALLOUT / ANALOGY ============ */
+  .callout{
+    background:var(--paper-2);
+    border-left:3px solid var(--red-600);
+    border-radius:4px;
+    padding:1.1rem 1.3rem;
+    margin:1.4rem 0;
+  }
+  .callout .label{font-family:var(--font-mono);font-size:.75rem;color:var(--red-600);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;display:block;}
+  .callout p{margin:0;color:var(--ink-soft);}
+  .callout p + p{margin-top:.6em;}
+
+  /* ============ EQUATIONS ============ */
+  .eq-wrap{margin:1.6rem 0;overflow-x:auto;}
+  .eq-block{
+    display:flex;justify-content:center;align-items:center;
+    background:var(--paper-2);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:1.4rem 1.2rem;
+    font-family:var(--font-display);
+    font-style:italic;
+    font-size:clamp(1.05rem,2.6vw,1.45rem);
+    color:var(--ink);
+    white-space:nowrap;
+  }
+  .eq-block .b{color:var(--red-700);font-weight:600;}
+  .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .25em;font-size:.85em;}
+  .frac .num{padding:0 .2em .05em;border-bottom:1.5px solid currentColor;}
+  .frac .den{padding:.05em .2em 0;}
+  .sum{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 .2em;line-height:.75;}
+  .sum .top,.sum .bot{font-size:.36em;font-style:normal;font-family:var(--font-mono);color:var(--ink-soft);}
+  .sum .sigma{font-size:1.5em;font-style:normal;}
+  .eq-legend{list-style:none;padding:0;margin:1rem 0 0;}
+  .eq-legend li{
+    font-size:.95rem;color:var(--ink-soft);padding-left:0;margin-bottom:.5em;
+  }
+  .eq-legend code{font-family:var(--font-mono);color:var(--red-700);background:var(--red-050);padding:.05em .35em;border-radius:3px;font-style:normal;}
+
+  /* ============ DIAGRAM CARD ============ */
+  .diagram-card{
+    margin:1.8rem 0;
+    background:var(--paper-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:1.4rem 1.2rem 1.1rem;
+  }
+  .diagram-card svg{width:100%;height:auto;}
+  .diagram-caption{font-size:.85rem;color:var(--ink-faint);text-align:center;margin:.7rem 0 0;font-style:italic;}
+  .fill-paper{fill:var(--paper);}
+  .fill-paper2{fill:var(--paper-2);}
+  .fill-red700{fill:var(--red-700);}
+  .fill-red600{fill:var(--red-600);}
+  .fill-red500{fill:var(--red-500);}
+  .fill-red300{fill:var(--red-300);}
+  .fill-red200{fill:var(--red-200);}
+  .fill-red100{fill:var(--red-100);}
+  .fill-red050{fill:var(--red-050);}
+  .fill-ink{fill:var(--ink);}
+  .fill-inksoft{fill:var(--ink-soft);}
+  .stroke-red600{stroke:var(--red-600);}
+  .stroke-red400{stroke:var(--red-400);}
+  .stroke-red300{stroke:var(--red-300);}
+  .stroke-red200{stroke:var(--red-200);}
+  .stroke-line{stroke:var(--line);}
+  .stroke-ink{stroke:var(--ink);}
+  .stroke-inksoft{stroke:var(--ink-soft);}
+  .dtext{font-family:var(--font-mono);font-size:11px;fill:var(--ink-soft);}
+  .dtext-lg{font-family:var(--font-body);font-size:13px;font-weight:600;fill:var(--ink);}
+
+  /* ============ QUIZ ============ */
+  .quiz{
+    margin:1.8rem 0;
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+    background:var(--paper-2);
+  }
+  .quiz-head{padding:1.1rem 1.3rem .9rem;border-bottom:1px solid var(--line);}
+  .quiz-head .label{font-family:var(--font-mono);font-size:.75rem;color:var(--red-600);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:.5rem;}
+  .quiz-head p{margin:0;font-weight:600;color:var(--ink);}
+  .quiz-options{list-style:none;margin:0;padding:.9rem 1.3rem;display:grid;gap:.6rem;}
+  .quiz-opt{
+    display:block;width:100%;text-align:left;
+    font-family:var(--font-body);font-size:.96rem;color:var(--ink);
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:.7rem .9rem;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .quiz-opt:hover:not(:disabled){border-color:var(--red-400);}
+  .quiz-opt:disabled{cursor:default;}
+  .quiz-opt.is-correct{border-color:var(--red-600);background:var(--red-050);font-weight:600;}
+  .quiz-opt.is-incorrect{border-color:var(--ink-faint);background:var(--paper-2);text-decoration:line-through;color:var(--ink-faint);}
+  .quiz-feedback{
+    max-height:0;overflow:hidden;
+    padding:0 1.3rem;
+    transition:max-height .25s ease, padding .25s ease;
+    background:var(--red-050);
+  }
+  .quiz-feedback.is-visible{max-height:220px;padding:1rem 1.3rem 1.2rem;border-top:1px solid var(--red-200);}
+  .quiz-verdict{display:block;font-weight:700;color:var(--red-700);margin-bottom:.3rem;}
+  .quiz-feedback p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+
+  /* ============ CODE ============ */
+  .code-wrap{margin:1.4rem 0;overflow-x:auto;border-radius:8px;}
+  pre.code{
+    margin:0;background:var(--code-bg);color:var(--code-ink);
+    font-family:var(--font-mono);font-size:.87rem;line-height:1.55;
+    padding:1.1rem 1.3rem;white-space:pre;
+  }
+  .code-label{font-family:var(--font-mono);font-size:.75rem;color:var(--ink-faint);margin-bottom:.4rem;}
+  .kw{color:var(--code-accent);}
+  .cm{color:#8c7c79;font-style:italic;}
+
+  /* ============ PLAYGROUND ============ */
+  .playground{
+    display:grid;grid-template-columns:260px 1fr;gap:1.6rem;
+    background:var(--paper);border:1px solid var(--line);border-radius:12px;
+    padding:1.4rem;margin-top:1.6rem;
+  }
+  @media (max-width:720px){.playground{grid-template-columns:1fr;}}
+  .pg-controls{display:flex;flex-direction:column;gap:1.3rem;}
+  .pg-field label{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.82rem;color:var(--ink-soft);margin-bottom:.4rem;}
+  .pg-field label span.val{color:var(--red-600);font-weight:600;}
+  input[type="range"]{
+    -webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;
+    background:var(--line);outline-offset:4px;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;
+    background:var(--red-600);border:3px solid var(--paper);box-shadow:0 0 0 1px var(--red-600);cursor:pointer;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:16px;height:16px;border-radius:50%;background:var(--red-600);border:3px solid var(--paper);box-shadow:0 0 0 1px var(--red-600);cursor:pointer;
+  }
+  .pg-check{display:flex;align-items:center;gap:.55rem;font-size:.9rem;color:var(--ink);}
+  .pg-check input{width:16px;height:16px;accent-color:var(--red-600);}
+  .pg-stats{display:flex;gap:1rem;margin-top:.4rem;}
+  .pg-stat{flex:1;background:var(--paper-2);border-radius:8px;padding:.7rem .8rem;text-align:center;}
+  .pg-stat .k{font-family:var(--font-mono);font-size:.72rem;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;display:block;}
+  .pg-stat .v{font-family:var(--font-mono);font-size:1.3rem;color:var(--red-700);font-weight:600;}
+  .pg-chart{background:var(--paper-2);border-radius:8px;padding:.6rem;}
+  .pg-note{font-size:.85rem;color:var(--ink-faint);margin-top:.8rem;}
+
+  /* ============ TAKEAWAYS ============ */
+  .takeaway-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-top:1.6rem;}
+  @media (max-width:640px){.takeaway-grid{grid-template-columns:1fr;}}
+  .takeaway{
+    background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;
+    display:flex;gap:.8rem;align-items:flex-start;
+  }
+  .takeaway .dot{width:8px;height:8px;border-radius:50%;background:var(--red-600);margin-top:.5em;flex:none;}
+  .takeaway p{margin:0;font-size:.95rem;color:var(--ink-soft);}
+
+  /* ============ EXPLORE ============ */
+  .explore-list{list-style:none;margin:1.6rem 0 0;padding:0;display:flex;flex-direction:column;gap:1rem;}
+  .explore-item{
+    border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.3rem;background:var(--paper-2);
+    display:flex;gap:.9rem;
+  }
+  .explore-item .qn{font-family:var(--font-display);font-style:italic;color:var(--red-600);font-size:1.3rem;flex:none;}
+  .explore-item p{margin:0;color:var(--ink);}
+
+  /* ============ FOOTER ============ */
+  footer{padding:44px 0 56px;text-align:center;}
+  footer .fname{font-family:var(--font-display);font-size:1.15rem;color:var(--ink);}
+  footer .fline{font-size:.85rem;color:var(--ink-faint);margin-top:.4rem;}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML with AI 2 · Linear regression from scratch</span><span class="pn"><a href="../ML-with-AI-workflows-1/" title="ML with AI 1 · Classification, regression, clustering">← Prev</a><a href="../ML-with-AI-workflows-3/" title="ML with AI 3 · Coefficients and gradient descent">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progress"></div>
+
+<header class="hero">
+  <div class="colw">
+    <p class="hero-kicker">An interactive read · linear regression, from scratch</p>
+    <h1>Linear Regression intro post read</h1>
+    <p class="dek">How a used-car marketplace teaches a straight line to guess a fair price — encoding, splitting, fitting, and scoring, explained end to end.</p>
+    <p class="lede">Arjun has just joined the pricing team at a used-car marketplace. On his first day, his manager hands him a spreadsheet of past listings — make, model, age, kilometers driven, fuel type, and the price each car eventually sold for — and asks him to stop pricing cars by gut feeling. What follows is the same sequence of decisions anyone building a regression model has to make, told through Arjun's spreadsheet.</p>
+
+    <div class="hero-visual" aria-hidden="true">
+      <svg viewBox="0 0 700 220" role="img" aria-label="A scatter of points trending downward with a fitted red regression line through them">
+        <line x1="40" y1="180" x2="670" y2="180" class="stroke-line" stroke-width="1"/>
+        <line x1="40" y1="20" x2="40" y2="180" class="stroke-line" stroke-width="1"/>
+        <circle cx="80" cy="48" r="5" class="fill-red300"/>
+        <circle cx="130" cy="70" r="5" class="fill-red300"/>
+        <circle cx="150" cy="55" r="5" class="fill-red300"/>
+        <circle cx="200" cy="90" r="5" class="fill-red300"/>
+        <circle cx="240" cy="78" r="5" class="fill-red300"/>
+        <circle cx="280" cy="112" r="5" class="fill-red300"/>
+        <circle cx="330" cy="100" r="5" class="fill-red300"/>
+        <circle cx="360" cy="130" r="5" class="fill-red300"/>
+        <circle cx="410" cy="118" r="5" class="fill-red300"/>
+        <circle cx="450" cy="145" r="5" class="fill-red300"/>
+        <circle cx="500" cy="128" r="5" class="fill-red300"/>
+        <circle cx="540" cy="158" r="5" class="fill-red300"/>
+        <circle cx="590" cy="150" r="5" class="fill-red300"/>
+        <circle cx="630" cy="168" r="5" class="fill-red300"/>
+        <line x1="55" y1="40" x2="655" y2="168" class="hero-line stroke-red600" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <nav class="toc" aria-label="Sections in this article">
+      <a href="#problem">The problem</a>
+      <a href="#dataprep">Preparing the data</a>
+      <a href="#splitting">Splitting the data</a>
+      <a href="#math">The mathematics</a>
+      <a href="#code">Building the model</a>
+      <a href="#playground">Playground</a>
+      <a href="#evaluation">Scoring the model</a>
+      <a href="#takeaways">Takeaways</a>
+      <a href="#explore">Explore further</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ SECTION 1 ============ -->
+  <section id="problem">
+    <div class="colw">
+      <div class="section-head">
+        <span class="section-num">01</span>
+        <h2>What are we even predicting?</h2>
+      </div>
+      <p>Before writing a line of code, Arjun has to name the problem correctly. His spreadsheet holds a car's make, model, age, kilometers driven, and fuel type — and one more column: the price it eventually sold for. His manager wants that price predicted from everything else.</p>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 700 180" role="img" aria-label="Diagram showing five input columns — make, model, age, kilometers driven, fuel type — flowing into a predicted selling price">
+          <g class="dtext-lg">
+            <rect x="10" y="60" width="90" height="46" rx="8" class="fill-paper stroke-line" stroke-width="1.2"/>
+            <text x="55" y="88" text-anchor="middle" class="dtext">make</text>
+            <rect x="112" y="60" width="90" height="46" rx="8" class="fill-paper stroke-line" stroke-width="1.2"/>
+            <text x="157" y="88" text-anchor="middle" class="dtext">model</text>
+            <rect x="214" y="60" width="90" height="46" rx="8" class="fill-paper stroke-line" stroke-width="1.2"/>
+            <text x="259" y="88" text-anchor="middle" class="dtext">age</text>
+            <rect x="316" y="60" width="110" height="46" rx="8" class="fill-paper stroke-line" stroke-width="1.2"/>
+            <text x="371" y="88" text-anchor="middle" class="dtext">km driven</text>
+            <rect x="438" y="60" width="100" height="46" rx="8" class="fill-paper stroke-line" stroke-width="1.2"/>
+            <text x="488" y="88" text-anchor="middle" class="dtext">fuel type</text>
+          </g>
+          <path d="M545 83 L600 83" class="stroke-red600" stroke-width="2" marker-end="url(#arrow1)"/>
+          <defs>
+            <marker id="arrow1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10z" class="fill-red600"/>
+            </marker>
+          </defs>
+          <circle cx="645" cy="83" r="38" class="fill-red600"/>
+          <text x="645" y="79" text-anchor="middle" fill="var(--paper)" font-family="var(--font-mono)" font-size="12">selling</text>
+          <text x="645" y="94" text-anchor="middle" fill="var(--paper)" font-family="var(--font-mono)" font-size="12">price</text>
+          <text x="645" y="140" text-anchor="middle" class="dtext">what we predict</text>
+        </svg>
+        <p class="diagram-caption">Five columns of information go in; one continuous number comes out.</p>
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-head">
+          <span class="label">Quiz</span>
+          <p>What kind of problem is this?</p>
+        </div>
+        <ul class="quiz-options">
+          <li><button class="quiz-opt" data-correct="true">Regression</button></li>
+          <li><button class="quiz-opt" data-correct="false">Classification</button></li>
+          <li><button class="quiz-opt" data-correct="false">Clustering</button></li>
+          <li><button class="quiz-opt" data-correct="false">Reinforcement learning</button></li>
+        </ul>
+        <div class="quiz-feedback">
+          <span class="quiz-verdict"></span>
+          <p>We're predicting a continuous numeric value — the selling price — rather than assigning a data point to one of a fixed set of categories, or grouping unlabeled data together. That makes it a regression problem.</p>
+        </div>
+      </div>
+
+      <p>Two of those columns are trouble waiting to happen: <code class="inline">make</code> and <code class="inline">model</code> are text — "Maruti", "Hyundai", "Honda" — and a model that only does arithmetic can't learn from words directly. That's Arjun's next problem.</p>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 2 ============ -->
+  <section id="dataprep">
+    <div class="colw">
+      <div class="section-head">
+        <span class="section-num">02</span>
+        <h2>Getting the data ready</h2>
+      </div>
+      <p>Arjun can't feed the word "Maruti" into a mathematical model. He also notices his numeric columns aren't on the same footing — a car's age is a small number, its kilometers driven is not. Both problems need to be solved before any training happens.</p>
+
+      <h3 class="sub-head">Turning categories into numbers</h3>
+      <p>There are dozens of distinct makes in the data, and thousands of distinct models. One-hot encoding would create a column for every single one of them — unmanageable at that scale. Label encoding would assign each category an arbitrary number, implying an order between "Maruti" and "Hyundai" that doesn't actually exist. Arjun reaches for a third option: <em class="term">target mean encoding</em>.</p>
+
+      <div class="callout">
+        <span class="label">Analogy</span>
+        <p>Think of it as a resale-reputation score. If cars from a certain make have historically sold for a high average price, that make gets a high score. If another make historically sells for less, it gets a lower one.</p>
+      </div>
+
+      <div class="eq-wrap">
+        <div class="eq-block">encode(category) = mean of selling_price for all rows in that category</div>
+      </div>
+      <p style="font-size:.95rem;color:var(--ink-soft)">Here, <code class="inline">category</code> is a single value from the <code class="inline">make</code> or <code class="inline">model</code> column — say, "Maruti" — and the encoded number simply replaces that text label with the average selling price seen for that category in the data.</p>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 640 220" role="img" aria-label="Bar chart showing that each car make is replaced by a number equal to its historical average selling price — higher bars for makes that sold for more">
+          <line x1="50" y1="180" x2="600" y2="180" class="stroke-line" stroke-width="1"/>
+          <g>
+            <rect x="90" y="70" width="70" height="110" rx="4" class="fill-red200"/>
+            <text x="125" y="200" text-anchor="middle" class="dtext">Make A</text>
+            <text x="125" y="62" text-anchor="middle" class="dtext">avg. price ↑</text>
+          </g>
+          <g>
+            <rect x="220" y="118" width="70" height="62" rx="4" class="fill-red300"/>
+            <text x="255" y="200" text-anchor="middle" class="dtext">Make B</text>
+          </g>
+          <g>
+            <rect x="350" y="40" width="70" height="140" rx="4" class="fill-red600"/>
+            <text x="385" y="200" text-anchor="middle" class="dtext">Make C</text>
+          </g>
+          <g>
+            <rect x="480" y="145" width="70" height="35" rx="4" class="fill-red100"/>
+            <text x="515" y="200" text-anchor="middle" class="dtext">Make D</text>
+          </g>
+        </svg>
+        <p class="diagram-caption">Illustrative example — the exact numbers come from each make's rows in the training data.</p>
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-head">
+          <span class="label">Quiz</span>
+          <p>How should we handle the large number of categories in <code class="inline">make</code> and <code class="inline">model</code>?</p>
+        </div>
+        <ul class="quiz-options">
+          <li><button class="quiz-opt" data-correct="false">One-hot encoding</button></li>
+          <li><button class="quiz-opt" data-correct="false">Label encoding</button></li>
+          <li><button class="quiz-opt" data-correct="true">Target mean encoding</button></li>
+          <li><button class="quiz-opt" data-correct="false">Encoding isn't necessary</button></li>
+        </ul>
+        <div class="quiz-feedback">
+          <span class="quiz-verdict"></span>
+          <p>One-hot encoding would create one column per category — with hundreds of models that becomes unmanageable. Label encoding assigns arbitrary numbers that imply an order that doesn't exist. Target mean encoding instead replaces each category with a number that's directly meaningful: its average selling price.</p>
+        </div>
+      </div>
+
+      <h3 class="sub-head">Putting every number on the same footing</h3>
+      <p>Arjun then notices something else: <code class="inline">km_driven</code> is measured in the tens of thousands, while <code class="inline">age</code> is measured in single or double digits.</p>
+
+      <div class="callout">
+        <span class="label">Analogy</span>
+        <p>Imagine comparing a person's height in centimeters to their weight in kilograms, and trying to say which one "matters more" just by looking at the raw numbers. The units aren't comparable, so the bigger number would unfairly dominate. Scaling brings every column onto the same footing before comparison.</p>
+      </div>
+
+      <p><em class="term">Min-max scaling</em> squeezes every column into the same range:</p>
+
+      <div class="eq-wrap">
+        <div class="eq-block">x' = <span class="frac"><span class="num">x − x<sub>min</sub></span><span class="den">x<sub>max</sub> − x<sub>min</sub></span></span></div>
+      </div>
+      <ul class="eq-legend">
+        <li><code>x</code> — the original value in a column</li>
+        <li><code>x_min</code>, <code>x_max</code> — the smallest and largest values that column takes across the data</li>
+        <li><code>x'</code> — the rescaled value, always between 0 and 1</li>
+      </ul>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 680 230" role="img" aria-label="Two number lines for age and kilometers driven, both mapped onto a shared 0 to 1 scale">
+          <text x="20" y="30" class="dtext-lg">age (years)</text>
+          <line x1="20" y1="50" x2="440" y2="50" class="stroke-line" stroke-width="1.5"/>
+          <circle cx="60" cy="50" r="5" class="fill-red600"/>
+          <circle cx="180" cy="50" r="5" class="fill-red600"/>
+          <circle cx="400" cy="50" r="5" class="fill-red600"/>
+          <text x="20" y="90" class="dtext-lg">km driven</text>
+          <line x1="20" y1="110" x2="440" y2="110" class="stroke-line" stroke-width="1.5"/>
+          <circle cx="90" cy="110" r="5" class="fill-red600"/>
+          <circle cx="220" cy="110" r="5" class="fill-red600"/>
+          <circle cx="380" cy="110" r="5" class="fill-red600"/>
+          <path d="M60 58 L100 168 M180 58 L260 168 M400 58 L400 168" class="stroke-line" stroke-width="1" stroke-dasharray="2 3"/>
+          <path d="M90 118 L100 168 M220 118 L260 168 M380 118 L400 168" class="stroke-line" stroke-width="1" stroke-dasharray="2 3"/>
+          <text x="20" y="150" class="dtext-lg">shared 0–1 scale</text>
+          <line x1="60" y1="168" x2="440" y2="168" class="stroke-red600" stroke-width="2"/>
+          <circle cx="100" cy="168" r="6" class="fill-red600"/>
+          <circle cx="260" cy="168" r="6" class="fill-red600"/>
+          <circle cx="400" cy="168" r="6" class="fill-red600"/>
+          <text x="60" y="188" class="dtext">0</text>
+          <text x="432" y="188" class="dtext">1</text>
+        </svg>
+        <p class="diagram-caption">Illustrative example — two differently-scaled columns land on the same 0–1 range after min-max scaling.</p>
+      </div>
+
+      <p style="font-size:.9rem;color:var(--ink-faint)">Min-max scaling is one option among several worth trying on a given dataset.</p>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 3 ============ -->
+  <section id="splitting">
+    <div class="colw">
+      <div class="section-head">
+        <span class="section-num">03</span>
+        <h2>Splitting the data the right way</h2>
+      </div>
+      <p>Arjun now has clean, numeric data. But before he trains anything, he needs a way to check his work honestly — and a common language to describe his data.</p>
+
+      <h3 class="sub-head">A shared vocabulary</h3>
+      <div class="diagram-card">
+        <svg viewBox="0 0 640 220" role="img" aria-label="Table diagram labeling X as the input feature columns, y as the target column, n as the number of rows, and d as the number of feature columns">
+          <text x="10" y="26" class="dtext-lg">X — input features (d columns)</text>
+          <rect x="10" y="36" width="380" height="130" rx="6" class="fill-red050 stroke-red400" stroke-width="1"/>
+          <line x1="10" y1="66" x2="390" y2="66" class="stroke-line"/>
+          <line x1="105" y1="36" x2="105" y2="166" class="stroke-line"/>
+          <line x1="200" y1="36" x2="200" y2="166" class="stroke-line"/>
+          <line x1="295" y1="36" x2="295" y2="166" class="stroke-line"/>
+          <text x="57" y="55" text-anchor="middle" class="dtext">make</text>
+          <text x="152" y="55" text-anchor="middle" class="dtext">age</text>
+          <text x="247" y="55" text-anchor="middle" class="dtext">km</text>
+          <text x="342" y="55" text-anchor="middle" class="dtext">…</text>
+          <text x="200" y="90" text-anchor="middle" class="dtext">⋮</text>
+          <text x="200" y="120" text-anchor="middle" class="dtext">⋮</text>
+          <text x="200" y="150" text-anchor="middle" class="dtext">n rows</text>
+          <text x="410" y="26" class="dtext-lg">y</text>
+          <rect x="410" y="36" width="90" height="130" rx="6" class="fill-red600"/>
+          <text x="455" y="55" text-anchor="middle" fill="var(--paper)" class="dtext">price</text>
+          <text x="455" y="105" text-anchor="middle" fill="var(--paper)" font-size="11">selling</text>
+          <text x="455" y="120" text-anchor="middle" fill="var(--paper)" font-size="11">price</text>
+          <text x="10" y="196" class="dtext">n = number of rows · d = number of feature columns in X</text>
+        </svg>
+        <p class="diagram-caption"><code class="inline">X</code> is everything used to predict with; <code class="inline">y</code> is the single column being predicted.</p>
+      </div>
+
+      <h3 class="sub-head">The real goal: generalization</h3>
+      <p>Arjun's manager won't judge the model on cars it has already seen. She'll judge it on brand-new cars arriving next week. That's the real goal of machine learning — performing well on data the model has never encountered, not simply memorizing the data it was trained on.</p>
+
+      <p>To measure this honestly, Arjun holds back a portion of his data that the model never sees during training, and uses it only at the very end to test performance. We'll divide the data into a 70:30 split — 70 percent for training, 30 percent for testing.</p>
+
+      <div class="callout">
+        <span class="label">Analogy</span>
+        <p>Think of the training set as practice questions and the test set as the exam. If exam questions leak into your practice material beforehand, your score stops meaning anything — it no longer tells you how you'd perform on a genuinely new problem. Information from the test set must never influence how the training set is prepared.</p>
+      </div>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 640 140" role="img" aria-label="Bar split 70 percent training data labeled practice questions, 30 percent testing data labeled the exam and kept unseen until the end">
+          <rect x="20" y="30" width="434" height="60" class="fill-red600"/>
+          <rect x="454" y="30" width="186" height="60" class="fill-red200"/>
+          <text x="237" y="65" text-anchor="middle" fill="var(--paper)" font-weight="700" font-family="var(--font-body)">70% — Training</text>
+          <text x="547" y="65" text-anchor="middle" fill="var(--ink)" font-weight="700" font-family="var(--font-body)">30% — Testing</text>
+          <text x="237" y="115" text-anchor="middle" class="dtext">practice questions</text>
+          <text x="547" y="115" text-anchor="middle" class="dtext">the exam — unseen until the end</text>
+        </svg>
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-head">
+          <span class="label">Quiz</span>
+          <p>When should you split your data into training and testing sets?</p>
+        </div>
+        <ul class="quiz-options">
+          <li><button class="quiz-opt" data-correct="true">Before preprocessing the data</button></li>
+          <li><button class="quiz-opt" data-correct="false">After training the model</button></li>
+          <li><button class="quiz-opt" data-correct="false">After evaluating the model's performance</button></li>
+          <li><button class="quiz-opt" data-correct="false">It doesn't matter when</button></li>
+        </ul>
+        <div class="quiz-feedback">
+          <span class="quiz-verdict"></span>
+          <p>Preprocessing steps like encoding and scaling calculate statistics — averages, minimums — from the data. Calculate them before splitting, and information from the test set quietly leaks into training, a problem known as data leakage. Splitting first keeps the test set genuinely unseen.</p>
+        </div>
+      </div>
+
+      <h3 class="sub-head">Encoding and scaling without leakage</h3>
+      <p>For the training rows, Arjun replaces each category with its category-wise average selling price — calculated only from training rows. For the test rows, he reuses those exact training averages; he never recalculates them from the test data. Reusing the training set's own statistics is what keeps the test set honest, the same way a student shouldn't see the exam's answer key while practicing.</p>
+      <p>A wrinkle: a model of car might appear in the test data but never in training. There's no training average to map it to, so that value goes missing — Arjun fills it with the <em class="term">global mean</em>, the average selling price across the entire training set, the most reasonable guess available with no category-specific information. Scaling follows the same rule: fit only on the training data, then apply those same statistics to the test data.</p>
+      <p>What's left is one output to predict, <code class="inline">selling_price</code>, from seventeen input features — everything else in the sheet.</p>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 4 ============ -->
+  <section id="math">
+    <div class="colw">
+      <div class="section-head">
+        <span class="section-num">04</span>
+        <h2>The mathematics of a straight line</h2>
+      </div>
+      <p>With clean, well-split data in hand, Arjun is ready to describe the relationship between a car's features and its price. Start with the simplest possible version, using just one feature.</p>
+
+      <h3 class="sub-head">One feature: univariate regression</h3>
+      <p>Suppose Arjun uses only <code class="inline">age</code> to predict <code class="inline">selling_price</code>. He's looking for the straight line that best fits the relationship between the two.</p>
+
+      <div class="eq-wrap">
+        <div class="eq-block">ŷ = <span class="b">b₀</span> + <span class="b">b₁</span>x</div>
+      </div>
+      <ul class="eq-legend">
+        <li><code>x</code> — the input feature, e.g. the car's age</li>
+        <li><code>ŷ</code> — the predicted selling price</li>
+        <li><code>b₀</code> — the intercept: the predicted price when <code>x</code> is zero</li>
+        <li><code>b₁</code> — the slope: how much the predicted price changes for every one-unit increase in <code>x</code></li>
+      </ul>
+
+      <div class="callout">
+        <span class="label">Analogy</span>
+        <p>Think of a taxi fare. There's a base fare you pay just for getting in — that's the intercept, <code class="inline">b₀</code>. Then there's a rate charged per kilometer travelled — that's the slope, <code class="inline">b₁</code>. The total fare is the base fare plus the rate times distance, exactly the shape of our equation.</p>
+      </div>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 640 260" role="img" aria-label="Anatomy of a regression line, showing the intercept as the starting height and the slope as rise over run">
+          <line x1="60" y1="220" x2="600" y2="220" class="stroke-line" stroke-width="1"/>
+          <line x1="60" y1="30" x2="60" y2="220" class="stroke-line" stroke-width="1"/>
+          <line x1="60" y1="70" x2="540" y2="190" class="stroke-red600" stroke-width="3"/>
+          <circle cx="60" cy="70" r="5" class="fill-red600"/>
+          <line x1="60" y1="70" x2="60" y2="220" stroke-dasharray="3 4" class="stroke-inksoft" stroke-width="1"/>
+          <text x="20" y="150" class="dtext" transform="rotate(-90 20 150)">b₀ (intercept)</text>
+          <path d="M300 130 L300 158 L340 158" class="stroke-inksoft" stroke-width="1.3" fill="none"/>
+          <text x="345" y="150" class="dtext">rise</text>
+          <text x="300" y="176" class="dtext">run</text>
+          <text x="230" y="118" class="dtext-lg" font-style="italic">b₁ = rise ⁄ run (slope)</text>
+          <text x="60" y="240" class="dtext">x = 0</text>
+          <text x="560" y="240" class="dtext">x</text>
+        </svg>
+        <p class="diagram-caption">Moving b₀ shifts the whole line up or down; changing b₁ tilts it.</p>
+      </div>
+
+      <p>Training the model simply means finding the values of <code class="inline">b₀</code> and <code class="inline">b₁</code> that make this line fit the data as closely as possible.</p>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-head">
+          <span class="label">Quiz</span>
+          <p>How many parameters do you need to estimate in a simple linear regression with one independent variable?</p>
+        </div>
+        <ul class="quiz-options">
+          <li><button class="quiz-opt" data-correct="false">1</button></li>
+          <li><button class="quiz-opt" data-correct="true">2</button></li>
+          <li><button class="quiz-opt" data-correct="false">3</button></li>
+          <li><button class="quiz-opt" data-correct="false">Can't say</button></li>
+        </ul>
+        <div class="quiz-feedback">
+          <span class="quiz-verdict"></span>
+          <p>A simple regression line, ŷ = b₀ + b₁x, has exactly two unknowns to estimate — the intercept b₀ and the slope b₁.</p>
+        </div>
+      </div>
+
+      <h3 class="sub-head">Many features: multivariate regression</h3>
+      <p>Arjun's manager wants the price predicted from all seventeen features, not just one. The same idea extends naturally.</p>
+
+      <div class="eq-wrap">
+        <div class="eq-block">ŷ = <span class="b">b₀</span> + <span class="b">b₁</span>x₁ + <span class="b">b₂</span>x₂ + ⋯ + <span class="b">b<sub>d</sub></span>x<sub>d</sub></div>
+      </div>
+      <ul class="eq-legend">
+        <li><code>x₁, x₂, … x_d</code> — the individual input features, e.g. age, kilometers driven, make</li>
+        <li><code>d</code> — the total number of features</li>
+        <li><code>b₁ … b_d</code> — one coefficient per feature, describing how much it pulls the predicted price up or down</li>
+        <li><code>b₀</code> — still the intercept: the predicted price when every feature is zero</li>
+      </ul>
+
+      <div class="callout">
+        <span class="label">Analogy</span>
+        <p>Think of the price as a recipe. Each ingredient — age, mileage, brand reputation — contributes its own amount to the final dish. Each coefficient is like the "quantity" of that ingredient's influence: some contribute a lot, some very little, and some might even subtract from the total.</p>
+      </div>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 680 220" role="img" aria-label="Flow diagram showing each feature multiplied by its own weight, all summed together with the intercept to produce the predicted price">
+          <g class="dtext">
+            <text x="20" y="34">x₁ (age)</text>
+            <text x="20" y="74">x₂ (km)</text>
+            <text x="20" y="114">x₃ (make)</text>
+            <text x="20" y="154">⋮</text>
+            <text x="20" y="194">x_d</text>
+          </g>
+          <g class="stroke-red400">
+            <line x1="90" y1="30" x2="280" y2="100" stroke-width="1.3"/>
+            <line x1="90" y1="70" x2="280" y2="100" stroke-width="1.3"/>
+            <line x1="90" y1="110" x2="280" y2="100" stroke-width="1.3"/>
+            <line x1="90" y1="190" x2="280" y2="100" stroke-width="1.3"/>
+          </g>
+          <text x="150" y="24" class="dtext" font-style="italic">×b₁</text>
+          <text x="150" y="60" class="dtext" font-style="italic">×b₂</text>
+          <text x="150" y="150" class="dtext" font-style="italic">×b₃…b_d</text>
+          <circle cx="300" cy="100" r="26" class="fill-red100 stroke-red600" stroke-width="1.5"/>
+          <text x="300" y="106" text-anchor="middle" font-size="20" class="fill-red700">Σ</text>
+          <text x="300" y="150" text-anchor="middle" class="dtext">+ b₀</text>
+          <line x1="326" y1="100" x2="400" y2="100" class="stroke-red600" stroke-width="2" marker-end="url(#arrow2)"/>
+          <defs>
+            <marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10z" class="fill-red600"/>
+            </marker>
+          </defs>
+          <circle cx="440" cy="100" r="34" class="fill-red600"/>
+          <text x="440" y="106" text-anchor="middle" fill="var(--paper)" font-family="var(--font-display)" font-style="italic" font-size="18">ŷ</text>
+        </svg>
+        <p class="diagram-caption">With more than one feature, the "line" becomes a flat hyperplane through a higher-dimensional space. Fitting it needs one coefficient per feature, plus one intercept — d + 1 parameters in total.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 5 ============ -->
+  <section id="code">
+    <div class="colw">
+      <div class="section-head">
+        <span class="section-num">05</span>
+        <h2>Teaching the model with code</h2>
+      </div>
+      <p>It's time to let the computer search for the best <code class="inline">b₀</code> and <code class="inline">b₁</code> values itself, rather than guessing them by hand. Arjun starts with a single feature.</p>
+
+      <div class="code-wrap">
+        <div class="code-label">One feature</div>
+        <pre class="code"><span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LinearRegression
+
+model = LinearRegression()
+model.fit(X1_train, y_train)
+
+model.coef_       <span class="cm"># the fitted slope, b1</span>
+model.intercept_  <span class="cm"># the fitted intercept, b0</span></pre>
+      </div>
+
+      <p>Plotting the model's predictions against the actual test prices shows the points lining up along a straight line — exactly the shape described by <code class="inline">b₀ + b₁x</code>. Now Arjun generalizes to all seventeen features at once:</p>
+
+      <div class="code-wrap">
+        <div class="code-label">All features</div>
+        <pre class="code">model = LinearRegression()
+model.fit(X_train, y_train)
+
+model.coef_       <span class="cm"># one coefficient per feature</span>
+model.intercept_  <span class="cm"># a single intercept</span></pre>
+      </div>
+
+      <p>The model now has one coefficient per feature, plus a single intercept — exactly the <code class="inline">d + 1</code> parameters the maths predicted.</p>
+    </div>
+  </section>
+
+  <!-- ============ INTERLUDE: PLAYGROUND ============ -->
+  <section id="playground" class="interlude">
+    <div class="diaw">
+      <span class="tag">Try it yourself</span>
+      <h2 style="font-size:clamp(1.4rem,3vw,1.9rem);">Build intuition for slope and intercept</h2>
+      <p>Every prediction the model makes comes down to just two numbers. Drag the sliders below to reshape the line by hand, and watch the error update as you go. Then switch on the stray point to see how one bad miss affects each error metric very differently — even while the line itself barely has to move to accommodate it.</p>
+
+      <div class="playground">
+        <div class="pg-controls">
+          <div class="pg-field">
+            <label for="b0slider">b₀ — intercept <span class="val" id="b0val">9.0</span></label>
+            <input type="range" id="b0slider" min="0" max="15" step="0.1" value="9.0" aria-describedby="pgstats">
+          </div>
+          <div class="pg-field">
+            <label for="b1slider">b₁ — slope <span class="val" id="b1val">−0.7</span></label>
+            <input type="range" id="b1slider" min="-3" max="3" step="0.1" value="-0.7" aria-describedby="pgstats">
+          </div>
+          <label class="pg-check"><input type="checkbox" id="outlierToggle"> Add one stubborn outlier</label>
+          <div class="pg-stats" id="pgstats" aria-live="polite">
+            <div class="pg-stat"><span class="k">MSE</span><span class="v" id="mseval">0.00</span></div>
+            <div class="pg-stat"><span class="k">MAE</span><span class="v" id="maeval">0.00</span></div>
+          </div>
+          <p class="pg-note">x is a stand-in feature (e.g. age); y is a stand-in target (e.g. price).</p>
+        </div>
+        <div class="pg-chart">
+          <svg id="pgsvg" viewBox="0 0 520 360" role="img" aria-label="Scatter plot with a movable regression line and grey residual lines showing the error at each point"></svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 6 ============ -->
+  <section id="evaluation">
+    <div class="colw">
+      <div class="section-head">
+        <span class="section-num">06</span>
+        <h2>Is the model any good?</h2>
+      </div>
+      <p>Arjun's model now produces predictions. But a prediction on its own says nothing about quality — he needs a way to measure how far off those predictions are.</p>
+
+      <h3 class="sub-head">Mean Squared Error (MSE)</h3>
+      <div class="eq-wrap">
+        <div class="eq-block">MSE = <span class="frac"><span class="num">1</span><span class="den">n</span></span><span class="sum"><span class="top">n</span><span class="sigma">Σ</span><span class="bot">i=1</span></span>(y<sub>i</sub> − ŷ<sub>i</sub>)²</div>
+      </div>
+      <ul class="eq-legend">
+        <li><code>y_i</code> — the actual selling price of the i-th car</li>
+        <li><code>ŷ_i</code> — the model's predicted price for that same car</li>
+        <li><code>n</code> — the total number of cars evaluated</li>
+        <li>the difference (y_i − ŷ_i) is called the <em class="term">residual</em>, or error, for that car</li>
+      </ul>
+
+      <div class="callout">
+        <span class="label">Analogy</span>
+        <p>Think of a game of darts. Each throw that lands off the bullseye is an error. Squaring that error before averaging punishes wild misses far more harshly than near misses — a model with a few very bad predictions will have a much higher MSE than one that's consistently just slightly off, even if their average raw error looks similar.</p>
+      </div>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 400 220" role="img" aria-label="Dartboard diagram showing a near miss receiving a small penalty and a far miss receiving a much larger, squared penalty">
+          <circle cx="200" cy="100" r="90" class="fill-red050 stroke-red200" stroke-width="1"/>
+          <circle cx="200" cy="100" r="60" class="fill-red100 stroke-red200" stroke-width="1"/>
+          <circle cx="200" cy="100" r="30" class="fill-red200 stroke-red300" stroke-width="1"/>
+          <circle cx="200" cy="100" r="6" class="fill-red600"/>
+          <circle cx="212" cy="92" r="5" class="fill-red700"/>
+          <text x="222" y="70" class="dtext">small miss</text>
+          <text x="222" y="84" class="dtext">→ small penalty</text>
+          <circle cx="330" cy="180" r="5" class="fill-red700"/>
+          <line x1="200" y1="100" x2="330" y2="180" stroke-dasharray="2 3" class="stroke-inksoft" stroke-width="1"/>
+          <text x="245" y="205" class="dtext">big miss → squared, much bigger penalty</text>
+        </svg>
+      </div>
+
+      <h3 class="sub-head">Mean Absolute Error (MAE)</h3>
+      <div class="eq-wrap">
+        <div class="eq-block">MAE = <span class="frac"><span class="num">1</span><span class="den">n</span></span><span class="sum"><span class="top">n</span><span class="sigma">Σ</span><span class="bot">i=1</span></span>|y<sub>i</sub> − ŷ<sub>i</sub>|</div>
+      </div>
+      <p>The symbols mean the same as above. The only difference from MSE is that MAE takes the absolute value of the error instead of squaring it, so every miss counts in direct proportion to its size, without punishing large misses extra harshly.</p>
+
+      <h3 class="sub-head">Why not just sum the errors?</h3>
+      <p>Positive and negative errors can cancel each other out:</p>
+      <div class="eq-wrap">
+        <div class="eq-block">(+3) + (+4) + (−7) = 0</div>
+      </div>
+      <p>A model with large errors could appear to have zero error. We need a metric that prevents this cancellation — which is exactly what squaring (MSE) or taking the absolute value (MAE) does.</p>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 560 140" role="img" aria-label="Number line showing errors of plus three, plus four, and minus seven summing to zero despite being sizeable individual mistakes">
+          <line x1="40" y1="90" x2="520" y2="90" class="stroke-line" stroke-width="1"/>
+          <circle cx="280" cy="90" r="4" class="fill-ink"/>
+          <text x="280" y="115" text-anchor="middle" class="dtext">0</text>
+          <path d="M280 90 C 320 40, 380 40, 400 90" class="stroke-red600" stroke-width="2" fill="none" marker-end="url(#arrow3)"/>
+          <text x="330" y="45" text-anchor="middle" class="dtext">+3</text>
+          <path d="M400 90 C 440 30, 500 30, 520 90" class="stroke-red600" stroke-width="2" fill="none" marker-end="url(#arrow3)"/>
+          <text x="455" y="35" text-anchor="middle" class="dtext">+4</text>
+          <path d="M520 90 C 460 150, 300 150, 280 92" class="stroke-red600" stroke-width="2" fill="none" marker-end="url(#arrow3)"/>
+          <text x="400" y="165" text-anchor="middle" class="dtext">−7</text>
+          <defs>
+            <marker id="arrow3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10z" class="fill-red600"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">Three real mistakes, summing to a deceptive zero.</p>
+      </div>
+
+      <h3 class="sub-head">R-squared, the coefficient of determination</h3>
+      <div class="eq-wrap">
+        <div class="eq-block">R² = 1 − <span class="frac"><span class="num">SS<sub>res</sub></span><span class="den">SS<sub>tot</sub></span></span></div>
+      </div>
+      <ul class="eq-legend">
+        <li><code>SS_res</code> — the sum of squared residuals, the same total error behind MSE</li>
+        <li><code>SS_tot</code> — the total variance in the actual data, regardless of any model</li>
+        <li><code>R²</code> — a single score, typically between 0 and 1, describing what fraction of that variance the model explains</li>
+      </ul>
+
+      <div class="callout">
+        <span class="label">Analogy</span>
+        <p>Think of it as a report-card percentage for how much of the story the model has learned. A score of 0.85 means the model accounts for 85 percent of why prices differ from one car to another — the remaining 15 percent is variation it hasn't captured, perhaps from features not in the data, like a car's condition or a seller's negotiating skill.</p>
+      </div>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 420 220" role="img" aria-label="Donut chart showing 85 percent of variance explained by the model in red and 15 percent unexplained in light grey">
+          <circle cx="150" cy="110" r="80" fill="none" class="stroke-line" stroke-width="26"/>
+          <circle cx="150" cy="110" r="80" fill="none" class="stroke-red600" stroke-width="26" stroke-dasharray="427 502" stroke-dashoffset="0" transform="rotate(-90 150 110)" stroke-linecap="round"/>
+          <text x="150" y="104" text-anchor="middle" font-family="var(--font-display)" font-size="30" class="fill-ink">85%</text>
+          <text x="150" y="126" text-anchor="middle" class="dtext">explained</text>
+          <g class="dtext">
+            <circle cx="290" cy="80" r="6" class="fill-red600"/>
+            <text x="304" y="85">explained by the model</text>
+            <circle cx="290" cy="110" r="6" class="fill-paper2 stroke-line" stroke-width="1"/>
+            <text x="304" y="115">not explained (R² example: 0.85)</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-head">
+          <span class="label">Quiz</span>
+          <p>In a multiple linear regression with five features, R² comes out to 0.85. What does that mean?</p>
+        </div>
+        <ul class="quiz-options">
+          <li><button class="quiz-opt" data-correct="true">The model explains 85% of the variation in the target variable</button></li>
+          <li><button class="quiz-opt" data-correct="false">The model's predictions are 85% accurate</button></li>
+          <li><button class="quiz-opt" data-correct="false">The model has an 85% probability of making correct predictions</button></li>
+          <li><button class="quiz-opt" data-correct="false">The model is 85% confident in its predictions</button></li>
+        </ul>
+        <div class="quiz-feedback">
+          <span class="quiz-verdict"></span>
+          <p>R² measures the proportion of variance in the target that the model accounts for. It isn't an accuracy score, and it says nothing about confidence or the probability of being correct — it purely describes how much of the spread in the actual values lines up with what the model captures.</p>
+        </div>
+      </div>
+
+      <h3 class="sub-head">Checking generalization</h3>
+      <p>Scikit-learn's <code class="inline">.score()</code> for <code class="inline">LinearRegression</code> reports R² by default. Arjun runs it on both the training set and the held-out test set, and compares the two.</p>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 480 160" role="img" aria-label="Two bars of similar, high height labeled training score and test score, with a checkmark indicating they are close and the model is generalizing well">
+          <line x1="40" y1="130" x2="440" y2="130" class="stroke-line" stroke-width="1"/>
+          <rect x="90" y="42" width="80" height="88" rx="4" class="fill-red600"/>
+          <text x="130" y="150" text-anchor="middle" class="dtext">Training score</text>
+          <rect x="290" y="48" width="80" height="82" rx="4" class="fill-red500"/>
+          <text x="330" y="150" text-anchor="middle" class="dtext">Test score</text>
+          <text x="230" y="30" text-anchor="middle" class="fill-red700" font-size="20">✓ close</text>
+        </svg>
+        <p class="diagram-caption">Training and test scores landing close together tells Arjun the model is generalizing — not simply memorizing the training data.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAKEAWAYS ============ -->
+  <section id="takeaways">
+    <div class="colw">
+      <div class="section-head" style="margin-bottom:.5rem;">
+        <h2 style="font-size:clamp(1.4rem,3vw,1.9rem);">Key takeaways</h2>
+      </div>
+      <div class="takeaway-grid">
+        <div class="takeaway"><span class="dot"></span><p>Predicting a continuous price from a car's features is a regression problem, not classification or clustering.</p></div>
+        <div class="takeaway"><span class="dot"></span><p>Categorical columns like make and model can be turned into numbers with target mean encoding; numeric columns can be put on equal footing with min-max scaling.</p></div>
+        <div class="takeaway"><span class="dot"></span><p>Data must be split into training and test sets before any preprocessing, to avoid data leakage.</p></div>
+        <div class="takeaway"><span class="dot"></span><p>The linear regression equation extends naturally from one feature (ŷ = b₀ + b₁x) to many (ŷ = b₀ + b₁x₁ + … + b_dx_d).</p></div>
+        <div class="takeaway"><span class="dot"></span><p>Scikit-learn's LinearRegression fits the model and exposes its learned coefficients and intercept directly.</p></div>
+        <div class="takeaway"><span class="dot"></span><p>MSE, MAE, and R² each measure error differently — squared, absolute, and as a share of explained variance, respectively.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ EXPLORE FURTHER ============ -->
+  <section id="explore">
+    <div class="colw">
+      <div class="section-head" style="margin-bottom:.5rem;">
+        <h2 style="font-size:clamp(1.4rem,3vw,1.9rem);">Questions worth sitting with</h2>
+      </div>
+      <p>None of these have a single clean answer — they're worth turning over on your own, or discussing with someone who knows the material well.</p>
+      <ul class="explore-list">
+        <li class="explore-item"><span class="qn">?</span><p>Why does MSE square the error instead of simply taking the absolute difference — and when would you actually prefer MAE over MSE?</p></li>
+        <li class="explore-item"><span class="qn">?</span><p>What happens to a model's R² score if you add a completely random, meaningless feature to it?</p></li>
+        <li class="explore-item"><span class="qn">?</span><p>Why does splitting the data before preprocessing avoid data leakage — and where else, outside car pricing, could this same kind of leakage sneak in?</p></li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="colw">
+    <div class="fname">Linear Regression intro post read</div>
+    <div class="fline">An interactive introduction to linear regression, built around predicting used-car prices.</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- reading progress bar ---------- */
+  var progressEl = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrollTop = h.scrollTop || document.body.scrollTop;
+    var scrollHeight = (h.scrollHeight || document.body.scrollHeight) - h.clientHeight;
+    var pct = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+    if(progressEl){ progressEl.style.width = pct + '%'; }
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  updateProgress();
+
+  /* ---------- quizzes ---------- */
+  function initQuizzes(){
+    var quizzes = document.querySelectorAll('[data-quiz]');
+    quizzes.forEach(function(quiz){
+      var answered = false;
+      var buttons = quiz.querySelectorAll('.quiz-opt');
+      var feedback = quiz.querySelector('.quiz-feedback');
+      var verdict = feedback ? feedback.querySelector('.quiz-verdict') : null;
+      buttons.forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if(answered) return;
+          answered = true;
+          var chosenCorrect = btn.getAttribute('data-correct') === 'true';
+          buttons.forEach(function(b){
+            b.disabled = true;
+            if(b.getAttribute('data-correct') === 'true'){ b.classList.add('is-correct'); }
+          });
+          if(!chosenCorrect){ btn.classList.add('is-incorrect'); }
+          if(feedback){
+            feedback.classList.add('is-visible');
+            if(verdict){ verdict.textContent = chosenCorrect ? 'Correct.' : 'Not quite — here is why:'; }
+          }
+        });
+      });
+    });
+  }
+
+  /* ---------- interactive playground ---------- */
+  function initPlayground(){
+    var svg = document.getElementById('pgsvg');
+    var b0slider = document.getElementById('b0slider');
+    var b1slider = document.getElementById('b1slider');
+    var outlierToggle = document.getElementById('outlierToggle');
+    var b0val = document.getElementById('b0val');
+    var b1val = document.getElementById('b1val');
+    var mseval = document.getElementById('mseval');
+    var maeval = document.getElementById('maeval');
+    if(!svg || !b0slider || !b1slider) return;
+
+    /* deterministic synthetic stand-in data: 25 points, x from 0 to 10,
+       y roughly following y = 9 - 0.7x with small fixed "noise" so the
+       chart looks the same on every load. */
+    var N = 25;
+    var xs = [];
+    var ysBase = [];
+    for(var i=0;i<N;i++){
+      var x = (i * 10) / (N - 1);
+      var noise = 0.35 * Math.sin(i * 2.37 + 1.1) + 0.18 * Math.cos(i * 4.13 + 0.4);
+      var y = 9 - 0.7 * x + noise;
+      xs.push(x);
+      ysBase.push(y);
+    }
+    var outlier = {x: 8.5, y: 12.0};
+
+    var W = 520, H = 360;
+    var margin = {top: 20, right: 20, bottom: 40, left: 46};
+    var plotW = W - margin.left - margin.right;
+    var plotH = H - margin.top - margin.bottom;
+
+    function render(){
+      var b0 = parseFloat(b0slider.value);
+      var b1 = parseFloat(b1slider.value);
+      var addOutlier = outlierToggle.checked;
+
+      b0val.textContent = b0.toFixed(1);
+      b1val.textContent = (b1 >= 0 ? b1.toFixed(1) : '\u2212' + Math.abs(b1).toFixed(1));
+
+      var xData = xs.slice();
+      var yData = ysBase.slice();
+      if(addOutlier){ xData.push(outlier.x); yData.push(outlier.y); }
+
+      var residuals = [];
+      var preds = [];
+      for(var i=0;i<xData.length;i++){
+        var p = b0 + b1 * xData[i];
+        preds.push(p);
+        residuals.push(yData[i] - p);
+      }
+      var sqSum = 0, absSum = 0;
+      for(var j=0;j<residuals.length;j++){ sqSum += residuals[j]*residuals[j]; absSum += Math.abs(residuals[j]); }
+      var mse = sqSum / residuals.length;
+      var mae = absSum / residuals.length;
+      mseval.textContent = mse.toFixed(2);
+      maeval.textContent = mae.toFixed(2);
+
+      /* autoscale y-domain to fit data + the fitted line's endpoints */
+      var lineY0 = b0 + b1 * 0;
+      var lineY10 = b0 + b1 * 10;
+      var allY = yData.concat([lineY0, lineY10]);
+      var yMin = Math.min.apply(null, allY);
+      var yMax = Math.max.apply(null, allY);
+      var pad = (yMax - yMin) * 0.14 || 1;
+      yMin -= pad; yMax += pad;
+      var xMin = -0.4, xMax = 10.4;
+
+      function sx(x){ return margin.left + ((x - xMin) / (xMax - xMin)) * plotW; }
+      function sy(y){ return margin.top + (1 - (y - yMin) / (yMax - yMin)) * plotH; }
+
+      var parts = [];
+
+      /* grid + axes */
+      parts.push('<line x1="'+margin.left+'" y1="'+(margin.top+plotH)+'" x2="'+(margin.left+plotW)+'" y2="'+(margin.top+plotH)+'" class="stroke-line" stroke-width="1"/>');
+      parts.push('<line x1="'+margin.left+'" y1="'+margin.top+'" x2="'+margin.left+'" y2="'+(margin.top+plotH)+'" class="stroke-line" stroke-width="1"/>');
+      parts.push('<text x="'+margin.left+'" y="'+(H-10)+'" class="dtext">x (feature)</text>');
+      parts.push('<text x="8" y="'+(margin.top+12)+'" class="dtext">y (target)</text>');
+
+      /* residual lines */
+      for(var k=0;k<xData.length;k++){
+        var isOut = addOutlier && k === xData.length - 1;
+        parts.push('<line x1="'+sx(xData[k])+'" y1="'+sy(yData[k])+'" x2="'+sx(xData[k])+'" y2="'+sy(preds[k])+'" class="stroke-inksoft" stroke-width="1" opacity="0.55"/>');
+      }
+
+      /* fitted line */
+      parts.push('<line x1="'+sx(0)+'" y1="'+sy(lineY0)+'" x2="'+sx(10)+'" y2="'+sy(lineY10)+'" class="stroke-red600" stroke-width="2.5"/>');
+
+      /* points */
+      for(var m=0;m<xData.length;m++){
+        var isOutlierPt = addOutlier && m === xData.length - 1;
+        var r = isOutlierPt ? 7 : 5;
+        var fillColor = isOutlierPt ? 'var(--red-700)' : 'var(--ink)';
+        parts.push('<circle cx="'+sx(xData[m])+'" cy="'+sy(yData[m])+'" r="'+r+'" style="fill:'+fillColor+'" opacity="0.85"/>');
+      }
+
+      svg.innerHTML = parts.join('');
+    }
+
+    b0slider.addEventListener('input', render);
+    b1slider.addEventListener('input', render);
+    outlierToggle.addEventListener('change', render);
+    render();
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    initQuizzes();
+    initPlayground();
+  });
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/ML-with-AI-workflows-2" target="_blank" rel="noopener">github.com/scaler-content/ML-with-AI-workflows-2</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

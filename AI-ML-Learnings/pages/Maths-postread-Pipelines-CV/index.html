@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Math Behind the Notebook — Regularisation, Pipelines &amp; Cross-Validation</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-svg.js"></script>
+
+<style>
+:root{
+  --paper:      #F2F5FA;
+  --paper-2:    #FFFFFF;
+  --grid:       #DCE4F0;
+  --ink:        #14243F;
+  --ink-soft:   #4E6183;
+  --ink-faint:  #8496AF;
+  --rule:       #C6D2E4;
+  --pen:        #A81F27;
+  --chalk:      #0D6A67;
+  --amber:      #9C6410;
+  --code-bg:    #101C33;
+  --code-fg:    #DCE6F5;
+
+  --serif: "IBM Plex Serif", Georgia, serif;
+  --sans:  "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono:  "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --hand:  "Caveat", cursive;
+
+  --col:  700px;
+  --rail: 300px;
+}
+
+*{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; scroll-padding-top:88px; }
+
+body{
+  margin:0;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 26px 26px;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.68;
+  -webkit-font-smoothing: antialiased;
+}
+
+#progress{
+  position:fixed; top:0; left:0; height:3px; width:0%;
+  background: var(--pen); z-index:60; transition: width .08s linear;
+}
+
+nav.topbar{
+  position:sticky; top:0; z-index:50;
+  background: rgba(242,245,250,.93);
+  backdrop-filter: blur(8px);
+  border-bottom:1px solid var(--rule);
+}
+.topbar-inner{
+  max-width:1180px; margin:0 auto; padding:10px 24px;
+  display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+}
+.topbar .brand{
+  font-family: var(--mono); font-size:12px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); white-space:nowrap;
+}
+.topbar .links{ display:flex; gap:6px; flex-wrap:wrap; }
+.topbar a{
+  font-family: var(--mono); font-size:12.5px; text-decoration:none;
+  color:var(--ink-soft); padding:5px 10px; border:1px solid transparent;
+  border-radius:2px; white-space:nowrap;
+}
+.topbar a:hover{ border-color:var(--rule); background:var(--paper-2); color:var(--ink); }
+.topbar a:focus-visible{ outline:2px solid var(--pen); outline-offset:2px; }
+
+.wrap{ max-width:1180px; margin:0 auto; padding:0 24px; }
+
+.sheet{
+  display:grid;
+  grid-template-columns: var(--col) var(--rail);
+  gap:0 44px;
+  align-items:start;
+}
+.sheet > *{ grid-column:1; min-width:0; }
+.sheet > .note{ grid-column:2; }
+
+header.hero{
+  border-bottom:2px solid var(--ink);
+  padding:76px 0 34px;
+}
+.series{
+  display:inline-block; font-family:var(--mono); font-size:11px;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint);
+  border:1px solid var(--rule); background:var(--paper-2);
+  padding:4px 10px; border-radius:2px; margin-bottom:20px;
+}
+.eyebrow{
+  font-family:var(--mono); font-size:12px; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--pen); margin-bottom:22px;
+}
+h1{
+  font-family:var(--serif); font-weight:700;
+  font-size: clamp(38px, 6.2vw, 68px);
+  line-height:1.02; letter-spacing:-.022em;
+  margin:0 0 22px; max-width:16ch;
+}
+h1 em{ font-style:italic; font-weight:400; color:var(--pen); }
+.standfirst{
+  font-family:var(--serif); font-size:20px; line-height:1.55;
+  color:var(--ink-soft); max-width:60ch; margin:0 0 30px;
+}
+.meta-row{
+  display:flex; gap:28px; flex-wrap:wrap;
+  font-family:var(--mono); font-size:12px; color:var(--ink-faint);
+  letter-spacing:.05em; padding-top:18px; border-top:1px solid var(--rule);
+}
+.meta-row b{ color:var(--ink); font-weight:500; display:block; font-size:13px; }
+
+.chapter{ margin:0; padding:64px 0 0; border-top:1px solid var(--rule); }
+.chapter:first-of-type{ border-top:none; }
+.chapter-head{ display:flex; align-items:baseline; gap:16px; margin-bottom:8px; }
+.chapter-num{
+  font-family:var(--mono); font-size:12px; letter-spacing:.16em;
+  color:var(--pen); text-transform:uppercase; white-space:nowrap;
+}
+.chapter-rule{ flex:1; height:1px; background:var(--rule); }
+h2{
+  font-family:var(--serif); font-weight:700;
+  font-size: clamp(28px,4vw,40px); line-height:1.12;
+  letter-spacing:-.015em; margin:6px 0 14px;
+}
+.chapter-sub{
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-faint);
+  margin-bottom:34px; letter-spacing:.03em;
+}
+h3{
+  font-family:var(--serif); font-weight:600; font-size:25px;
+  line-height:1.24; margin:52px 0 12px; letter-spacing:-.01em;
+}
+h4{ font-family:var(--sans); font-weight:600; font-size:16.5px; margin:32px 0 8px; }
+p{ margin:0 0 17px; }
+a{ color:var(--chalk); }
+ul,ol{ margin:0 0 18px; padding-left:22px; }
+li{ margin-bottom:8px; }
+li::marker{ color:var(--ink-faint); }
+strong{ font-weight:600; }
+code{
+  font-family:var(--mono); font-size:.88em;
+  background:#E4EAF4; padding:1px 5px; border-radius:2px; color:#1D3557;
+}
+
+.note{
+  font-family:var(--hand); font-size:21px; line-height:1.35;
+  color:var(--pen); border-left:2px solid var(--pen);
+  padding:2px 0 2px 14px; margin:8px 0 22px; align-self:start;
+}
+.note b{ font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+
+.ladder{
+  border-top:1px solid var(--ink); border-bottom:1px solid var(--ink);
+  padding:8px 0; margin:30px 0; background:var(--paper-2);
+}
+.ladder-title{
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-faint);
+  padding:8px 20px 10px; border-bottom:1px dashed var(--rule);
+}
+.step{
+  display:grid; grid-template-columns:44px 1fr; gap:0 14px;
+  padding:16px 20px; border-bottom:1px dashed var(--rule);
+}
+.step:last-child{ border-bottom:none; }
+.step-n{
+  font-family:var(--mono); font-size:12px; color:var(--pen);
+  padding-top:4px; letter-spacing:.04em;
+}
+.step-body p{ margin:0 0 8px; }
+.step-body p:last-child{ margin-bottom:0; }
+.step-why{ font-family:var(--sans); font-size:14.5px; color:var(--ink-soft); }
+
+pre{
+  background:var(--code-bg); color:var(--code-fg);
+  font-family:var(--mono); font-size:13.5px; line-height:1.62;
+  padding:18px 20px; border-radius:3px; overflow-x:auto;
+  margin:20px 0; border-left:3px solid var(--chalk);
+}
+pre code{ background:none; padding:0; color:inherit; font-size:inherit; }
+.c-com{ color:#7C93B8; font-style:italic; }
+.c-kw{ color:#F09E6C; }
+.c-str{ color:#8FD4A0; }
+.c-num{ color:#E6C77E; }
+.c-fn{ color:#7FC4E8; }
+.c-bad{ color:#F2777A; text-decoration:underline wavy #F2777A; text-underline-offset:3px; }
+.code-cap{
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-faint);
+  margin:-14px 0 22px; letter-spacing:.04em;
+}
+
+.box{
+  border:1px solid var(--rule); background:var(--paper-2);
+  padding:20px 22px; margin:26px 0; border-radius:3px;
+}
+.box-label{
+  font-family:var(--mono); font-size:11px; letter-spacing:.16em;
+  text-transform:uppercase; margin-bottom:10px; color:var(--ink-faint);
+}
+.box p:last-child{ margin-bottom:0; }
+.box.flag{ border-left:3px solid var(--amber); }
+.box.flag .box-label{ color:var(--amber); }
+.box.field{ border-left:3px solid var(--chalk); }
+.box.field .box-label{ color:var(--chalk); }
+.box.check{ border-left:3px solid var(--pen); }
+.box.check .box-label{ color:var(--pen); }
+
+figure{ margin:34px 0; }
+figure svg{ width:100%; height:auto; display:block; background:var(--paper-2);
+  border:1px solid var(--rule); border-radius:3px; }
+figcaption{
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-faint);
+  margin-top:10px; line-height:1.55; letter-spacing:.02em;
+}
+figcaption b{ color:var(--ink-soft); font-weight:500; }
+
+svg text{ font-family:"IBM Plex Sans", sans-serif; fill:var(--ink); }
+.svg-lbl{ font-size:12px; fill:#4E6183; }
+.svg-tiny{ font-size:10.5px; fill:#8496AF; font-family:"IBM Plex Mono", monospace; }
+.svg-hand{ font-family:"Caveat", cursive; font-size:19px; fill:#A81F27; }
+
+table{ width:100%; border-collapse:collapse; margin:24px 0; font-size:14.5px; background:var(--paper-2); }
+th,td{ text-align:left; padding:9px 12px; border-bottom:1px solid var(--rule); }
+th{
+  font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-faint); border-bottom:1px solid var(--ink);
+}
+td.num{ font-family:var(--mono); font-size:13px; }
+
+details{ border:1px dashed var(--rule); border-radius:3px; padding:0 18px; margin:24px 0; background:var(--paper-2); }
+details[open]{ padding-bottom:6px; }
+summary{ cursor:pointer; padding:14px 0; font-family:var(--mono); font-size:12.5px; letter-spacing:.06em; color:var(--chalk); }
+summary:focus-visible{ outline:2px solid var(--pen); outline-offset:2px; }
+
+.lede{ font-family:var(--serif); font-size:19px; line-height:1.6; color:var(--ink-soft); margin-bottom:26px; }
+hr.soft{ border:none; border-top:1px dashed var(--rule); margin:38px 0; }
+
+footer.end{
+  border-top:2px solid var(--ink); margin-top:76px; padding:34px 0 80px;
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-faint); line-height:1.8;
+}
+
+mjx-container[display="true"]{ margin:20px 0 !important; overflow-x:auto; overflow-y:hidden; }
+
+@media (max-width:1120px){
+  .sheet{ grid-template-columns:minmax(0,1fr); }
+  .sheet > .note{ grid-column:1; max-width:560px; }
+  :root{ --col:auto; }
+}
+@media (max-width:640px){
+  body{ font-size:16px; background-size:20px 20px; }
+  .wrap{ padding:0 18px; }
+  header.hero{ padding:44px 0 26px; }
+  .note{ font-size:19px; }
+  .step{ grid-template-columns:30px 1fr; padding:14px 14px; }
+  pre{ font-size:12.5px; padding:14px; }
+  .meta-row{ gap:16px; }
+}
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  #progress{ transition:none; }
+}
+@media print{
+  nav.topbar,#progress{ display:none; }
+  body{ background:#fff; }
+  .sheet{ grid-template-columns:1fr; }
+  .note{ grid-column:1; }
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· Math Companion · Regularisation and cross-validation</span><span class="pn"><a href="../cross-validation-in-ML/" title="ML Foundations · Cross-validation and tuning">← Prev</a><a href="../ML-with-AI-workflows-8/" title="ML with AI 8 · Logistic regression: log-odds and trust">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progress"></div>
+
+<nav class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">Math &amp; Code Companion — Set 2</span>
+    <span class="links">
+      <a href="#inventory">Audit</a>
+      <a href="#l1">01 · Regularisation &amp; Pipelines</a>
+      <a href="#l2">02 · Cross-Validation</a>
+      <a href="#cheatsheet">Cheat sheet</a>
+    </span>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<header class="hero">
+  <span class="series">Series · Post-read 2 of the regression track</span>
+  <div class="eyebrow">Sklearn Pipelines · Cross Validation in ML</div>
+  <h1>Two hyperparameters and an <em>honest</em> estimate</h1>
+  <p class="standfirst">These two lectures introduce the first number you must choose yourself — λ — and then the machinery for choosing it without cheating. Underneath sit some of the most elegant results in the module: why a squared penalty makes a singular matrix invertible, why an absolute-value penalty sets coefficients to exactly zero, and why leave-one-out cross-validation can be computed without ever leaving one out.</p>
+  <div class="meta-row">
+    <span><b>Builds on</b>Post-read 1, Lectures 1–4</span>
+    <span><b>Prerequisites</b>Normal equation, bias–variance</span>
+    <span><b>Datasets</b>CarPrice_Assignment · Housing</span>
+  </div>
+</header>
+
+<section class="chapter sheet" id="inventory" style="padding-top:56px">
+  <div class="chapter-head">
+    <span class="chapter-num">Before we start</span>
+    <span class="chapter-rule"></span>
+  </div>
+  <h2>What in these two notebooks has mathematics under it?</h2>
+  <p class="chapter-sub">The same audit as last time, so you know where the derivations are</p>
+
+  <p class="lede">These lectures are more engineering-flavoured than Lectures 1–4 — a good chunk of the Pipelines notebook is API surface, and API surface has no theorems. But the regularisation half is dense with real mathematics, and cross-validation has a derivation in it that surprises most people the first time they see it.</p>
+
+  <table>
+    <thead>
+      <tr><th>From the notebook</th><th>Has real math?</th><th>What's underneath</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>The roof-leakage / tug-of-war analogy</td><td>Partly</td><td>Constrained optimisation, stated informally</td></tr>
+      <tr><td><code>Ridge(alpha=10)</code></td><td><strong>Yes</strong></td><td>Closed form, eigenvalue shift, shrinkage factors</td></tr>
+      <tr><td><code>Lasso(alpha=100)</code> zeroing coefficients</td><td><strong>Yes</strong></td><td>Subgradients and the soft-threshold operator</td></tr>
+      <tr><td>Elastic Net</td><td><strong>Yes</strong></td><td>Convex combination; the grouping effect</td></tr>
+      <tr><td>λ as a hyperparameter</td><td><strong>Yes</strong></td><td>Bayesian MAP view: Gaussian vs Laplace prior</td></tr>
+      <tr><td><code>StandardScaler</code> / <code>MinMaxScaler</code> / <code>MaxAbsScaler</code></td><td><strong>Yes</strong></td><td>Three formulas, and why the penalty forces you to use one</td></tr>
+      <tr><td><code>OrdinalEncoder</code> vs <code>OneHotEncoder</code></td><td><strong>Yes</strong></td><td>Rank information vs linear dependence</td></tr>
+      <tr><td><code>ColumnTransformer</code>, <code>Pipeline</code>, <code>FeatureUnion</code></td><td>Partly</td><td>Function composition; the leakage argument is formal</td></tr>
+      <tr><td>MCQ cells, EDA, heatmaps</td><td>No</td><td>Exploration and pedagogy</td></tr>
+      <tr><td>"One split isn't enough"</td><td><strong>Yes</strong></td><td>Variance of a hold-out estimate</td></tr>
+      <tr><td><code>KFold</code>, <code>cross_val_score</code></td><td><strong>Yes</strong></td><td>The CV estimator, and its own bias–variance tradeoff</td></tr>
+      <tr><td>Leave-One-Out CV</td><td><strong>Yes</strong></td><td>A closed form via the hat matrix — the showpiece</td></tr>
+      <tr><td><code>GridSearchCV</code></td><td><strong>Yes</strong></td><td>Combinatorics, and the winner's-curse bias</td></tr>
+      <tr><td>Stratified K-Fold</td><td><strong>Yes</strong></td><td>Variance reduction by stratification</td></tr>
+      <tr><td><code>RFE</code></td><td>Partly</td><td>A greedy algorithm; its correctness rests on scaling</td></tr>
+      <tr><td>Degree-20 polynomial, test R² = −5.6 × 10⁹</td><td><strong>Yes</strong></td><td>Why R² has no lower bound, made concrete</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">The single most important idea across both lectures: <b>the pipeline must live inside the CV loop.</b> Everything else is detail.</div>
+
+  <div class="box field">
+    <div class="box-label">Continuity with post-read 1</div>
+    <p>This document assumes the normal equation \(\hat{\mathbf{w}} = (X^\top X)^{-1}X^\top \mathbf{y}\), the hat matrix, R², and the bias–variance decomposition — all derived in the previous companion. Where a result here is a direct extension of one there, it says so rather than repeating the derivation.</p>
+    <p>As before, findings marked in red are things your notebooks' own outputs reveal. There are seven this time, and four of them are code defects worth fixing before the next cohort runs these cells.</p>
+  </div>
+</section>
+
+<!-- ============================ LECTURE 1 ============================ -->
+<section class="chapter sheet" id="l1">
+  <div class="chapter-head">
+    <span class="chapter-num">Lecture 05</span>
+    <span class="chapter-rule"></span>
+  </div>
+  <h2>Regularisation, and the plumbing that keeps it honest</h2>
+  <p class="chapter-sub">Sklearn Pipelines · Ridge, Lasso, Elastic Net, ColumnTransformer, Pipeline</p>
+
+  <p class="lede">The previous lecture ended by observing that models with many large weights tend to overfit. This one acts on that observation. The remedy is one extra term in the cost function — and that single term turns out to solve the multicollinearity problem, the overfitting problem, and the feature-selection problem, depending on which norm you pick.</p>
+
+  <h3>Step 1 · Making the tug-of-war precise</h3>
+
+  <p>The notebook's roof-leakage analogy is a good one: you want to minimise leakage <em>and</em> minimise cost, and the two pull against each other. Mathematically there are two ways to write that, and they are equivalent.</p>
+
+  <p><strong>Constrained form</strong> — minimise error, but you are only allowed a weight budget:</p>
+  \[ \min_{\mathbf{w}} \;\|\mathbf{y} - X\mathbf{w}\|^2 \quad \text{subject to} \quad \|\mathbf{w}\|^2 \le t \]
+
+  <p><strong>Penalised form</strong> — minimise error plus a price per unit of weight:</p>
+  \[ \min_{\mathbf{w}} \;\|\mathbf{y} - X\mathbf{w}\|^2 + \lambda\|\mathbf{w}\|^2 \]
+
+  <p>These describe the same family of solutions. For every budget \(t\) there is a price \(\lambda\) that produces the identical answer — \(\lambda\) is the Lagrange multiplier of the constraint. The relationship runs backwards, which is worth saying out loud to learners: <strong>a large \(\lambda\) corresponds to a small budget \(t\)</strong>. Expensive weights mean you buy fewer of them.</p>
+
+  <div class="note">The constrained form is the one to draw. The penalised form is the one to code. Same object.</div>
+
+  <p>The notebook's two limiting cases now have one-line proofs. At \(\lambda = 0\) the penalty term vanishes and we are back to ordinary least squares, free to overfit. As \(\lambda \to \infty\) any non-zero weight costs infinitely more than it saves, so \(\hat{\mathbf{w}} \to \mathbf{0}\) and the model predicts a constant — maximum underfitting. Everything useful lives between.</p>
+
+  <div class="box flag">
+    <div class="box-label">One caveat the lecture text glosses</div>
+    <p>The notebook motivates regularisation by saying the model "tries to make \(\hat{y}\) values larger" by inflating the weights. That is not quite the mechanism — least squares pushes \(\hat{y}\) <em>towards \(y\)</em>, in whichever direction that is, and shrinking a coefficient is just as likely as growing it.</p>
+    <p>The real reason weights blow up is the one from Lecture 4: when features are collinear, \(X^\top X\) is near-singular, and its inverse has enormous entries. The fit then relies on huge coefficients that nearly cancel — recall your <code>year = +4.6e11</code> and <code>const = −4.6e11</code>. Large weights are a symptom of an ill-conditioned matrix, not of greed. Framing it that way makes the next section land, because the penalty is going to fix the conditioning directly.</p>
+  </div>
+
+  <h3>Step 2 · Ridge regression, derived</h3>
+
+  <div class="ladder">
+    <div class="ladder-title">Deriving the Ridge closed form</div>
+
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-body">
+        <p>Write the penalised objective in matrix form:</p>
+        \[ J(\mathbf{w}) = (\mathbf{y} - X\mathbf{w})^{\!\top}(\mathbf{y} - X\mathbf{w}) + \lambda\mathbf{w}^{\!\top}\mathbf{w} \]
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-body">
+        <p>Differentiate. The first part is exactly the gradient from the previous companion; the new part uses \(\partial(\mathbf{w}^\top\mathbf{w})/\partial\mathbf{w} = 2\mathbf{w}\):</p>
+        \[ \nabla_{\mathbf{w}} J = -2X^{\!\top}\mathbf{y} + 2X^{\!\top}X\mathbf{w} + 2\lambda\mathbf{w} \]
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-body">
+        <p>Set to zero and factor out \(\mathbf{w}\):</p>
+        \[ (X^{\!\top}X + \lambda I)\,\mathbf{w} = X^{\!\top}\mathbf{y} \qquad\Longrightarrow\qquad \boxed{\;\hat{\mathbf{w}}_{\text{ridge}} = (X^{\!\top}X + \lambda I)^{-1}X^{\!\top}\mathbf{y}\;} \]
+        <p class="step-why">One identity matrix, scaled. That is the entire difference from OLS — and it is the difference between a model that falls over on collinear data and one that does not.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">4</div>
+      <div class="step-body">
+        <p><strong>Why that inverse always exists.</strong> Let \(\mu_1, \ldots, \mu_p \ge 0\) be the eigenvalues of \(X^\top X\) (all non-negative, since we proved it is positive semi-definite). Adding \(\lambda I\) shifts every eigenvalue up:</p>
+        \[ \text{eigenvalues of } (X^{\!\top}X + \lambda I) \;=\; \mu_1 + \lambda,\; \ldots,\; \mu_p + \lambda \]
+        <p class="step-why">For any \(\lambda > 0\), every eigenvalue is now strictly positive, so the determinant — their product — is non-zero. <strong>Ridge is invertible even when OLS is not.</strong> Your <code>year</code>/<code>age</code> pair, which made \(X^\top X\) singular and produced coefficients of size \(10^{11}\), would have been handled by \(\lambda = 0.01\) without dropping a single column.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">5</div>
+      <div class="step-body">
+        <p>The condition number improves too:</p>
+        \[ \kappa_{\text{ridge}} = \frac{\mu_{\max} + \lambda}{\mu_{\min} + \lambda} \;<\; \frac{\mu_{\max}}{\mu_{\min}} = \kappa_{\text{OLS}} \]
+        <p class="step-why">So gradient descent also converges faster on the regularised problem. Regularisation is a numerical stabiliser as much as a statistical one.</p>
+      </div>
+    </div>
+  </div>
+
+  <details>
+    <summary>▸ What Ridge does to each direction in feature space (the SVD view)</summary>
+    <p>Write the singular value decomposition \(X = UDV^\top\), where \(D\) holds the singular values \(d_1 \ge d_2 \ge \cdots \ge d_p\). Substituting into both formulas, the fitted values become</p>
+    \[ \hat{\mathbf{y}}_{\text{OLS}} = \sum_{j} \mathbf{u}_j\,\mathbf{u}_j^{\!\top}\mathbf{y}, \qquad \hat{\mathbf{y}}_{\text{ridge}} = \sum_{j} \mathbf{u}_j \frac{d_j^2}{d_j^2 + \lambda}\,\mathbf{u}_j^{\!\top}\mathbf{y} \]
+    <p>Every direction is multiplied by a shrinkage factor \(d_j^2/(d_j^2+\lambda)\), which sits between 0 and 1. Directions where the data varies a lot (large \(d_j\)) are barely touched; directions where the data barely varies (small \(d_j\)) are crushed towards zero.</p>
+    <p>That is exactly the right behaviour. Low-variance directions are where the estimate is least reliable — recall from post-read 1 that \(\mathrm{Var}(\hat{w}_j)\) has the spread of \(x_j\) in its denominator. Ridge shrinks hardest precisely where the data has least to say.</p>
+  </details>
+
+  <h3>Step 3 · Lasso, and the real reason it produces zeros</h3>
+
+  <p>Swap the squared penalty for an absolute one and you have Lasso:</p>
+  \[ J_{\text{lasso}}(\mathbf{w}) = \|\mathbf{y} - X\mathbf{w}\|^2 + \lambda\sum_{j=1}^{p}|w_j| \]
+
+  <p>There is no closed form — \(|w|\) is not differentiable at zero, so you cannot set a gradient to zero — and sklearn solves it with coordinate descent. But the sparsity property has a clean proof in the simplest case, and that proof is far more convincing than the usual diamond picture.</p>
+
+  <div class="ladder">
+    <div class="ladder-title">Why Lasso hits exactly zero and Ridge does not</div>
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-body">
+        <p>Take one coefficient at a time, with the features uncorrelated and standardised (\(X^\top X = I\)). Let \(z\) be the OLS estimate for that coefficient. The one-dimensional problem is</p>
+        \[ \min_{w}\; (w - z)^2 + \lambda|w| \]
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-body">
+        <p><strong>Ridge version first.</strong> With \(\lambda w^2\) instead, differentiate and solve: \(2(w-z) + 2\lambda w = 0\), giving</p>
+        \[ \hat{w}_{\text{ridge}} = \frac{z}{1+\lambda} \]
+        <p class="step-why">Multiplicative shrinkage. Dividing a non-zero number by \(1+\lambda\) never produces zero, however large \(\lambda\) gets. Ridge coefficients approach zero asymptotically and never arrive.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-body">
+        <p><strong>Lasso version.</strong> Away from \(w = 0\) the derivative is \(2(w-z) + \lambda\,\mathrm{sign}(w) = 0\). At \(w = 0\) the absolute value has no derivative but has a <em>subgradient</em> — the whole interval \([-\lambda, \lambda]\). Zero is optimal exactly when \(2z\) lies inside that interval. Solving the three cases:</p>
+        \[ \hat{w}_{\text{lasso}} = \begin{cases} z - \lambda/2 & z > \lambda/2\\[2pt] 0 & |z| \le \lambda/2\\[2pt] z + \lambda/2 & z < -\lambda/2 \end{cases} \;=\; \mathrm{sign}(z)\bigl(|z| - \tfrac{\lambda}{2}\bigr)_+ \]
+        <p class="step-why">This is the <strong>soft-thresholding operator</strong>. Subtractive shrinkage, with a floor at zero. Any coefficient whose OLS estimate is smaller than the threshold is set to <em>exactly</em> zero, not approximately.</p>
+      </div>
+    </div>
+  </div>
+
+  <p>So the difference is one word: Ridge <em>divides</em>, Lasso <em>subtracts</em>. Division never reaches zero; subtraction with a floor does. That is the whole story, and MCQ 1 in your notebook is asking exactly this.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 300" role="img" aria-label="Left: elliptical error contours meeting a circular Ridge constraint at a generic point. Right: the same contours meeting a diamond-shaped Lasso constraint at a corner on the axis">
+      <text x="165" y="24" text-anchor="middle" font-size="13" font-weight="600">Ridge — round budget</text>
+      <text x="500" y="24" text-anchor="middle" font-size="13" font-weight="600">Lasso — cornered budget</text>
+
+      <!-- LEFT axes -->
+      <line x1="60" y1="190" x2="300" y2="190" stroke="#C6D2E4"/>
+      <line x1="150" y1="60" x2="150" y2="270" stroke="#C6D2E4"/>
+      <text x="304" y="194" class="svg-tiny">w₁</text>
+      <text x="140" y="56" class="svg-tiny">w₂</text>
+
+      <circle cx="150" cy="190" r="62" fill="#EDF2FA" stroke="#0D6A67" stroke-width="1.8"/>
+      <g transform="rotate(-32 218 108)" fill="none" stroke="#C6D2E4">
+        <ellipse cx="218" cy="108" rx="34" ry="19"/>
+        <ellipse cx="218" cy="108" rx="62" ry="35"/>
+      </g>
+      <ellipse cx="218" cy="108" rx="96" ry="54" fill="none" stroke="#A81F27" stroke-width="1.6" transform="rotate(-32 218 108)"/>
+      <circle cx="218" cy="108" r="4" fill="#14243F"/>
+      <text x="226" y="102" class="svg-tiny">ŵ OLS</text>
+      <circle cx="188" cy="136" r="5" fill="#A81F27"/>
+      <text x="150" y="150" class="svg-tiny" fill="#A81F27">both ≠ 0</text>
+
+      <!-- RIGHT axes -->
+      <line x1="395" y1="190" x2="635" y2="190" stroke="#C6D2E4"/>
+      <line x1="485" y1="60" x2="485" y2="270" stroke="#C6D2E4"/>
+      <text x="639" y="194" class="svg-tiny">w₁</text>
+      <text x="475" y="56" class="svg-tiny">w₂</text>
+
+      <polygon points="485,128 547,190 485,252 423,190" fill="#EDF2FA" stroke="#0D6A67" stroke-width="1.8"/>
+      <g transform="rotate(-32 553 108)" fill="none" stroke="#C6D2E4">
+        <ellipse cx="553" cy="108" rx="34" ry="19"/>
+        <ellipse cx="553" cy="108" rx="62" ry="35"/>
+      </g>
+      <ellipse cx="553" cy="108" rx="86" ry="48" fill="none" stroke="#A81F27" stroke-width="1.6" transform="rotate(-32 553 108)"/>
+      <circle cx="553" cy="108" r="4" fill="#14243F"/>
+      <text x="561" y="102" class="svg-tiny">ŵ OLS</text>
+      <circle cx="485" cy="128" r="5" fill="#A81F27"/>
+      <text x="392" y="122" class="svg-tiny" fill="#A81F27">w₁ = 0</text>
+
+      <text x="330" y="288" text-anchor="middle" class="svg-hand">a corner is easy to hit; a smooth curve is not</text>
+    </svg>
+    <figcaption><b>Fig. 1</b> — The constrained view. Contours of squared error expand from the OLS solution until they touch the budget region. The diamond's corners sit <em>on the axes</em>, where one coefficient is zero, and corners catch a contour from many directions — so the tangency lands there for a wide range of datasets. A circle has no such points.</figcaption>
+  </figure>
+
+  <h3>Step 4 · Elastic Net, and why it exists</h3>
+
+  <p>Elastic Net charges both prices at once:</p>
+  \[ J_{\text{EN}}(\mathbf{w}) = \|\mathbf{y} - X\mathbf{w}\|^2 + \lambda\left(\alpha\sum_j |w_j| + \tfrac{1-\alpha}{2}\sum_j w_j^2\right) \]
+
+  <p>with \(\alpha = 1\) recovering Lasso and \(\alpha = 0\) recovering Ridge. It is not merely a hedge. Lasso has a specific failure mode: when a group of features is highly correlated, Lasso tends to pick <em>one at random</em> and zero the rest — and which one it picks can flip if you re-sample the data. The L2 term, being strictly convex, spreads weight across correlated features instead. Elastic Net therefore keeps whole correlated groups together while still zeroing genuinely useless features. This is called the <strong>grouping effect</strong>.</p>
+
+  <p>Your CarPrice data is a textbook case: <code>carlength</code>, <code>carwidth</code>, <code>wheelbase</code> and <code>curbweight</code> have correlations of 0.79 to 0.88 with each other, exactly as your heatmap shows. Lasso will keep one of them; Elastic Net will keep the family.</p>
+
+  <details>
+    <summary>▸ The Bayesian reading — where the two penalties come from</summary>
+    <p>Post-read 1 showed that minimising squared error is maximum likelihood under Gaussian noise. Regularisation is what you get when you additionally place a <em>prior</em> on the weights and maximise the posterior instead:</p>
+    \[ \hat{\mathbf{w}}_{\text{MAP}} = \arg\max_{\mathbf{w}} \; \underbrace{\log p(\mathbf{y}\mid\mathbf{w})}_{\text{likelihood} \to \text{squared error}} + \underbrace{\log p(\mathbf{w})}_{\text{prior} \to \text{penalty}} \]
+    <ul>
+      <li>A <strong>Gaussian</strong> prior \(w_j \sim \mathcal{N}(0, \tau^2)\) has log-density \(\propto -w_j^2\) → the L2 penalty → <strong>Ridge</strong>.</li>
+      <li>A <strong>Laplace</strong> prior \(p(w_j) \propto e^{-|w_j|/b}\) has log-density \(\propto -|w_j|\) → the L1 penalty → <strong>Lasso</strong>.</li>
+    </ul>
+    <p>And \(\lambda\) is the ratio of noise variance to prior variance: \(\lambda = \sigma^2/\tau^2\). A large \(\lambda\) says "I believe the weights are small more strongly than I believe the data." The Laplace distribution has a sharp spike at zero, which is the probabilistic version of the diamond's corner — it genuinely expects many coefficients to be zero.</p>
+  </details>
+
+  <h3>Step 5 · Two rules the penalty imposes on your preprocessing</h3>
+
+  <h4>Rule one: you must scale, and it is no longer optional</h4>
+
+  <p>In post-read 1 we established that for plain OLS, scaling changes coefficients but not predictions. <strong>Under regularisation that is no longer true.</strong> Here is why, in one line.</p>
+
+  <p>Suppose you measure a feature in metres and then switch to centimetres: \(x_j' = 100\,x_j\). To keep the same predictions the coefficient must become \(w_j' = w_j/100\). But the penalty charges \(w_j^2\), and</p>
+
+  \[ (w_j/100)^2 = w_j^2/10{,}000 \]
+
+  <p>The same feature is now penalised ten thousand times less, purely because of the unit you chose. Features measured in small units get large coefficients and are punished hard; features in large units get small coefficients and slip past the penalty free. The model you fit depends on your choice of measurement system, which is indefensible. Standardising puts every feature on a common footing so that \(\lambda\) means the same thing everywhere.</p>
+
+  <div class="note">Rule of thumb: any model with a penalty on \(\mathbf{w}\), or any distance-based model, <b>must</b> be scaled. OLS, decision trees, and random forests need not be.</div>
+
+  <h4>Rule two: never penalise the intercept</h4>
+
+  <p>If \(w_0\) were penalised, adding a constant to every target — switching from rupees to rupees-above-a-baseline — would change the fitted model. Predictions should not depend on where you put the origin of your \(y\) axis. sklearn handles this for you: <code>Ridge</code> and <code>Lasso</code> centre the data internally and leave <code>intercept_</code> out of the penalty. Worth stating in class, because the formula on the slide does not show it.</p>
+
+  <h4>The three scalers in the notebook</h4>
+
+  <table>
+    <thead><tr><th>Scaler</th><th>Formula</th><th>Output range</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td>StandardScaler</td><td>\((x-\mu)/\sigma\)</td><td>mean 0, sd 1</td><td>Default for linear and regularised models</td></tr>
+      <tr><td>MinMaxScaler</td><td>\(\frac{x - x_{\min}}{x_{\max}-x_{\min}}\)</td><td>[0, 1]</td><td>Bounded inputs; fragile to outliers</td></tr>
+      <tr><td>MaxAbsScaler</td><td>\(x / \max|x|\)</td><td>[−1, 1]</td><td>Sparse data — it preserves zeros</td></tr>
+    </tbody>
+  </table>
+
+  <p>MaxAbs is the one the notebook does not explain, and it has a specific purpose: it never shifts the data, so a zero stays a zero. That matters enormously for sparse matrices — subtracting a mean from a sparse matrix fills in every zero and can turn a 100 MB matrix into 40 GB. It is the scaler you reach for after one-hot encoding thousands of categories.</p>
+
+  <h3>Step 6 · Pipelines, formally</h3>
+
+  <p>A <code>Pipeline</code> is function composition and a <code>ColumnTransformer</code> is a direct sum. Writing it that way makes the difference obvious:</p>
+
+  \[ \text{Pipeline:}\quad T(\mathbf{x}) = f_k \circ f_{k-1} \circ \cdots \circ f_1(\mathbf{x}) \qquad \text{(sequential — output feeds the next)} \]
+  \[ \text{ColumnTransformer:}\quad T(\mathbf{x}) = \bigl[\,g_1(\mathbf{x}_{C_1}) \;\|\; g_2(\mathbf{x}_{C_2}) \;\|\; \cdots \;\|\; g_m(\mathbf{x}_{C_m})\,\bigr] \qquad \text{(parallel — outputs concatenate)} \]
+
+  <p>where the \(C_i\) are disjoint sets of columns and \(\|\) is horizontal concatenation. <code>FeatureUnion</code> is the same concatenation but with each branch seeing <em>all</em> the columns rather than a slice — which is why the notebook's two-people-splitting-the-work story fits it.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 290" role="img" aria-label="Left: ColumnTransformer splits one dataframe into three parallel branches which concatenate. Right: Pipeline chains steps one after another">
+      <defs>
+        <marker id="a1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 z" fill="#4E6183"/>
+        </marker>
+      </defs>
+
+      <text x="160" y="24" text-anchor="middle" font-size="13" font-weight="600">ColumnTransformer — parallel</text>
+      <rect x="30" y="120" width="58" height="48" fill="#EDF2FA" stroke="#C6D2E4"/>
+      <text x="59" y="148" text-anchor="middle" class="svg-tiny">df</text>
+
+      <rect x="130" y="58" width="112" height="36" fill="#FFF" stroke="#14243F"/>
+      <text x="186" y="81" text-anchor="middle" class="svg-tiny">StandardScaler · 5 cols</text>
+      <rect x="130" y="126" width="112" height="36" fill="#FFF" stroke="#14243F"/>
+      <text x="186" y="149" text-anchor="middle" class="svg-tiny">MinMaxScaler · 5 cols</text>
+      <rect x="130" y="194" width="112" height="36" fill="#FFF" stroke="#14243F"/>
+      <text x="186" y="217" text-anchor="middle" class="svg-tiny">MaxAbsScaler · 5 cols</text>
+
+      <line x1="90" y1="136" x2="126" y2="78" stroke="#4E6183" marker-end="url(#a1)"/>
+      <line x1="90" y1="144" x2="126" y2="144" stroke="#4E6183" marker-end="url(#a1)"/>
+      <line x1="90" y1="152" x2="126" y2="210" stroke="#4E6183" marker-end="url(#a1)"/>
+
+      <line x1="246" y1="78" x2="278" y2="136" stroke="#4E6183" marker-end="url(#a1)"/>
+      <line x1="246" y1="144" x2="278" y2="144" stroke="#4E6183" marker-end="url(#a1)"/>
+      <line x1="246" y1="210" x2="278" y2="152" stroke="#4E6183" marker-end="url(#a1)"/>
+      <rect x="282" y="120" width="46" height="48" fill="#EDF2FA" stroke="#C6D2E4"/>
+      <text x="305" y="148" text-anchor="middle" class="svg-tiny">‖</text>
+
+      <line x1="345" y1="40" x2="345" y2="250" stroke="#C6D2E4" stroke-dasharray="4 4"/>
+
+      <text x="500" y="24" text-anchor="middle" font-size="13" font-weight="600">Pipeline — sequential</text>
+      <g>
+        <rect x="382" y="126" width="72" height="36" fill="#FFF" stroke="#14243F"/>
+        <text x="418" y="149" text-anchor="middle" class="svg-tiny">encode</text>
+        <rect x="478" y="126" width="72" height="36" fill="#FFF" stroke="#14243F"/>
+        <text x="514" y="149" text-anchor="middle" class="svg-tiny">scale</text>
+        <rect x="574" y="126" width="62" height="36" fill="#EDF2FA" stroke="#0D6A67" stroke-width="1.6"/>
+        <text x="605" y="149" text-anchor="middle" class="svg-tiny">Ridge</text>
+        <line x1="458" y1="144" x2="474" y2="144" stroke="#4E6183" marker-end="url(#a1)"/>
+        <line x1="554" y1="144" x2="570" y2="144" stroke="#4E6183" marker-end="url(#a1)"/>
+      </g>
+      <text x="510" y="196" text-anchor="middle" class="svg-tiny">only the last step may be an estimator</text>
+      <text x="510" y="230" text-anchor="middle" class="svg-hand">one .fit() — one object to hand over</text>
+    </svg>
+    <figcaption><b>Fig. 2</b> — Both compose into a single object with one <code>fit</code> and one <code>transform</code>. A ColumnTransformer can be a step <em>inside</em> a Pipeline, which is the standard production shape.</figcaption>
+  </figure>
+
+  <h4>The leakage argument, stated properly</h4>
+
+  <p>This is the part that matters, and it is a real theorem rather than a style preference. A transformer has <em>parameters</em> that it learns from data: <code>StandardScaler</code> learns \((\mu, \sigma)\), <code>MinMaxScaler</code> learns \((x_{\min}, x_{\max})\), an imputer learns a median, <code>OneHotEncoder</code> learns the category list. Call them \(\theta\).</p>
+
+  \[ \theta = \text{fit}(X_{\text{train}}), \qquad X'_{\text{train}} = \text{transform}(X_{\text{train}}; \theta), \qquad X'_{\text{test}} = \text{transform}(X_{\text{test}}; \theta) \]
+
+  <p>If instead you compute \(\theta\) from the full dataset, then \(\theta\) is a function of the test rows, so \(X'_{\text{train}}\) depends on the test set, so your model has seen information it will not have at prediction time. The test score is then an estimate of nothing in particular. A <code>Pipeline</code> enforces the correct pattern structurally: calling <code>fit</code> on the pipeline fits every step on the training fold only, and <code>predict</code> calls <code>transform</code> — never <code>fit_transform</code> — on new data. That is the substance behind MCQ 5.</p>
+
+  <h3>Reading your own output: four findings in this notebook</h3>
+
+  <div class="box check">
+    <div class="box-label">Finding 1 — the ordinal encoder's category list scrambles the order it was meant to preserve</div>
+    <p>The whole point of ordinal encoding is that the integers carry rank. The notebook supplies:</p>
+    <pre><code>OE_categories_list = [
+    [<span class="c-bad">-2, -1, 3, 2, 1, 0</span>],                                    <span class="c-com"># symboling</span>
+    [<span class="c-str">'two'</span>,<span class="c-str">'three'</span>,<span class="c-str">'four'</span>,<span class="c-str">'five'</span>,<span class="c-str">'six'</span>,<span class="c-str">'eight'</span>,<span class="c-str">'twelve'</span>]   <span class="c-com"># fine</span>
+]</code></pre>
+    <p><code>OrdinalEncoder</code> maps each category to its <em>index in the list you give it</em>. So this produces:</p>
+    <table>
+      <thead><tr><th>symboling</th><th class="num">−2</th><th class="num">−1</th><th class="num">0</th><th class="num">1</th><th class="num">2</th><th class="num">3</th></tr></thead>
+      <tbody><tr><td>encoded as</td><td class="num">0</td><td class="num">1</td><td class="num">5</td><td class="num">4</td><td class="num">3</td><td class="num">2</td></tr></tbody>
+    </table>
+    <p>The safest risk rating (0) becomes the largest number and the riskiest (3) becomes a middling one. You can confirm it in the notebook's own output: row 0 has <code>symboling = 3</code> and the encoder prints <code>2.0</code>; row 2 has <code>symboling = 1</code> and prints <code>4.0</code>. The cylinder list is correctly ordered, which makes the contrast a good teaching moment. The fix is one line:</p>
+    <pre><code>[-<span class="c-num">2</span>, -<span class="c-num">1</span>, <span class="c-num">0</span>, <span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>]   <span class="c-com"># monotone — now the integers mean something</span></code></pre>
+  </div>
+
+  <div class="box check">
+    <div class="box-label">Finding 2 — <code>symboling</code> and <code>cylindernumber</code> are encoded twice, creating exact linear dependence</div>
+    <p>Both columns appear in the <code>OrdinalEncoder</code> list <em>and</em> in the <code>OneHotEncoder</code> list. The output therefore contains both representations of the same variable, and one is an exact linear combination of the other:</p>
+    \[ \text{ord}_{\text{symboling}} \;=\; \sum_{k} \mathrm{idx}(k)\cdot \text{onehot}_k \]
+    <p>There is a second dependency as well: <code>OneHotEncoder</code> is called without <code>drop='first'</code>, so the six symboling dummies sum to 1 in every row, matching the intercept column. \(X^\top X\) is singular twice over.</p>
+    <p>To be precise about what that means — and this is worth getting exactly right in class — the redundancy lets you shift <strong>the intercept against <em>all</em> the dummies of that variable together</strong>. Subtract \(c\) from the intercept and add \(c\) to every one of the six symboling dummies, and predictions are unchanged, because each row contributes exactly one dummy. Shifting the intercept against only <em>one</em> dummy does not work: it changes the prediction for every other category. The coefficients are individually meaningless, but only along that specific direction.</p>
+    <p>Two consequences for the lesson: pick <em>one</em> encoding per column, and pass <code>drop='first'</code> to the one-hot encoder. Note that Ridge would survive all of this — which is a nice way to demonstrate step 2 of the derivation on live data.</p>
+  </div>
+
+  <div class="box check">
+    <div class="box-label">Finding 3 — the target variable is being scaled as if it were a feature</div>
+    <p><code>num_cols</code> is built with <code>cars.select_dtypes(include='number')</code>, which returns <code>price</code> — the thing you are predicting — along with <code>car_ID</code>, a row number with no meaning. Both then flow into the <code>MaxAbsScaler</code> branch and out into <code>preprocessed_data</code>.</p>
+    <p>Two separate problems. Scaling the target is not fatal but it silently changes the units of every coefficient and of MSE, and it must be inverted before anyone reads a predicted price. Keeping <code>car_ID</code> is worse: it is a pure index, and in this dataset it correlates with <code>price</code> at −0.11 because the file happens to be sorted by manufacturer. The model can learn from it, and it will generalise to nothing.</p>
+    <pre><code>num_cols = cars.<span class="c-fn">select_dtypes</span>(include=<span class="c-str">'number'</span>).columns.<span class="c-fn">drop</span>([<span class="c-str">'price'</span>, <span class="c-str">'car_ID'</span>])</code></pre>
+  </div>
+
+  <div class="box check">
+    <div class="box-label">Finding 4 — the Ridge model is fitted on data scaled before the split</div>
+    <p>The final modelling section runs <code>X = pd.DataFrame(scale(X))</code> across all 205 rows, and only then calls <code>train_test_split</code>. So the \(\mu\) and \(\sigma\) used on the training rows were computed partly from the test rows — the exact pattern the ColumnTransformer section spent twenty cells teaching learners to avoid.</p>
+    <p>It is a small leak here (a mean over 205 rows barely moves), but it undermines the lecture's own argument, and the fix is the punchline the notebook is already building towards:</p>
+    <pre><code>pipe = <span class="c-fn">Pipeline</span>([
+    (<span class="c-str">'prep'</span>, preprocessor),          <span class="c-com"># the ColumnTransformer from earlier</span>
+    (<span class="c-str">'model'</span>, <span class="c-fn">Ridge</span>(alpha=<span class="c-num">10</span>))
+])
+pipe.<span class="c-fn">fit</span>(X_train, y_train)          <span class="c-com"># every step fits on train only</span>
+pipe.<span class="c-fn">score</span>(X_test, y_test)</code></pre>
+    <p>Worth restructuring the notebook so the Ridge fit uses the pipeline that was just built. It closes the loop and removes the leak in the same edit.</p>
+  </div>
+
+  <div class="box flag">
+    <div class="box-label">Two smaller fixes</div>
+    <p>The instructor note before the encoder cell says "<code>drop='first'</code> attribute of the <strong>Standard Scaler</strong>" — <code>drop</code> is a <code>OneHotEncoder</code> parameter; <code>StandardScaler</code> has no such argument. And <code>sns.distplot</code> in the EDA cells has been removed from current seaborn; <code>sns.histplot(..., kde=True)</code> is the replacement.</p>
+  </div>
+
+  <div class="box field">
+    <div class="box-label">Why this matters outside the classroom</div>
+    <p>The reason pipelines are non-negotiable in production is not tidiness — it is that the training code and the serving code must apply <em>identical</em> transformations, and the serving code usually runs in a different process, written months later, on one row at a time. A pickled pipeline carries its learned \(\theta\) with it, so the scaler that serves a request is the same object that was fitted during training. Hand-rolled preprocessing is where training/serving skew comes from, and it is one of the most common causes of a model that scored well in a notebook and failed in production.</p>
+  </div>
+</section>
+
+<!-- ============================ LECTURE 2 ============================ -->
+<section class="chapter sheet" id="l2">
+  <div class="chapter-head">
+    <span class="chapter-num">Lecture 06</span>
+    <span class="chapter-rule"></span>
+  </div>
+  <h2>Cross-validation: getting a number you can trust</h2>
+  <p class="chapter-sub">Cross Validation in ML · fold estimators, the LOOCV shortcut, grid search, and the winner's curse</p>
+
+  <p class="lede">Lecture 5 gave you a knob to turn. This one is about the measuring instrument you use while turning it — and about the fact that if you calibrate the instrument on your test set, you no longer have a test set.</p>
+
+  <h3>Step 1 · Why one split is not enough, quantified</h3>
+
+  <p>Your notebook makes the argument by intuition: a 20% slice might happen to be easy or hard. Here is the same argument with numbers attached.</p>
+
+  <p>Hold-out R² is computed from \(n_{\text{test}}\) observations, so it is an average of \(n_{\text{test}}\) noisy quantities. Its standard error therefore scales as</p>
+
+  \[ \mathrm{SE}(\widehat{\text{score}}) \;\propto\; \frac{1}{\sqrt{n_{\text{test}}}} \]
+
+  <p>The housing data gives 164 test rows; the car data gives 62. Small test sets produce loud estimates. And you can see exactly this in your own output — the five fold scores from <code>cross_val_score</code> on the housing model:</p>
+
+  <table>
+    <thead><tr><th>Fold</th><th class="num">1</th><th class="num">2</th><th class="num">3</th><th class="num">4</th><th class="num">5</th><th>mean</th><th>spread</th></tr></thead>
+    <tbody>
+      <tr><td>R² (<code>cv=5</code>)</td><td class="num">0.683</td><td class="num">0.693</td><td class="num">0.676</td><td class="num">0.618</td><td class="num">0.593</td><td class="num">0.653</td><td class="num">0.101</td></tr>
+      <tr><td>R² (shuffled)</td><td class="num">0.599</td><td class="num">0.713</td><td class="num">0.613</td><td class="num">0.627</td><td class="num">0.621</td><td class="num">0.635</td><td class="num">0.114</td></tr>
+    </tbody>
+  </table>
+
+  <p>Those are the <em>same model on the same data</em>. Depending on which slice you had drawn as your single hold-out, you would have reported anywhere from 0.59 to 0.71 — a range of eleven percentage points of explained variance. Averaging over folds is what turns that into one defensible number, and the spread itself is information: your notebook is right that folds disagreeing wildly is a red flag.</p>
+
+  <div class="note">Report the mean <b>and</b> the standard deviation. A model at 0.65 ± 0.04 and one at 0.65 ± 0.20 are not the same model.</div>
+
+  <h3>Step 2 · The k-fold estimator</h3>
+
+  <p>Partition the training data into \(k\) disjoint folds \(F_1, \ldots, F_k\) of roughly equal size. For each \(i\), train on everything except \(F_i\) and score on \(F_i\). The cross-validation estimate is the average:</p>
+
+  \[ \mathrm{CV}_k \;=\; \frac{1}{k}\sum_{i=1}^{k} L\bigl(\hat{f}^{(-F_i)},\, F_i\bigr) \]
+
+  <p>Every observation is used for validation exactly once and for training exactly \(k-1\) times. That is the property the diagram in your notebook is showing.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 280" role="img" aria-label="Five rows of five blocks; in each row a different block is marked as the validation fold and the rest are training">
+      <text x="30" y="26" font-size="13" font-weight="600">5-fold cross-validation</text>
+      <text x="470" y="26" class="svg-tiny">■ validation fold   □ training folds</text>
+      <rect x="452" y="17" width="10" height="10" fill="#A81F27"/>
+      <rect x="556" y="17" width="10" height="10" fill="#EDF2FA" stroke="#C6D2E4"/>
+
+      <g font-family="IBM Plex Mono" font-size="10.5">
+        <!-- rows -->
+        <g>
+          <text x="30" y="66" class="svg-tiny">split 1</text>
+          <rect x="86" y="52" width="100" height="22" fill="#A81F27"/>
+          <rect x="190" y="52" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="294" y="52" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="398" y="52" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="502" y="52" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <text x="614" y="68" class="svg-tiny">R²₁</text>
+        </g>
+        <g>
+          <text x="30" y="100" class="svg-tiny">split 2</text>
+          <rect x="86" y="86" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="190" y="86" width="100" height="22" fill="#A81F27"/>
+          <rect x="294" y="86" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="398" y="86" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="502" y="86" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <text x="614" y="102" class="svg-tiny">R²₂</text>
+        </g>
+        <g>
+          <text x="30" y="134" class="svg-tiny">split 3</text>
+          <rect x="86" y="120" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="190" y="120" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="294" y="120" width="100" height="22" fill="#A81F27"/>
+          <rect x="398" y="120" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="502" y="120" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <text x="614" y="136" class="svg-tiny">R²₃</text>
+        </g>
+        <g>
+          <text x="30" y="168" class="svg-tiny">split 4</text>
+          <rect x="86" y="154" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="190" y="154" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="294" y="154" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="398" y="154" width="100" height="22" fill="#A81F27"/>
+          <rect x="502" y="154" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <text x="614" y="170" class="svg-tiny">R²₄</text>
+        </g>
+        <g>
+          <text x="30" y="202" class="svg-tiny">split 5</text>
+          <rect x="86" y="188" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="190" y="188" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="294" y="188" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="398" y="188" width="100" height="22" fill="#EDF2FA" stroke="#C6D2E4"/>
+          <rect x="502" y="188" width="100" height="22" fill="#A81F27"/>
+          <text x="614" y="204" class="svg-tiny">R²₅</text>
+        </g>
+      </g>
+
+      <line x1="86" y1="228" x2="602" y2="228" stroke="#14243F"/>
+      <text x="344" y="252" text-anchor="middle" class="svg-tiny">CV score = mean(R²₁ … R²₅),  report the sd alongside it</text>
+      <text x="150" y="272" class="svg-hand">the held-out test set is not on this diagram — that is the point</text>
+    </svg>
+    <figcaption><b>Fig. 3</b> — All five splits happen <em>within</em> the training data. The test set sits outside this picture entirely and is touched exactly once, at the very end.</figcaption>
+  </figure>
+
+  <h4>Choosing k is itself a bias–variance tradeoff</h4>
+
+  <table>
+    <thead><tr><th></th><th>Small k (e.g. 3)</th><th>Large k (e.g. n = LOOCV)</th></tr></thead>
+    <tbody>
+      <tr><td>Training set per fold</td><td class="num">67% of data</td><td class="num">(n−1)/n ≈ 100%</td></tr>
+      <tr><td>Bias of the estimate</td><td>Higher — models are trained on less data than the final one, so CV is pessimistic</td><td>Almost none</td></tr>
+      <tr><td>Variance of the estimate</td><td>Lower</td><td>Higher — the n training sets overlap almost completely, so the n scores are highly correlated and averaging them removes little noise</td></tr>
+      <tr><td>Cost</td><td class="num">3 fits</td><td class="num">n fits</td></tr>
+    </tbody>
+  </table>
+
+  <p>\(k = 5\) or \(k = 10\) is the standard compromise, and it is what your notebooks use. It is worth telling learners that this is an empirical convention rather than a theorem.</p>
+
+  <h3>Step 3 · The result that surprises people: LOOCV for free</h3>
+
+  <p>Leave-one-out sounds prohibitively expensive — \(n\) model fits. For linear regression it costs <em>one</em>. This is a genuinely beautiful piece of algebra and it uses the projection matrix from post-read 1.</p>
+
+  <p>Recall the hat matrix, which turns actual values into fitted values:</p>
+  \[ H = X(X^{\!\top}X)^{-1}X^{\!\top}, \qquad \hat{\mathbf{y}} = H\mathbf{y} \]
+
+  <p>Its diagonal entries \(h_{ii}\) are called <strong>leverages</strong>: \(h_{ii}\) measures how much observation \(i\) influences its own fitted value. Then:</p>
+
+  <div class="ladder">
+    <div class="ladder-title">The PRESS identity</div>
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-body">
+        <p>Let \(e_i = y_i - \hat{y}_i\) be the ordinary residual from the model fitted on <em>all</em> the data. Then the leave-one-out residual — the error the model makes on point \(i\) when point \(i\) was excluded from training — is</p>
+        \[ \boxed{\;y_i - \hat{y}_i^{(-i)} = \frac{e_i}{1 - h_{ii}}\;} \]
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-body">
+        <p>So the full leave-one-out cross-validation error is</p>
+        \[ \mathrm{CV}_{\text{LOO}} = \frac{1}{n}\sum_{i=1}^{n}\left(\frac{e_i}{1-h_{ii}}\right)^{\!2} \]
+        <p class="step-why">No refitting. One fit, one diagonal, done. This quantity is called the <strong>PRESS statistic</strong>, and it is why <code>RidgeCV</code> can search a hundred alphas almost instantly while <code>LassoCV</code> cannot.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-body">
+        <p>The identity also explains <em>why</em> training error is optimistic, in a way the \(p/n\) formula from post-read 1 only hinted at. Since \(\mathrm{tr}(H) = p\), the average leverage is exactly \(p/n\), so on average</p>
+        \[ \frac{1}{1 - h_{ii}} \approx \frac{1}{1 - p/n} \]
+        <p class="step-why">Every training residual is understating the true error by roughly this factor — and the factor blows up as \(p\) approaches \(n\).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="box field">
+    <div class="box-label">Put your own numbers in it</div>
+    <p>The CarPrice model has \(n = 143\) training rows and \(p = 68\) features. Average leverage is \(68/143 = 0.476\), so</p>
+    \[ \frac{1}{1-0.476} = 1.91 \qquad\Longrightarrow\qquad \text{squared errors understated by} \approx 1.91^2 \approx 3.6\times \]
+    <p>The training fit is flattering itself by more than a factor of three. The housing model, at \(p/n = 13/381 = 0.034\), has \(1/(1-0.034) = 1.035\), so on the same squared basis it inflates by only \(1.035^2 \approx 1.07\times\) — barely anything. Same technique, wildly different exposure, and the ratio \(p/n\) is the number that tells you which situation you are in. This is also the strongest possible argument for why the CarPrice model <em>needs</em> Ridge and the housing model does not.</p>
+  </div>
+
+  <details>
+    <summary>▸ Proof of the PRESS identity (uses the Sherman–Morrison formula)</summary>
+    <p>Removing row \(i\) removes its contribution from both accumulators:</p>
+    \[ X_{(-i)}^{\!\top}X_{(-i)} = X^{\!\top}X - \mathbf{x}_i\mathbf{x}_i^{\!\top}, \qquad X_{(-i)}^{\!\top}\mathbf{y}_{(-i)} = X^{\!\top}\mathbf{y} - \mathbf{x}_i y_i \]
+    <p>Sherman–Morrison gives the inverse of a rank-one update in closed form:</p>
+    \[ (A - \mathbf{x}\mathbf{x}^{\!\top})^{-1} = A^{-1} + \frac{A^{-1}\mathbf{x}\mathbf{x}^{\!\top}A^{-1}}{1 - \mathbf{x}^{\!\top}A^{-1}\mathbf{x}} \]
+    <p>With \(A = X^\top X\) the denominator is \(1 - h_{ii}\), since \(h_{ii} = \mathbf{x}_i^\top(X^\top X)^{-1}\mathbf{x}_i\) by definition. Combining and simplifying:</p>
+    \[ \hat{\mathbf{w}}^{(-i)} = \hat{\mathbf{w}} - \frac{(X^{\!\top}X)^{-1}\mathbf{x}_i\,e_i}{1-h_{ii}} \]
+    <p>Predicting at \(\mathbf{x}_i\) with those weights, \(\hat{y}_i^{(-i)} = \hat{y}_i - \dfrac{h_{ii}e_i}{1-h_{ii}}\), so</p>
+    \[ y_i - \hat{y}_i^{(-i)} = e_i + \frac{h_{ii}e_i}{1-h_{ii}} = \frac{e_i(1-h_{ii}) + h_{ii}e_i}{1-h_{ii}} = \frac{e_i}{1-h_{ii}} \qquad\blacksquare \]
+  </details>
+
+  <h3>Step 4 · Finding the best λ</h3>
+
+  <p>Your notebook plots training and validation error against \(\lambda\) and reads the optimum off the curve. The shapes of those two curves are forced by the mathematics of the previous lecture:</p>
+
+  <ul>
+    <li><strong>Training error rises monotonically with λ.</strong> Provable: at \(\lambda = 0\) the OLS solution minimises training error by definition, and any larger \(\lambda\) moves the solution away from that minimiser. Adding constraint can never improve the objective it is constraining.</li>
+    <li><strong>Validation error is U-shaped.</strong> At small λ, variance dominates — the model is fitting noise. At large λ, bias dominates — the model has been shrunk into a near-constant. The minimum is the bias–variance sweet spot from Lecture 4, now reachable by turning one dial.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 660 300" role="img" aria-label="Error against lambda: training error rises steadily while validation error falls then rises, with the optimum marked at the validation minimum">
+      <line x1="70" y1="255" x2="630" y2="255" stroke="#14243F"/>
+      <line x1="70" y1="30" x2="70" y2="255" stroke="#14243F"/>
+      <text x="350" y="284" text-anchor="middle" class="svg-lbl">λ  (regularisation strength, log scale)</text>
+      <text x="26" y="145" text-anchor="middle" class="svg-lbl" transform="rotate(-90 26 145)">error</text>
+
+      <path d="M 84 228 C 200 222, 320 200, 620 92" fill="none" stroke="#0D6A67" stroke-width="2.2"/>
+      <text x="500" y="140" class="svg-tiny" fill="#0D6A67">training error — only goes up</text>
+
+      <path d="M 84 78 C 170 168, 250 196, 330 197 C 430 199, 520 130, 620 46" fill="none" stroke="#A81F27" stroke-width="2.4"/>
+      <text x="120" y="66" class="svg-tiny" fill="#A81F27">validation error</text>
+
+      <line x1="336" y1="197" x2="336" y2="255" stroke="#14243F" stroke-dasharray="3 3"/>
+      <circle cx="336" cy="197" r="5.5" fill="#A81F27"/>
+      <text x="336" y="272" text-anchor="middle" class="svg-tiny">λ*</text>
+
+      <text x="130" y="240" class="svg-tiny">overfit · high variance</text>
+      <text x="500" y="240" class="svg-tiny">underfit · high bias</text>
+
+      <text x="360" y="120" class="svg-hand">pick the bottom of the red curve —</text>
+      <text x="360" y="142" class="svg-hand">never the bottom of the green one</text>
+    </svg>
+    <figcaption><b>Fig. 4</b> — The gap between the two curves <em>is</em> the variance term. A model where they meet has nothing left to regularise away.</figcaption>
+  </figure>
+
+  <h4>Grid search, counted</h4>
+
+  <p>The cost of an exhaustive grid search is a product, not a sum:</p>
+
+  \[ \text{fits} = k \times \prod_{j=1}^{m}\bigl|\text{grid}_j\bigr| \;\;(+\,1\text{ refit on the full training set}) \]
+
+  <p>Your notebook's <code>verbose=1</code> output confirms it three times: <code>Fitting 5 folds for each of 28 candidates, totalling 140 fits</code> (5 × 28), then 65 fits (5 × 13), then 190 fits (5 × 38). Note the product: two hyperparameters with ten values each at \(k=5\) is 500 fits, and three is 5,000. This is why <code>RandomizedSearchCV</code> exists — sampling 60 random points from a grid finds a configuration in the top 5% with probability about 95%, regardless of how many dimensions the grid has.</p>
+
+  <h3>Step 5 · The winner's curse, and why the test set stays sealed</h3>
+
+  <p>Your notebook opens with exactly the right warning: choosing λ by comparing test scores means you are training on the test set. Here is the formal version, which is worth giving to learners because it explains <em>how much</em> you are fooling yourself.</p>
+
+  <p>Suppose you evaluate \(m\) candidate models on the same hold-out set. Each score \(S_j\) is an unbiased but noisy estimate of that model's true performance. You report the best one. But for any random variables,</p>
+
+  \[ \mathbb{E}\Bigl[\max_j S_j\Bigr] \;\ge\; \max_j \mathbb{E}[S_j] \]
+
+  <p>The maximum of noisy estimates is biased upward — you are partly selecting the model that got the luckiest draw, not the model that is best. With \(m = 28\) alphas and a 62-row test set, that optimism is not small. The whole three-way discipline follows from this one inequality:</p>
+
+  <table>
+    <thead><tr><th>Set</th><th>Used for</th><th>How many times</th></tr></thead>
+    <tbody>
+      <tr><td>Training folds</td><td>Fitting parameters \(\mathbf{w}\)</td><td>Once per fold per candidate</td></tr>
+      <tr><td>Validation folds</td><td>Choosing hyperparameters λ, k, degree</td><td>Many — that's the job</td></tr>
+      <tr><td>Test set</td><td>Reporting one final number</td><td><strong>Exactly once, at the end</strong></td></tr>
+    </tbody>
+  </table>
+
+  <p>If you look at the test score and then go back and change anything — the model, a feature, λ — the test set has become a validation set and your reported number is optimistic again. In a workplace this is the difference between a model that hits its projected numbers in production and one that quietly underperforms by five points.</p>
+
+  <p>Your notebooks get this structurally right: <code>GridSearchCV</code> is fitted on <code>X_train</code> only, and the test set is scored once. Worth pointing out explicitly, because it is the discipline the whole lecture is arguing for.</p>
+
+  <h3>Step 6 · Where the two lectures meet</h3>
+
+  <p>This is the single most important idea across both notebooks, and it is the one most easily missed because each lecture only shows half of it.</p>
+
+  <p>Cross-validation is supposed to simulate "a model meeting data it has never seen." If you scale <em>before</em> the CV loop, then the scaler saw every fold, including the one currently being held out — and the simulation is broken. The validation score is optimistic, and it is optimistic in a way no amount of extra folds will reveal.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 300" role="img" aria-label="Top: a scaler fitted once on all data before folding, with arrows showing the held-out fold contributing to it. Bottom: a pipeline refitting the scaler inside each fold">
+      <text x="30" y="24" font-size="13" font-weight="600" fill="#A81F27">Wrong — scale first, then cross-validate</text>
+      <rect x="30" y="40" width="140" height="34" fill="#FFF" stroke="#A81F27" stroke-width="1.6"/>
+      <text x="100" y="62" text-anchor="middle" class="svg-tiny">scaler.fit_transform(X)</text>
+      <g>
+        <rect x="210" y="40" width="80" height="34" fill="#EDF2FA" stroke="#C6D2E4"/>
+        <rect x="296" y="40" width="80" height="34" fill="#EDF2FA" stroke="#C6D2E4"/>
+        <rect x="382" y="40" width="80" height="34" fill="#EDF2FA" stroke="#C6D2E4"/>
+        <rect x="468" y="40" width="80" height="34" fill="#A81F27"/>
+        <text x="508" y="62" text-anchor="middle" font-size="10.5" fill="#FFF" font-family="IBM Plex Mono">held out</text>
+      </g>
+      <path d="M 508 78 C 508 106, 100 106, 100 80" fill="none" stroke="#A81F27" stroke-width="1.4" stroke-dasharray="4 3"/>
+      <text x="300" y="120" text-anchor="middle" class="svg-tiny" fill="#A81F27">the held-out fold's μ and σ are already baked into every training fold</text>
+
+      <line x1="30" y1="146" x2="630" y2="146" stroke="#C6D2E4" stroke-dasharray="4 4"/>
+
+      <text x="30" y="176" font-size="13" font-weight="600" fill="#0D6A67">Right — put the scaler inside the pipeline</text>
+      <g>
+        <rect x="30" y="196" width="100" height="34" fill="#EDF2FA" stroke="#C6D2E4"/>
+        <text x="80" y="218" text-anchor="middle" class="svg-tiny">fold 1 train</text>
+        <rect x="136" y="196" width="100" height="34" fill="#EDF2FA" stroke="#C6D2E4"/>
+        <text x="186" y="218" text-anchor="middle" class="svg-tiny">fold 2 train</text>
+        <rect x="242" y="196" width="100" height="34" fill="#EDF2FA" stroke="#C6D2E4"/>
+        <text x="292" y="218" text-anchor="middle" class="svg-tiny">fold 3 train</text>
+        <rect x="348" y="196" width="86" height="34" fill="#0D6A67"/>
+        <text x="391" y="218" text-anchor="middle" font-size="10.5" fill="#FFF" font-family="IBM Plex Mono">held out</text>
+      </g>
+      <rect x="452" y="188" width="178" height="50" fill="#FFF" stroke="#0D6A67" stroke-width="1.6"/>
+      <text x="541" y="208" text-anchor="middle" class="svg-tiny">scaler re-fitted per fold</text>
+      <text x="541" y="226" text-anchor="middle" class="svg-tiny">on training rows only</text>
+      <text x="230" y="262" text-anchor="middle" class="svg-hand">Pipeline(steps=[scaler, model]) does this automatically</text>
+    </svg>
+    <figcaption><b>Fig. 5</b> — Pass the <em>pipeline</em> to <code>cross_val_score</code> or <code>GridSearchCV</code>, never a pre-transformed matrix. Every preprocessing step that learns from data — scalers, imputers, encoders, feature selectors, target encoders — belongs inside.</figcaption>
+  </figure>
+
+  <pre><code><span class="c-com"># The shape both lectures are building towards</span>
+pipe = <span class="c-fn">Pipeline</span>([
+    (<span class="c-str">'prep'</span>,  preprocessor),      <span class="c-com"># ColumnTransformer from lecture 5</span>
+    (<span class="c-str">'model'</span>, <span class="c-fn">Ridge</span>())
+])
+
+grid = <span class="c-fn">GridSearchCV</span>(
+    pipe,
+    param_grid={<span class="c-str">'model__alpha'</span>: [<span class="c-num">0.01</span>, <span class="c-num">0.1</span>, <span class="c-num">1</span>, <span class="c-num">10</span>, <span class="c-num">100</span>]},   <span class="c-com"># note the step__param syntax</span>
+    cv=<span class="c-fn">KFold</span>(n_splits=<span class="c-num">5</span>, shuffle=<span class="c-kw">True</span>, random_state=<span class="c-num">42</span>),
+    scoring=<span class="c-str">'r2'</span>
+)
+grid.<span class="c-fn">fit</span>(X_train, y_train)             <span class="c-com"># preprocessing re-fitted inside every fold</span>
+<span class="c-fn">print</span>(grid.best_params_, grid.best_score_)
+grid.<span class="c-fn">score</span>(X_test, y_test)           <span class="c-com"># the one and only look at test</span></code></pre>
+  <p class="code-cap">The double underscore in <code>model__alpha</code> is how you address a parameter of a named step. It is also how you tune preprocessing choices — <code>prep__num__imputer__strategy</code> is a legal hyperparameter.</p>
+
+  <h3>Step 7 · Stratified k-fold, and why RFE needs scaling</h3>
+
+  <h4>Stratification</h4>
+  <p>Plain <code>KFold</code> slices at random, so with a rare class the fold proportions wobble. If a class has prevalence \(\pi\), the count in a fold of size \(n/k\) is roughly Binomial, with standard deviation</p>
+  \[ \sqrt{\tfrac{n}{k}\,\pi(1-\pi)} \]
+  <p>At \(\pi = 0.02\), \(n = 1000\), \(k = 5\): each fold expects 4 positives with a standard deviation of about 2. Some folds will contain one positive; some may contain none at all, which makes several metrics undefined. <code>StratifiedKFold</code> removes that variance entirely by sampling within each class, so every fold has the same class balance as the whole. It is the default for classifiers in sklearn, and it becomes essential in the next module.</p>
+
+  <div class="note">Note that stratified k-fold appears in the agenda and the MCQ but never in a code cell — worth adding a two-line demo before the classification module.</div>
+
+  <h4>RFE</h4>
+  <p>Recursive Feature Elimination is a greedy backward search: fit the model, rank features by \(|w_j|\), drop the weakest, refit, repeat until the requested count remains. Its cost is \(O(p)\) fits, and its correctness rests entirely on an assumption from Lecture 5: <strong>\(|w_j|\) is only a fair ranking if all features share a scale.</strong> On unscaled data, RFE will eliminate whatever happens to be measured in large units. Your notebook does scale beforehand, so the ranking is meaningful — but it is worth saying out loud, since it is the same reason regularisation needs scaling.</p>
+
+  <h3>Step 8 · When R² goes to minus five billion</h3>
+
+  <p>The polynomial experiment produces the most memorable number in either notebook:</p>
+
+  <table>
+    <thead><tr><th>Degree</th><th class="num">1</th><th class="num">2</th><th class="num">3</th><th class="num">6</th><th class="num">10</th><th class="num">20</th></tr></thead>
+    <tbody>
+      <tr><td>Train R²</td><td class="num">0.29</td><td class="num">0.34</td><td class="num">0.34</td><td class="num">0.36</td><td class="num">0.37</td><td class="num">0.38</td></tr>
+      <tr><td>Test R²</td><td class="num">0.25</td><td class="num">0.22</td><td class="num">0.22</td><td class="num">0.11</td><td class="num">−108.8</td><td class="num">−5.6 × 10⁹</td></tr>
+    </tbody>
+  </table>
+
+  <p>Two things to draw out. First, the training column is almost flat — it climbs from 0.29 to 0.38 across nineteen extra degrees. Anyone watching only that column would conclude the models are all much the same. The test column collapses. This is the cleanest demonstration of the \(2\sigma^2p/n\) gap you will get.</p>
+
+  <p>Second, the magnitude is not a bug. From post-read 1, \(R^2 = 1 - SS_{\text{res}}/SS_{\text{tot}}\), and \(SS_{\text{res}}\) has no upper bound. A degree-20 polynomial fitted on <code>area</code> scaled to [0, 1] involves \(x^{20}\), and the design matrix columns span twenty orders of magnitude — a condition number so large that the coefficients are essentially numerical noise. Just outside the training range the curve leaves the page. Squaring those errors gets you to \(10^9\) easily.</p>
+
+  <p>The remedy is the previous lecture: a degree-20 polynomial with Ridge regularisation is perfectly usable, because the penalty suppresses precisely the high-order coefficients that are running away. Running that comparison live is a strong five minutes of class.</p>
+
+  <h3>Reading your own output: three code defects in this notebook</h3>
+
+  <div class="box check">
+    <div class="box-label">Finding 5 — the Ridge tuning plot has no x-axis left</div>
+    <pre><code>cv_results[<span class="c-str">'param_alpha'</span>] = cv_results[<span class="c-str">'param_alpha'</span>].<span class="c-fn">astype</span>(<span class="c-bad">'int32'</span>)</code></pre>
+    <p>The alpha grid starts at 0.0001 and has thirteen values below 1.0. Casting to <code>int32</code> truncates every one of them to <strong>0</strong>. Half the grid collapses onto a single x-coordinate, and matplotlib draws a vertical scribble at the origin — the plot cannot show where the optimum is, which is the only thing it was drawn to show.</p>
+    <p>The Lasso version of the same cell uses <code>float32</code> and is fine, which makes the contrast easy to demonstrate. Better still, plot on a log scale, since the grid spans seven orders of magnitude:</p>
+    <pre><code>cv_results[<span class="c-str">'param_alpha'</span>] = cv_results[<span class="c-str">'param_alpha'</span>].<span class="c-fn">astype</span>(<span class="c-str">'float64'</span>)
+plt.<span class="c-fn">semilogx</span>(cv_results[<span class="c-str">'param_alpha'</span>], cv_results[<span class="c-str">'mean_test_score'</span>])</code></pre>
+    <p>Related: the chosen <code>alpha = 15</code> is not a member of the grid at all (it jumps 10 → 20), and <code>model_cv.best_params_</code> is never consulted. Use <code>grid.best_estimator_</code> — it is already refitted on the full training set and it removes the transcription step where a wrong number can creep in.</p>
+  </div>
+
+  <div class="box check">
+    <div class="box-label">Finding 6 — the test set gets its own scaler</div>
+    <pre><code>df_train[numeric_vars] = scaler.<span class="c-fn">fit_transform</span>(df_train[numeric_vars])
+df_test[numeric_vars]  = scaler.<span class="c-bad">fit_transform</span>(df_test[numeric_vars])   <span class="c-com"># should be .transform</span></code></pre>
+    <p>The second <code>fit_transform</code> throws away the training \((x_{\min}, x_{\max})\) and learns new ones from the test rows. Train and test now live on <em>different</em> scales — the cheapest house in the test set maps to 0.0 regardless of how it compares with the cheapest training house — so the fitted coefficients are being applied to inputs they were never calibrated for.</p>
+    <p>It is doubly worth fixing because the very next markdown cell says "we haven't rescaled the test set yet," which contradicts the code directly above it. A learner following along carefully will be confused, and a learner following along carelessly will copy the pattern into their capstone.</p>
+  </div>
+
+  <div class="box check">
+    <div class="box-label">Finding 7 — the "final model" reports the score of a different model</div>
+    <pre><code>n_features_optimal = <span class="c-num">10</span>
+lm = <span class="c-fn">LinearRegression</span>()
+lm.<span class="c-fn">fit</span>(X_train, y_train)
+rfe = <span class="c-fn">RFE</span>(lm, n_features_to_select=n_features_optimal)
+rfe = rfe.<span class="c-fn">fit</span>(X_train, y_train)
+
+y_pred = <span class="c-bad">lm</span>.<span class="c-fn">predict</span>(X_test)     <span class="c-com"># should be rfe.predict</span>
+r2 = sklearn.metrics.<span class="c-fn">r2_score</span>(y_test, y_pred)   <span class="c-com"># prints 0.5996</span></code></pre>
+    <p>The RFE object is fitted and then never used. The reported 0.5996 belongs to the full 13-feature model, not to the 10-feature model the grid search just selected. The conclusion drawn from it — that the test score closely matches the CV mean — happens to hold anyway, but it is being supported by the wrong number.</p>
+    <p>Changing <code>lm</code> to <code>rfe</code> is the whole fix. It is a good cell to leave in as a deliberate spot-the-bug exercise, because it is exactly the kind of mistake that survives code review: nothing errors, and the output looks plausible.</p>
+  </div>
+</section>
+
+
+<!-- ============================ CHEAT SHEET ============================ -->
+<section class="chapter sheet" id="cheatsheet">
+  <div class="chapter-head">
+    <span class="chapter-num">Appendix</span>
+    <span class="chapter-rule"></span>
+  </div>
+  <h2>One-page formula sheet</h2>
+  <p class="chapter-sub">Set 2, with the notebook each result belongs to</p>
+
+  <table>
+    <thead><tr><th>Concept</th><th>Formula</th><th>Lecture</th></tr></thead>
+    <tbody>
+      <tr><td>Ridge objective</td><td>\(\|\mathbf{y}-X\mathbf{w}\|^2 + \lambda\|\mathbf{w}\|_2^2\)</td><td class="num">5</td></tr>
+      <tr><td>Ridge closed form</td><td>\((X^{\!\top}X + \lambda I)^{-1}X^{\!\top}\mathbf{y}\)</td><td class="num">5</td></tr>
+      <tr><td>Ridge shrinkage (1-D)</td><td>\(\hat{w} = z/(1+\lambda)\)</td><td class="num">5</td></tr>
+      <tr><td>Lasso objective</td><td>\(\|\mathbf{y}-X\mathbf{w}\|^2 + \lambda\|\mathbf{w}\|_1\)</td><td class="num">5</td></tr>
+      <tr><td>Soft threshold (1-D)</td><td>\(\hat{w} = \mathrm{sign}(z)(|z|-\lambda/2)_+\)</td><td class="num">5</td></tr>
+      <tr><td>Elastic Net</td><td>\(\lambda\bigl(\alpha\|\mathbf{w}\|_1 + \tfrac{1-\alpha}{2}\|\mathbf{w}\|_2^2\bigr)\)</td><td class="num">5</td></tr>
+      <tr><td>Eigenvalue shift</td><td>\(\mu_j \to \mu_j + \lambda\) — always invertible</td><td class="num">5</td></tr>
+      <tr><td>SVD shrinkage factor</td><td>\(d_j^2/(d_j^2+\lambda)\)</td><td class="num">5</td></tr>
+      <tr><td>MaxAbs scaling</td><td>\(x/\max|x|\) — preserves zeros</td><td class="num">5</td></tr>
+      <tr><td>Pipeline</td><td>\(f_k \circ \cdots \circ f_1\)</td><td class="num">5</td></tr>
+      <tr><td>ColumnTransformer</td><td>\([\,g_1(\mathbf{x}_{C_1})\|\cdots\|g_m(\mathbf{x}_{C_m})\,]\)</td><td class="num">5</td></tr>
+      <tr><td>k-fold estimate</td><td>\(\frac{1}{k}\sum_i L(\hat{f}^{(-F_i)}, F_i)\)</td><td class="num">6</td></tr>
+      <tr><td>Hat matrix / leverage</td><td>\(H = X(X^{\!\top}X)^{-1}X^{\!\top}\), \(\mathrm{tr}(H)=p\)</td><td class="num">6</td></tr>
+      <tr><td>LOOCV (PRESS)</td><td>\(\frac{1}{n}\sum_i \bigl(e_i/(1-h_{ii})\bigr)^2\)</td><td class="num">6</td></tr>
+      <tr><td>Grid search cost</td><td>\(k \times \prod_j |\text{grid}_j|\)</td><td class="num">6</td></tr>
+      <tr><td>Winner's curse</td><td>\(\mathbb{E}[\max_j S_j] \ge \max_j \mathbb{E}[S_j]\)</td><td class="num">6</td></tr>
+      <tr><td>Fold class-count sd</td><td>\(\sqrt{(n/k)\pi(1-\pi)}\)</td><td class="num">6</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Corrections to carry back into the notebooks</h3>
+  <ol>
+    <li><strong>Pipelines, ordinal encoder</strong> — <code>[-2,-1,3,2,1,0]</code> scrambles the risk ordering. Use <code>[-2,-1,0,1,2,3]</code>.</li>
+    <li><strong>Pipelines, encoders</strong> — <code>symboling</code> and <code>cylindernumber</code> are ordinal- <em>and</em> one-hot-encoded, creating exact linear dependence. Pick one, and add <code>drop='first'</code>.</li>
+    <li><strong>Pipelines, <code>num_cols</code></strong> — <code>price</code> (the target) and <code>car_ID</code> (a row index) are being scaled as features. Drop both.</li>
+    <li><strong>Pipelines, model section</strong> — <code>scale(X)</code> runs before <code>train_test_split</code>. Move it into a Pipeline.</li>
+    <li><strong>Pipelines, instructor note</strong> — <code>drop='first'</code> is a <code>OneHotEncoder</code> parameter, not <code>StandardScaler</code>. Also <code>sns.distplot</code> is removed from current seaborn.</li>
+    <li><strong>CV, ridge plot</strong> — <code>astype('int32')</code> flattens 13 of the 26 alphas to zero. Use <code>float64</code> and <code>semilogx</code>. Also take α from <code>best_params_</code>, not by eye — 15 is not in the grid.</li>
+    <li><strong>CV, housing</strong> — the test set is re-fitted with a fresh scaler; should be <code>transform</code>. It also contradicts the markdown cell below it.</li>
+    <li><strong>CV, final model</strong> — <code>lm.predict(X_test)</code> should be <code>rfe.predict(X_test)</code>. The reported 0.5996 is the wrong model's score.</li>
+    <li><strong>CV, stratified k-fold</strong> — in the agenda and the MCQ but never demonstrated in code.</li>
+  </ol>
+
+  <h3>Exercises</h3>
+  <ol>
+    <li>Fit Ridge on the CarPrice data with <code>year</code>-style duplicated columns deliberately added. Show that OLS breaks and Ridge does not, then explain it with the eigenvalue shift.</li>
+    <li>Implement the soft-threshold operator in three lines and plot \(\hat{w}\) against \(z\) for Ridge and Lasso on the same axes. The kink is the whole lecture.</li>
+    <li>Compute LOOCV for the housing model two ways — once with <code>KFold(n_splits=len(X))</code> and once with the PRESS formula from the hat matrix diagonal. Time both.</li>
+    <li>Rebuild the CarPrice workflow as a single <code>Pipeline</code> inside a <code>GridSearchCV</code>. Compare the CV score with the leaky version that scales first.</li>
+    <li>Take the degree-20 polynomial that scored −5.6 × 10⁹ and wrap it in Ridge. Find the α that makes it usable.</li>
+    <li>Run <code>GridSearchCV</code> on pure noise (<code>y = np.random.randn(n)</code>) over 50 candidates. Note that the best CV score is still positive — that is the winner's curse, measured.</li>
+  </ol>
+</section>
+
+<footer class="end">
+  Post-read companion, set 2 · Sklearn Pipelines &amp; Cross Validation in ML<br>
+  Every derivation corresponds to a cell in the two Colab notebooks. Numerical claims — fold spreads, leverage ratios, grid-search fit counts, and the ordinal encoder mapping — were checked against the printed outputs.<br>
+  Equations rendered with MathJax; an internet connection is needed the first time the page loads.
+</footer>
+
+</div><!-- /wrap -->
+
+<script>
+(function () {
+  var bar = document.getElementById('progress');
+  function update() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var pct = max > 0 ? (h.scrollTop || document.body.scrollTop) / max * 100 : 0;
+    bar.style.width = pct.toFixed(2) + '%';
+  }
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Maths-postread-Pipelines-CV" target="_blank" rel="noopener">github.com/scaler-content/Maths-postread-Pipelines-CV</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

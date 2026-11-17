@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Series 3 — Post Read</title>
+<meta name="description" content="Cracking the ARIMA family: ACF, PACF, AR, MA, ARIMA and SARIMA, built step by step on the Vastra Loop sales-forecasting case study.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============ Tokens ============ */
+:root{
+  --royal-900:#0B1A44;
+  --royal-800:#12266B;
+  --royal-700:#1B3F91;
+  --royal-600:#2A50AA;
+  --royal-500:#3B62C4;
+  --royal-400:#5A7CD6;
+  --royal-100:#E7ECFB;
+  --royal-050:#F3F5FD;
+  --gold-700:#8A6300;
+  --gold-600:#B0820A;
+  --gold-500:#D8A300;
+  --gold-400:#F2BC12;
+  --gold-300:#F7CB3E;
+  --gold-100:#FCEFC4;
+  --gold-050:#FDF6E0;
+  --white:#FFFFFF;
+  --paper:#F7F8FC;
+  --paper-2:#EEF1FA;
+  --ink:#0E1735;
+  --ink-soft:#454E74;
+  --ink-mute:#6B7396;
+  --line:#DCE1F2;
+  --line-strong:#B9C2E6;
+  --danger:#B23A3A;
+  --success:#1D7A55;
+
+  --font-display:'Fraunces', Georgia, serif;
+  --font-body:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+
+  --radius-s:6px;
+  --radius-m:12px;
+  --radius-l:20px;
+  --measure:720px;
+  --measure-wide:980px;
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  *,*::before,*::after{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+}
+
+body{
+  margin:0;
+  background:var(--white);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:17px;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+
+::selection{ background:var(--gold-300); color:var(--royal-900); }
+
+a{ color:var(--royal-600); text-decoration-thickness:1px; text-underline-offset:3px; }
+a:hover{ color:var(--royal-800); }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-visible{
+  outline:3px solid var(--gold-400);
+  outline-offset:2px;
+  border-radius:4px;
+}
+
+img{ max-width:100%; height:auto; display:block; }
+
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+
+.skip-link{
+  position:absolute; left:-999px; top:0; background:var(--royal-900); color:var(--white);
+  padding:12px 20px; z-index:200; border-radius:0 0 8px 0; font-weight:600;
+}
+.skip-link:focus{ left:0; }
+
+/* ============ Layout helpers ============ */
+.wrap{ max-width:var(--measure); margin:0 auto; padding:0 24px; }
+.wrap-wide{ max-width:var(--measure-wide); margin:0 auto; padding:0 24px; }
+
+.eyebrow{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  letter-spacing:0.09em;
+  text-transform:uppercase;
+  color:var(--gold-700);
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 14px;
+}
+.eyebrow::before{
+  content:"";
+  width:22px; height:2px; background:var(--gold-500); display:inline-block;
+}
+
+h1,h2,h3,h4{
+  font-family:var(--font-display);
+  color:var(--royal-900);
+  font-weight:600;
+  line-height:1.18;
+  margin:0 0 0.5em;
+}
+h2{ font-size:clamp(1.6rem, 1.2rem + 1.6vw, 2.35rem); }
+h3{ font-size:clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem); font-weight:600; }
+h4{ font-size:1.05rem; font-weight:600; font-family:var(--font-body); text-transform:uppercase; letter-spacing:0.04em; color:var(--royal-700); }
+
+p{ margin:0 0 1.15em; color:var(--ink); }
+.lede{ font-size:1.14rem; color:var(--ink-soft); }
+
+strong{ color:var(--royal-900); font-weight:600; }
+code{ font-family:var(--font-mono); font-size:0.88em; background:var(--royal-050); color:var(--royal-800); padding:0.15em 0.4em; border-radius:4px; }
+
+/* ============ Skip / Header ============ */
+header.masthead{
+  background:linear-gradient(180deg, var(--royal-900) 0%, var(--royal-800) 62%, var(--royal-700) 100%);
+  color:var(--white);
+  padding:64px 0 88px;
+  position:relative;
+  overflow:hidden;
+}
+header.masthead::after{
+  content:"";
+  position:absolute; inset:auto 0 0 0; height:1px;
+  background:linear-gradient(90deg, transparent, var(--gold-400), transparent);
+}
+.masthead-grid{
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(var(--royal-600) 1px, transparent 1px),
+    linear-gradient(90deg, var(--royal-600) 1px, transparent 1px);
+  background-size:64px 64px;
+  opacity:0.14;
+  pointer-events:none;
+}
+.masthead-inner{ position:relative; z-index:1; }
+.kicker{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--gold-300);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:22px;
+  font-weight:600;
+}
+.kicker .dot{ width:7px; height:7px; border-radius:50%; background:var(--gold-400); display:inline-block; }
+
+h1.hero-title{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:clamp(2.2rem, 1.6rem + 3vw, 3.6rem);
+  color:var(--white);
+  line-height:1.06;
+  margin:0 0 20px;
+  max-width:16ch;
+}
+h1.hero-title em{
+  font-style:italic;
+  color:var(--gold-300);
+  font-weight:600;
+}
+.hero-sub{
+  font-size:1.2rem;
+  color:#C9D3F2;
+  max-width:56ch;
+  margin:0 0 30px;
+}
+.hero-meta{
+  display:flex; flex-wrap:wrap; gap:14px 28px;
+  font-family:var(--font-mono);
+  font-size:13px;
+  color:#AEBCE6;
+}
+.hero-meta span{ display:flex; align-items:center; gap:8px; }
+.hero-meta b{ color:var(--gold-300); font-weight:600; }
+
+/* ============ Model ladder (signature element) ============ */
+.ladder-shell{
+  position:sticky; top:0; z-index:50;
+  background:rgba(255,255,255,0.92);
+  backdrop-filter:saturate(1.4) blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.ladder{
+  max-width:var(--measure-wide);
+  margin:0 auto;
+  padding:10px 24px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.ladder::-webkit-scrollbar{ display:none; }
+.ladder-label{
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--ink-mute);
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  white-space:nowrap;
+  padding-right:6px;
+  border-right:1px solid var(--line);
+  margin-right:4px;
+}
+.ladder-pill{
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:1px;
+  padding:6px 12px;
+  border-radius:999px;
+  border:1px solid var(--line-strong);
+  background:var(--white);
+  min-width:76px;
+  transition:background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+.ladder-pill .pn{
+  font-family:var(--font-mono);
+  font-size:11px;
+  font-weight:600;
+  color:var(--ink-mute);
+  letter-spacing:0.03em;
+}
+.ladder-pill .pv{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  font-weight:600;
+  color:var(--ink-mute);
+}
+.ladder-pill.active{
+  background:var(--royal-800);
+  border-color:var(--royal-800);
+  transform:translateY(-1px);
+}
+.ladder-pill.active .pn{ color:#B9C6F2; }
+.ladder-pill.active .pv{ color:var(--gold-300); }
+.ladder-pill.cleared .pv{ color:var(--success); }
+.ladder-pill.cleared.active .pv{ color:var(--gold-300); }
+.ladder-target{
+  flex:0 0 auto;
+  margin-left:6px;
+  padding:6px 12px;
+  border-radius:999px;
+  border:1px dashed var(--gold-500);
+  background:var(--gold-050);
+  font-family:var(--font-mono);
+  font-size:11.5px;
+  color:var(--gold-700);
+  font-weight:600;
+  white-space:nowrap;
+}
+
+/* ============ Sections ============ */
+main{ display:block; }
+section{ padding:64px 0; }
+section.alt{ background:var(--paper); }
+section.deep{ background:var(--royal-900); color:#DDE4FA; }
+section.deep h2, section.deep h3{ color:var(--white); }
+section.deep p{ color:#C6D0F0; }
+section.deep .eyebrow{ color:var(--gold-300); }
+section.deep .eyebrow::before{ background:var(--gold-400); }
+
+.section-head{ max-width:var(--measure); margin:0 auto 34px; padding:0 24px; }
+.section-head p.lede{ margin-bottom:0; }
+
+figure{ margin:28px 0; }
+figure img{ border-radius:var(--radius-m); border:1px solid var(--line); }
+figcaption{
+  font-size:0.9rem;
+  color:var(--ink-mute);
+  margin-top:10px;
+  font-family:var(--font-mono);
+  line-height:1.55;
+}
+
+.figure-row{
+  display:grid; grid-template-columns:1fr 1fr; gap:20px;
+}
+@media (max-width:720px){ .figure-row{ grid-template-columns:1fr; } }
+
+/* ============ Narrative callouts ============ */
+.dialogue{
+  display:flex; gap:14px;
+  margin:26px 0;
+  padding:18px 20px;
+  border-radius:var(--radius-m);
+  background:var(--royal-050);
+  border:1px solid var(--royal-100);
+}
+.dialogue .avatar{
+  flex:0 0 auto;
+  width:38px; height:38px; border-radius:50%;
+  background:var(--royal-700);
+  color:var(--white);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-weight:600; font-size:13px;
+}
+.dialogue.rohan .avatar{ background:var(--gold-500); color:var(--royal-900); }
+.dialogue .txt p{ margin:0; font-style:italic; font-family:var(--font-display); font-size:1.08rem; color:var(--royal-900); }
+.dialogue .who{
+  display:block; font-family:var(--font-mono); font-style:normal; font-size:11.5px;
+  text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-mute); margin-top:8px;
+}
+
+.aside-card{
+  margin:30px 0; padding:26px 28px;
+  border-radius:var(--radius-m);
+  background:var(--white);
+  border:1px solid var(--line);
+  border-left:4px solid var(--gold-500);
+}
+.aside-card h4{ margin-bottom:0.6em; }
+
+.callout{
+  margin:26px 0; padding:20px 22px;
+  border-radius:var(--radius-m);
+  border:1px solid var(--line);
+  background:var(--paper);
+}
+.callout.warn{ border-color:#EBD9AE; background:var(--gold-050); }
+.callout.warn h4{ color:var(--gold-700); }
+
+.analogy{
+  margin:24px 0; padding:22px 24px;
+  border-radius:var(--radius-m);
+  background:var(--royal-900);
+  color:#E4E9FA;
+  position:relative;
+}
+.analogy h4{ color:var(--gold-300); margin-bottom:0.5em; }
+.analogy p{ color:#DCE4FA; margin-bottom:0; }
+.analogy p:not(:last-child){ margin-bottom:0.8em; }
+
+/* ============ Reading-the-plot list ============ */
+.read-list{
+  margin:22px 0; padding:22px 24px;
+  border-radius:var(--radius-m);
+  background:var(--white);
+  border:1px solid var(--line);
+}
+.read-list h4{ margin-bottom:0.8em; }
+.read-list ul{ margin:0; padding-left:1.2em; }
+.read-list li{ margin-bottom:0.55em; color:var(--ink-soft); }
+.read-list li:last-child{ margin-bottom:0; }
+.read-list li strong{ color:var(--ink); }
+
+/* ============ Result strip (mape badges) ============ */
+.result-strip{
+  display:flex; flex-wrap:wrap; gap:14px;
+  margin:24px 0;
+}
+.result-tile{
+  flex:1 1 200px;
+  background:var(--royal-900);
+  color:var(--white);
+  border-radius:var(--radius-m);
+  padding:18px 20px;
+}
+.result-tile .rt-label{ font-family:var(--font-mono); font-size:12px; color:#AEBCE6; text-transform:uppercase; letter-spacing:0.05em; }
+.result-tile .rt-value{ font-family:var(--font-display); font-size:2.1rem; font-weight:700; color:var(--gold-300); margin-top:4px; }
+.result-tile .rt-note{ font-size:0.85rem; color:#C6D0F0; margin-top:6px; }
+
+/* ============ Interactive tool embed ============ */
+.tool-embed{
+  margin:30px 0;
+  border-radius:var(--radius-l);
+  border:1px solid var(--line-strong);
+  background:var(--white);
+  overflow:hidden;
+  box-shadow:0 1px 2px rgba(11,26,68,0.04);
+}
+.tool-embed__head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:14px 20px;
+  background:var(--royal-050);
+  border-bottom:1px solid var(--line);
+}
+.tool-embed__head .te-title{
+  font-family:var(--font-mono); font-size:12.5px; font-weight:600;
+  color:var(--royal-800); text-transform:uppercase; letter-spacing:0.05em;
+  display:flex; align-items:center; gap:8px;
+}
+.tool-embed__head .te-title::before{
+  content:"◆"; color:var(--gold-500); font-size:11px;
+}
+.tool-embed__frame{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/10;
+  background:var(--paper);
+}
+.tool-embed__frame iframe{
+  position:absolute; inset:0; width:100%; height:100%; border:0;
+}
+.tool-embed__meta{ padding:16px 20px 20px; }
+.tool-embed__meta p{ margin:0 0 10px; color:var(--ink-soft); font-size:0.96rem; }
+.te-link{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:var(--font-mono); font-size:12.5px; font-weight:600;
+  color:var(--royal-700);
+}
+
+/* ============ Quiz ============ */
+.quiz{
+  margin:34px 0;
+  border-radius:var(--radius-l);
+  border:1px solid var(--line-strong);
+  background:var(--white);
+  overflow:hidden;
+}
+.quiz__head{
+  padding:18px 22px;
+  background:var(--royal-900);
+  color:var(--white);
+  display:flex; align-items:center; gap:10px;
+}
+.quiz__head .qtag{
+  font-family:var(--font-mono); font-size:11.5px; font-weight:700;
+  color:var(--royal-900); background:var(--gold-400);
+  padding:3px 9px; border-radius:5px; letter-spacing:0.03em;
+}
+.quiz__head p{ margin:0; font-family:var(--font-mono); font-size:12.5px; color:#B9C6F2; text-transform:uppercase; letter-spacing:0.05em; }
+.quiz__body{ padding:22px; }
+.quiz__prompt{ font-size:1.05rem; color:var(--ink); margin-bottom:18px; font-weight:500; }
+.quiz__options{ display:flex; flex-direction:column; gap:10px; margin-bottom:6px; }
+.quiz-opt{
+  text-align:left;
+  font-family:var(--font-body);
+  font-size:0.98rem;
+  padding:13px 16px;
+  border-radius:var(--radius-s);
+  border:1px solid var(--line-strong);
+  background:var(--white);
+  color:var(--ink);
+  cursor:pointer;
+  display:flex; align-items:flex-start; gap:12px;
+  transition:border-color 0.15s ease, background 0.15s ease;
+}
+.quiz-opt:hover:not(:disabled){ border-color:var(--royal-500); background:var(--royal-050); }
+.quiz-opt .marker{
+  flex:0 0 auto; width:22px; height:22px; border-radius:50%;
+  border:1px solid var(--line-strong); display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-size:12px; color:var(--ink-mute); margin-top:1px;
+}
+.quiz-opt:disabled{ cursor:default; }
+.quiz-opt.correct{ border-color:var(--success); background:#EAF6F0; }
+.quiz-opt.correct .marker{ background:var(--success); border-color:var(--success); color:var(--white); }
+.quiz-opt.incorrect{ border-color:var(--danger); background:#FBEDED; }
+.quiz-opt.incorrect .marker{ background:var(--danger); border-color:var(--danger); color:var(--white); }
+.quiz-opt.dim{ opacity:0.55; }
+.quiz__feedback{
+  margin-top:16px; padding:16px 18px; border-radius:var(--radius-s);
+  display:none; font-size:0.96rem; line-height:1.65;
+}
+.quiz__feedback.show{ display:block; }
+.quiz__feedback.good{ background:#EAF6F0; border:1px solid #BFE3D1; color:#0F4A32; }
+.quiz__feedback.bad{ background:#FBEDED; border:1px solid #F0C6C6; color:#6E1F1F; }
+.quiz__feedback .fb-tag{ font-family:var(--font-mono); font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:6px; }
+
+/* ============ Explore-further callout ============ */
+.explore{
+  margin:28px 0; padding:22px 24px;
+  border-radius:var(--radius-m);
+  background:var(--gold-050);
+  border:1px solid var(--gold-100);
+}
+.explore h4{ color:var(--gold-700); margin-bottom:0.5em; display:flex; align-items:center; gap:9px; }
+.explore h4::before{ content:"✦"; font-size:0.85em; }
+.explore p{ color:var(--ink-soft); margin-bottom:0; font-style:italic; }
+
+/* ============ Dial explorer ============ */
+.dial-grid{
+  display:grid; grid-template-columns:repeat(3, 1fr); gap:14px;
+  margin:26px 0 10px;
+}
+@media (max-width:700px){ .dial-grid{ grid-template-columns:1fr; } }
+.dial-card{
+  border:1px solid var(--line-strong);
+  border-radius:var(--radius-m);
+  background:var(--white);
+  padding:18px 18px 16px;
+  cursor:pointer;
+  text-align:left;
+  font-family:var(--font-body);
+  transition:border-color 0.2s ease, background 0.2s ease;
+}
+.dial-card:hover{ border-color:var(--royal-500); }
+.dial-card.open{ border-color:var(--royal-700); background:var(--royal-050); }
+.dial-card .dc-letter{
+  font-family:var(--font-display); font-weight:700; font-size:1.6rem; color:var(--royal-700);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.dial-card .dc-letter .chev{ font-family:var(--font-body); font-size:0.9rem; color:var(--ink-mute); transition:transform 0.2s ease; }
+.dial-card.open .dc-letter .chev{ transform:rotate(180deg); }
+.dial-card .dc-name{ font-size:0.86rem; color:var(--ink-mute); margin-top:2px; font-weight:500; }
+.dial-card .dc-body{
+  max-height:0; overflow:hidden; transition:max-height 0.28s ease;
+  font-size:0.92rem; color:var(--ink-soft); line-height:1.6;
+}
+.dial-card.open .dc-body{ max-height:220px; margin-top:12px; }
+
+/* ============ Bar chart (verdict) ============ */
+.verdict-chart{
+  margin:30px 0 10px;
+  padding:28px 24px 14px;
+  border-radius:var(--radius-l);
+  border:1px solid var(--line-strong);
+  background:var(--white);
+}
+.vc-bars{
+  display:flex; align-items:flex-end; gap:18px;
+  height:280px;
+  position:relative;
+  padding-top:8px;
+}
+.vc-target-line{
+  position:absolute; left:0; right:0; height:0;
+  border-top:2px dashed var(--gold-600);
+}
+.vc-target-line .lbl{
+  position:absolute; right:0; top:-22px;
+  font-family:var(--font-mono); font-size:11.5px; color:var(--gold-700); font-weight:600;
+  background:var(--white); padding:0 6px;
+}
+.vc-bar-col{
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;
+  position:relative;
+}
+.vc-bar{
+  width:100%; max-width:64px;
+  border-radius:6px 6px 0 0;
+  background:var(--royal-400);
+  position:relative;
+  transition:filter 0.15s ease;
+  cursor:pointer;
+}
+.vc-bar:hover, .vc-bar:focus-visible{ filter:brightness(1.08); }
+.vc-bar.win{ background:var(--gold-500); }
+.vc-bar.win2{ background:var(--royal-700); }
+.vc-bar-val{
+  font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:var(--ink);
+  margin-bottom:6px;
+}
+.vc-bar-name{
+  font-family:var(--font-mono); font-size:11px; color:var(--ink-mute); margin-top:10px; text-align:center; line-height:1.35;
+}
+.vc-tooltip{
+  position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+  background:var(--royal-900); color:var(--white); font-family:var(--font-mono); font-size:11.5px;
+  padding:6px 10px; border-radius:6px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity 0.15s ease;
+}
+.vc-bar-col:hover .vc-tooltip, .vc-bar:focus-visible + .vc-tooltip{ opacity:1; }
+.verdict-table{ width:100%; border-collapse:collapse; margin-top:26px; font-size:0.92rem; }
+.verdict-table caption{ text-align:left; font-family:var(--font-mono); font-size:12px; color:var(--ink-mute); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em; }
+.verdict-table th, .verdict-table td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
+.verdict-table th{ font-family:var(--font-mono); font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-mute); font-weight:600; }
+.verdict-table td.num{ font-family:var(--font-mono); font-weight:600; }
+.verdict-table tr.win td{ color:var(--gold-700); font-weight:700; }
+.verdict-table tr.win2 td{ color:var(--royal-700); font-weight:700; }
+
+/* ============ Coef table ============ */
+.coef-table{ width:100%; border-collapse:collapse; margin:22px 0; font-family:var(--font-mono); font-size:0.85rem; overflow-x:auto; display:block; }
+.coef-table thead, .coef-table tbody{ display:table; width:100%; table-layout:fixed; }
+.coef-table th, .coef-table td{ padding:9px 8px; border-bottom:1px solid var(--line); text-align:right; }
+.coef-table th:first-child, .coef-table td:first-child{ text-align:left; }
+.coef-table th{ color:var(--ink-mute); font-weight:600; background:var(--paper); }
+.coef-table td.sig{ color:var(--success); font-weight:600; }
+
+/* ============ Comparison cards (streaming section) ============ */
+.compare-grid{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:26px 0; }
+@media (max-width:700px){ .compare-grid{ grid-template-columns:1fr; } }
+.compare-card{ border-radius:var(--radius-m); border:1px solid var(--line-strong); padding:20px 22px; background:var(--white); }
+.compare-card.bad{ border-top:4px solid var(--danger); }
+.compare-card.good{ border-top:4px solid var(--success); }
+.compare-card h4{ margin-bottom:0.5em; display:flex; align-items:center; gap:8px; }
+.compare-card p{ color:var(--ink-soft); font-size:0.95rem; margin-bottom:0; }
+
+/* ============ Wrap up ============ */
+.recap-grid{
+  display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;
+  margin:30px 0;
+}
+@media (max-width:700px){ .recap-grid{ grid-template-columns:1fr; } }
+.recap-item{
+  padding:16px 18px;
+  border-radius:var(--radius-m);
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.12);
+  font-size:0.94rem;
+  color:#D6DEF6;
+  line-height:1.55;
+}
+.recap-item strong{ color:var(--gold-300); }
+
+.next-card{
+  margin-top:34px;
+  padding:26px 28px;
+  border-radius:var(--radius-l);
+  background:rgba(242,188,18,0.08);
+  border:1px solid rgba(242,188,18,0.3);
+}
+.next-card h4{ color:var(--gold-300); margin-bottom:0.6em; }
+.next-card p{ color:#DCE4FA; }
+
+/* ============ Footer ============ */
+footer{
+  background:var(--royal-900);
+  color:#9FACD6;
+  padding:40px 0 34px;
+  border-top:1px solid rgba(255,255,255,0.08);
+}
+footer .foot-inner{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; }
+footer .foot-name{ font-family:var(--font-display); font-weight:600; color:var(--white); font-size:1.05rem; }
+footer .foot-name span{ color:var(--gold-300); }
+footer p{ margin:0; font-size:0.85rem; color:#8695C4; }
+
+/* ============ Misc ============ */
+.divider{ height:1px; background:var(--line); margin:0; border:0; }
+.narrow-note{ font-size:0.85rem; color:var(--ink-mute); font-family:var(--font-mono); }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Time Series 3 · ARIMA, SARIMA and ACF/PACF</span><span class="pn"><a href="../Timeseries-2/" title="Time Series 2 · Forecast baselines and MAPE">← Prev</a><a href="../Timeseries-4/" title="Time series 4 · SARIMAX and a 39-day forecast">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip-link" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead-grid" aria-hidden="true"></div>
+  <div class="wrap masthead-inner">
+    <p class="kicker"><span class="dot"></span>Time series forecasting · Part 3</p>
+    <h1 class="hero-title">Cracking the <em>ARIMA</em> family</h1>
+    <p class="hero-sub">Time Series 3 — Post Read. A step-by-step walk through ACF, PACF, AR, MA, ARIMA and SARIMA, built on the same Vastra Loop sales data — and the honest verdict on whether any of it beats Holt-Winters.</p>
+    <div class="hero-meta">
+      <span>Case study <b>Vastra Loop sales forecasting</b></span>
+      <span>Series <b>18 years of monthly sales</b></span>
+      <span>Target <b>&lt; 5% MAPE</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="ladder-shell">
+  <nav class="ladder" aria-label="Model comparison progress">
+    <span class="ladder-label">MAPE&nbsp;watch</span>
+    <a class="ladder-pill" data-target="ar" href="#ar"><span class="pn">AR</span><span class="pv">—</span></a>
+    <a class="ladder-pill" data-target="ma" href="#ma"><span class="pn">MA</span><span class="pv">—</span></a>
+    <a class="ladder-pill" data-target="arma" href="#arma"><span class="pn">ARMA</span><span class="pv">—</span></a>
+    <a class="ladder-pill" data-target="arima" href="#arima"><span class="pn">ARIMA</span><span class="pv">—</span></a>
+    <a class="ladder-pill" data-target="sarima" href="#sarima"><span class="pn">SARIMA</span><span class="pv">—</span></a>
+    <span class="ladder-target">Holt-Winters (Part 2): 4.30%</span>
+  </nav>
+</div>
+
+<main id="main">
+
+<!-- ============ RECAP ============ -->
+<section id="recap" aria-labelledby="recap-h">
+  <div class="section-head">
+    <p class="eyebrow">Where we left off</p>
+    <h2 id="recap-h">Picking up with a stationary series</h2>
+  </div>
+  <div class="wrap">
+    <p class="lede">Aisha's notebook still has yesterday's work open: the Vastra Loop monthly sales series, now stationary after differencing, and an ADF test that finally rejected the idea that trend and seasonality are still baked into the data.</p>
+
+    <div class="dialogue rohan">
+      <div class="avatar">R</div>
+      <div class="txt">
+        <p>"The team's been asking about ARIMA models for a while now. Can you try it on our sales data? And honestly — prove to me it's worth the extra complexity over Holt-Winters, which is already hitting our target."</p>
+        <span class="who">Rohan</span>
+      </div>
+    </div>
+
+    <p>That's the brief for today. No new dataset, no new business problem — just going deeper on the forecasting problem Aisha already owns: build up the ARIMA family piece by piece, and settle whether it's actually worth switching to.</p>
+
+    <div class="figure-row">
+      <figure>
+        <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/537/original/Screenshot_2026-08-25_171142.png?1787658116" alt="Line chart of Vastra Loop's raw monthly sales from 2001 to 2019, showing a steady upward trend with repeating seasonal swings.">
+        <figcaption>Raw monthly sales — trend and seasonality still visible.</figcaption>
+      </figure>
+      <figure>
+        <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/538/original/Screenshot_2026-08-25_171221.png?1787658152" alt="Line chart of the differenced series oscillating around zero with no visible trend or seasonal pattern.">
+        <figcaption>Differenced once for trend, once for seasonality — an ADF test now rejects non-stationarity (p &lt; 0.05).</figcaption>
+      </figure>
+    </div>
+
+    <p>The train/test split from Part 2 also carries over unchanged: the last 12 months are held out as a test window, so every model built today gets scored the same way — a 12-month-ahead MAPE against sales the model never saw.</p>
+  </div>
+</section>
+
+<!-- ============ ACF ============ -->
+<section class="alt" id="acf" aria-labelledby="acf-h">
+  <div class="section-head">
+    <p class="eyebrow">Choosing a lag, data-first</p>
+    <h2 id="acf-h">ACF: how far back does a pattern echo?</h2>
+  </div>
+  <div class="wrap">
+    <p class="lede">The ARIMA family looks back at past values and past errors to make a forecast. But how many months back should it look? Guessing isn't a strategy — the data itself can answer that, through the <strong>Auto-Correlation Function (ACF)</strong>.</p>
+
+    <p>Imagine asking: how similar is this month's sales to last month's? To two months ago? To twelve months ago? ACF answers exactly that — it's the correlation of the series with a delayed copy of itself, checked at every lag.</p>
+
+    <div class="analogy">
+      <h4>The echo in an empty hall</h4>
+      <p>Clap once in an empty hall and the sound you hear a moment later is how much of that original clap is still bouncing around. ACF is the "echo strength" of the data at each lag — a strong echo at lag 12 means the pattern from twelve months ago is still influencing today. Tall bars mean a lag still matters; bars inside the shaded band mean it's basically noise.</p>
+    </div>
+
+    <div class="tool-embed">
+      <div class="tool-embed__head">
+        <span class="te-title">Interactive tool</span>
+      </div>
+      <div class="tool-embed__frame">
+        <iframe src="https://aiml-vizs-new.vercel.app/time-series/acf-lag-correlation-explorer-dot-product-build-up-table/" title="ACF lag correlation explorer — interactive dot-product build-up table" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+      <div class="tool-embed__meta">
+        <p>Drag the lag slider and watch the dot-product build up term by term — this is what ACF is actually computing under the hood at each lag.</p>
+        <a class="te-link" href="https://aiml-vizs-new.vercel.app/time-series/acf-lag-correlation-explorer-dot-product-build-up-table/" target="_blank" rel="noopener noreferrer">Open the explorer in a new tab ↗</a>
+      </div>
+    </div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/539/original/Screenshot_2026-08-25_171256.png?1787658186" alt="ACF plot of the stationary Vastra Loop series showing a strong negative bar at lag 1, most other lags inside the confidence band, and isolated small spikes near lags 11 and 17.">
+      <figcaption>ACF on the stationary series, lags 1–24.</figcaption>
+    </figure>
+
+    <div class="read-list">
+      <h4>Reading this plot</h4>
+      <ul>
+        <li><strong>Lag 1 shows a strong negative correlation</strong> (around −0.5): when sales run higher than usual in one month, the following month tends to run lower, and vice versa.</li>
+        <li><strong>Most other lags fall inside the confidence band</strong> — not strong enough to call statistically significant.</li>
+        <li><strong>Lags 11 and 17 show positive spikes</strong>, but they're isolated; there's no clear repeating pattern across seasonal lags like 12 or 24.</li>
+        <li><strong>Overall:</strong> once the series is stationary, there's some short-term dependence at lag 1, and little strong autocorrelation further out — recent months carry some predictive information, but the longer-term dependence is weak.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PACF ============ -->
+<section id="pacf" aria-labelledby="pacf-h">
+  <div class="section-head">
+    <p class="eyebrow">Removing the middleman</p>
+    <h2 id="pacf-h">PACF: what does this lag add on its own?</h2>
+  </div>
+  <div class="wrap">
+    <p class="lede">ACF has a blind spot. If lag 1 is strongly correlated with today, lag 2 will also look correlated with today — partly through lag 1, not because lag 2 itself adds new information. What's needed is the <strong>direct</strong> effect of each lag, with the in-between lags' influence stripped out — the job of the <strong>Partial Auto-Correlation Function (PACF)</strong>.</p>
+
+    <div class="analogy">
+      <h4>The family group chat</h4>
+      <p>Your uncle's opinion might correlate with yours — but is that because he influences you directly, or because he influences your mom, who then influences you? PACF asks: once I already know what Mom thinks, does Uncle add anything new? It isolates the direct link at each lag.</p>
+      <p>Together, ACF and PACF give a data-driven way to choose how many past values (for AR) and how many past errors (for MA) a model should include — no guessing required.</p>
+    </div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/540/original/Screenshot_2026-08-25_171328.png?1787658226" alt="PACF plot of the stationary series showing strong negative bars at lag 1 and lag 2, a positive spike at lag 11, and a few smaller significant spikes later.">
+      <figcaption>PACF on the stationary series, lags 1–24 (Yule-Walker method with modification).</figcaption>
+    </figure>
+
+    <div class="read-list">
+      <h4>Reading this plot</h4>
+      <ul>
+        <li><strong>Lag 1 has a strong negative partial correlation</strong> (around −0.5) — the previous month's value has a strong direct relationship with the current month.</li>
+        <li><strong>Lag 2 is also significantly negative</strong>, with several early lags showing smaller negative effects.</li>
+        <li><strong>Lag 11 shows a noticeable positive spike</strong>, alongside a few smaller significant spikes later.</li>
+        <li><strong>PACF is what guides the AR term</strong> — the significant spikes help pick the <code>p</code> parameter.</li>
+      </ul>
+    </div>
+
+    <div class="explore">
+      <h4>Explore further</h4>
+      <p>"Explain, with a simple example, why the ACF plot for a purely seasonal series (period 12) shows tall bars at lags 12, 24, 36 — and what that tells us about choosing a seasonal order later."</p>
+    </div>
+
+    <div class="quiz" data-quiz="q1">
+      <div class="quiz__head"><span class="qtag">Check yourself</span><p>ACF vs. PACF</p></div>
+      <div class="quiz__body">
+        <p class="quiz__prompt">A strong bar shows up at lag 2 in both ACF and PACF. ACF also shows a strong (though smaller) bar at lag 3, while the PACF bar at lag 3 sits inside the shaded "not significant" band. What's the most likely explanation?</p>
+        <div class="quiz__options">
+          <button class="quiz-opt" data-correct="false">Lag 3 has a strong direct effect on today's sales, same as lag 2.</button>
+          <button class="quiz-opt" data-correct="true">The apparent lag-3 correlation in ACF is mostly explained through lag 2, not a direct effect of lag 3 itself.</button>
+          <button class="quiz-opt" data-correct="false">The data has no seasonality at all.</button>
+          <button class="quiz-opt" data-correct="false">PACF is unreliable and should be ignored in favor of ACF.</button>
+        </div>
+        <div class="quiz__feedback"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ASIDE: correlation vs causation ============ -->
+<section class="alt" aria-labelledby="aside-h">
+  <div class="wrap">
+    <div class="aside-card">
+      <p class="eyebrow" style="margin-bottom:10px;">Quick aside</p>
+      <h4 id="aside-h" style="text-transform:none; font-family:var(--font-display); font-size:1.3rem; color:var(--royal-900); letter-spacing:0;">Correlation doesn't mean causation</h4>
+      <p>Before building on top of ACF/PACF, it's worth being honest about something: a strong correlation at some lag just means the numbers moved together historically — it does not mean last month's sales figure <em>caused</em> this month's.</p>
+      <div class="analogy" style="margin-top:16px;">
+        <h4>Ice cream and sunscreen</h4>
+        <p>Ice cream sales and sunscreen sales rise and fall together every year. That doesn't mean ice cream causes sunscreen purchases — a third factor, summer, drives both. A strong lag-12 correlation in sales is most likely both months being driven by the same yearly cycle — festive season, weather, school holidays — not last year's sales literally causing this year's.</p>
+      </div>
+      <p style="margin-bottom:0;">ACF/PACF are excellent for picking model settings, but they're not evidence of a causal mechanism — a distinction worth keeping in mind before building AR and MA models next.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ AR ============ -->
+<section id="ar" aria-labelledby="ar-h" data-model="AR">
+  <div class="section-head">
+    <p class="eyebrow">Model 1 · past values</p>
+    <h2 id="ar-h">AR — Auto-Regression</h2>
+  </div>
+  <div class="wrap">
+    <p class="lede">Time to build the first real model. The PACF plot already showed which lags have a direct relationship with today's sales — an AR model uses exactly that.</p>
+    <p>An <strong>AR(p)</strong> model forecasts the next value as a weighted mix of the last <code>p</code> values.</p>
+
+    <div class="analogy">
+      <h4>Your grade next week</h4>
+      <p>Your grade next week probably looks like a weighted mix of your last few weeks' grades. If you've been consistently scoring well, next week's guess leans high; if you've been slipping, the guess leans down. AR does the same thing with sales numbers instead of grades.</p>
+    </div>
+
+    <div class="callout">
+      <h4 style="color:var(--royal-700); text-transform:none; font-family:var(--font-body); margin-bottom:6px;">Minimal formula — recognize it, don't memorize it</h4>
+      <p style="font-family:var(--font-mono); font-size:0.92rem; color:var(--ink-soft); margin-bottom:0;">today's value ≈ (weight₁ × last value) + (weight₂ × value 2 months ago) + … + noise</p>
+    </div>
+
+    <p><code>p</code> — how many past values to use — is picked by reading where the PACF bars stop being significant: the "how many past weeks' grades actually matter" answer.</p>
+
+    <div class="tool-embed">
+      <div class="tool-embed__head"><span class="te-title">Interactive tool</span></div>
+      <div class="tool-embed__frame">
+        <iframe src="https://aiml-vizs-new.vercel.app/time-series/ar-multi-step-error-compounding/" title="AR(2) multi-step error compounding — interactive visualizer" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+      <div class="tool-embed__meta">
+        <p>Step an AR(2) forecast forward one month at a time and watch a small early error get fed back in as an input — and compound — the further out the forecast runs.</p>
+        <a class="te-link" href="https://aiml-vizs-new.vercel.app/time-series/ar-multi-step-error-compounding/" target="_blank" rel="noopener noreferrer">Open the explorer in a new tab ↗</a>
+      </div>
+    </div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/542/original/Screenshot_2026-08-25_171524.png?1787658337" alt="Line chart comparing AR(2) forecasts against actual sales for the twelve held-out months. The forecast flattens out at a lower level instead of following the actual ups and downs.">
+      <figcaption>AR(2) forecast vs. actual — order chosen by reading the PACF plot.</figcaption>
+    </figure>
+
+    <div class="result-strip">
+      <div class="result-tile">
+        <div class="rt-label">AR(2) · 12-month MAPE</div>
+        <div class="rt-value">20.83%</div>
+        <div class="rt-note">Well above the 5% target.</div>
+      </div>
+    </div>
+
+    <div class="read-list">
+      <h4>What the graph shows</h4>
+      <ul>
+        <li>The AR(2) model uses only the previous two months to make each forecast, based on the PACF analysis.</li>
+        <li>The forecast <strong>doesn't follow the large ups and downs</strong> in actual sales — instead it gradually settles around a lower level.</li>
+        <li>A MAPE of <strong>20.83%</strong> means the predictions are off by roughly a fifth, on average.</li>
+        <li>AR(2) alone isn't capturing the strong seasonal and changing patterns in Vastra Loop's sales.</li>
+      </ul>
+    </div>
+
+    <div class="quiz" data-quiz="q2">
+      <div class="quiz__head"><span class="qtag">Check yourself</span><p>Multi-step forecasting with AR models</p></div>
+      <div class="quiz__body">
+        <p class="quiz__prompt">The AR(2) model forecasts reasonably well for month 1 of the test set, but forecast quality visibly degrades by months 8–12. What's the most likely reason?</p>
+        <div class="quiz__options">
+          <button class="quiz-opt" data-correct="false">AR models can only ever forecast one step ahead accurately.</button>
+          <button class="quiz-opt" data-correct="true">Multi-step AR forecasts increasingly rely on the model's own earlier forecasts as inputs, so small errors compound the further out you go.</button>
+          <button class="quiz-opt" data-correct="false">The ADF test was performed incorrectly.</button>
+          <button class="quiz-opt" data-correct="false">AR models cannot be used on monthly data.</button>
+        </div>
+        <div class="quiz__feedback"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MA ============ -->
+<section class="alt" id="ma" aria-labelledby="ma-h" data-model="MA">
+  <div class="section-head">
+    <p class="eyebrow">Model 2 · past errors</p>
+    <h2 id="ma-h">MA — moving average, the ARIMA kind</h2>
+  </div>
+  <div class="wrap">
+    <div class="callout warn">
+      <h4 style="text-transform:none; font-family:var(--font-body); margin-bottom:6px;">A naming clash worth clearing up first</h4>
+      <p style="margin-bottom:0;">This isn't the same "moving average" used as a baseline earlier (which just averaged the last few raw values). This MA is a component of the ARIMA family that works on <strong>forecast errors</strong>, not raw values.</p>
+    </div>
+
+    <p class="lede">An <strong>MA(q)</strong> model forecasts the next value by adjusting for how wrong the last <code>q</code> forecasts were.</p>
+
+    <div class="analogy">
+      <h4>Guessing a friend's arrival time</h4>
+      <p>Adjust your guess based on how wrong you were last time, not what the value itself was. If you guessed a friend's arrival time and they were ten minutes late, you don't just repeat your last guess — you nudge your next guess by roughly that same error, expecting a similar pattern of lateness.</p>
+    </div>
+
+    <div class="callout">
+      <h4 style="color:var(--royal-700); text-transform:none; font-family:var(--font-body); margin-bottom:6px;">Minimal formula — recognize it, don't memorize it</h4>
+      <p style="font-family:var(--font-mono); font-size:0.92rem; color:var(--ink-soft); margin-bottom:0;">today's value ≈ average level + (weight₁ × last error) + (weight₂ × error 2 steps ago) + …</p>
+    </div>
+
+    <p><code>q</code> is picked from the ACF plot — the lag where the "echo" of past shocks fades out.</p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/543/original/Screenshot_2026-08-25_171605.png?1787658384" alt="Diagram illustrating how an MA model adjusts its next forecast based on the size of its most recent forecast error.">
+    </figure>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/544/original/Screenshot_2026-08-25_171653.png?1787658423" alt="Line chart comparing MA(2) forecasts against actual sales. The forecast settles near a flat 10,600 while actual sales fluctuate between roughly 12,000 and 16,000.">
+      <figcaption>MA(2) forecast vs. actual.</figcaption>
+    </figure>
+
+    <div class="result-strip">
+      <div class="result-tile">
+        <div class="rt-label">MA(2) · 12-month MAPE</div>
+        <div class="rt-value">26.44%</div>
+        <div class="rt-note">Worse than AR(2)'s 20.83%.</div>
+      </div>
+    </div>
+
+    <div class="read-list">
+      <h4>What the graph shows</h4>
+      <ul>
+        <li>MA(2) uses the previous two forecast errors to make each prediction.</li>
+        <li>The forecast quickly settles around 10,600 and stays almost flat, while actual sales keep fluctuating between roughly 12,000 and 16,000.</li>
+        <li>A MAPE of <strong>26.44%</strong> — worse than AR(2).</li>
+        <li>Using only past errors isn't enough to capture the changing pattern in this series.</li>
+      </ul>
+    </div>
+
+    <div class="explore">
+      <h4>Explore further</h4>
+      <p>"Give me an everyday example — not sales, not weather — where an MA(1) model's 'adjust based on last error' logic would naturally make sense, and one where it clearly would not."</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARMA ============ -->
+<section id="arma" aria-labelledby="arma-h" data-model="ARMA">
+  <div class="section-head">
+    <p class="eyebrow">Model 3 · both signals combined</p>
+    <h2 id="arma-h">ARMA — combining both</h2>
+  </div>
+  <div class="wrap">
+    <p class="lede">There are now two lenses on the same data: AR looks at past values, MA looks at past errors. Why choose one? <strong>ARMA(p, q)</strong> simply uses both at the same time.</p>
+
+    <div class="analogy">
+      <h4>Grade trend plus last week's miss</h4>
+      <p>Predicting next week's grade using both your recent grade trend (the AR part) and how far off your last prediction was (the MA part) — combining "what's been happening" with "how wrong was I last time" usually beats using just one signal.</p>
+    </div>
+
+    <div class="callout warn">
+      <h4 style="text-transform:none; font-family:var(--font-body); margin-bottom:6px;">The catch</h4>
+      <p style="margin-bottom:0;">ARMA still assumes the input series is already stationary — no trend, no seasonality left in it. That's exactly why it's fit on <code>sales_diff</code>, the differenced series from Part 2, and not the raw sales numbers.</p>
+    </div>
+
+    <p>Fitting <strong>ARMA(2, 2)</strong> on the differenced series produces the following coefficient summary:</p>
+
+    <table class="coef-table">
+      <caption>ARMA(2,2) coefficients</caption>
+      <thead>
+        <tr><th>Term</th><th>coef</th><th>std err</th><th>z</th><th>P&gt;|z|</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>const</td><td>0.0101</td><td>0.024</td><td>0.417</td><td>0.677</td></tr>
+        <tr><td>ar.L1</td><td class="sig">−1.0169</td><td>0.074</td><td>−13.818</td><td class="sig">0.000</td></tr>
+        <tr><td>ar.L2</td><td>−0.1682</td><td>0.078</td><td>−2.155</td><td>0.031</td></tr>
+        <tr><td>ma.L1</td><td>−4.573e-05</td><td>9.407</td><td>−4.86e-06</td><td>1.000</td></tr>
+        <tr><td>ma.L2</td><td class="sig">−1.0000</td><td>0.117</td><td>−8.571</td><td class="sig">0.000</td></tr>
+        <tr><td>sigma2</td><td>358.818</td><td>0.026</td><td>1.37e+04</td><td class="sig">0.000</td></tr>
+      </tbody>
+    </table>
+
+    <div class="read-list">
+      <h4>Reading this output</h4>
+      <ul>
+        <li>The model combines <strong>AR terms</strong> (past values) and <strong>MA terms</strong> (past errors), two of each.</li>
+        <li><strong>ar.L1</strong> and <strong>ma.L2</strong> are statistically significant (p &lt; 0.05), suggesting they contribute meaningfully. The other terms are weaker.</li>
+        <li>Fitting warnings indicated the optimizer had <strong>difficulty finding good starting parameters and did not fully converge</strong> — these results should be treated with caution.</li>
+        <li>Overall, ARMA(2,2) is a useful experiment, but the convergence warning means it shouldn't be relied on without further checking or tuning.</li>
+      </ul>
+    </div>
+
+    <div class="quiz" data-quiz="q3">
+      <div class="quiz__head"><span class="qtag">Check yourself</span><p>ARMA and stationarity</p></div>
+      <div class="quiz__body">
+        <p class="quiz__prompt">Suppose an ARMA(p, q) model gets fit directly on the raw Vastra Loop sales — trend and seasonality still in it — instead of the differenced series. What's the most likely consequence?</p>
+        <div class="quiz__options">
+          <button class="quiz-opt" data-correct="false">Nothing — ARMA automatically handles trend and seasonality internally.</button>
+          <button class="quiz-opt" data-correct="true">The model will likely produce unreliable forecasts, since ARMA assumes the series has a constant mean and variance over time, which a trending/seasonal series violates.</button>
+          <button class="quiz-opt" data-correct="false">The model will refuse to fit and throw an error every time.</button>
+          <button class="quiz-opt" data-correct="false">MAPE will always improve when using raw data instead of stationary data.</button>
+        </div>
+        <div class="quiz__feedback"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARIMA ============ -->
+<section class="alt" id="arima" aria-labelledby="arima-h" data-model="ARIMA">
+  <div class="section-head">
+    <p class="eyebrow">Model 4 · differencing, automated</p>
+    <h2 id="arima-h">ARIMA — removing the stationarity requirement</h2>
+  </div>
+  <div class="wrap">
+    <p class="lede">There's an annoying manual step in what ARMA required: the data has to be differenced by hand before ARMA will work, and then that differencing has to be "undone" to get forecasts back on the original sales scale. That's exactly the gap ARIMA closes.</p>
+
+    <p><strong>ARIMA(p, d, q)</strong> = ARMA(p, q) + automatic differencing. The "I" stands for <em>Integration</em> — a fancy word for "differencing, done internally, and then undone automatically when producing the final forecast."</p>
+
+    <div class="analogy">
+      <h4>A built-in de-wobble dial</h4>
+      <p>Think of <code>d</code> as a built-in "de-wobble" dial. Instead of manually flattening the trend before modeling and un-flattening the forecast after, ARIMA just needs to be told how many times to difference — usually <code>d=1</code> for a trend, sometimes <code>d=2</code> for a stronger one — and it handles the flattening and un-flattening on its own. That means the raw, non-stationary sales series can be fed in directly.</p>
+    </div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/545/original/Screenshot_2026-08-25_171738.png?1787658476" alt="Diagram illustrating ARIMA's internal differencing step flattening a trending series before modelling it, then restoring the trend when producing the final forecast.">
+    </figure>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/546/original/Screenshot_2026-08-25_171819.png?1787658510" alt="Line chart comparing ARIMA(2,1,2) forecasts, fit directly on raw sales, against actual sales. The forecast tracks the overall level much more closely than AR or MA, though it still smooths out month-to-month swings.">
+      <figcaption>ARIMA(2,1,2) fit directly on raw sales — no manual differencing needed.</figcaption>
+    </figure>
+
+    <div class="result-strip">
+      <div class="result-tile">
+        <div class="rt-label">ARIMA(2,1,2) · 12-month MAPE</div>
+        <div class="rt-value">8.79%</div>
+        <div class="rt-note">Down from AR's 20.83% and MA's 26.44%.</div>
+      </div>
+    </div>
+
+    <div class="read-list">
+      <h4>What the graph shows</h4>
+      <ul>
+        <li>ARIMA(2,1,2) combines past values, differencing, and past forecast errors to predict future sales.</li>
+        <li>The forecast <strong>captures the overall sales level much better</strong> than AR(2) or MA(2), although it still smooths out the larger month-to-month fluctuations.</li>
+        <li>A MAPE of <strong>8.79%</strong> is a substantial improvement over both earlier models.</li>
+        <li>Differencing clearly helped ARIMA capture the underlying pattern — a much better fit for this dataset, though still short of the 5% target.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PLAYGROUND ============ -->
+<section id="playground" aria-labelledby="pg-h">
+  <div class="section-head">
+    <p class="eyebrow">Build your own intuition</p>
+    <h2 id="pg-h">What do the p, d, q dials actually do?</h2>
+  </div>
+  <div class="wrap">
+    <p class="lede">Reading ACF/PACF plots and picking p, d, q is part science, part trial-and-error. Before moving on to seasonality, it helps to build intuition for how each knob changes the shape of a forecast.</p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/548/original/Screenshot_2026-08-25_171901.png?1787658554" alt="Screenshot of an interactive notebook widget with sliders for p, d, and q, showing the resulting ARIMA forecast line and its MAPE score updating live.">
+      <figcaption>Aisha's notebook widget: sliders for p, d, q update the forecast and MAPE live on the test window.</figcaption>
+    </figure>
+
+    <p>Each dial does something distinct. Click a card to see what it controls.</p>
+
+    <div class="dial-grid" role="group" aria-label="ARIMA parameter explainer">
+      <button class="dial-card" data-dial="p" aria-expanded="false">
+        <span class="dc-letter">p<span class="chev">⌄</span></span>
+        <span class="dc-name">AR order</span>
+        <span class="dc-body">Controls how much the forecast depends on <strong>previous sales values</strong>. Higher p can make the forecast respond more to past patterns.</span>
+      </button>
+      <button class="dial-card" data-dial="d" aria-expanded="false">
+        <span class="dc-letter">d<span class="chev">⌄</span></span>
+        <span class="dc-name">Differencing</span>
+        <span class="dc-body">Controls how many times consecutive values are subtracted to remove trend. Higher d can make the series more stable, but too much differencing can remove useful patterns.</span>
+      </button>
+      <button class="dial-card" data-dial="q" aria-expanded="false">
+        <span class="dc-letter">q<span class="chev">⌄</span></span>
+        <span class="dc-name">MA order</span>
+        <span class="dc-body">Controls how much the forecast uses <strong>previous prediction errors</strong> to correct itself. Higher q can help the model adjust based on recent mistakes.</span>
+      </button>
+    </div>
+    <p class="narrow-note" style="margin-top:16px;">Notice how moving one dial at a time changes the forecast line and MAPE differently — that's the fastest way to build a feel for what each one is doing.</p>
+
+    <div class="quiz" data-quiz="q4">
+      <div class="quiz__head"><span class="qtag">Check yourself</span><p>ARIMA and differencing</p></div>
+      <div class="quiz__body">
+        <p class="quiz__prompt">Setting d=0 while fitting on the raw sales series — which has a clear upward trend — tends to produce forecasts that badly underestimate future sales. Why?</p>
+        <div class="quiz__options">
+          <button class="quiz-opt" data-correct="true">d=0 means no differencing is applied, so the model treats the trending raw series as if it were already stationary — and fails to project the trend forward.</button>
+          <button class="quiz-opt" data-correct="false">d=0 deletes the trend from the data automatically.</button>
+          <button class="quiz-opt" data-correct="false">p and q become irrelevant once d=0.</button>
+          <button class="quiz-opt" data-correct="false">ARIMA cannot be fit at all when d=0.</button>
+        </div>
+        <div class="quiz__feedback"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SARIMA ============ -->
+<section class="alt" id="sarima" aria-labelledby="sarima-h" data-model="SARIMA">
+  <div class="section-head">
+    <p class="eyebrow">Model 5 · seasonality, added back</p>
+    <h2 id="sarima-h">SARIMA — adding back seasonality</h2>
+  </div>
+  <div class="wrap">
+    <p class="lede">The playground makes one thing obvious: even a well-tuned ARIMA forecast tends to flatten out and miss Vastra Loop's festive-season bumps. That's because plain ARIMA has no concept of a repeating seasonal pattern — it only differences away trend.</p>
+
+    <p><strong>SARIMA(p, d, q)(P, D, Q, s)</strong> is ARIMA plus a second set of AR/I/MA terms, applied at the seasonal lag <code>s</code> — 12, for monthly data with a yearly cycle.</p>
+
+    <div class="analogy">
+      <h4>Two trackers running together</h4>
+      <p>Think of ARIMA as tracking "how this month compares to recent months," and the seasonal part as a second, independent tracker asking "how does this month compare to the same month last year, and the year before?" SARIMA runs both trackers together and blends their signals into one forecast.</p>
+    </div>
+
+    <p>The seasonal period is set to <code>s = 12</code>, based on the seasonality confirmed back in Part 1's decomposition and re-confirmed by the ACF plot's lag-12 spike earlier today.</p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/549/original/Screenshot_2026-08-25_171941.png?1787658591" alt="Line chart comparing SARIMA forecasts against actual sales, closely tracking the festive-season peaks and troughs that ARIMA had smoothed away." >
+      <figcaption>SARIMA(2,1,2)(1,1,1,12) forecast vs. actual — festive-season bumps now tracked.</figcaption>
+    </figure>
+
+    <div class="result-strip">
+      <div class="result-tile">
+        <div class="rt-label">SARIMA · 12-month MAPE</div>
+        <div class="rt-value">3.98%</div>
+        <div class="rt-note">Clears the 5% target for the first time.</div>
+      </div>
+    </div>
+
+    <div class="read-list">
+      <h4>What the graph shows</h4>
+      <ul>
+        <li>SARIMA extends ARIMA by adding seasonality, letting the model learn patterns that repeat every 12 months.</li>
+        <li>The forecast <strong>tracks the yearly festive-season ups and downs much more closely</strong> than plain ARIMA.</li>
+        <li>A MAPE of <strong>3.98%</strong> — a significant improvement over ARIMA's 8.79%.</li>
+        <li>Including the 12-month seasonal pattern was clearly important for this dataset.</li>
+      </ul>
+    </div>
+
+    <div class="explore">
+      <h4>Explore further</h4>
+      <p>"What tools or techniques can automatically suggest good (p,d,q)(P,D,Q,s) values for a SARIMA model instead of picking them manually from ACF/PACF plots — for example, auto_arima? What are the trade-offs of an automated search versus reading the plots by hand?"</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PREDICTION INTERVALS ============ -->
+<section id="intervals" aria-labelledby="pi-h">
+  <div class="section-head">
+    <p class="eyebrow">Beyond a single number</p>
+    <h2 id="pi-h">Prediction intervals — how confident are we?</h2>
+  </div>
+  <div class="wrap">
+    <div class="dialogue rohan">
+      <div class="avatar">R</div>
+      <div class="txt">
+        <p>"Okay, but how sure are we about this number? Give me a range, not just a single line."</p>
+        <span class="who">Rohan</span>
+      </div>
+    </div>
+
+    <p class="lede">A fair ask — a single forecasted number hides how uncertain the model actually is, especially further into the future. A <strong>prediction interval</strong> is a range around the forecast — "sales will likely land between X and Y" — instead of one exact number.</p>
+
+    <div class="analogy">
+      <h4>A more honest weather forecast</h4>
+      <p>A weather forecast that says "32°C" feels falsely precise. One that says "30–34°C, most likely around 32°C" is more honest, and more useful for planning. The interval usually widens the further out you forecast, because uncertainty compounds with each additional step — the same effect that made multi-step AR forecasts get shakier over time.</p>
+    </div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/550/original/Screenshot_2026-08-25_172012.png?1787658621" alt="Line chart of the SARIMA forecast with a shaded 95 percent prediction interval that starts narrow and widens across the twelve-month horizon, with most actual values falling inside the shaded region.">
+      <figcaption>SARIMA forecast with a 95% prediction interval.</figcaption>
+    </figure>
+
+    <div class="read-list">
+      <h4>Reading this chart</h4>
+      <ul>
+        <li>The forecast line is SARIMA's point forecast; actual sales run alongside it.</li>
+        <li>The <strong>shaded region is the 95% prediction interval</strong> — the range within which the actual value is expected to fall roughly 95% of the time.</li>
+        <li>The interval becomes <strong>wider further into the future</strong>, because uncertainty increases the further ahead the forecast reaches.</li>
+        <li>Most actual values fall <strong>inside</strong> the shaded region, suggesting the model's uncertainty estimates are reasonably well calibrated.</li>
+      </ul>
+    </div>
+
+    <div class="quiz" data-quiz="q5">
+      <div class="quiz__head"><span class="qtag">Check yourself</span><p>Understanding prediction intervals</p></div>
+      <div class="quiz__body">
+        <p class="quiz__prompt">The 95% prediction interval band is noticeably narrow for month 1 of the forecast but much wider by month 12. What does this most likely reflect?</p>
+        <div class="quiz__options">
+          <button class="quiz-opt" data-correct="false">A mistake in the confidence interval calculation.</button>
+          <button class="quiz-opt" data-correct="true">The model is increasingly uncertain further into the future, since errors compound with each additional forecasted step — similar to multi-step AR forecasting.</button>
+          <button class="quiz-opt" data-correct="false">Sales become genuinely more volatile in month 12 every single year.</button>
+          <button class="quiz-opt" data-correct="false">Wider intervals in later months mean the model is more accurate there.</button>
+        </div>
+        <div class="quiz__feedback"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VERDICT ============ -->
+<section class="alt" id="verdict" aria-labelledby="verdict-h">
+  <div class="section-head">
+    <p class="eyebrow">The question Rohan actually asked</p>
+    <h2 id="verdict-h">SARIMA vs. Holt-Winters — the verdict</h2>
+  </div>
+  <div class="wrap-wide">
+    <p class="lede" style="max-width:var(--measure); margin-left:auto; margin-right:auto;">Does the more complex ARIMA family actually beat Holt-Winters, or is it extra effort for no real gain? Lining up every model's MAPE side by side settles it.</p>
+
+    <div class="verdict-chart">
+      <h3 class="sr-only">Bar chart comparing MAPE across five models, with a dashed line at the 5 percent target</h3>
+      <div class="vc-bars" role="img" aria-label="MAPE comparison: SARIMA 3.98 percent, Holt-Winters 4.30 percent, ARIMA 8.79 percent, AR 20.83 percent, MA 26.44 percent. A target line sits at 5 percent.">
+        <div class="vc-target-line" style="bottom:18.9%;" aria-hidden="true"><span class="lbl">Rohan's 5% target</span></div>
+        <div class="vc-bar-col">
+          <span class="vc-bar-val">3.98%</span>
+          <div class="vc-bar win" style="height:15.1%;" tabindex="0"></div>
+          <span class="vc-tooltip">SARIMA · 3.98%</span>
+          <span class="vc-bar-name">SARIMA</span>
+        </div>
+        <div class="vc-bar-col">
+          <span class="vc-bar-val">4.30%</span>
+          <div class="vc-bar win2" style="height:16.3%;" tabindex="0"></div>
+          <span class="vc-tooltip">Holt-Winters (Part 2) · 4.30%</span>
+          <span class="vc-bar-name">Holt-Winters<br>(Part 2)</span>
+        </div>
+        <div class="vc-bar-col">
+          <span class="vc-bar-val">8.79%</span>
+          <div class="vc-bar" style="height:33.2%;" tabindex="0"></div>
+          <span class="vc-tooltip">ARIMA · 8.79%</span>
+          <span class="vc-bar-name">ARIMA</span>
+        </div>
+        <div class="vc-bar-col">
+          <span class="vc-bar-val">20.83%</span>
+          <div class="vc-bar" style="height:78.8%;" tabindex="0"></div>
+          <span class="vc-tooltip">AR · 20.83%</span>
+          <span class="vc-bar-name">AR</span>
+        </div>
+        <div class="vc-bar-col">
+          <span class="vc-bar-val">26.44%</span>
+          <div class="vc-bar" style="height:100%;" tabindex="0"></div>
+          <span class="vc-tooltip">MA · 26.44%</span>
+          <span class="vc-bar-name">MA</span>
+        </div>
+      </div>
+
+      <table class="verdict-table">
+        <caption>Exact figures, sorted best to worst</caption>
+        <thead><tr><th>Model</th><th>MAPE (%)</th><th>Clears 5% target?</th></tr></thead>
+        <tbody>
+          <tr class="win"><td>SARIMA</td><td class="num">3.98</td><td>Yes</td></tr>
+          <tr class="win2"><td>Holt-Winters (Part 2)</td><td class="num">4.30</td><td>Yes</td></tr>
+          <tr><td>ARIMA</td><td class="num">8.79</td><td>No</td></tr>
+          <tr><td>AR</td><td class="num">20.83</td><td>No</td></tr>
+          <tr><td>MA</td><td class="num">26.44</td><td>No</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="max-width:var(--measure); margin:32px auto 0;">
+      <p>Only the models that properly account for seasonality clear the 5% target. SARIMA (3.98%) slightly outperforms Holt-Winters (about 4.3%), while the simpler ARIMA, AR, and MA models fall well above it.</p>
+      <p style="margin-bottom:0;">The honest verdict isn't "SARIMA is magic." It's this: once seasonality is correctly accounted for, both SARIMA and Holt-Winters perform very well — so the final choice comes down to which approach is easier for the team to maintain, explain, and use.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STREAMING ============ -->
+<section id="streaming" aria-labelledby="stream-h">
+  <div class="section-head">
+    <p class="eyebrow">From notebook to production</p>
+    <h2 id="stream-h">From a static CSV to a live forecast</h2>
+  </div>
+  <div class="wrap">
+    <div class="dialogue rohan">
+      <div class="avatar">R</div>
+      <div class="txt">
+        <p>"This all makes sense on last year's CSV. But our POS system pushes a new month of sales the moment it closes. Are you refitting the whole SARIMA model from scratch every time one new number shows up?"</p>
+        <span class="who">Rohan</span>
+      </div>
+    </div>
+
+    <p class="lede">Fair question, and the answer matters for production. Refitting a SARIMA model on 18 years of data every time a single new month lands is wasteful and slow. What's actually needed is a way to fold new observations into the model cheaply, without re-estimating every coefficient from zero.</p>
+
+    <p>Statsmodels' <code>.append(refit=False)</code> does exactly that: it updates the model's internal state — its recent lagged values and residuals — using the same <code>(p,d,q)(P,D,Q,s)</code> coefficients, instead of re-estimating them from scratch. Simulating the sales arriving as a live monthly stream and comparing the original 12-month-ahead SARIMA forecast against a rolling, one-step-ahead streaming forecast:</p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/552/original/Screenshot_2026-08-25_172117.png?1787658690" alt="Line chart comparing the original 12-month-ahead SARIMA forecast to a streaming one-step-ahead forecast that updates monthly, both plotted against actual sales.">
+      <figcaption>Static forecast vs. streaming forecast — same underlying SARIMA model.</figcaption>
+    </figure>
+
+    <p>Because each streaming forecast only ever has to look one month ahead instead of twelve, the errors don't get the chance to compound the way a multi-step forecast's do — which is the same compounding effect seen earlier with AR.</p>
+
+    <h3>But what if the pattern itself changes?</h3>
+    <p>The streaming forecast above tracked well because nothing about the underlying sales pattern actually shifted — <code>.append()</code> was just feeding the same pattern one point at a time. That's the easy case.</p>
+
+    <div class="dialogue">
+      <div class="avatar">A</div>
+      <div class="txt">
+        <p>Vastra Loop is opening a new store format next quarter — one expected to permanently lift the sales level. This isn't noise, and it isn't a one-month blip. It's a <strong>structural break</strong>: a genuine shift in the process generating the data, not just another draw from the same distribution the model was fit on.</p>
+        <span class="who">Aisha, working through the implication</span>
+      </div>
+    </div>
+
+    <h3>Why .append() alone can't catch this</h3>
+    <p><code>.append(refit=False)</code> only updates the model's internal state. It never re-estimates the <code>(p,d,q)(P,D,Q,s)</code> coefficients themselves — and those coefficients are where the model's belief about trend and seasonal strength actually lives. That belief was frozen the moment <code>.fit()</code> ran on historical data. So when the new store format pushes sales onto a higher level:</p>
+    <ul>
+      <li>The model has no mechanism to notice the shift is permanent.</li>
+      <li>It keeps forecasting off the old level, one step behind reality.</li>
+      <li>Because the seasonal component reuses last year's swing size, it under-predicts by roughly the same margin month after month — the gap doesn't close on its own.</li>
+    </ul>
+
+    <div class="compare-grid">
+      <div class="compare-card bad">
+        <h4>Append-only forecast</h4>
+        <p>Keeps folding new months in with <code>.append(refit=False)</code>, but never touches the coefficients. Stays anchored near the old sales level, and the gap to actual sales widens for months — bottoming out over 150 units below actual before slowly narrowing as more data outweighs the stale fit.</p>
+      </div>
+      <div class="compare-card good">
+        <h4>Quarterly-refit forecast</h4>
+        <p>Periodically re-estimates the SARIMA coefficients on the latest window. Picks up the new sales level within one quarter and tracks actual sales far more closely from then on.</p>
+      </div>
+    </div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/554/original/Screenshot_2026-08-25_172153.png?1787658723" alt="Line chart comparing an append-only forecast that stays well below actual sales after a structural break to a quarterly-refit forecast that catches up to the new sales level within about a quarter.">
+      <figcaption>Append-only vs. quarterly-refit forecast, once the new store format goes live.</figcaption>
+    </figure>
+
+    <p><code>.append()</code> is built to absorb new observations, not new behavior — and a store format change is a change in behavior, not just a new data point. The real question isn't "does the model see the new number?" (it does). It's whether the model's coefficients can ever adapt to the fact that the story has changed. With <code>refit=False</code>, the answer is no — which is exactly the gap that periodic refitting closes.</p>
+  </div>
+</section>
+
+<!-- ============ WRAP UP ============ -->
+<section class="deep" aria-labelledby="wrap-h">
+  <div class="wrap">
+    <p class="eyebrow">Key takeaways</p>
+    <h2 id="wrap-h">What today covered</h2>
+
+    <div class="recap-grid">
+      <div class="recap-item"><strong>ACF &amp; PACF</strong> — reading "how far back does a pattern echo" to choose model settings.</div>
+      <div class="recap-item"><strong>Correlation ≠ causation</strong> — a sanity check before trusting lag relationships.</div>
+      <div class="recap-item"><strong>AR</strong> — forecasting from past values, and how its errors compound across multiple steps.</div>
+      <div class="recap-item"><strong>MA</strong> — forecasting from past errors, distinct from the simple moving-average baseline.</div>
+      <div class="recap-item"><strong>ARMA</strong> — combining both, but only valid on an already-stationary series.</div>
+      <div class="recap-item"><strong>ARIMA</strong> — adds automatic differencing, so raw series work directly.</div>
+      <div class="recap-item"><strong>An interactive playground</strong> for building intuition around p, d, q.</div>
+      <div class="recap-item"><strong>SARIMA</strong> — adds a second seasonal AR/I/MA layer on top of ARIMA.</div>
+      <div class="recap-item"><strong>Prediction intervals</strong> — turning a single forecast number into an honest range.</div>
+      <div class="recap-item"><strong>The verdict</strong> — SARIMA holds its own against Holt-Winters on Vastra Loop sales.</div>
+      <div class="recap-item" style="grid-column:1/-1;"><strong>Static file → live feed</strong> — updating SARIMA cheaply with <code>.append()</code> as new data streams in, and why a periodic full refit still matters when the underlying pattern itself shifts.</div>
+    </div>
+
+    <div class="next-card">
+      <p class="eyebrow" style="margin-bottom:10px;">Looking ahead</p>
+      <h4>What comes next</h4>
+      <div class="dialogue rohan" style="background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.12);">
+        <div class="avatar">R</div>
+        <div class="txt" style="color:#DCE4FA;">
+          <p style="color:#EDEFFA;">"Our festive-season spikes aren't just generic seasonality — they're tied to specific holidays. Can the model actually use that?"</p>
+          <span class="who" style="color:#AEBCE6;">Rohan</span>
+        </div>
+      </div>
+      <p style="margin-bottom:0;">Vastra Loop's own data already hints at this pattern — it showed up back in Part 1's decomposition. Before touching production data, the next case study moves to a similar, holiday-driven dataset from a sister business: a restaurant chain's daily footfall.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div class="foot-name">Time Series 3 <span>— Post Read</span></div>
+    <p>Vastra Loop sales-forecasting case study · ARIMA family · ACF, PACF, AR, MA, ARIMA, SARIMA</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---- Quiz interactivity ---- */
+  var quizzes = document.querySelectorAll(".quiz");
+  quizzes.forEach(function(q){
+    var options = q.querySelectorAll(".quiz-opt");
+    var feedback = q.querySelector(".quiz__feedback");
+    var answered = false;
+    options.forEach(function(opt){
+      opt.addEventListener("click", function(){
+        if (answered) return;
+        answered = true;
+        var isCorrect = opt.getAttribute("data-correct") === "true";
+        options.forEach(function(o){
+          o.disabled = true;
+          if (o.getAttribute("data-correct") === "true"){
+            o.classList.add("correct");
+            var m = o.querySelector(".marker");
+            if (m) m.textContent = "✓";
+          } else if (o === opt){
+            o.classList.add("incorrect");
+            var m2 = o.querySelector(".marker");
+            if (m2) m2.textContent = "✕";
+          } else {
+            o.classList.add("dim");
+          }
+        });
+        feedback.classList.add("show");
+        feedback.classList.add(isCorrect ? "good" : "bad");
+        var explanations = {
+          q1: "This is exactly the \u201cmiddleman\u201d effect PACF is built to catch. ACF shows the total correlation at each lag, which can carry over from earlier lags. PACF strips that carry-over out. A tall ACF bar at lag 3 that disappears in PACF means lag 3\u2019s apparent influence was really just an echo of lag 2 \u2014 not new, direct information.",
+          q2: "Once an AR model runs out of real past values to look back on, it starts feeding its own forecasts back in as \u201cpast values\u201d for the next step. Any error in an early forecast doesn\u2019t disappear \u2014 it gets carried forward and compounded, which is exactly why longer forecast horizons tend to get shakier for AR-style models.",
+          q3: "ARMA has no built-in mechanism for handling trend or seasonality \u2014 it\u2019s built on the assumption of a stationary series. Feed it a series that\u2019s still trending or seasonal, and its forecasts tend to drift or systematically miss, because the model is implicitly assuming a stability the data doesn\u2019t actually have.",
+          q4: "d is the dial that tells ARIMA how much internal differencing to apply before fitting the ARMA part. At d=0, ARIMA behaves like plain ARMA, which assumes stationarity. Fit that on a trending series and the model has no mechanism to account for the upward drift, so it under-forecasts.",
+          q5: "Prediction intervals widen with the forecast horizon because each additional step adds more accumulated uncertainty \u2014 the model has less \u201creal\u201d recent information to anchor on for months further away, similar to how AR forecasts get shakier several steps ahead. It\u2019s not a sign of an error or of higher real-world volatility later in the year \u2014 it\u2019s an honest reflection of growing uncertainty."
+        };
+        var key = q.getAttribute("data-quiz");
+        feedback.innerHTML = '<span class="fb-tag">' + (isCorrect ? "Correct" : "Not quite") + '</span>' + (explanations[key] || "");
+        feedback.focus && feedback.setAttribute("tabindex","-1");
+      });
+    });
+  });
+
+  /* ---- Dial explorer ---- */
+  var dials = document.querySelectorAll(".dial-card");
+  dials.forEach(function(card){
+    card.addEventListener("click", function(){
+      var isOpen = card.classList.contains("open");
+      dials.forEach(function(c){ c.classList.remove("open"); c.setAttribute("aria-expanded","false"); });
+      if (!isOpen){
+        card.classList.add("open");
+        card.setAttribute("aria-expanded","true");
+      }
+    });
+  });
+
+  /* ---- Model ladder: highlight + fill MAPE on scroll ---- */
+  var mapeByModel = { AR: "20.83%", MA: "26.44%", ARMA: "n/a", ARIMA: "8.79%", SARIMA: "3.98%" };
+  var clearedTarget = { AR:false, MA:false, ARMA:false, ARIMA:false, SARIMA:true };
+  var pills = {};
+  document.querySelectorAll(".ladder-pill").forEach(function(p){
+    pills[p.getAttribute("data-target")] = p;
+  });
+  var modelSections = document.querySelectorAll("[data-model]");
+
+  function setPillValue(id, model){
+    var pill = pills[id];
+    if (!pill) return;
+    var val = mapeByModel[model];
+    if (val){
+      var pv = pill.querySelector(".pv");
+      if (pv) pv.textContent = val;
+      if (clearedTarget[model]) pill.classList.add("cleared");
+    }
+  }
+
+  if ("IntersectionObserver" in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        var id = entry.target.id;
+        var model = entry.target.getAttribute("data-model");
+        if (entry.isIntersecting){
+          Object.keys(pills).forEach(function(k){ pills[k].classList.remove("active"); });
+          if (pills[id]) pills[id].classList.add("active");
+          setPillValue(id, model);
+        }
+      });
+    }, { rootMargin: "-40% 0px -50% 0px", threshold: 0 });
+
+    modelSections.forEach(function(sec){ io.observe(sec); });
+  }
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Timeseries-3" target="_blank" rel="noopener">github.com/scaler-content/Timeseries-3</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

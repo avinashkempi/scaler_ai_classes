@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Computer Vision 6 post read</title>
+<meta name="description" content="Computer Vision 6 post read: CNN for medical diagnosis with MobileNet, threshold selection and Grad-CAM.">
+<style>
+:root{
+  --v950:#1e0b4b;--v900:#2e1065;--v800:#4c1d95;--v700:#6d28d9;--v600:#7c3aed;--v500:#8b5cf6;
+  --v400:#a78bfa;--v300:#c4b5fd;--v200:#ddd6fe;--v100:#ede9fe;--v50:#f5f3ff;
+  --ink:#1f1637;--muted:#5a4f78;--line:#e4dcfa;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{margin:0;background:#fff;color:var(--ink);font:17px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:Georgia,"Iowan Old Style","Times New Roman",serif;line-height:1.2;color:var(--v900);margin:0}
+h2{font-size:clamp(1.7rem,3.4vw,2.3rem);margin:0 0 .7rem}
+h3{font-size:1.35rem;margin:2.2rem 0 .5rem}
+h4{font-size:1.02rem;margin:1.2rem 0 .3rem;color:var(--v800)}
+p{margin:.75rem 0}
+p,ul,ol{max-width:70ch}
+li{margin:.3rem 0}
+a{color:var(--v700)}
+code{font:.88em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--v100);color:var(--v800);padding:.1em .35em;border-radius:5px}
+:focus-visible{outline:3px solid var(--v500);outline-offset:2px;border-radius:4px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:-999px;top:8px;background:var(--v900);color:#fff;padding:.5rem 1rem;z-index:100;border-radius:8px}
+.skip:focus{left:8px}
+
+/* header */
+.top{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .in{max-width:1040px;margin:0 auto;padding:.6rem 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font:700 1.05rem Georgia,serif;color:var(--v900);text-decoration:none;display:flex;align-items:center;gap:10px}
+.brand i{width:18px;height:18px;border-radius:4px;background:conic-gradient(var(--v700) 25%,var(--v300) 0 50%,var(--v500) 0 75%,var(--v900) 0);display:inline-block}
+#bar{height:3px;background:var(--v600);width:0;transition:width .1s}
+.btn{font:600 .9rem system-ui,sans-serif;background:var(--v700);color:#fff;border:2px solid var(--v700);border-radius:10px;padding:7px 14px;cursor:pointer}
+.btn:hover{background:var(--v800);border-color:var(--v800)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:#fff;color:var(--v700)}
+.btn.ghost:hover{background:var(--v50)}
+.btn.sm{padding:4px 10px;font-size:.82rem}
+#toc{position:absolute;right:max(20px,calc(50% - 520px));top:100%;width:min(360px,calc(100vw - 40px));max-height:70vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px -12px rgba(46,16,101,.35);padding:10px}
+#toc ol{list-style:none;margin:0;padding:0;max-width:none}
+#toc a{display:flex;gap:10px;padding:7px 10px;border-radius:8px;text-decoration:none;color:var(--ink);font-size:.95rem;line-height:1.35}
+#toc a b{color:var(--v600);font-variant-numeric:tabular-nums;min-width:1.6em}
+#toc a:hover,#toc a[aria-current=true]{background:var(--v100);color:var(--v900)}
+#toc a[aria-current=true]{font-weight:700}
+
+/* hero */
+.hero{color:#fff;padding:84px 20px 92px;background-color:var(--v900);
+  background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(135deg,var(--v950),var(--v700));
+  background-size:30px 30px,30px 30px,100% 100%}
+.hero .in{max-width:900px;margin:0 auto}
+.eyebrow{font:700 .78rem system-ui;letter-spacing:.14em;text-transform:uppercase;color:var(--v200)}
+.hero h1{color:#fff;font-size:clamp(2.3rem,6.5vw,4rem);margin:.4rem 0 1rem}
+.hero p{font-size:1.2rem;color:var(--v100);max-width:56ch}
+.hero .cta{margin-top:1.6rem;display:flex;gap:12px;flex-wrap:wrap}
+.hero .btn{background:#fff;color:var(--v800);border-color:#fff}
+.hero .btn.ghost{background:transparent;color:#fff;border-color:var(--v300)}
+
+/* sections */
+main section{padding:60px 20px;border-bottom:1px solid var(--line)}
+main section:nth-of-type(even){background:var(--v50)}
+main section>.in{max-width:940px;margin:0 auto}
+.kicker{display:inline-block;font:700 .78rem system-ui;letter-spacing:.14em;text-transform:uppercase;color:var(--v600);margin-bottom:.35rem}
+.callout{border-left:5px solid var(--v600);background:var(--v100);padding:12px 18px;border-radius:0 14px 14px 0;margin:1.2rem 0;max-width:70ch}
+.callout p{margin:.3rem 0}
+.note{font-size:.88rem;color:var(--muted)}
+.formula{font:italic 1.2rem Georgia,serif;text-align:center;background:var(--v900);color:#fff;border-radius:14px;padding:14px 18px;margin:16px 0;overflow-x:auto;max-width:none}
+.formula small{display:block;font:.8rem system-ui;color:var(--v200);font-style:normal;margin-top:4px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.card{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:#fff}
+.card h4{margin:0 0 .3rem;font-size:1.05rem;color:var(--v900)}
+.card p{margin:.3rem 0;font-size:.97rem}
+.card.dark{background:var(--v900);color:#fff;border-color:var(--v900)}
+.card.dark h4{color:#fff}
+.tag{display:inline-block;font:700 .72rem system-ui;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--v100);color:var(--v800)}
+
+/* widgets */
+.widget{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin:24px 0;box-shadow:0 8px 26px -14px rgba(76,29,149,.35)}
+.wtag{display:inline-block;font:700 .7rem system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--v700);background:var(--v100);padding:5px 10px;border-radius:999px;margin-bottom:8px}
+.wtitle{font:700 1.12rem/1.3 Georgia,serif;color:var(--v900);margin:0 0 4px}
+.wdesc{color:var(--muted);font-size:.93rem;margin:0 0 12px;max-width:none}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:8px 0 14px}
+.seg{display:inline-flex;flex-wrap:wrap}
+.seg button{font:600 .85rem system-ui,sans-serif;border:1.5px solid var(--v300);background:#fff;color:var(--v800);padding:6px 12px;cursor:pointer;margin-left:-1.5px}
+.seg button:first-child{border-radius:10px 0 0 10px;margin-left:0}
+.seg button:last-child{border-radius:0 10px 10px 0}
+.seg button:only-child{border-radius:10px}
+.seg button:hover{background:var(--v50)}
+.seg button[aria-pressed=true]{background:var(--v700);border-color:var(--v700);color:#fff;position:relative;z-index:1}
+select,input[type=number]{font:inherit;font-size:.9rem;padding:6px 8px;border:1.5px solid var(--v300);border-radius:8px;background:#fff;color:var(--v900)}
+input[type=number]{width:92px}
+input[type=range]{accent-color:var(--v600)}
+label.sel,label.chk,label.fld{font-size:.88rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+label.fld{flex-direction:column;align-items:flex-start;gap:3px;font-weight:600}
+.mat{display:grid;gap:3px;grid-template-columns:repeat(var(--c),minmax(0,1fr))}
+.cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;text-align:center;font:600 clamp(.6rem,1.7vw,.88rem)/1.1 ui-monospace,Menlo,monospace;border-radius:6px;background:var(--v50);color:var(--v900);border:1.5px solid var(--v200);padding:0;margin:0}
+button.cell{cursor:pointer}
+button.cell:hover{border-color:var(--v700)}
+.cell.win{outline:3px solid var(--v900);outline-offset:-2px;z-index:1}
+.cell.pad{background:repeating-linear-gradient(45deg,#fff,#fff 4px,var(--v100) 4px,var(--v100) 8px);color:var(--muted);border-style:dashed}
+.cell.neg{border:2px dashed var(--v900)}
+.cell.cur{outline:3px solid var(--v900);outline-offset:-2px}
+.cell.on{background:var(--v700);color:#fff;border-color:var(--v700)}
+.cell.ghost{border:2px dashed var(--v700)}
+.cell.sel{outline:3px solid var(--v900);outline-offset:-2px}
+.bars{display:grid;gap:6px}
+.brow{display:grid;grid-template-columns:minmax(78px,150px) 1fr 62px;gap:10px;align-items:center;font-size:.9rem}
+.bl{font-weight:600;color:var(--v900)}
+.bt{background:var(--v100);border-radius:6px;height:16px;overflow:hidden;display:block}
+.bf{display:block;height:100%;background:var(--v700);border-radius:6px;transition:width .25s}
+.bv{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted)}
+.readout{margin-top:12px;padding:10px 14px;background:var(--v50);border:1px solid var(--line);border-radius:12px;font-size:.93rem;max-width:none}
+.readout b{color:var(--v900)}
+.fig{margin:14px 0}
+.fig img{max-width:100%;height:auto;border-radius:12px;border:1px solid var(--line);display:block;margin:0 auto}
+.fig figcaption{font-size:.85rem;color:var(--muted);text-align:center;margin-top:6px}
+.fb{display:none;padding:18px;border:2px dashed var(--v300);border-radius:12px;color:var(--muted);font-size:.9rem;text-align:center}
+.fig.broken .fb{display:block}
+.fig.broken img{display:none}
+.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+
+/* tabs */
+.tabs{margin:18px 0}
+.tablist{display:flex;gap:4px;flex-wrap:wrap;border-bottom:2px solid var(--line);margin-bottom:14px}
+.tablist button{font:600 .92rem system-ui,sans-serif;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:9px 14px;cursor:pointer;margin-bottom:-2px;border-radius:8px 8px 0 0}
+.tablist button:hover{color:var(--v800);background:var(--v50)}
+.tablist button[aria-selected=true]{color:var(--v800);border-bottom-color:var(--v700);background:var(--v100)}
+[role=tabpanel]:focus-visible{outline-offset:6px}
+
+/* code + tables */
+details.code{border:1px solid var(--line);border-radius:12px;margin:14px 0;background:#fff;overflow:hidden}
+details.code summary{cursor:pointer;padding:10px 14px;font:600 .9rem system-ui;color:var(--v800);background:var(--v50)}
+details.code[open] summary{border-bottom:1px solid var(--line)}
+pre{margin:0;padding:14px 16px;overflow:auto;background:var(--v950);color:var(--v100);font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.tw{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--v100);color:var(--v900);font-weight:700}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+
+/* specific widgets */
+.pxwrap{display:grid;grid-template-columns:minmax(0,420px) 1fr;gap:20px;align-items:start}
+.pxgrid{gap:2px}
+.pxgrid .cell{border-radius:3px;border:0;font-size:clamp(.5rem,1.4vw,.68rem)}
+.vrow{display:flex;align-items:center;gap:8px;margin:5px 0}
+.vl{font-weight:800;color:var(--v800);width:44px;font-size:.82rem}
+.vcells{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:3px;flex:1}
+.vcells .cell{aspect-ratio:auto;height:34px;font-size:clamp(.55rem,1.5vw,.78rem)}
+.flat{display:grid;grid-template-columns:130px 1fr;gap:22px;align-items:start}
+.flat .mat{max-width:130px}
+.srow{display:grid;grid-template-columns:72px minmax(90px,1fr) 42px minmax(90px,1fr) 58px;gap:10px;align-items:center;margin:8px 0;font-size:.9rem}
+.srow input{width:100%}
+.zv{font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
+.mx{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;align-items:start}
+.layers{list-style:none;margin:0;padding:0;max-width:none;display:grid;gap:6px}
+.lay{width:100%;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.9fr) minmax(0,1fr);gap:8px;align-items:center;text-align:left;font:inherit;font-size:.86rem;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;color:var(--ink)}
+.lay:hover{border-color:var(--v400)}
+.lay[aria-pressed=true]{border-color:var(--v700);background:var(--v50);box-shadow:inset 4px 0 0 var(--v700)}
+.lay .ln{font-weight:700;color:var(--v900)}
+.lay .ls{color:var(--muted);font-variant-numeric:tabular-nums}
+.lay .lp{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.lay .lb{grid-column:1/-1;height:6px;background:var(--v100);border-radius:4px;overflow:hidden}
+.lay .lb i{display:block;height:100%;background:var(--v600)}
+.ldetail{background:var(--v900);color:#fff;border-radius:14px;padding:16px 18px;position:sticky;top:90px}
+.ldetail h4{color:#fff;margin:0 0 6px}
+.ldetail p{margin:.4rem 0;font-size:.92rem;color:var(--v100)}
+.ldetail code{background:rgba(255,255,255,.14);color:#fff}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin:6px 0}
+.legend i{display:inline-block;width:26px;height:0;border-top:3px solid var(--v900);vertical-align:middle;margin-right:6px}
+.plot{touch-action:pan-y;outline-offset:2px}
+.plot svg{width:100%;height:auto;display:block}
+.cx{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,.7fr) minmax(0,.7fr) minmax(0,1fr);gap:16px;align-items:start}
+.pl{font:700 .78rem system-ui;color:var(--v800);margin-bottom:6px;letter-spacing:.02em}
+.sum{margin-top:8px;font-size:.95rem}
+.stepbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:14px}
+.stepbar input[type=range]{flex:1;min-width:140px}
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0}
+.stat{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff}
+.stat .k{font:700 .74rem system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font:700 1.7rem Georgia,serif;color:var(--v900)}
+.stat .s{font-size:.85rem;color:var(--muted)}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vs div{padding:8px 10px;border-radius:10px;background:var(--v50)}
+.vs div.win{background:var(--v900);color:#fff}
+.vs small{display:block;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.vs b{font:700 1.3rem Georgia,serif}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0;max-width:none}
+.flow span{background:#fff;border:1.5px solid var(--v300);color:var(--v900);padding:8px 12px;border-radius:10px;font:600 .9rem system-ui}
+.flow i{color:var(--v600);font-style:normal;font-weight:800}
+.cortex{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:stretch}
+.cortex .rl{font:700 .75rem system-ui;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center}
+.cortex button{font:inherit;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:10px 8px;cursor:pointer;text-align:center;color:var(--ink);font-size:.84rem}
+.cortex button:hover{border-color:var(--v400)}
+.cortex button[aria-pressed=true]{background:var(--v900);color:#fff;border-color:var(--v900)}
+.cortex svg{width:40px;height:40px;display:block;margin:0 auto 4px}
+.cortex button b{display:block;font-size:.86rem}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;margin:8px 0;cursor:pointer;background:#fff}
+.opt:hover{border-color:var(--v400)}
+.opt input{margin-top:5px;accent-color:var(--v700)}
+.opt.ok{background:var(--v900);color:#fff;border-color:var(--v900)}
+.opt.bad{border:2px dashed var(--v900);background:var(--v50)}
+.opt .mk{margin-left:auto;font-weight:700;font-size:.82rem;white-space:nowrap}
+fieldset{border:0;padding:0;margin:0}
+legend{font-weight:700;color:var(--v900);padding:0;margin-bottom:6px}
+.qa{display:flex;gap:10px;margin-top:10px}
+footer{background:var(--v950);color:var(--v200);text-align:center;padding:36px 20px;font:700 1rem Georgia,serif}
+footer small{display:block;font:.8rem system-ui;opacity:.7;margin-top:4px}
+
+@media (max-width:820px){
+  .pxwrap,.flat,.mx{grid-template-columns:1fr}
+  .cx{grid-template-columns:1fr 1fr}
+  .cx .pn-in{grid-column:1/-1}
+  .ldetail{position:static}
+  .cortex{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .cortex .rl{grid-column:1/-1}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  main section{padding:44px 16px}
+  .srow{grid-template-columns:72px 1fr 42px}
+  .srow .bt{grid-column:2}
+  .srow .bv{grid-column:3}
+  .brow{grid-template-columns:84px 1fr 54px}
+}
+/* L2 additions */
+.maps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.maps .mat{gap:2px}
+.maps .cell{border-radius:3px;border:0;font-size:clamp(.5rem,1.4vw,.72rem)}
+.mapbtn{border:2px solid transparent;background:none;border-radius:10px;padding:4px;cursor:pointer;text-align:left;font:inherit}
+.mapbtn:hover{border-color:var(--v300)}
+.mapbtn[aria-pressed=true]{border-color:var(--v700);background:var(--v50)}
+.outrow{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+.outrow .cell{width:34px;height:34px;aspect-ratio:auto;border-radius:5px;font-size:.7rem}
+.neurons{gap:3px;max-width:420px}
+.neurons .cell{border-radius:4px;border:0;font-size:0}
+.neurons .cell.on{background:var(--v700)}
+.neurons .cell.off{background:repeating-linear-gradient(45deg,#fff,#fff 3px,var(--v200) 3px,var(--v200) 6px);border:1.5px dashed var(--v300)}
+.meter{height:12px;background:var(--v100);border-radius:6px;overflow:hidden;margin:4px 0 10px}
+.meter i{display:block;height:100%;background:var(--v700);transition:width .2s}
+.meter.warn i{background:var(--v900)}
+.mrow{font-size:.9rem;color:var(--ink)}
+.mrow b{color:var(--v900)}
+.lsteps{list-style:none;counter-reset:s;padding:0;margin:12px 0;max-width:none;display:grid;gap:8px}
+.lsteps li{counter-increment:s;display:flex;gap:12px;align-items:center;border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;background:#fff;margin:0}
+.lsteps li::before{content:counter(s);flex:none;width:28px;height:28px;border-radius:50%;background:var(--v700);color:#fff;display:flex;align-items:center;justify-content:center;font:700 .85rem system-ui}
+.lsteps li.skip{border-style:dashed;background:var(--v50);color:var(--muted)}
+.lsteps li.skip::before{background:var(--v300)}
+.lsteps li .tg{margin-left:auto;font:700 .72rem system-ui;letter-spacing:.06em;text-transform:uppercase;color:var(--v800);background:var(--v100);padding:3px 8px;border-radius:999px;white-space:nowrap}
+.augg{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0}
+.augg figure{margin:0;text-align:center}
+.augg svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:10px;background:#fff}
+.augg figcaption{font:600 .78rem system-ui;color:var(--muted);margin-top:4px}
+.vols{width:100%;height:auto;display:block;margin:6px 0 10px}
+.vols g[role=button]{cursor:pointer}
+.vols g:focus-visible{outline:none}
+.vols g:focus-visible rect:first-of-type{stroke-width:4}
+.rbars{display:grid;gap:8px}
+.rb{display:grid;grid-template-columns:minmax(120px,210px) 1fr 64px;gap:10px;align-items:center;text-align:left;font:inherit;font-size:.9rem;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;color:var(--ink);width:100%}
+.rb:hover{border-color:var(--v400)}
+.rb[aria-pressed=true]{border-color:var(--v700);background:var(--v50);box-shadow:inset 4px 0 0 var(--v700)}
+.rb .bl{font-weight:700}
+.rb .bt{height:18px;position:relative}
+.rb .zone{position:absolute;top:0;bottom:0;left:0;background:repeating-linear-gradient(45deg,var(--v200),var(--v200) 3px,#fff 3px,#fff 6px);opacity:.9}
+.rb .bf{position:relative}
+.mt td,.mt th{text-align:center;padding:6px 8px}
+.mt td:first-child,.mt th:first-child{text-align:left}
+.yes{font-weight:800;color:var(--v700)}
+.no{color:var(--v300)}
+pre.prompt{white-space:pre-wrap;word-break:break-word;border-radius:12px;font-size:13px}
+.hint{font-size:.85rem;color:var(--muted)}
+.cardlink{display:inline-block;margin-top:.4rem;font-weight:700;font-size:.9rem}
+@media (max-width:640px){
+  .maps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rb{grid-template-columns:90px 1fr 54px}
+}
+td.hl{background:var(--v100);font-weight:700}
+label.sel{flex-wrap:wrap;max-width:100%}
+label.sel select{max-width:100%;min-width:0}
+@media (max-width:640px){label.sel{width:100%}label.sel select{width:100%}}
+.yes{white-space:nowrap}
+@media (max-width:640px){.plot svg text{font-size:19px}.vols text{font-size:18px}}
+p code,li code,td code{overflow-wrap:anywhere}
+@media (max-width:640px){.widget .tw th,.widget .tw td{padding:6px 5px;font-size:.74rem}}
+.readout pre{overflow-x:auto;max-width:100%}
+.seg{max-width:100%;flex-wrap:wrap}
+.brow{grid-template-columns:minmax(70px,150px) minmax(0,1fr) auto}.brow .bl{overflow-wrap:anywhere}
+.readout{overflow-wrap:anywhere}
+
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/cv/">Computer vision</a><span class="t">· Computer Vision 6 · Chest X-ray pneumonia classifier</span><span class="pn"><a href="../DSML-CV-5/" title="Computer Vision 5 · Embeddings and nearest neighbours">← Prev</a><a href="../DSML-CV-7/" title="Computer Vision 7 · Object localisation and IoU">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="#top"><i aria-hidden="true"></i>Computer Vision 6 post read</a>
+    <button class="btn ghost sm" id="tocBtn" aria-expanded="false" aria-controls="toc">Contents</button>
+  </div>
+  <div id="bar" aria-hidden="true"></div>
+  <nav id="toc" aria-label="Contents" hidden><ol></ol></nav>
+</header>
+
+<div class="hero" id="top">
+  <div class="in">
+    <div class="eyebrow">Deep Learning · Computer Vision</div>
+    <h1>Computer Vision 6 post read</h1>
+    <p>A complete medical-imaging pipeline: classify chest X-rays as normal or pneumonia with a model small enough for a phone. We handle imbalanced data and patient-level splits, learn how MobileNet saves computation, fine-tune MobileNetV2, choose a safe decision threshold, look inside the model with Grad-CAM, and meet EfficientNet and Vision Transformers.</p>
+    <div class="cta"><a class="btn" href="#problem">Start reading</a><a class="btn ghost" href="#mobilenet">Jump to MobileNet</a></div>
+  </div>
+</div>
+
+<main id="main">
+
+<section id="problem" data-title="The problem and its constraints">
+<div class="in">
+  <span class="kicker">01</span>
+  <h2>The problem and its constraints</h2>
+  <p>Pneumonia sends well over a million people to hospital every year in the US alone, and it is a leading cause of serious illness worldwide. The chest X-ray is the most common imaging test used to diagnose it. Suppose you are a data scientist at Qure.ai, a medical AI company. Your task is to classify whether a chest X-ray shows pneumonia or not, and the model must also run on a mobile device so that predictions are fast and work in real time.</p>
+  <div data-fig="xr"></div>
+  <p class="note">Pneumonia is an infection that inflames the air sacs in one or both lungs. The air sacs may fill with fluid or pus, causing cough with phlegm, fever, chills and difficulty breathing. Bacteria, viruses and fungi can all cause it. It ranges from mild to life-threatening, and is most serious for infants and young children, people over 65, and people with other health problems or weakened immune systems.</p>
+  <div class="callout"><p><b>Teaching exercise only.</b> The model built here is not a medical device and must not be used to make clinical decisions. Real diagnostic tools need clinical validation, regulatory approval, and a clinician in the loop.</p></div>
+
+  <h3>Four constraints that shape every choice</h3>
+  <div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="card"><span class="tag">Speed</span><h4>Low latency</h4><p>Predictions should arrive quickly, on the device.</p></div>
+    <div class="card"><span class="tag">Errors</span><h4>Mistakes have different costs</h4><p><b>False negative:</b> the patient has pneumonia and the model says normal; they may go untreated, usually the more dangerous error. <b>False positive:</b> a normal patient is flagged; this causes extra tests and worry.</p></div>
+    <div class="card"><span class="tag">Trust</span><h4>Trustworthy confidence</h4><p>A score of 0.9 should really mean high confidence.</p></div>
+    <div class="card"><span class="tag">Insight</span><h4>Explainability</h4><p>A clinician should be able to see why the model decided what it did.</p></div>
+  </div>
+
+  <h3>How we will solve it</h3>
+  <p>Earlier lectures covered large networks such as VGG16 and ResNet: accurate but heavy, which makes them awkward on a phone. Here we introduce <b>MobileNet</b>, which has far fewer parameters (MobileNetV2 has roughly 7 times fewer than ResNet-50 and about 40 times fewer than VGG16) while keeping good ImageNet accuracy. It is widely used in mobile apps for image classification and object detection, where low latency matters.</p>
+  <div data-fig="mn"></div>
+</div>
+</section>
+
+<section id="data" data-title="The data and its pitfalls">
+<div class="in">
+  <span class="kicker">02</span>
+  <h2>The data and its pitfalls</h2>
+  <p>We use the chest X-ray dataset from <a href="https://www.cell.com/cell/fulltext/S0092-8674(18)30154-5">Kermany et al., <i>Cell</i>, 2018</a>. It contains chest X-rays of <b>children aged one to five</b> from a single hospital in Guangzhou, China, with labels from expert physicians. It is split into a training set (5,232 images) and a test set (624 images). Keep the source in mind: a model trained on it may not work on adults or on scans from other hospitals.</p>
+  <h3>Loading and caching</h3>
+  <p>The data is stored in <code>.tfrec</code> files, a plain binary container: each record is an 8-byte length, a 4-byte checksum, the payload bytes, and another 4-byte checksum. The payloads are raw JPEG images and their file paths, so a few lines of Python can read them with no special library. Every image is decoded once to a small grayscale array and cached; the class label is the name of the parent folder in the path. One grayscale channel is stored, and expanded to three only when it is fed to the network.</p>
+  <details class="code"><summary>Code: download, read records, decode and cache</summary><pre data-code="load"></pre></details>
+
+  <h3>Class imbalance</h3>
+  <div class="widget" data-w="imb"></div>
+  <p>There are far more pneumonia images than normal ones, which can bias the model towards the majority class. On the test set, a model that always says “pneumonia” already scores about 62.5%, so every accuracy we report has to be judged against that baseline.</p>
+  <details class="code"><summary>Code: count the classes</summary><pre data-code="count"></pre></details>
+
+  <h3>Can we use augmentation?</h3>
+  <p>Be careful. Some augmentations create images that never occur in real scans: a horizontal flip puts the heart on the wrong side of the chest, because X-rays are always taken in a standard orientation. Mild changes such as small rotations, slight zoom, and brightness or contrast shifts are common in medical imaging and can help. The lecture skips augmentation to keep the pipeline simple.</p>
+  <div class="widget" data-w="quiz" data-q="q1"></div>
+
+  <h3>Split by patient, not by image</h3>
+  <p>The same patient can have several X-rays, and filenames carry a patient ID (for example <code>person12_bacteria_34.jpeg</code> for pneumonia scans and <code>IM-0115-0001.jpeg</code> for normal ones). If images of one patient land in both training and validation, the validation score looks better than it really is. <code>GroupShuffleSplit</code> keeps all images that share a group label on the same side.</p>
+  <div class="widget" data-w="split"></div>
+  <details class="code"><summary>Code: extract the patient ID and split</summary><pre data-code="split"></pre></details>
+
+  <h3>Class weights</h3>
+  <p>Instead of augmenting, we weight the loss so that mistakes on the minority class (normal) count more. The weight of a class is <code>(1 / count) × total / 2</code>, computed from the training split only.</p>
+  <div class="widget" data-w="weights"></div>
+  <details class="code"><summary>Code: compute class weights</summary><pre data-code="weights"></pre></details>
+
+  <h3>Turning arrays into model input</h3>
+  <p>The arrays are wrapped in PyTorch <code>DataLoader</code>s that hand the model one shuffled batch at a time. The helper <code>to_input</code> converts a batch of 8-bit grayscale images into what MobileNet expects: three channels, values scaled to 0 to 1, and normalised with the ImageNet mean and standard deviation (the statistics the pretrained weights were trained with). Always look at the data before training.</p>
+  <div data-fig="batch"></div>
+  <details class="code"><summary>Code: <code>to_input</code> and the loaders</summary><pre data-code="input"></pre></details>
+</div>
+</section>
+
+<section id="mobilenet" data-title="MobileNet and separable convolutions">
+<div class="in">
+  <span class="kicker">03</span>
+  <h2>MobileNet and depthwise separable convolutions</h2>
+  <p>State-of-the-art models such as ResNet-50, Inception, VGG16 and AlexNet reach strong accuracy on ImageNet but are expensive to train and to run. A phone needs something lighter that is still reliable. <b>MobileNet</b>, introduced by Google in 2017 (<a href="https://arxiv.org/abs/1704.04861">paper</a>), is built for that.</p>
+  <div class="widget" data-w="models"></div>
+  <p class="note">Figures are for the pretrained torchvision weights on the ImageNet-1k validation set. The first MobileNet (V1) has about 4.2M parameters, as reported in its paper. Models like this are meant for on-device inference: after training in PyTorch they can be exported to a runtime such as ExecuTorch or ONNX Runtime Mobile.</p>
+
+  <h3>The core idea</h3>
+  <p>MobileNetV1 has about 28 layers (counting each depthwise and pointwise layer separately), yet only about 4.2M parameters, around 6 times fewer than ResNet-50. The saving comes from how it does convolutions. Recall that in a standard convolution each filter spans all input channels, so one filter produces one output channel by mixing every input channel together.</p>
+  <div data-fig="std"></div>
+  <p>MobileNet uses a standard convolution only once, in the first layer. Every later layer is a <b>depthwise separable convolution</b>: a depthwise convolution followed by a pointwise convolution.</p>
+  <div class="vs">
+    <div><b>Depthwise: filter</b><p>Apply one filter to each input channel, separately: split the input into channels, convolve each with its own filter, stack the results. A 3-channel input gives a 3-channel output.</p></div>
+    <div class="win"><b>Pointwise: combine</b><p>A 1 × 1 convolution. At each position it takes a weighted sum across all channels; many such kernels give any number of output channels.</p></div>
+  </div>
+  <div data-fig="dw1,pw"></div>
+  <details class="code"><summary>More figures: depthwise detail and the combination</summary><div data-fig="dw2,sep"></div></details>
+  <p>A standard convolution filters and combines in one step. The separable version splits this into two cheaper steps: one layer for filtering, one for combining.</p>
+
+  <h3>How much does it save?</h3>
+  <p>For a kernel of size <code>k × k</code>, <code>M</code> input channels and <code>N</code> output channels, a standard convolution needs <code>k·k·M·N</code> weights; the separable version needs <code>k·k·M</code> (depthwise) plus <code>M·N</code> (pointwise). The ratio of the two is <code>1/N + 1/k²</code>, which for 3 × 3 kernels is a saving of roughly 8 to 9 times.</p>
+  <div class="widget" data-w="sep"></div>
+  <div data-fig="sav"></div>
+  <p>In PyTorch the depthwise layer is an ordinary <code>Conv2d</code> with <code>groups</code> equal to the number of input channels, so each filter sees only its own channel.</p>
+  <details class="code"><summary>Code: count the weights yourself</summary><pre data-code="sepcode"></pre></details>
+  <div class="widget" data-w="quiz" data-q="q2"></div>
+</div>
+</section>
+
+<section id="v1" data-title="MobileNet architecture and versions">
+<div class="in">
+  <span class="kicker">04</span>
+  <h2>MobileNetV1 architecture and its successors</h2>
+  <div data-fig="v1"></div>
+  <ol>
+    <li>A standard 3 × 3 convolution with stride 2 (32 filters).</li>
+    <li>13 depthwise separable blocks. Their output channels go 64, 128, 128, 256, 256, 512, then <b>five blocks of 512</b>, then 1024, 1024. Blocks that halve the spatial size use stride 2 in the depthwise layer.</li>
+    <li>Global average pooling.</li>
+    <li>A fully connected layer with 1,000 outputs (one per ImageNet class).</li>
+  </ol>
+  <p>Every convolution is followed by batch normalisation and a <b>ReLU6</b> activation. ReLU6 caps activations at 6, which keeps values in a small range and works well with the low-precision arithmetic used on mobile hardware.</p>
+  <div class="widget" data-w="mob"></div>
+  <details class="code"><summary>Code: one block, the full network, and a shape trace</summary><pre data-code="v1code"></pre></details>
+
+  <h3>MobileNet versions</h3>
+  <div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+    <div class="card"><span class="tag">2017</span><h4>MobileNetV1</h4><p>Introduced by Google with depthwise separable convolutions, to run vision models efficiently on low-resource devices.</p></div>
+    <div class="card"><span class="tag">2018</span><h4>MobileNetV2</h4><p>Adds <b>inverted residuals</b> and <b>linear bottlenecks</b>. A block expands the channels with a 1 × 1 convolution, applies a depthwise 3 × 3 convolution, then projects back down with a 1 × 1 convolution that has no activation (the linear bottleneck). A shortcut joins the narrow ends of the block. Higher accuracy at lower cost.</p></div>
+    <div class="card"><span class="tag">2019</span><h4>MobileNetV3</h4><p>Found with neural architecture search; adds squeeze-and-excitation blocks and the hard-swish activation.</p></div>
+  </div>
+  <div data-fig="v2"></div>
+</div>
+</section>
+
+<section id="finetune" data-title="Fine-tuning MobileNetV2">
+<div class="in">
+  <span class="kicker">05</span>
+  <h2>Fine-tuning MobileNetV2</h2>
+  <p>Basic transfer learning freezes the pretrained layers and trains only a few new fully connected layers on top. But ImageNet photos are very different from chest X-rays, so the pretrained features may not fit perfectly. With enough data it helps to let some pretrained layers learn too. This is <b>fine-tuning</b>: unfreeze the layers near the top, which hold the most task-specific features, and train them on the new data. (In everyday speech the two terms are often interchangeable; transfer learning is the general idea, fine-tuning one way of doing it.)</p>
+  <div data-fig="ft"></div>
+  <p>How many layers to unfreeze? More trainable parameters raise the risk of overfitting on about four thousand training images. As a middle path we freeze most of the network and train only the last two blocks plus a new classifier.</p>
+  <div class="widget" data-w="slice"></div>
+  <p><code>features</code> holds 19 convolutional blocks and <code>classifier</code> the final layers (<code>Dropout(0.2)</code> then <code>Linear(1280, 1000)</code>). The old head is replaced by <code>1280 → 128 → 1</code> with a ReLU between. The result has <b>2,387,969</b> parameters in total, <b>1,050,177</b> of them trainable.</p>
+  <details class="code"><summary>Code: load, <code>build_model</code> and <code>set_train_mode</code></summary><pre data-code="build"></pre></details>
+  <div class="callout"><p><b>Batch norm needs care.</b> Batch norm layers keep running averages of the activations they have seen. If we simply call <code>net.train()</code>, the frozen layers keep updating those averages, which quietly changes “frozen” features. <code>set_train_mode</code> keeps the batch norm layers of frozen blocks in inference mode.</p></div>
+
+  <h3>Training setup</h3>
+  <div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+    <div class="card"><h4>Loss</h4><p>Binary cross-entropy, each example weighted by its class weight.</p></div>
+    <div class="card"><h4>Early stopping</h4><p>Stop when validation loss has not improved for 3 epochs and restore the best weights. We monitor the same class-weighted loss that we optimise.</p></div>
+    <div class="card"><h4>Checkpoint</h4><p>Save the best weights to disk so we need not retrain.</p></div>
+    <div class="card"><h4>Learning rate</h4><p>Adam: 1e-4 for the unfrozen pretrained blocks, 1e-3 for the new head, both decayed exponentially (10× smaller every 20 epochs).</p></div>
+  </div>
+  <h3>Metrics that matter in medicine</h3>
+  <div class="vs">
+    <div><b>Precision</b><p>Share of predicted pneumonia cases that are real.</p></div>
+    <div class="win"><b>Recall (sensitivity)</b><p>Share of real pneumonia cases we catch.</p></div>
+    <div><b>Specificity</b><p>Share of normal cases we correctly call normal.</p></div>
+  </div>
+  <details class="code"><summary>Code: <code>compute_metrics</code> and the weighted loss</summary><pre data-code="metrics"></pre></details>
+
+  <h3>Anatomy of one training step</h3>
+  <p>Before the full loop, one batch is run by hand on a throwaway copy of the model. The logits, plain per-image losses and weighted losses show how the class weights act: normal images (label 0) get the larger weight, so their loss is scaled up. A frozen layer has no gradient (<code>None</code>), so the optimizer cannot change it, while the new output layer has one (norm 0.3500).</p>
+  <div class="widget" data-w="loss"></div>
+  <details class="code"><summary>Code: one step by hand and the full training loop</summary><pre data-code="loop"></pre></details>
+</div>
+</section>
+
+<section id="results" data-title="Training and test results">
+<div class="in">
+  <span class="kicker">06</span>
+  <h2>Training and test results</h2>
+  <div class="widget" data-w="curves"></div>
+  <p>Training metrics are measured while the weights are changing, so a gap between training and validation curves is normal. What matters is whether the validation curves keep improving. Results vary a little between runs and machines even with a fixed seed.</p>
+  <details class="code"><summary>Lecture plot: precision, recall, accuracy and loss</summary><div data-fig="curves"></div></details>
+
+  <h3>The test set, at the default threshold of 0.5</h3>
+  <p>The training step restored the best weights, so the model is ready. The test set is data it has never seen: 390 pneumonia and 234 normal images.</p>
+  <div class="widget" data-w="conf"></div>
+  <ul>
+    <li>Compare accuracy with the 62.5% baseline. A small margin over it is weak evidence of learning.</li>
+    <li>A model with very high recall but low specificity flags nearly everything as pneumonia. At 0.5 here: missed pneumonia cases (false negatives) 1 of 390; normal scans flagged as pneumonia (false positives) 100 of 234.</li>
+    <li>A test score well below the validation score has several possible causes, not only overfitting: the test scans can come from a different distribution than the training scans, the validation set may still resemble the training set too closely, and the 0.5 threshold may not suit a model trained with class weights.</li>
+  </ul>
+  <div data-fig="cm,one"></div>
+  <p class="note">The first pneumonia image in the test set is scored 99.94 percent PNEUMONIA (0.06 percent NORMAL).</p>
+  <details class="code"><summary>Code: evaluate, confusion matrix and a single prediction</summary><pre data-code="eval"></pre></details>
+
+  <h3>Choosing the threshold</h3>
+  <p>The model outputs a probability, and 0.5 is a choice, not a rule. In screening, missing a case is worse than a false alarm, so a common approach is to require high recall (say 95%) and then pick the threshold with the best specificity under that requirement. We choose it on the <b>validation</b> set and then apply it to the test set. Choosing it on the test set would be cheating, because the test set would no longer be unseen. (The validation set also picked our best epoch, so it is slightly optimistic, and 95% recall on validation does not guarantee 95% on test.)</p>
+  <ol>
+    <li><code>roc_curve</code> on validation data; keep thresholds with recall ≥ 95% (30 candidates).</li>
+    <li>Among those, pick the one with the fewest false alarms: <b>0.901</b>.</li>
+  </ol>
+  <p>On the test set, moving from 0.5 to 0.901 changes accuracy from 0.838 to 0.878, recall from 0.997 to 0.987, specificity from 0.573 to 0.697 and precision from 0.796 to 0.844. Use the first control above to compare the two.</p>
+  <p class="note">The lecture reports metrics for these two thresholds only, not a full sweep, so no continuous threshold curve is drawn. The counts shown for 0.901 are derived from the reported rates and the class sizes (they reproduce all four reported metrics).</p>
+  <details class="code"><summary>Code: sweep and choose the threshold</summary><pre data-code="thr"></pre></details>
+  <div class="widget" data-w="quiz" data-q="q3"></div>
+
+  <h3>Is it small and fast enough for a phone?</h3>
+  <p>Size and latency were measured on one image on a CPU, which is closer to phone conditions than a GPU.</p>
+  <div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+    <div class="card"><h4>2,387,969</h4><p>parameters</p></div>
+    <div class="card"><h4>9.8 MB</h4><p>on disk (32-bit weights)</p></div>
+    <div class="card"><h4>21.1 ms</h4><p>CPU latency per image (median of 30 runs)</p></div>
+  </div>
+  <p>This is a desktop or cloud CPU, so a real phone will differ. To deploy, export to an on-device runtime such as ExecuTorch or ONNX Runtime Mobile. Quantising the weights to 8-bit integers typically shrinks the model about 4 times and speeds up inference, but accuracy must be re-checked afterwards, especially for a medical model.</p>
+  <details class="code"><summary>Code: measure size and latency</summary><pre data-code="phone"></pre></details>
+</div>
+</section>
+
+<section id="gradcam" data-title="Grad-CAM: where does the model look?">
+<div class="in">
+  <span class="kicker">07</span>
+  <h2>Grad-CAM: where does the model look?</h2>
+  <p>When a doctor reads an X-ray, they look at specific regions of the lungs. For a medical model it matters that it bases its decision on the lungs, not on something incidental like a text marker, a scan border, or a medical device. <b>Grad-CAM</b> (Gradient-weighted Class Activation Mapping) highlights the regions of the image that most influenced a prediction. It generalises the earlier CAM method: it works with any CNN architecture, with no need to change the network.</p>
+  <div data-fig="gc"></div>
+  <ol>
+    <li>Run the image through the CNN and keep the feature maps of a chosen convolutional layer, normally the last one.</li>
+    <li>Take the score of the class of interest (here, the pneumonia output) and compute its gradient with respect to those feature maps.</li>
+    <li>Average each channel’s gradient over all positions: one weight per channel, saying how much that channel matters for the class.</li>
+    <li>Compute the weighted sum of the feature maps and apply a ReLU, keeping only features that push the score up.</li>
+    <li>Upsample to the image size, rescale to 0 to 1, and overlay on the image as a heat map.</li>
+  </ol>
+  <div class="widget" data-w="cam"></div>
+  <p><b>Which layer?</b> The last convolutional layer is the best choice: it combines high-level meaning with some remaining spatial layout. Earlier layers keep fine spatial detail but respond to simple patterns such as edges, so their maps say little about the class. In MobileNetV2 the last convolutional block is <code>features[-1]</code> (1280 channels at 7 × 7). In code, a forward hook saves the feature maps and asks PyTorch to keep the gradient: both have shape (1, 1280, 7, 7); the channel weights have shape (1, 1280, 1, 1) and the heat map (1, 1, 7, 7).</p>
+  <div data-fig="gc1"></div>
+  <details class="code"><summary>Code: hooks, channel weights, weighted sum and overlay</summary><pre data-code="gcsteps"></pre></details>
+
+  <h3>A reusable function, and four kinds of result</h3>
+  <p>Wrapping the steps in <code>grad_cam(net, x, target_layer, sign)</code> lets us reuse them on any image and any layer. The <code>sign</code> argument lets us explain evidence <i>for</i> pneumonia (+1) or <i>for</i> normal (−1), because the model has a single output. The function reproduces the manual result. The figure shows a true positive, a false positive, a false negative and a true negative; the middle column uses the last convolutional layer and the right column an early layer.</p>
+  <div data-fig="gc2,gc3"></div>
+  <p>The last-layer maps are smooth and coarse (7 × 7 stretched to the image size). The early-layer maps are sharper but follow low-level structure, which is usually not what we want to explain.</p>
+  <div class="callout"><p><b>What a heat map does and does not show.</b> It shows where the model looked, not that the model is right. A model can reach good scores by using shortcuts, such as the hospital’s text marker on the image, and a heat map is one way to catch that.</p></div>
+  <details class="code"><summary>Code: <code>grad_cam</code></summary><pre data-code="gcfunc"></pre></details>
+  <div class="widget" data-w="quiz" data-q="q4"></div>
+</div>
+</section>
+
+<section id="beyond" data-title="EfficientNet and Vision Transformers">
+<div class="in">
+  <span class="kicker">08</span>
+  <h2>EfficientNet and Vision Transformers</h2>
+  <h3>EfficientNet: compound scaling</h3>
+  <p>When designing an architecture we can scale in three directions: <b>width</b> (more channels per layer), <b>depth</b> (more layers) and <b>resolution</b> (a larger input). Earlier families mostly scaled one at a time (ResNet mainly scales depth). A brute-force search over all combinations would be far too expensive. EfficientNet (<a href="https://arxiv.org/abs/1905.11946">paper</a>) is a family B0 to B7 built around careful scaling.</p>
+  <div data-fig="es"></div>
+  <p>The three directions are not independent: if the input image is bigger, the network needs more layers to grow its receptive field and more channels to capture finer patterns. <b>Compound scaling</b> uses a single coefficient φ to scale depth, width and resolution together, in fixed proportions found by a small grid search on the smallest model (B0): depth = 1.2^φ, width = 1.1^φ, resolution = 1.15^φ. B0 itself was found by neural architecture search and is built from MBConv blocks (the inverted-residual blocks of MobileNetV2, plus squeeze-and-excitation).</p>
+  <div class="widget" data-w="eff"></div>
+  <div data-fig="es2"></div>
+  <p>EfficientNets reach the same accuracy as other ConvNets with many times fewer parameters and FLOPs. For example, EfficientNet-B7 reached 84.3% top-1 accuracy on ImageNet while being 8.4 times smaller and 6.1 times faster at inference than the best ConvNet of the time, and EfficientNet-B3 beat ResNeXt-101 with 18 times fewer FLOPs.</p>
+  <details class="code"><summary>More figures: accuracy versus size, and the PyTorch model</summary><div data-fig="es3,es4"></div></details>
+  <p>Each size has a native input resolution (B0: 224, B3: 300, B6: 528). Working at 224 × 224 on a phone-sized budget, we use <b>B0</b> with the classifier replaced by a single-output head. It has the same <code>features</code> / <code>classifier</code> structure as our MobileNet, so the same training function works. Parameters with a one-output head: <b>EfficientNet-B0 4,008,829</b> versus <b>MobileNetV2 2,387,969</b>.</p>
+  <details class="code"><summary>Code: load a pretrained EfficientNet-B0</summary><pre data-code="eff"></pre></details>
+
+  <h3>Vision Transformers (optional)</h3>
+  <p>Every architecture so far relies on convolutional filters, which need far fewer weights than dense networks to extract information from images. As datasets grow very large, that built-in assumption becomes less necessary. Vaswani et al. proposed the Transformer for language in “Attention Is All You Need” (2017). Its key idea is <b>attention</b>: when producing each output, the model learns which parts of the input to focus on. To translate “ma chemise rouge” into “my red shirt”, it learns to attend to “rouge” when producing “red”. Attention alone does not know word order, so <b>positional information</b> is added to each input: (ma, 1), (chemise, 2), (rouge, 3).</p>
+  <p>The <b>Vision Transformer (ViT)</b> of Dosovitskiy et al. (“An Image is Worth 16x16 Words”, 2020) applies this to images. The equivalent of words are square patches, so the first step is cutting the image into patches. Each patch is flattened and linearly projected into a vector, and a learnable position embedding is added so the model can learn which patches are close to each other.</p>
+  <div data-fig="vit"></div>
+  <div class="widget" data-w="patch"></div>
+  <p>The sequence then passes through several Transformer blocks. Each has (1) <b>multi-head self-attention</b>, letting every patch look at all the others to decide which matter, added back through a skip connection, and (2) a small dense network (<b>MLP</b>) applied to each patch, followed by a second skip connection. Layer normalisation is applied before each part. The block output keeps the shape (1, 196, 64).</p>
+  <details class="code"><summary>Code: patch embedding and a Transformer block</summary><pre data-code="vit"></pre></details>
+  <p class="note">A full ViT also prepends a learnable class token, stacks many blocks and reads the prediction from that token; the lecture’s code leaves this out. ViT needs much more data than a convolutional network, so the authors recommend pretraining on a very large dataset and then fine-tuning. With a small dataset like ours, a ViT trained from scratch is not promising, but applying Transformers to images is an exciting source of new ideas.</p>
+</div>
+</section>
+
+<section id="choose" data-title="Choosing a model and a strategy">
+<div class="in">
+  <span class="kicker">09</span>
+  <h2>Choosing a model and a transfer-learning strategy</h2>
+  <div class="widget" data-w="choose"></div>
+  <h3>Points to remember before applying transfer learning</h3>
+  <p>Two factors matter: the <b>size</b> of your new dataset, and how <b>similar</b> it is to the original (ImageNet-like content and classes, or very different).</p>
+  <div class="widget" data-w="matrix"></div>
+  <div class="callout"><ul>
+    <li>Class imbalance, patient-level splitting and class weights come <b>before</b> the model: a baseline of “always pneumonia” already scores 62.5%.</li>
+    <li>MobileNet’s <b>depthwise separable convolutions</b> save roughly 8 to 9× the weights of a standard 3 × 3 convolution.</li>
+    <li>Fine-tuning the <b>top blocks</b> of a pretrained MobileNetV2 (keeping frozen batch norm in inference mode) gave a 9.8 MB model with about 21 ms CPU latency.</li>
+    <li>In screening, <b>choose the threshold on validation data</b> to keep recall high; 0.5 is not a rule.</li>
+    <li><b>Grad-CAM</b> shows where the model looked, not whether it is right.</li>
+    <li>This model is a teaching exercise, not a medical device.</li>
+  </ul></div>
+  <p class="note">Other models to follow: <a href="https://arxiv.org/pdf/1608.06993.pdf">DenseNet</a>, <a href="https://arxiv.org/pdf/1602.07360.pdf">SqueezeNet</a>, <a href="https://arxiv.org/pdf/1707.07012.pdf">NASNet</a>.</p>
+</div>
+</section>
+
+</main>
+<footer>Computer Vision 6 post read<small>Interactive learning article</small></footer>
+
+<script>
+(function(){
+'use strict';
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const fmt=n=>Number(n).toLocaleString('en-US');
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+let uid=0;
+function h(html){const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstElementChild;}
+function mix(t){t=Math.max(0,Math.min(1,t));const a=[255,255,255],b=[109,40,217];return 'rgb('+a.map((v,i)=>Math.round(v+(b[i]-v)*t)).join(',')+')';}
+function ink(t){return t>0.5?'#fff':'#2e1065';}
+function shell(root,title,desc){root.classList.add('widget');root.innerHTML='<span class="wtag">Interactive</span><h4 class="wtitle">'+title+'</h4>'+(desc?'<p class="wdesc">'+desc+'</p>':'')+'<div class="wbody"></div>';return $('.wbody',root);}
+function seg(container,options,value,onChange,label){
+  const wrap=h('<div class="seg" role="group" aria-label="'+label+'"></div>');
+  function set(v){value=v;Array.from(wrap.children).forEach((b,i)=>b.setAttribute('aria-pressed',String(options[i].value===v)));}
+  options.forEach(o=>{const b=h('<button type="button" aria-pressed="false">'+o.label+'</button>');b.addEventListener('click',()=>{set(o.value);onChange(o.value);});wrap.appendChild(b);});
+  set(value);container.appendChild(wrap);return {set};
+}
+
+/* ---------- chart helper (inline SVG) ---------- */
+function niceMax(m){const st=m<=3?0.5:m<=6?1:2;return Math.ceil(m/st)*st;}
+function stepTicks(a,b,st){const t=[];for(let v=a;v<=b+1e-9;v+=st)t.push(+v.toFixed(6));return t;}
+function epochTicks(n){const st=n<=12?1:5,t=[1];for(let v=st;v<=n;v+=st)if(v>1)t.push(v);return t;}
+function chart(o){
+  const W=o.W||640,H=o.H||300,M=Object.assign({l:52,r:16,t:16,b:40},o.M||{});
+  const iw=W-M.l-M.r,ih=H-M.t-M.b,x0=o.x[0],x1=o.x[1],y0=o.y[0],y1=o.y[1];
+  const X=v=>M.l+(v-x0)/(x1-x0)*iw,Y=v=>M.t+ih-(v-y0)/(y1-y0)*ih;
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.label||'Chart')+'">';
+  (o.yt||[]).forEach(t=>{s+='<line x1="'+M.l+'" x2="'+(W-M.r)+'" y1="'+Y(t).toFixed(1)+'" y2="'+Y(t).toFixed(1)+'" stroke="#e4dcfa"/><text x="'+(M.l-8)+'" y="'+(Y(t)+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#5a4f78">'+(o.yf?o.yf(t):t)+'</text>';});
+  (o.xt||[]).forEach(t=>{s+='<text x="'+X(t).toFixed(1)+'" y="'+(H-M.b+17)+'" text-anchor="middle" font-size="11" fill="#5a4f78">'+(o.xf?o.xf(t):t)+'</text>';});
+  s+='<line x1="'+M.l+'" x2="'+(W-M.r)+'" y1="'+(M.t+ih)+'" y2="'+(M.t+ih)+'" stroke="#a78bfa"/>';
+  if(o.xlabel)s+='<text x="'+(M.l+iw/2)+'" y="'+(H-5)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#2e1065">'+esc(o.xlabel)+'</text>';
+  if(o.ylabel)s+='<text transform="translate(13 '+(M.t+ih/2)+') rotate(-90)" text-anchor="middle" font-size="12" font-weight="700" fill="#2e1065">'+esc(o.ylabel)+'</text>';
+  (o.hl||[]).forEach(v=>{s+='<line x1="'+M.l+'" x2="'+(W-M.r)+'" y1="'+Y(v.y).toFixed(1)+'" y2="'+Y(v.y).toFixed(1)+'" stroke="'+(v.c||'#a78bfa')+'" stroke-width="'+(v.w||1.5)+'"'+(v.d?' stroke-dasharray="'+v.d+'"':'')+'/>';});
+  (o.vl||[]).forEach(v=>{const x=X(v.x),right=x>W*0.7;s+='<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+M.t+'" y2="'+(M.t+ih)+'" stroke="'+(v.c||'#8b5cf6')+'" stroke-width="'+(v.w||1.5)+'" stroke-dasharray="'+(v.d||'4 4')+'"/>'+(v.label?'<text x="'+(x+(right?-4:4)).toFixed(1)+'" y="'+(M.t+11)+'" text-anchor="'+(right?'end':'start')+'" font-size="10.5" font-weight="700" fill="#4c1d95">'+esc(v.label)+'</text>':'');});
+  if(o.cur!=null){const x=X(o.cur).toFixed(1);s+='<line x1="'+x+'" x2="'+x+'" y1="'+M.t+'" y2="'+(M.t+ih)+'" stroke="#a78bfa" stroke-width="2"/>';}
+  (o.series||[]).forEach(se=>{
+    if(!se.pts.length)return;
+    s+='<path d="'+se.pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ')+'" fill="none" stroke="'+se.c+'" stroke-width="'+(se.w||2.6)+'"'+(se.d?' stroke-dasharray="'+se.d+'"':'')+' stroke-linejoin="round"/>';
+    if(se.m)se.pts.forEach(p=>{const hi=o.cur!=null&&Math.abs(p[0]-o.cur)<1e-9,r=hi?6:3.4,x=X(p[0]),y=Y(p[1]);
+      if(se.m==='c')s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'" fill="'+se.c+'"/>';
+      else if(se.m==='s')s+='<rect x="'+(x-r).toFixed(1)+'" y="'+(y-r).toFixed(1)+'" width="'+2*r+'" height="'+2*r+'" fill="#fff" stroke="'+se.c+'" stroke-width="2.2"/>';
+      else s+='<path d="M'+x.toFixed(1)+' '+(y-r-1).toFixed(1)+' L'+(x+r+1).toFixed(1)+' '+(y+r).toFixed(1)+' L'+(x-r-1).toFixed(1)+' '+(y+r).toFixed(1)+' Z" fill="#fff" stroke="'+se.c+'" stroke-width="2.2"/>';});
+  });
+  (o.dots||[]).forEach(d=>{s+='<circle cx="'+X(d.x).toFixed(1)+'" cy="'+Y(d.y).toFixed(1)+'" r="6" fill="'+d.c+'" stroke="#fff" stroke-width="2"/>';});
+  return s+'</svg>';
+}
+function legendHtml(S){return S.map(se=>'<span><i style="border-color:'+se.c+';'+(se.d?'border-top-style:dashed':'')+'"></i>'+se.n+'</span>').join('');}
+function fmtLR(v){return v.toFixed(6).replace(/0+$/,'').replace(/\.$/,'');}
+
+/* ---------- figures ---------- */
+const CF='https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/';
+function fig(path,alt,cap,w){
+  return '<figure class="fig"><img src="'+CF+path+'" alt="'+esc(alt)+'" loading="lazy"'+(w?' style="max-width:'+w+'px"':'')+' onerror="this.closest(\'.fig\').classList.add(\'broken\')"><div class="fb" role="note">Image not available offline. '+esc(alt)+'</div>'+(cap?'<figcaption>'+cap+'</figcaption>':'')+'</figure>';
+}
+/* ---------- tabs ---------- */
+function mountTabs(root,items){
+  root.classList.add('tabs');
+  const id='t'+(++uid),list=h('<div class="tablist" role="tablist"></div>'),tabs=[],panels=[];
+  items.forEach((it,i)=>{
+    const b=h('<button type="button" role="tab" id="'+id+'-t'+i+'" aria-controls="'+id+'-p'+i+'">'+it.label+'</button>');
+    const p=h('<div role="tabpanel" id="'+id+'-p'+i+'" aria-labelledby="'+id+'-t'+i+'" tabindex="0"></div>');
+    p.innerHTML=it.html;tabs.push(b);panels.push(p);list.appendChild(b);
+  });
+  root.append(list,...panels);
+  function sel(i,focus){tabs.forEach((b,j)=>{const on=i===j;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;panels[j].hidden=!on;});if(focus)tabs[i].focus();}
+  tabs.forEach((b,i)=>{
+    b.addEventListener('click',()=>sel(i));
+    b.addEventListener('keydown',e=>{
+      if(e.key==='ArrowRight'){e.preventDefault();sel((i+1)%tabs.length,true);}
+      else if(e.key==='ArrowLeft'){e.preventDefault();sel((i-1+tabs.length)%tabs.length,true);}
+      else if(e.key==='Home'){e.preventDefault();sel(0,true);}
+      else if(e.key==='End'){e.preventDefault();sel(tabs.length-1,true);}
+    });
+  });
+  sel(0);
+}
+const code=k=>'<pre data-code="'+k+'"></pre>';
+function wQuiz(root,key){
+  const d=QUIZ[key],name='q'+(++uid),L='abcd';
+  root.classList.add('widget');
+  root.innerHTML='<span class="wtag">Check your understanding</span><fieldset><legend>'+d.q+'</legend>'+d.c.map((c,i)=>'<label class="opt"><input type="radio" name="'+name+'" value="'+i+'"><span>'+(d.letters?L[i]+') ':'')+c+'</span><span class="mk"></span></label>').join('')+'</fieldset><div class="qa"><button type="button" class="btn" disabled>Check answer</button><button type="button" class="btn ghost" hidden>Try again</button></div><div class="readout" aria-live="polite" hidden></div>';
+  const [chk,again]=$$('.btn',root),out=$('.readout',root),opts=$$('.opt',root),radios=$$('input',root);
+  radios.forEach(r=>r.addEventListener('change',()=>{chk.disabled=false;}));
+  chk.addEventListener('click',()=>{
+    const v=radios.findIndex(r=>r.checked);if(v<0)return;
+    opts.forEach((o,i)=>{o.classList.remove('ok','bad');$('.mk',o).textContent='';if(i===d.a){o.classList.add('ok');$('.mk',o).textContent='✓ Correct answer';}else if(i===v){o.classList.add('bad');$('.mk',o).textContent='✗ Your choice';}});
+    out.hidden=false;out.innerHTML='<b>'+(v===d.a?'Correct.':'Not quite.')+'</b> '+d.e;
+    chk.hidden=true;again.hidden=false;radios.forEach(r=>r.disabled=true);
+  });
+  again.addEventListener('click',()=>{
+    opts.forEach(o=>{o.classList.remove('ok','bad');$('.mk',o).textContent='';});
+    radios.forEach(r=>{r.checked=false;r.disabled=false;});out.hidden=true;chk.hidden=false;chk.disabled=true;again.hidden=true;
+  });
+}
+
+/* ---------- contents + progress ---------- */
+function wToc(){
+  const secs=$$('main section[data-title]'),ol=$('#toc ol'),btn=$('#tocBtn'),toc=$('#toc');
+  ol.innerHTML=secs.map((s,i)=>'<li><a href="#'+s.id+'"><b>'+String(i+1).padStart(2,'0')+'</b><span>'+s.dataset.title+'</span></a></li>').join('');
+  function close(){toc.hidden=true;btn.setAttribute('aria-expanded','false');}
+  btn.addEventListener('click',()=>{const o=toc.hidden;toc.hidden=!o;btn.setAttribute('aria-expanded',String(o));});
+  ol.addEventListener('click',e=>{if(e.target.closest('a'))close();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!toc.hidden){close();btn.focus();}});
+  document.addEventListener('click',e=>{if(!toc.hidden&&!e.target.closest('#toc')&&!e.target.closest('#tocBtn'))close();});
+  const links=$$('a',ol);
+  if('IntersectionObserver' in window){
+    const io=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){links.forEach(l=>l.removeAttribute('aria-current'));const l=$('a[href="#'+en.target.id+'"]',ol);if(l)l.setAttribute('aria-current','true');}});},{rootMargin:'-30% 0px -60% 0px'});
+    secs.forEach(s=>io.observe(s));
+  }
+  const bar=$('#bar');
+  function prog(){const d=document.documentElement,t=d.scrollHeight-d.clientHeight;bar.style.width=(t>0?Math.min(100,d.scrollTop/t*100):0)+'%';}
+  window.addEventListener('scroll',prog,{passive:true});prog();
+}
+const mk=(n,m,f)=>Array.from({length:n},(_,i)=>Array.from({length:m},(_,j)=>f(i,j)));
+function corr(a,k){const kh=k.length,kw=k[0].length;return mk(a.length-kh+1,a[0].length-kw+1,(i,j)=>{let s=0;for(let p=0;p<kh;p++)for(let q=0;q<kw;q++)s+=a[i+p][j+q]*k[p][q];return s;});}
+const flip=k=>k.slice().reverse().map(r=>r.slice().reverse());
+function padM(a,p){return mk(a.length+2*p,a[0].length+2*p,(i,j)=>{const r=i-p,c=j-p;return r>=0&&r<a.length&&c>=0&&c<a[0].length?a[r][c]:0;});}
+const convFull=(a,k)=>corr(padM(a,k.length-1),flip(k));
+const r2=v=>Math.round(v*1e6)/1e6;
+function matHtml(m,o){o=o||{};return '<div class="mat" style="--c:'+m[0].length+(o.max?';max-width:'+o.max+'px':'')+'">'+m.map((r,i)=>r.map((v,j)=>'<div class="cell'+(o.cls?' '+o.cls(i,j,v):'')+'"'+(o.style?' style="'+o.style(i,j,v)+'"':'')+'>'+(o.fmt?o.fmt(v):r2(v))+'</div>').join('')).join('')+'</div>';}
+const heat=(m,v)=>"background:"+mix(Math.abs(v)/(m||1))+";color:"+ink(Math.abs(v)/(m||1));
+const F=(p,alt,cap,w)=>fig(p,alt,cap,w);const A='249/';
+const FIGS={
+  xr:F(A+'282/original/1.png?1793086361','A normal chest X-ray beside a chest X-ray showing pneumonia','Normal (left) and pneumonia (right): hazy “ground-glass” areas where air spaces fill with fluid',560),
+  pn:F(A+'283/original/2.jpeg?1793086378','Illustration of pneumonia in the lungs','Pneumonia',480),
+  mn:F(A+'285/original/3.png?1793086398','MobileNet architecture','MobileNet architecture',520),
+  batch:F('250/128/original/Screenshot_2026-10-28_202518.png?1793199339','A grid of 25 training X-rays with their labels','A batch of training images with labels',560),
+  std:F(A+'288/original/4.png?1793086439','A standard convolution: each filter spans all input channels','A standard convolution mixes all input channels into one output channel',520),
+  dw1:F(A+'289/original/5.png?1793086460','Depthwise convolution: one filter per input channel','Depthwise convolution',520),
+  dw2:F('047/001/original/Screenshot_2023-09-08_at_12.21.18_PM.png?1694156086','Depthwise convolution detail','Depthwise convolution, detail',520),
+  pw:F(A+'292/original/7.png?1793086485','Pointwise 1x1 convolution','Pointwise (1×1) convolution',520),
+  sep:F(A+'293/original/8.png?1793086513','Depthwise followed by pointwise convolution','Depthwise separable = depthwise + pointwise',520),
+  sav:F(A+'295/original/9.png?1793086538','Cost comparison of standard and separable convolutions','Standard vs separable cost',520),
+  v1:F(A+'296/original/10.png?1793086574','MobileNetV1 architecture','MobileNetV1 architecture',520),
+  v1b:F(A+'300/original/11.png?1793086651','MobileNetV1','MobileNetV1',480),
+  v2:F(A+'302/original/12.png?1793086682','MobileNetV2 block with inverted residual and linear bottleneck','MobileNetV2: inverted residual with a linear bottleneck',520),
+  ft:F('047/002/original/Screenshot_2023-09-08_at_12.22.04_PM.png?1694156124','Freezing early layers and fine-tuning the top layers','Freeze the early layers, fine-tune the top',520),
+  curves:F('250/130/original/Screenshot_2026-10-28_203003.png?1793199612','Precision, recall, accuracy and loss curves for training and validation','Training and validation curves',760),
+  cm:F('250/131/original/Screenshot_2026-10-28_203046.png?1793199656','Confusion matrix on the test set','Test-set confusion matrix at threshold 0.5',420),
+  one:F('250/132/original/Screenshot_2026-10-28_203123.png?1793199693','A pneumonia X-ray from the test set','A pneumonia image from the test set',360),
+  gc:F(A+'327/original/1.jpeg?1793086989','Grad-CAM overview','Grad-CAM',520),
+  gc1:F('250/133/original/Screenshot_2026-10-28_203233.png?1793199765','An X-ray beside its Grad-CAM overlay','X-ray and Grad-CAM overlay',460),
+  gc2:F('250/135/original/Screenshot_2026-10-28_203321.png?1793199888','Grad-CAM for true positive, false positive, false negative and true negative cases, last layer and early layer','Four kinds of test result: last layer vs early layer',560),
+  gc3:F('250/134/original/Screenshot_2026-10-28_203341.png?1793199837','Grad-CAM examples, continued','Grad-CAM examples, continued',560),
+  es:F(A+'331/original/2.png?1793087018','Scaling width, depth and resolution','Width, depth and resolution',520),
+  es2:F(A+'343/original/3.png?1793087181','EfficientNet compound scaling','Compound scaling',520),
+  es3:F('046/999/original/Screenshot_2023-09-08_at_12.22.45_PM.png?1694155997','EfficientNet accuracy versus parameters','EfficientNet: accuracy vs size',520),
+  es4:F(A+'347/original/4.webp?1793087211','EfficientNet in PyTorch','EfficientNet in torchvision',520),
+  vit:F('047/000/original/Screenshot_2023-09-08_at_12.23.45_PM.png?1694156046','An image cut into patches for the Vision Transformer','Vision Transformer: the image becomes a sequence of patches',520)
+};
+const QUIZ={
+  q1:{q:'Why should we be careful when applying flips and large rotations to chest X-ray images?',letters:true,c:['They increase the computational cost of MobileNet.','They reduce MobileNet’s accuracy because it has few parameters.','They create anatomically unrealistic images, such as a heart on the wrong side, that never occur in real scans.','MobileNet cannot accept augmented images.'],a:2,e:'X-rays are taken in a standard orientation, so a flipped or strongly rotated scan is not a realistic example. The other options are not true: augmentation is cheap, it does not depend on model size, and any CNN accepts augmented images. Mild augmentation (small rotations, slight zoom, brightness and contrast changes) is still widely used on medical images.'},
+  q2:{q:'What is the main advantage of depthwise separable convolution in MobileNet?',letters:true,c:['It reduces computation and model complexity','It removes the need for training','It guarantees perfect classification accuracy','It converts images into text'],a:0,e:'It separates spatial filtering from channel mixing, reducing the number of operations compared with a standard convolution.'},
+  q3:{q:'In pneumonia screening, why might we choose a threshold that prioritizes high recall?',letters:true,c:['To reduce the number of pneumonia cases missed','To guarantee that every prediction is correct','To eliminate all false alarms','To avoid evaluating the model on test data'],a:0,e:'High recall helps detect more actual pneumonia cases, although it can increase false alarms. The threshold should be selected using validation data.'},
+  q4:{q:'What is Grad-CAM?',letters:true,c:['A method that adds colour to black-and-white images.','A method that highlights the regions of the input that most influenced a prediction.','A method that only works for X-ray images.','A method that computes the accuracy of a model.'],a:1,e:'Grad-CAM (Gradient-weighted Class Activation Mapping) uses the gradients of the target class score flowing into a convolutional layer to build a heat map of the important regions. It works on any CNN and any kind of image, and it explains individual predictions rather than measuring accuracy.'}
+};
+const TABS={};const P=fmt;
+const bar=(l,v,max,txt)=>'<div class="brow"><span class="bl">'+l+'</span><span class="bt"><span class="bf" style="width:'+Math.max(0.5,v/max*100)+'%"></span></span><span class="bv">'+txt+'</span></div>';
+const pct=v=>(v*100).toFixed(1)+'%';
+
+/* ---------- imbalance ---------- */
+function wImb(root){
+  const b=shell(root,'How imbalanced is the data?','Counts of normal and pneumonia images. A model that always says “pneumonia” already scores the share of pneumonia images in accuracy, so any accuracy must be judged against that baseline.');
+  const D={train:[1349,3883],test:[234,390]};let sp='train';const ctrl=h('<div class="ctrl"></div>'),out=h('<div class="bars"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,out,ro);
+  seg(ctrl,[{label:'Training set (5,232)',value:'train'},{label:'Test set (624)',value:'test'}],sp,v=>{sp=v;draw();},'Split');
+  function draw(){const [n,p]=D[sp],t=n+p;out.innerHTML=bar('Normal',n,3883,P(n)+' ('+pct(n/t)+')')+bar('Pneumonia',p,3883,P(p)+' ('+pct(p/t)+')');
+    ro.innerHTML='Always predicting pneumonia on the <b>'+sp+'</b> set would be right for <b>'+pct(p/t)+'</b> of images'+(sp==='test'?' (the lecture: 62.5%).':'.')+' The imbalance can bias the model towards the majority class (pneumonia).';}
+  draw();
+}
+
+/* ---------- class weights ---------- */
+function wWeights(root){
+  const b=shell(root,'Class-weight calculator','weight = (1 / count) × total / 2. Dividing by the class count makes the rarer class count more; the factor total/2 keeps the overall loss at a similar size. Defaults use the full training set (1,349 normal, 3,883 pneumonia).');
+  let c=[1349,3883];const ctrl=h('<div class="ctrl"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,ro);
+  ['Normal count','Pneumonia count'].forEach((l,i)=>{const lab=h('<label class="fld">'+l+'<input type="number" min="1" value="'+c[i]+'"></label>');$('input',lab).addEventListener('input',e=>{c[i]=Math.max(1,parseInt(e.target.value,10)||1);draw();});ctrl.appendChild(lab);});
+  function draw(){const t=c[0]+c[1],w=c.map(x=>t/x/2);ro.innerHTML='Total = <b>'+P(t)+'</b>. Weight for normal (class 0): <b>'+w[0].toFixed(2)+'</b> · weight for pneumonia (class 1): <b>'+w[1].toFixed(2)+'</b> · ratio <b>'+(w[0]/w[1]).toFixed(1)+'×</b>.<br>Check: weighted counts '+P(Math.round(c[0]*w[0]))+' vs '+P(Math.round(c[1]*w[1]))+': each class now contributes the same total weight.<br><span class="note">The lecture’s 1.96 and 0.67 are computed on the 4,171-image training split (after the patient-level split), whose per-class counts are not printed.</span>';}
+  draw();
+}
+
+/* ---------- patient-level split ---------- */
+function wSplit(root){
+  const b=shell(root,'Why split by patient?','Toy example: 10 patients with several X-rays each. A random split by image puts the same patient on both sides, so the validation score looks better than it really is. Splitting by patient ID keeps each patient on one side.');
+  const N=[3,2,4,2,3,2,3,4,2,3];let mode='random';const ctrl=h('<div class="ctrl"></div>'),out=h('<div></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,out,ro);
+  seg(ctrl,[{label:'Random split by image',value:'random'},{label:'Split by patient',value:'group'}],mode,v=>{mode=v;draw();},'Split type');
+  function draw(){let k=0,leaks=0,html='';N.forEach((n,p)=>{let t=0,v=0,cells='';for(let i=0;i<n;i++){const val=mode==='random'?((k*7+3)%5===0||(k*3)%7===0):(p===2||p===7);k++;val?v++:t++;cells+='<span title="'+(val?'validation':'training')+'" style="display:inline-block;width:26px;height:26px;border-radius:5px;margin-right:4px;'+(val?'background:#fff;border:2.5px dashed var(--v900)':'background:var(--v700);border:2.5px solid var(--v700)')+'"></span>';}
+      if(t&&v)leaks++;html+='<div style="display:flex;gap:10px;align-items:center;margin:4px 0"><span style="width:84px;font-size:.85rem;font-weight:600">Patient '+(p+1)+'</span>'+cells+(t&&v?'<b style="color:var(--v900)">← on both sides</b>':'')+'</div>';});
+    out.innerHTML=html+'<p class="note">Solid = training image · dashed = validation image.</p>';
+    ro.innerHTML='Patients in both sets: <b>'+leaks+'</b> of 10.'+(leaks?' The model has already seen these patients in training, so validation is optimistic.':' Every patient falls entirely in one set, as in the lecture’s check (patients in both sets: 0).')+'<br>In the lecture: 2,650 distinct patient IDs for 5,232 images; <code>GroupShuffleSplit</code> gave 4,171 training and 1,061 validation images.';}
+  draw();
+}
+
+/* ---------- depthwise separable ---------- */
+function wSep(root){
+  const b=shell(root,'Standard vs depthwise separable convolution','Weights for a k × k kernel, M input channels and N output channels. Defaults are the lecture’s check: k = 3, M = 128, N = 256.');
+  const v={k:3,M:128,N:256};const fl=h('<div class="ctrl"></div>'),out=h('<div class="duo"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(fl,out,ro);
+  [['k','Kernel size k'],['M','Input channels M'],['N','Output channels N']].forEach(([key,l])=>{const lab=h('<label class="fld">'+l+'<input type="number" min="1" value="'+v[key]+'"></label>');$('input',lab).addEventListener('input',e=>{v[key]=Math.max(1,parseInt(e.target.value,10)||1);draw();});fl.appendChild(lab);});
+  function draw(){const s=v.k*v.k*v.M*v.N,dw=v.k*v.k*v.M,pw=v.M*v.N,sp=dw+pw,ratio=s/sp,formula=1/(1/v.N+1/(v.k*v.k));
+    out.innerHTML='<div class="card"><h4>Standard</h4><p><code>k·k·M·N</code> = '+v.k+'·'+v.k+'·'+v.M+'·'+v.N+' = <b>'+P(s)+'</b></p></div><div class="card dark"><h4>Depthwise separable</h4><p>Depthwise <code>k·k·M</code> = <b>'+P(dw)+'</b></p><p>Pointwise <code>M·N</code> = <b>'+P(pw)+'</b></p><p>Total = <b>'+P(sp)+'</b></p></div>';
+    ro.innerHTML='Saving: <b>'+ratio.toFixed(1)+'×</b> (formula: 1 / (1/N + 1/k²) = <b>'+formula.toFixed(1)+'×</b>). The ratio of separable to standard is 1/N + 1/k² = '+(1/v.N+1/(v.k*v.k)).toFixed(3)+'.'+(v.k===3&&v.M===128&&v.N===256?' Matches the lecture: 294,912 vs 33,920, 8.7×.':'')+' For 3×3 kernels the saving is roughly 8 to 9 times.';}
+  draw();
+}
+
+/* ---------- MobileNetV1 ---------- */
+function mnv1(){const cfg=[[64,1],[128,2],[128,1],[256,2],[256,1],[512,2],[512,1],[512,1],[512,1],[512,1],[512,1],[1024,2],[1024,1]];let sp=112,c=32;const rows=[{n:'Stem: 3×3 conv, stride 2',ci:3,co:32,sp,p:3*32*9+64,s:2}];
+  cfg.forEach(([o,s],i)=>{if(s===2)sp/=2;const p=c*9+2*c+c*o+2*o;rows.push({n:'Block '+(i+1)+': depthwise 3×3 (stride '+s+') + pointwise 1×1',ci:c,co:o,sp,p,s});c=o;});
+  const fc=1024*1000+1000;return {rows,fc,total:rows.reduce((a,r)=>a+r.p,0)+fc};}
+function wMob(root){
+  const b=shell(root,'MobileNetV1, block by block','A standard 3×3 stem convolution, then 13 depthwise separable blocks, global average pooling and a 1,000-way fully connected layer. Every convolution is followed by batch norm and ReLU6. Select a layer for its shapes and parameter count (computed from the layer definitions).');
+  const M=mnv1();let sel=0;const mx=h('<div class="mx"><ul class="layers"></ul><div class="ldetail" aria-live="polite"></div></div>');b.append(mx);const ul=$('.layers',mx),dt=$('.ldetail',mx),mp=Math.max(...M.rows.map(r=>r.p));
+  function draw(){ul.innerHTML=M.rows.map((r,i)=>'<li><button type="button" class="lay" data-i="'+i+'" aria-pressed="'+(i===sel)+'"><span class="ln">'+(i===0?'Stem':'Block '+i)+'</span><span class="ls">'+r.co+' × '+r.sp+' × '+r.sp+'</span><span class="lp">'+P(r.p)+'</span><span class="lb"><i style="width:'+(r.p/mp*100)+'%"></i></span></button></li>').join('');
+    const r=M.rows[sel];dt.innerHTML='<h4>'+r.n+'</h4><p>Channels: <code>'+r.ci+' → '+r.co+'</code></p><p>Output: <code>('+r.co+', '+r.sp+', '+r.sp+')</code></p><p>Parameters: <b>'+P(r.p)+'</b></p><p style="border-top:1px solid rgba(255,255,255,.2);padding-top:8px;margin-top:10px">Whole network (with the 1,000-class FC layer, '+P(M.fc)+' parameters): <b>'+P(M.total)+'</b>'+(M.total===4231976?', matching the lecture’s 4,231,976 (about 4.2M).':'')+'</p>';}
+  mx.addEventListener('click',e=>{const t=e.target.closest('[data-i]');if(!t)return;sel=+t.dataset.i;draw();$('[data-i="'+sel+'"]',ul).focus();});draw();
+}
+
+/* ---------- freezing blocks ---------- */
+function wSlice(root){
+  const b=shell(root,'How many blocks do we unfreeze?','MobileNetV2’s <code>features</code> has 19 blocks. <code>build_model(trainable_blocks)</code> freezes everything, then unfreezes the last n blocks. The lecture uses n = 2 (plus a new head).');
+  let n=2;const sl=h('<label class="fld">trainable_blocks <span class="zv"></span><input type="range" min="0" max="19" value="2" aria-label="Trainable blocks"></label>'),ch=h('<div class="flow" style="gap:4px"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(sl,ch,ro);
+  $('input',sl).addEventListener('input',e=>{n=+e.target.value;draw();});
+  function draw(){$('.zv',sl).textContent=n;const first=19-n;ch.innerHTML=Array.from({length:19},(_,i)=>'<span style="padding:5px 7px;'+(i>=first?'background:var(--v900);color:#fff;border-color:var(--v900)':'')+'">'+i+(i>=first?'✎':'❄')+'</span>').join('')+'<span style="background:var(--v700);color:#fff;border-color:var(--v700)">new head ✎</span>';
+    ro.innerHTML='Blocks 0 to '+(first-1)+' frozen ❄ ('+first+' blocks), blocks '+first+' to 18 trainable ✎ ('+n+' blocks), new head 1280 → 128 → 1 always trainable. Start index <code>first = 19 − '+n+' = '+first+'</code>.'+(n===0?'<br><b>Why the explicit index?</b> <code>features[-0:]</code> would select <i>all</i> 19 blocks, because −0 is 0. Computing <code>first</code> avoids that trap.':'')+(n===2?'<br>Lecture result: total parameters 2,387,969, trainable 1,050,177.':'')+'<br>More unfrozen blocks means more trainable parameters and a higher risk of overfitting on about four thousand training images.';}
+  draw();
+}
+
+/* ---------- weighted loss ---------- */
+function wLoss(root){
+  const b=shell(root,'Weighted binary cross-entropy for one image','The model outputs one logit for PNEUMONIA. Loss = BCE-with-logits, then scaled by the weight of the image’s true class (normal 1.96, pneumonia 0.67). The defaults are the normal image from the lecture’s one-step demo.');
+  let y=0,z=0.19;const ctrl=h('<div class="ctrl"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,ro);
+  ctrl.appendChild(h('<span class="note">True label</span>'));seg(ctrl,[{label:'0 = NORMAL',value:0},{label:'1 = PNEUMONIA',value:1}],y,v=>{y=v;draw();},'True label');
+  const sl=h('<label class="fld">Logit <span class="zv"></span><input type="range" min="-6" max="6" step="0.01" value="0.19" aria-label="Logit"></label>');ctrl.appendChild(sl);$('input',sl).addEventListener('input',e=>{z=+e.target.value;draw();});
+  function draw(){$('.zv',sl).textContent=z.toFixed(2);const p=1/(1+Math.exp(-z)),L=Math.log1p(Math.exp(z))-y*z,w=y?0.67:1.96;
+    ro.innerHTML='Probability of pneumonia p = sigmoid(logit) = <b>'+p.toFixed(3)+'</b><br>Plain loss = <b>'+L.toFixed(2)+'</b> · class weight = <b>'+w+'</b> · weighted loss = <b>'+(L*w).toFixed(2)+'</b><br>'+(y===0?'A normal image (the minority class) gets the larger weight, so its loss is scaled up.':'A pneumonia image (the majority class) gets the smaller weight.')+(y===0&&Math.abs(z-0.19)<1e-9?'<br>The lecture’s one-step demo printed logit 0.19, plain loss 0.80 and weighted 1.56 (its logits are rounded, so tiny differences are expected).':'');}
+  draw();
+}
+
+/* ---------- training curves ---------- */
+const TR={loss:[.153,.070,.039,.040,.026,.019,.015,.020],acc:[.932,.969,.985,.985,.990,.993,.995,.994],vloss:[.072,.068,.058,.060,.047,.054,.048,.053],vacc:[.973,.971,.977,.984,.985,.985,.983,.985],vprec:[.988,.993,.997,.991,.992,.991,.995,.992],vrec:[.974,.967,.972,.987,.987,.988,.982,.987]};
+function wCurves(root){
+  const b=shell(root,'Training log: 8 epochs','Fine-tuned MobileNetV2 (last 2 blocks + new head). Hover the chart or use ← → to read each epoch. Training precision and recall were not printed in the lecture.');
+  let met='loss',idx=4;const ctrl=h('<div class="ctrl"></div>');seg(ctrl,[{label:'Loss (class-weighted)',value:'loss'},{label:'Accuracy',value:'acc'},{label:'Validation precision & recall',value:'pr'}],met,v=>{met=v;draw();},'Metric');
+  const leg=h('<div class="legend"></div>'),pl=h('<div class="plot" tabindex="0" role="group" aria-label="Training chart. Use left and right arrow keys to change epoch."></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,leg,pl,ro);
+  const W=640,M={l:60,r:16,t:16,b:40};
+  function draw(){let S,y,yt,yf=v=>v;const pts=a=>a.map((v,i)=>[i+1,v]);
+    if(met==='loss'){S=[{n:'Train',pts:pts(TR.loss),c:'#2e1065',d:'',m:'c'},{n:'Validation',pts:pts(TR.vloss),c:'#8b5cf6',d:'7 5',m:'s'}];y=[0,.2];yt=[0,.05,.1,.15,.2];}
+    else if(met==='acc'){S=[{n:'Train',pts:pts(TR.acc),c:'#2e1065',d:'',m:'c'},{n:'Validation',pts:pts(TR.vacc),c:'#8b5cf6',d:'7 5',m:'s'}];y=[.9,1];yt=[.9,.925,.95,.975,1];yf=v=>(v*100).toFixed(1)+'%';}
+    else{S=[{n:'Validation precision',pts:pts(TR.vprec),c:'#2e1065',d:'',m:'c'},{n:'Validation recall',pts:pts(TR.vrec),c:'#8b5cf6',d:'7 5',m:'t'}];y=[.95,1];yt=[.95,.9625,.975,.9875,1];yf=v=>(v*100).toFixed(1)+'%';}
+    leg.innerHTML=legendHtml(S);pl.innerHTML=chart({W,H:260,M,x:[1,8],y,xt:[1,2,3,4,5,6,7,8],yt,yf,xlabel:'Epoch',label:'Training and validation '+met,series:S,cur:idx+1});
+    ro.innerHTML='<b>Epoch '+(idx+1)+'/8</b> — loss '+TR.loss[idx].toFixed(3)+' · acc '+TR.acc[idx].toFixed(3)+' · val_loss <b>'+TR.vloss[idx].toFixed(3)+'</b> · val_acc '+TR.vacc[idx].toFixed(3)+' · val_precision '+TR.vprec[idx].toFixed(3)+' · val_recall '+TR.vrec[idx].toFixed(3)+(idx===4?'<br>Best validation loss (0.047) is at epoch 5. The checkpoint saves the weights at that epoch, and after 3 epochs without improvement (6, 7, 8) early stopping triggers and the best weights are restored.':'');}
+  function at(e){const r=pl.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W;idx=Math.max(0,Math.min(7,Math.round(1+(x-M.l)/(W-M.l-M.r)*7)-1));draw();}
+  pl.addEventListener('pointermove',at);pl.addEventListener('pointerdown',at);pl.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){idx=Math.min(7,idx+1);draw();e.preventDefault();}else if(e.key==='ArrowLeft'){idx=Math.max(0,idx-1);draw();e.preventDefault();}});
+  draw();
+}
+
+/* ---------- confusion matrix and metrics ---------- */
+function wConf(root){
+  const b=shell(root,'Confusion matrix and metrics','Test set: 390 pneumonia and 234 normal images. Choose the threshold or edit the four counts. Counts at 0.5 are from the lecture (1 of 390 missed, 100 of 234 false alarms). Counts at 0.901 are derived from the reported recall and specificity.');
+  const PRE={'Threshold 0.5':[389,100,1,134],'Chosen threshold 0.901':[385,71,5,163]};let c=PRE['Threshold 0.5'].slice(),name='Threshold 0.5';
+  const ctrl=h('<div class="ctrl"></div>'),inp=h('<div class="ctrl"></div>'),mat=h('<div></div>'),out=h('<div class="bars"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,inp,mat,out,ro);
+  const sg=h('<div class="seg" role="group" aria-label="Threshold"></div>');Object.keys(PRE).forEach(k=>{const bt=h('<button type="button" aria-pressed="false">'+k+'</button>');bt.addEventListener('click',()=>{c=PRE[k].slice();name=k;sync();draw();});sg.appendChild(bt);});ctrl.appendChild(sg);
+  const L=['TP (caught pneumonia)','FP (false alarm)','FN (missed pneumonia)','TN (cleared normal)'],I=[];L.forEach((l,i)=>{const lab=h('<label class="fld">'+l+'<input type="number" min="0" value="'+c[i]+'"></label>');I.push($('input',lab));$('input',lab).addEventListener('input',e=>{c[i]=Math.max(0,parseInt(e.target.value,10)||0);name='Custom';draw();});inp.appendChild(lab);});
+  function sync(){I.forEach((x,i)=>x.value=c[i]);}
+  function draw(){$$('button',sg).forEach(x=>x.setAttribute('aria-pressed',String(x.textContent===name)));const [tp,fp,fn,tn]=c,n=tp+fp+fn+tn,m=[(tp+tn)/n,tp/Math.max(tp+fp,1),tp/Math.max(tp+fn,1),tn/Math.max(tn+fp,1)];
+    mat.innerHTML='<div class="mat" style="--c:3;max-width:420px"><div class="cell" style="font-size:.7rem"></div><div class="cell" style="font-size:.7rem">Pred NORMAL</div><div class="cell" style="font-size:.7rem">Pred PNEUMONIA</div><div class="cell" style="font-size:.7rem">Actual NORMAL</div><div class="cell" style="background:var(--v100)">'+tn+'</div><div class="cell on">'+fp+'</div><div class="cell" style="font-size:.7rem">Actual PNEUMONIA</div><div class="cell on">'+fn+'</div><div class="cell" style="background:var(--v100)">'+tp+'</div></div>';
+    out.innerHTML=[['Accuracy',m[0]],['Precision',m[1]],['Recall (sensitivity)',m[2]],['Specificity',m[3]]].map(x=>bar(x[0],x[1],1,pct(x[1]))).join('');
+    ro.innerHTML='Baseline: always predicting pneumonia scores <b>62.5%</b> accuracy. Precision = TP/(TP+FP), recall = TP/(TP+FN), specificity = TN/(TN+FP).'+(name==='Threshold 0.5'?'<br>Reported: accuracy 0.838, precision 0.796, recall 0.997, specificity 0.573. Very high recall but low specificity: it flags almost everything as pneumonia. Test AUC (threshold-free ranking quality): 0.962.':name.startsWith('Chosen')?'<br>Reported: accuracy 0.878, precision 0.844, recall 0.987, specificity 0.697. Moving the threshold to 0.901 gives up about 0.01 of recall for about 0.12 more specificity.':'');}
+  sync();draw();
+}
+
+/* ---------- Grad-CAM toy ---------- */
+function wCam(root){
+  const b=shell(root,'Grad-CAM on a toy 3 × 3 feature map','Two channels instead of 1,280, and a 3 × 3 map instead of 7 × 7, so every number can be checked by hand. Step through the five Grad-CAM steps.');
+  const A1=[[0,1,2],[0,3,1],[0,0,0]],A2=[[1,0,0],[0,0,0],[2,1,0]],G1=[[.1,.3,.2],[.2,.2,.2],[.3,.1,.2]],G2=[[-.1,-.2,0],[-.1,-.1,-.1],[0,-.2,-.1]];
+  let st=0;const bar_=h('<div class="stepbar"><button type="button" class="btn ghost sm" data-a="prev">◀ Prev</button><input type="range" min="0" max="4" value="0" aria-label="Step"><button type="button" class="btn sm" data-a="next">Next ▶</button></div>'),pan=h('<div class="duo"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(bar_,pan,ro);
+  const rng=$('input',bar_),mean=m=>m.flat().reduce((a,v)=>a+v,0)/9,mm=(m,t)=>matHtml(m,{max:150,cls:(i,j,v)=>v<0?'neg':'',style:(i,j,v)=>heat(t,v),fmt:v=>(Math.round(v*100)/100)});
+  const w1=mean(G1),w2=mean(G2),raw=mk(3,3,(i,j)=>w1*A1[i][j]+w2*A2[i][j]),rel=raw.map(r=>r.map(v=>Math.max(0,v))),mx=Math.max(...rel.flat()),nrm=rel.map(r=>r.map(v=>v/mx));
+  function draw(){rng.value=st;const pn=(t,m)=>'<div class="pn"><div class="pl">'+t+'</div>'+m+'</div>';let h_='',t='';
+    if(st===0){h_=pn('Feature map, channel 1',mm(A1,3))+pn('Feature map, channel 2',mm(A2,3));t='<b>1 · Forward.</b> Run the image through the CNN and keep the feature maps of the chosen conv layer (for MobileNetV2: <code>features[-1]</code>, 1280 channels at 7×7).';}
+    else if(st===1){h_=pn('Gradient of the class score, channel 1',mm(G1,.3))+pn('Gradient, channel 2',mm(G2,.3));t='<b>2 · Backward.</b> Take the score of the class of interest (the pneumonia logit) and compute its gradient with respect to those feature maps.';}
+    else if(st===2){h_='<div class="card"><h4>One weight per channel</h4><p>Channel 1: mean of its gradient = <b>'+w1.toFixed(2)+'</b></p><p>Channel 2: mean of its gradient = <b>'+w2.toFixed(2)+'</b></p></div>';t='<b>3 · Average each channel’s gradient over all positions.</b> This gives one weight per channel: how much that channel matters for the class. (A negative weight means the channel counts against the class.) Shape: (1, 1280, 1, 1) in the real model.';}
+    else if(st===3){h_=pn('Weighted sum ('+w1.toFixed(2)+'·ch1 + '+w2.toFixed(2)+'·ch2)',mm(raw,.6))+pn('After ReLU',mm(rel,.6));t='<b>4 · Weighted sum of the feature maps, then ReLU</b>, keeping only features that push the score up. Negative entries become 0. Shape: (1, 1, 7, 7) in the real model.';}
+    else{h_=pn('Rescaled to 0 to 1',mm(nrm,1));t='<b>5 · Rescale to 0–1, upsample to the image size</b> (bilinear interpolation, 224×224 in the lecture) and overlay on the X-ray as a heat map. The brightest cell here, the one with value 1, is the region that most influenced the score.';}
+    pan.innerHTML=h_;ro.innerHTML=t;}
+  bar_.addEventListener('click',e=>{const a=e.target.dataset.a;if(a==='prev')st=Math.max(0,st-1);else if(a==='next')st=Math.min(4,st+1);else return;draw();});rng.addEventListener('input',()=>{st=+rng.value;draw();});draw();
+}
+
+/* ---------- EfficientNet scaling ---------- */
+function wEff(root){
+  const b=shell(root,'Compound scaling','One coefficient φ scales depth, width and resolution together: depth = 1.2^φ, width = 1.1^φ, resolution = 1.15^φ (fixed proportions found by a small grid search on B0).');
+  let phi=0;const sl=h('<label class="fld">φ <span class="zv"></span><input type="range" min="0" max="7" step="1" value="0" aria-label="phi"></label>'),out=h('<div class="bars"></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(sl,out,ro);
+  $('input',sl).addEventListener('input',e=>{phi=+e.target.value;draw();});
+  function draw(){$('.zv',sl).textContent=phi;const d=Math.pow(1.2,phi),w=Math.pow(1.1,phi),r=Math.pow(1.15,phi);const mx=Math.pow(1.2,7);
+    out.innerHTML=bar('Depth ×'+d.toFixed(2),d,mx,'×'+d.toFixed(2))+bar('Width ×'+w.toFixed(2),w,mx,'×'+w.toFixed(2))+bar('Resolution ×'+r.toFixed(2),r,mx,'×'+r.toFixed(2));
+    ro.innerHTML='φ = '+phi+': layers ×<b>'+d.toFixed(2)+'</b>, channels ×<b>'+w.toFixed(2)+'</b>, input size ×<b>'+r.toFixed(2)+'</b> (a 224-pixel base would become about <b>'+Math.round(224*r)+'</b> pixels; computed). φ = 0 is the B0 baseline. The lecture notes that native input sizes differ per variant (B0: 224, B3: 300, B6: 528).';}
+  draw();
+}
+
+/* ---------- models ---------- */
+function wModels(root){
+  const b=shell(root,'Pretrained models compared','Pretrained torchvision weights, ImageNet-1k validation set. Parameter counts include the 1000-class classifier. Inception v3 expects 299×299 input and the others 224×224, so accuracies are not at identical resolutions.');
+  let m='p';const D=[['MobileNetV2',3.5,71.9,90.3],['EfficientNet-B0',5.3,77.7,93.5],['ResNet-50',25.6,76.1,92.9],['Inception v3',27.2,77.3,93.5],['VGG16',138.4,71.6,90.4],['AlexNet',61.1,56.5,79.1]];
+  const ctrl=h('<div class="ctrl"></div>'),out=h('<div class="bars"></div>'),ro=h('<div class="readout"></div>');b.append(ctrl,out,ro);
+  seg(ctrl,[{label:'Parameters (M)',value:'p'},{label:'Top-1 (%)',value:'t1'},{label:'Top-5 (%)',value:'t5'}],m,v=>{m=v;draw();},'Metric');
+  function draw(){const i={p:1,t1:2,t5:3}[m],mx=m==='p'?140:100;out.innerHTML=D.map(r=>bar(r[0],r[i],mx,r[i]+(m==='p'?'M':'%'))).join('');
+    ro.innerHTML=m==='p'?'MobileNetV2 has roughly <b>7×</b> fewer parameters than ResNet-50 (25.6 / 3.5) and about <b>40×</b> fewer than VGG16 (138.4 / 3.5).':'MobileNetV2’s top-5 accuracy (90.3%) is close to the much larger models’; EfficientNet-B0 reaches 77.7% top-1 with 5.3M parameters. With our single-output head: EfficientNet-B0 has 4,008,829 parameters, MobileNetV2 2,387,969.';}
+  draw();
+}
+
+/* ---------- ViT patches ---------- */
+function wPatch(root){
+  const b=shell(root,'Cutting an image into patches','A Vision Transformer treats square patches as “words”. Choose the image and patch size: the number of patches is (image ÷ patch)², each projected to a vector of size dim (64 in the lecture’s code).');
+  const v={img:224,p:16};const fl=h('<div class="ctrl"></div>'),g=h('<div></div>'),ro=h('<div class="readout" aria-live="polite"></div>');b.append(fl,g,ro);
+  [['img','Image size'],['p','Patch size']].forEach(([k,l])=>{const lab=h('<label class="fld">'+l+'<input type="number" min="1" value="'+v[k]+'"></label>');$('input',lab).addEventListener('input',e=>{v[k]=Math.max(1,parseInt(e.target.value,10)||1);draw();});fl.appendChild(lab);});
+  function draw(){const n=Math.floor(v.img/v.p),np=n*n;g.innerHTML=n<=28?'<div class="mat" style="--c:'+n+';max-width:280px;gap:1px">'+Array.from({length:np},(_,i)=>'<div class="cell" style="font-size:.45rem;background:var(--v'+(i%2?'50':'100')+')">'+(n<=14?i+1:'')+'</div>').join('')+'</div>':'';
+    ro.innerHTML=v.img+' ÷ '+v.p+' = <b>'+n+'</b> patches per side → <b>'+np+'</b> patches. Sequence shape <code>(1, '+np+', 64)</code>.'+(v.img%v.p?'<br>The size is not divisible: the lecture’s code uses integer division, so the leftover border would be dropped by the strided convolution.':'')+(v.img===224&&v.p===16?'<br>Matches the lecture: 14 × 14 = 196 patches, <code>(1, 196, 64)</code>.':'');}
+  draw();
+}
+
+/* ---------- transfer-learning matrix ---------- */
+function wMatrix(root){
+  const b=shell(root,'Which transfer-learning strategy?','Two factors matter: the size of your new dataset, and how similar it is to ImageNet. Choose both.');
+  let sz='small',sm='diff';const ctrl=h('<div class="ctrl"></div>'),out=h('<div class="card"></div>');b.append(ctrl,out);
+  seg(ctrl,[{label:'Small dataset',value:'small'},{label:'Large dataset',value:'large'}],sz,v=>{sz=v;draw();},'Dataset size');seg(ctrl,[{label:'Similar to ImageNet',value:'sim'},{label:'Very different',value:'diff'}],sm,v=>{sm=v;draw();},'Similarity');
+  const T={'small-sim':'Do not fine-tune the whole network (overfitting risk). Train a simple classifier on the pretrained features.','small-diff':'Use features from earlier layers, or fine-tune only a few top layers with strong regularisation and careful validation. <b>Our X-ray case is closest to this one.</b>','large-sim':'Fine-tune the whole network. More data lowers the overfitting risk.','large-diff':'You could train from scratch, but in practice it usually still helps to start from pretrained weights.'};
+  function draw(){out.innerHTML='<h4>'+(sz==='small'?'Small':'Large')+' dataset, '+(sm==='sim'?'similar to':'very different from')+' ImageNet</h4><p>'+T[sz+'-'+sm]+'</p>';}
+  draw();
+}
+function wChoose(root){
+  const b=shell(root,'Choosing a pretrained model','Pick your situation.');
+  let k=0;const O=[['Edge device','Phones and embedded devices: you want small size, fast download and low latency. Consider MobileNet or EfficientNet-B0.'],['Best accuracy, no limits','No size or speed limits (for example inference on autoscaling cloud servers): consider a larger EfficientNet.'],['Conservative','A well-understood choice: ResNet-50 or one of its larger variants.'],['Own layers','Training from your own layers: VGG is simple and performs well, but it is large.'],['Cost no object','Training cost and latency are not a concern, or small accuracy gains are worth a lot: consider an ensemble of complementary models.']];
+  const ctrl=h('<div class="ctrl"></div>'),out=h('<div class="readout" aria-live="polite"></div>');b.append(ctrl,out);seg(ctrl,O.map((o,i)=>({label:o[0],value:i})),0,v=>{k=v;draw();},'Situation');
+  function draw(){out.innerHTML='<b>'+O[k][0]+'.</b> '+O[k][1];}draw();
+}
+
+/* ---------- mount ---------- */
+function fillCode(){$$('[data-code]').forEach(el=>{el.textContent=CODE[el.dataset.code]||'';});}
+const W={imb:wImb,weights:wWeights,split:wSplit,sep:wSep,mob:wMob,slice:wSlice,loss:wLoss,curves:wCurves,conf:wConf,cam:wCam,eff:wEff,models:wModels,patch:wPatch,matrix:wMatrix,choose:wChoose};
+function init(){
+  $$('[data-fig]').forEach(el=>{el.innerHTML=el.dataset.fig.split(',').map(k=>FIGS[k]||'').join('');});
+  fillCode();
+  $$('[data-w]').forEach(el=>{const k=el.dataset.w;if(k==='quiz'){wQuiz(el,el.dataset.q);return;}if(W[k])W[k](el);});
+  wToc();
+}
+const CODE={"load": "BASE_URL = 'https://storage.googleapis.com/download.tensorflow.org/data/ChestXRay2017'  \nDATA_DIR = 'data/xray'  \nos.makedirs(DATA_DIR, exist_ok=True)\n\ndef download(split, name):  \n    \"\"\"Download one .tfrec file (skipped if it already exists).\"\"\"  \n    dest = f'{DATA_DIR}/{split}_{name}.tfrec'  \n    if not os.path.exists(dest):  \n        print('Downloading', dest)  \n        urllib.request.urlretrieve(f'{BASE_URL}/{split}/{name}.tfrec', dest + '.part')  \n        os.replace(dest + '.part', dest)  \n    return dest\n\ndef iter_records(path):  \n    \"\"\"Yield the raw payload bytes of every record in a .tfrec file.\"\"\"  \n    with open(path, 'rb') as f:  \n        while True:  \n            header = f.read(12)                    # 8-byte length + 4-byte checksum  \n            if len(header) < 12:  \n                return  \n            (length,) = struct.unpack('<Q', header[:8])  \n            payload = f.read(length)  \n            f.read(4)                              # checksum of the payload  \n            yield payload\n\ndef decode_image(jpeg_bytes):  \n    \"\"\"Decode a JPEG, convert to grayscale and resize to 224 x 224 (uint8).\"\"\"  \n    img = Image.open(io.BytesIO(jpeg_bytes)).convert('L').resize(IMAGE_SIZE, Image.BILINEAR)  \n    return np.asarray(img, dtype=np.uint8)\n\ndef load_split(split):  \n    \"\"\"Return (images, labels, paths) for 'train' or 'test'. Label 1 = PNEUMONIA.\"\"\"  \n    cache = f'{DATA_DIR}/{split}.npz'  \n    if os.path.exists(cache):  \n        z = np.load(cache, allow_pickle=False)  \n        return z['images'], z['labels'], z['paths']\n\n    images_file, paths_file = download(split, 'images'), download(split, 'paths')  \n    images, labels, paths = [], [], []  \n    for jpeg, path in tqdm(zip(iter_records(images_file), iter_records(paths_file)), desc=split):  \n        path = path.decode('utf-8')  \n        images.append(decode_image(jpeg))  \n        labels.append(int(path.split('/')[-2] == 'PNEUMONIA'))   # the class is the parent folder  \n        paths.append(path)\n\n    images, labels, paths = np.stack(images), np.array(labels, dtype=np.int64), np.array(paths)  \n    np.savez(cache, images=images, labels=labels, paths=paths)  \n    return images, labels, paths\n\nall_train_images, all_train_labels, all_train_paths = load_split('train')  \ntest_images, test_labels, test_paths = load_split('test')\n\nprint('Train image array:', all_train_images.shape, all_train_images.dtype)  \nprint('Test image array :', test_images.shape)", "count": "for name, y in [('training', all_train_labels), ('test', test_labels)]:  \n    print(f'{name:>8}: {np.sum(y == 0)} normal, {np.sum(y == 1)} pneumonia, {len(y)} total')\n\nprint(f'\\nAccuracy of always predicting PNEUMONIA on the test set: '  \n      f'{100 * np.mean(test_labels == 1):.1f}%')", "split": "def patient_id(path):  \n    \"\"\"Extract a patient ID from the file path (falls back to the path itself).\"\"\"  \n    match = re.search(r'person\\d+|IM-\\d+', path)  \n    return match.group(0) if match else path\n\nfor p in all_train_paths[:3]:  \n    print(f'{p}  ->  {patient_id(p)}')\n\ngroups = np.array([patient_id(p) for p in all_train_paths])  \nprint('Distinct patient IDs found:', len(set(groups)), 'for', len(groups), 'images')\n\nsplitter = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=SEED)  \ntrain_idx, val_idx = next(splitter.split(all_train_images, all_train_labels, groups))\n\ntrain_images, train_labels = all_train_images[train_idx], all_train_labels[train_idx]  \nval_images, val_labels = all_train_images[val_idx], all_train_labels[val_idx]\n\nprint('Patients in both sets:', len(set(groups[train_idx]) & set(groups[val_idx])))  \nprint(f'Training: {len(train_labels)} images   Validation: {len(val_labels)} images')", "weights": "COUNT_NORMAL = int(np.sum(train_labels == 0))  \nCOUNT_PNEUMONIA = int(np.sum(train_labels == 1))  \nTRAIN_IMG_COUNT = COUNT_NORMAL + COUNT_PNEUMONIA\n\nweight_for_0 = (1 / COUNT_NORMAL) * TRAIN_IMG_COUNT / 2.0  \nweight_for_1 = (1 / COUNT_PNEUMONIA) * TRAIN_IMG_COUNT / 2.0  \nclass_weight = [weight_for_0, weight_for_1]\n\nprint(f'Weight for class 0 (normal)   : {weight_for_0:.2f}')  \nprint(f'Weight for class 1 (pneumonia): {weight_for_1:.2f}')", "input": "MEAN = torch.tensor([0.485, 0.456, 0.406], device=device).view(1, 3, 1, 1)  \nSTD = torch.tensor([0.229, 0.224, 0.225], device=device).view(1, 3, 1, 1)\n\ndef to_input(xb):  \n    \"\"\"uint8 batch (B, 224, 224) -> normalised float tensor (B, 3, 224, 224) on the device.\"\"\"  \n    x = xb.to(device).float().div(255).unsqueeze(1).expand(-1, 3, -1, -1)  \n    return (x - MEAN) / STD\n\ndef make_loader(images, labels, shuffle):  \n    ds = TensorDataset(torch.from_numpy(images), torch.from_numpy(labels).float())  \n    g = torch.Generator().manual_seed(SEED)  \n    return DataLoader(ds, batch_size=BATCH_SIZE, shuffle=shuffle, generator=g)\n\ntrain_loader = make_loader(train_images, train_labels, shuffle=True)  \nval_loader = make_loader(val_images, val_labels, shuffle=False)  \ntest_loader = make_loader(test_images, test_labels, shuffle=False)\n\nimage_batch, label_batch = next(iter(train_loader))  \nprint('Batch of images:', tuple(image_batch.shape), '   labels:', tuple(label_batch.shape))  \nprint('Model input    :', tuple(to_input(image_batch).shape))\n\ndef show_batch(image_batch, label_batch, n_images=25):  \n    plt.figure(figsize=(10, 10))  \n    for n in range(n_images):  \n        plt.subplot(5, 5, n + 1)  \n        plt.imshow(image_batch[n], cmap='gray')  \n        plt.title(CLASS_NAMES[int(label_batch[n])])  \n        plt.axis('off')  \n    plt.show()\n\nshow_batch(image_batch.numpy(), label_batch.numpy())", "sepcode": "standard = nn.Conv2d(M, N, k, padding=1, bias=False)  \nseparable = nn.Sequential(  \n    nn.Conv2d(M, M, k, padding=1, groups=M, bias=False),   # depthwise: one filter per channel  \n    nn.Conv2d(M, N, 1, bias=False),                        # pointwise: 1x1 across channels  \n)\n\np_standard, p_separable = count_params(standard), count_params(separable)  \nprint(f'Standard convolution : {p_standard:,} weights')  \nprint(f'Depthwise separable  : {p_separable:,} weights')  \nprint(f'Saving               : {p_standard / p_separable:.1f}x   (formula: {1 / (1 / N + 1 / k**2):.1f}x)')", "v1code": "def depthwise_separable(in_ch, out_ch, stride):  \n    \"\"\"Depthwise 3x3 (filter each channel) followed by pointwise 1x1 (combine channels).\"\"\"  \n    return nn.Sequential(  \n        nn.Conv2d(in_ch, in_ch, kernel_size=3, stride=stride, padding=1, groups=in_ch, bias=False),  \n        nn.BatchNorm2d(in_ch),  \n        nn.ReLU6(inplace=True),  \n        nn.Conv2d(in_ch, out_ch, kernel_size=1, bias=False),  \n        nn.BatchNorm2d(out_ch),  \n        nn.ReLU6(inplace=True),  \n    )\n\nblock = depthwise_separable(32, 64, stride=2).eval()  \nprint('Input  : (1, 32, 112, 112)')  \nprint('Output :', tuple(block(torch.zeros(1, 32, 112, 112)).shape), '  (channels 32 -> 64, size halved by stride 2)')\n\nclass MobileNetV1(nn.Module):  \n    def __init__(self, num_classes=1000):  \n        super().__init__()  \n        # Stem: the only standard convolution in the network  \n        stem = nn.Sequential(  \n            nn.Conv2d(3, 32, kernel_size=3, stride=2, padding=1, bias=False),  \n            nn.BatchNorm2d(32),  \n            nn.ReLU6(inplace=True),  \n        )  \n        # (output channels, stride) of the 13 depthwise separable blocks  \n        config = [(64, 1), (128, 2), (128, 1), (256, 2), (256, 1), (512, 2)] \\  \n                 + [(512, 1)] * 5 \\  \n                 + [(1024, 2), (1024, 1)]  \n        blocks, in_ch = [], 32  \n        for out_ch, stride in config:  \n            blocks.append(depthwise_separable(in_ch, out_ch, stride))  \n            in_ch = out_ch  \n        self.features = nn.Sequential(stem, *blocks)  \n        self.pool = nn.AdaptiveAvgPool2d(1)          # global average pooling  \n        self.fc = nn.Linear(1024, num_classes)       # returns logits; softmax is applied in the loss\n\n    def forward(self, x):  \n        x = self.pool(self.features(x))  \n        return self.fc(torch.flatten(x, 1))\n\nmobilenet_v1 = MobileNetV1().eval()\n\nx = torch.zeros(1, 3, 224, 224)  \nwith torch.no_grad():  \n    for i, layer in enumerate(mobilenet_v1.features):  \n        x = layer(x)  \n        print(f'block {i:>2}: output shape {tuple(x.shape)}')  \n    print('Logits:', tuple(mobilenet_v1(torch.zeros(1, 3, 224, 224)).shape))\n\nprint(f'Parameters: {count_params(mobilenet_v1):,}')", "build": "net = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.IMAGENET1K_V1)\n\nprint('Number of blocks in net.features:', len(net.features))  \nprint('Last block   :', net.features[-1].__class__.__name__)  \nprint('Old classifier:', net.classifier)\n\ndef build_model(trainable_blocks=2, pretrained=True):  \n    \"\"\"MobileNetV2 with the last `trainable_blocks` blocks unfrozen and a new 1-output head.\"\"\"  \n    weights = models.MobileNet_V2_Weights.IMAGENET1K_V1 if pretrained else None  \n    net = models.mobilenet_v2(weights=weights)\n\n    for p in net.parameters():                          # freeze everything  \n        p.requires_grad = False  \n    first = len(net.features) - trainable_blocks        # (features[-0:] would select ALL blocks)  \n    for block in net.features[first:]:                  # then unfreeze the top blocks  \n        for p in block.parameters():  \n            p.requires_grad = True\n\n    # New classifier: 1280 -> 128 -> 1. The single output is a logit for PNEUMONIA.  \n    net.classifier = nn.Sequential(  \n        nn.Linear(1280, 128),  \n        nn.ReLU(inplace=True),  \n        nn.Linear(128, 1),  \n    )  \n    return net\n\ndef set_train_mode(net):  \n    \"\"\"Training mode, but keep batch norm of frozen layers in inference mode.\"\"\"  \n    net.train()  \n    for m in net.modules():  \n        if isinstance(m, nn.BatchNorm2d) and not any(p.requires_grad for p in m.parameters()):  \n            m.eval()\n\nfinetuned_mobilenet = build_model().to(device)\n\nn_total = count_params(finetuned_mobilenet)  \nn_trainable = sum(p.numel() for p in finetuned_mobilenet.parameters() if p.requires_grad)  \nprint(f'Total parameters    : {n_total:,}')  \nprint(f'Trainable parameters: {n_trainable:,}')  \nprint(finetuned_mobilenet.classifier)", "metrics": "def compute_metrics(y, p, threshold=0.5):  \n    \"\"\"Classification metrics from labels y and predicted pneumonia probabilities p.\"\"\"  \n    pred = (p >= threshold).astype(int)  \n    tp = int(np.sum((pred == 1) & (y == 1)))  \n    tn = int(np.sum((pred == 0) & (y == 0)))  \n    fp = int(np.sum((pred == 1) & (y == 0)))  \n    fn = int(np.sum((pred == 0) & (y == 1)))  \n    return {  \n        'accuracy': (tp + tn) / len(y),  \n        'precision': tp / max(tp + fp, 1),  \n        'recall': tp / max(tp + fn, 1),  \n        'specificity': tn / max(tn + fp, 1),  \n    }\n\ndef weighted_bce(logits, targets, class_weight):  \n    \"\"\"Per-example binary cross-entropy, scaled by the weight of each example's class.\"\"\"  \n    per_example = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')  \n    if class_weight is None:  \n        return per_example  \n    w = torch.tensor(class_weight, device=logits.device)  \n    return per_example * w[targets.long()]\n\ndef evaluate(net, loader, class_weight=None, threshold=0.5):  \n    \"\"\"Return (metrics, labels, probabilities). 'loss' is the (optionally class-weighted) mean cross-entropy.\"\"\"  \n    net.eval()  \n    probs, labels, total_loss = [], [], 0.0  \n    with torch.no_grad():  \n        for xb, yb in loader:  \n            yb = yb.to(device)  \n            logits = net(to_input(xb)).squeeze(1)  \n            total_loss += weighted_bce(logits, yb, class_weight).sum().item()  \n            probs.append(torch.sigmoid(logits).cpu())  \n            labels.append(yb.cpu())  \n    probs, labels = torch.cat(probs).numpy(), torch.cat(labels).numpy()  \n    metrics = compute_metrics(labels, probs, threshold)  \n    metrics['loss'] = total_loss / len(labels)  \n    return metrics, labels, probs", "loop": "demo_net = copy.deepcopy(finetuned_mobilenet)  \nset_train_mode(demo_net)\n\nxb, yb = next(iter(train_loader))  \nyb = yb.to(device)\n\nlogits = demo_net(to_input(xb)).squeeze(1)              # 1. forward pass: one logit per image  \nper_example = weighted_bce(logits, yb, None)            # 2. plain loss of each image  \nweighted = weighted_bce(logits, yb, class_weight)       # 3. ... scaled by its class weight\n\nprint('labels      :', yb[:6].int().tolist())  \nprint('logits      :', [round(v, 2) for v in logits[:6].tolist()])  \nprint('plain loss  :', [round(v, 2) for v in per_example[:6].tolist()])  \nprint('weighted    :', [round(v, 2) for v in weighted[:6].tolist()])\n\nweighted.mean().backward()                              # 4. backward pass: gradients for trainable weights  \nhead_grad = demo_net.classifier[-1].weight.grad.norm().item()  \nfrozen_grad = demo_net.features[0][0].weight.grad  \nprint(f'\\ngradient norm of the new output layer: {head_grad:.4f}')  \nprint('gradient of a frozen early layer     :', frozen_grad)\n\ndel demo_net\n\ndef train_model(net, train_loader, val_loader, class_weight, epochs=8, patience=3,  \n                lr_backbone=1e-4, lr_head=1e-3, checkpoint='xray_model.pt'):  \n    backbone_params = [p for p in net.features.parameters() if p.requires_grad]  \n    groups = [{'params': net.classifier.parameters(), 'lr': lr_head}]  \n    if backbone_params:                                   # nothing to add if the backbone is fully frozen  \n        groups.append({'params': backbone_params, 'lr': lr_backbone})  \n    optimizer = torch.optim.Adam(groups)  \n    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1 ** (1 / 20))\n\n    history = {k: [] for k in ['loss', 'accuracy', 'precision', 'recall',  \n                               'val_loss', 'val_accuracy', 'val_precision', 'val_recall']}  \n    best_val_loss, wait = float('inf'), 0\n\n    for epoch in range(epochs):  \n        set_train_mode(net)  \n        probs, labels, loss_sum = [], [], 0.0  \n        for xb, yb in train_loader:  \n            yb = yb.to(device)  \n            logits = net(to_input(xb)).squeeze(1)  \n            per_example = weighted_bce(logits, yb, class_weight)     # class-weighted loss  \n            loss = per_example.mean()  \n            optimizer.zero_grad()  \n            loss.backward()  \n            optimizer.step()\n\n            loss_sum += per_example.sum().item()  \n            probs.append(torch.sigmoid(logits).detach().cpu())  \n            labels.append(yb.cpu())  \n        scheduler.step()\n\n        probs, labels = torch.cat(probs).numpy(), torch.cat(labels).numpy()  \n        train_m = compute_metrics(labels, probs)  \n        train_m['loss'] = loss_sum / len(labels)  \n        val_m, _, _ = evaluate(net, val_loader, class_weight)\n\n        for k in ['loss', 'accuracy', 'precision', 'recall']:  \n            history[k].append(train_m[k])  \n            history['val_' + k].append(val_m[k])  \n        print(f'Epoch {epoch + 1:>2}/{epochs}  '  \n              f'loss {train_m[\"loss\"]:.3f}  acc {train_m[\"accuracy\"]:.3f}  '  \n              f'val_loss {val_m[\"loss\"]:.3f}  val_acc {val_m[\"accuracy\"]:.3f}  '  \n              f'val_precision {val_m[\"precision\"]:.3f}  val_recall {val_m[\"recall\"]:.3f}')\n\n              # Checkpoint and early stopping on the validation loss  \n        if val_m['loss'] < best_val_loss:  \n            best_val_loss, wait = val_m['loss'], 0  \n            torch.save(net.state_dict(), checkpoint)  \n        else:  \n            wait += 1  \n            if wait >= patience:  \n                print(f'Early stopping after epoch {epoch + 1}')  \n                break\n\n    net.load_state_dict(torch.load(checkpoint, map_location=device))   # restore the best weights  \n    return history\n\nhistory = train_model(finetuned_mobilenet, train_loader, val_loader, class_weight, epochs=8)", "eval": "test_metrics, y_test, p_test = evaluate(finetuned_mobilenet, test_loader)\n\nfor name, value in test_metrics.items():  \n    print(f'{name:>12}: {value:.4f}')  \nprint(f'\\nAlways predicting PNEUMONIA would score {100 * np.mean(y_test == 1):.1f}% accuracy.')  \nprint(f'Test AUC (ranking quality, threshold-free): {roc_auc_score(y_test, p_test):.3f}')\n\npred_test = (p_test >= 0.5).astype(int)  \ncm = confusion_matrix(y_test, pred_test)\n\nax = sns.heatmap(cm, annot=True, fmt='g', xticklabels=CLASS_NAMES, yticklabels=CLASS_NAMES)  \nax.set(xlabel='Predicted values', ylabel='Actual values')  \nplt.show()\n\ntn, fp, fn, tp = cm.ravel()  \nprint(f'Missed pneumonia cases (false negatives): {fn} of {fn + tp}')  \nprint(f'Normal scans flagged as pneumonia (false positives): {fp} of {fp + tn}')\n\ndef predict_one(net, img_u8):  \n    \"\"\"Probability of pneumonia for one 224 x 224 uint8 image.\"\"\"  \n    net.eval()  \n    with torch.no_grad():  \n        x = to_input(torch.from_numpy(img_u8).unsqueeze(0))  \n        return torch.sigmoid(net(x)).item()\n\ni = int(np.where(y_test == 1)[0][0])       # first pneumonia image in the test set  \np = predict_one(finetuned_mobilenet, test_images[i])\n\nplt.imshow(test_images[i], cmap='gray')  \nplt.title(f'True label: {CLASS_NAMES[int(y_test[i])]}')  \nplt.axis('off')  \nplt.show()\n\nfor score, name in zip([1 - p, p], CLASS_NAMES):  \n    print(f'This image is {100 * score:.2f} percent {name}')", "thr": "_, y_val, p_val = evaluate(finetuned_mobilenet, val_loader)\n\nfpr, tpr, thresholds = roc_curve(y_val, p_val)  \ncandidates = np.where(tpr >= 0.95)[0]                    # thresholds that keep recall >= 95%  \nprint('Thresholds that keep validation recall >= 95%:', len(candidates))\n\nbest = candidates[np.argmin(fpr[candidates])]            # ...with the fewest false alarms  \nchosen_threshold = float(np.clip(thresholds[best], 0.0, 1.0))  \nprint(f'Chosen threshold (from validation data): {chosen_threshold:.3f}\\n')\n\nfor name, thr in [('default 0.5', 0.5), ('chosen', chosen_threshold)]:  \n    m = compute_metrics(y_test, p_test, thr)  \n    print(f'Test set, threshold {name:<12}: accuracy {m[\"accuracy\"]:.3f}  '  \n          f'recall {m[\"recall\"]:.3f}  specificity {m[\"specificity\"]:.3f}  precision {m[\"precision\"]:.3f}')", "phone": "cpu_model = copy.deepcopy(finetuned_mobilenet).cpu().eval()  \nx = torch.randn(1, 3, 224, 224)\n\nbuffer = io.BytesIO()  \ntorch.save(cpu_model.state_dict(), buffer)  \nsize_mb = buffer.getbuffer().nbytes / 1e6\n\nwith torch.no_grad():  \n    for _ in range(5):                     # warm-up  \n        cpu_model(x)  \n    times = []  \n    for _ in range(30):  \n        start = time.perf_counter()  \n        cpu_model(x)  \n        times.append(time.perf_counter() - start)\n\nprint(f'Parameters     : {count_params(cpu_model):,}')  \nprint(f'Size on disk   : {size_mb:.1f} MB (32-bit weights)')  \nprint(f'CPU latency    : {np.median(times) * 1000:.1f} ms per image (median of {len(times)} runs)')", "gcsteps": "idx = int(np.where(y_test == 1)[0][0])  \nx = to_input(torch.from_numpy(test_images[idx]).unsqueeze(0))  \nx.requires_grad_(True)           # needed so that gradients can flow back through the frozen layers\n\ntarget_layer = finetuned_mobilenet.features[-1]     # last convolutional block: 1280 channels at 7 x 7  \nfinetuned_mobilenet.eval()\n\nstore = {}\n\ndef forward_hook(module, inputs, output):  \n    store['acts'] = output.detach()                                           # feature maps  \n    output.register_hook(lambda grad: store.__setitem__('grads', grad.detach()))   # their gradients\n\nhandle = target_layer.register_forward_hook(forward_hook)\n\nscore = finetuned_mobilenet(x).squeeze()     # the pneumonia logit  \nfinetuned_mobilenet.zero_grad()  \nscore.backward()                             # gradient of that score w.r.t. everything upstream  \nhandle.remove()\n\nprint('Feature maps :', tuple(store['acts'].shape))  \nprint('Gradients    :', tuple(store['grads'].shape))\n\nweights = store['grads'].mean(dim=(2, 3), keepdim=True)              # (1, 1280, 1, 1)  \ncam = F.relu((weights * store['acts']).sum(dim=1, keepdim=True))      # (1, 1, 7, 7)  \nprint('Channel weights:', tuple(weights.shape), '  Heat map:', tuple(cam.shape))\n\ncam_big = F.interpolate(cam, size=x.shape[-2:], mode='bilinear', align_corners=False)[0, 0]  \ncam_big = (cam_big - cam_big.min()) / (cam_big.max() - cam_big.min() + 1e-8)\n\nplt.figure(figsize=(8, 4))  \nplt.subplot(1, 2, 1); plt.imshow(test_images[idx], cmap='gray'); plt.title('X-ray'); plt.axis('off')  \nplt.subplot(1, 2, 2); plt.imshow(test_images[idx], cmap='gray')  \nplt.imshow(cam_big.cpu().numpy(), cmap='jet', alpha=0.4); plt.title('Grad-CAM'); plt.axis('off')  \nplt.show()", "gcfunc": "def grad_cam(net, x, target_layer, sign=1.0):  \n    \"\"\"  \n    Grad-CAM heat map for a model with one logit output.  \n    x: model input of shape (1, 3, H, W). sign=+1 explains evidence for PNEUMONIA, -1 for NORMAL.  \n    Returns an (H, W) array scaled to [0, 1].  \n    \"\"\"  \n    net.eval()  \n    store = {}\n\n    def forward_hook(module, inputs, output):  \n        store['acts'] = output.detach()  \n        output.register_hook(lambda grad: store.__setitem__('grads', grad.detach()))\n\n    handle = target_layer.register_forward_hook(forward_hook)  \n    x = x.detach().clone().requires_grad_(True)  \n    score = sign * net(x).squeeze()  \n    net.zero_grad()  \n    score.backward()  \n    handle.remove()\n\n    weights = store['grads'].mean(dim=(2, 3), keepdim=True)        # one weight per channel  \n    cam = F.relu((weights * store['acts']).sum(dim=1, keepdim=True))  \n    cam = F.interpolate(cam, size=x.shape[-2:], mode='bilinear', align_corners=False)[0, 0]  \n    cam = cam - cam.min()  \n    return (cam / (cam.max() + 1e-8)).cpu().numpy()\n\n# Sanity check: the function reproduces the step-by-step result  \nprint('Same as the manual result:', np.allclose(grad_cam(finetuned_mobilenet, x, target_layer),  \n                                                  cam_big.cpu().numpy(), atol=1e-5))", "eff": "def build_efficientnet_b0(pretrained=True):  \n    weights = models.EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None  \n    net = models.efficientnet_b0(weights=weights)  \n    for p in net.parameters():  \n        p.requires_grad = True                   # fine-tune the whole network  \n    net.classifier = nn.Sequential(nn.Dropout(0.2), nn.Linear(1280, 1))  \n    return net\n\nefficientnet = build_efficientnet_b0().to(device)  \nprint(f'EfficientNet-B0 parameters (1-output head): {count_params(efficientnet):,}')  \nprint(f'MobileNetV2 parameters     (1-output head): {count_params(build_model(pretrained=False)):,}')\n\n# history_eff = train_model(efficientnet, train_loader, val_loader, class_weight, checkpoint='xray_effnet.pt')", "vit": "class PatchEmbedding(nn.Module):  \n    \"\"\"Cut the image into patches, project each one to a vector, and add a position embedding.\"\"\"\n\n    def __init__(self, image_size=224, patch_size=16, in_ch=3, dim=64):  \n        super().__init__()  \n        self.num_patches = (image_size // patch_size) ** 2  \n        # A conv with kernel = stride = patch size is the same as flattening each patch  \n        # and applying one shared linear layer.  \n        self.project = nn.Conv2d(in_ch, dim, kernel_size=patch_size, stride=patch_size)  \n        self.position = nn.Embedding(self.num_patches, dim)\n\n    def forward(self, x):  \n        patches = self.project(x).flatten(2).transpose(1, 2)     # (batch, num_patches, dim)  \n        positions = torch.arange(self.num_patches, device=x.device)  \n        return patches + self.position(positions)\n\ntokens = PatchEmbedding()(torch.randn(1, 3, 224, 224))  \nprint('Sequence of patch vectors:', tuple(tokens.shape))   # 14 x 14 = 196 patches\n\nclass TransformerBlock(nn.Module):  \n    def __init__(self, dim=64, heads=4, mlp_dim=128, dropout=0.1):  \n        super().__init__()  \n        self.norm1 = nn.LayerNorm(dim)  \n        self.attention = nn.MultiheadAttention(dim, heads, dropout=dropout, batch_first=True)  \n        self.norm2 = nn.LayerNorm(dim)  \n        self.mlp = nn.Sequential(  \n            nn.Linear(dim, mlp_dim), nn.GELU(), nn.Dropout(dropout),  \n            nn.Linear(mlp_dim, dim), nn.Dropout(dropout),  \n        )\n\n    def forward(self, x):  \n        h = self.norm1(x)  \n        attended, _ = self.attention(h, h, h)       # self-attention: query = key = value = patches  \n        x = x + attended                            # skip connection 1  \n        return x + self.mlp(self.norm2(x))          # skip connection 2\n\nprint('Block output:', tuple(TransformerBlock()(tokens).shape))   # same shape as the input"};
+init();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-CV-6" target="_blank" rel="noopener">github.com/scaler-content/DSML-CV-6</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K-nearest Neighbors 2 post read</title>
+<meta name="description" content="Class 2 of k-Nearest Neighbors: rebuild kNN with scikit-learn, choose k with validation curves, understand its cost at scale, handle messy data, pick a distance metric, speed up search with LSH and impute missing values.">
+<script>
+(function(){
+  var t=null;
+  try{t=localStorage.getItem('knn1-theme');}catch(e){}
+  if(!t){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+<style>
+:root{
+  --bg:#F6F5F3; --surface:#FFFFFF; --surface-2:#EFEDE9; --text:#1A1A1A; --muted:#57534D; --border:#D9D5CE;
+  --red:#D0121B; --red-deep:#8E0B12; --red-tint:#FCEBEC;
+  --gold:#D4AF37; --gold-ink:#7A5C00; --gold-tint:#FBF4D9;
+  --black:#000000;
+  --c1:#D0121B; --c2:#D4AF37; --c3:#111111; --mark-stroke:#111111;
+  --pressed-bg:#D0121B; --pressed-fg:#FFFFFF; --focus:#D0121B;
+  --ok:#14532D; --ok-tint:#E6F4EA;
+  --display:"Avenir Next Condensed","Arial Narrow","Roboto Condensed","Helvetica Neue Condensed","Helvetica Neue",Arial,sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+:root[data-theme="dark"]{
+  --bg:#0A0A0A; --surface:#161514; --surface-2:#211F1D; --text:#EFECE7; --muted:#B3ADA4; --border:#34302C;
+  --red:#F0424D; --red-deep:#B5121B; --red-tint:#2A1416;
+  --gold:#E0BB4A; --gold-ink:#E0BB4A; --gold-tint:#2A2412;
+  --c1:#F0424D; --c2:#E0BB4A; --c3:#EDEAE6; --mark-stroke:#000000;
+  --pressed-bg:#E0BB4A; --pressed-fg:#000000; --focus:#E0BB4A;
+  --ok:#7DD99A; --ok-tint:#132A1B;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:1.0625rem;line-height:1.7}
+img,svg{max-width:100%}
+a{color:var(--red)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.skip{position:absolute;left:-999px;top:8px;background:#fff;color:#000;padding:8px 14px;z-index:100}
+.skip:focus{left:8px}
+i,em{font-style:italic}
+
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:0;z-index:50;height:56px;background:#000;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 24px;border-bottom:3px solid #D4AF37}
+.brand{font-family:var(--display);font-style:italic;font-weight:800;font-size:1.2rem;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.theme-btn{font:inherit;font-size:.85rem;color:#fff;background:transparent;border:1px solid #6b6660;border-radius:4px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.theme-btn:hover{border-color:var(--gold)}
+.theme-btn:focus-visible{outline-color:#E0BB4A}
+.progress{position:absolute;left:0;bottom:-3px;height:3px;width:0;background:#D0121B}
+
+/* ---------- hero ---------- */
+.hero{position:relative;overflow:hidden;background:#000;color:#fff;padding:76px 24px 88px}
+.hero::before,.hero::after{content:"";position:absolute;top:0;bottom:0;right:0;pointer-events:none;clip-path:polygon(130px 0,100% 0,100% 100%,0 100%)}
+.hero::after{width:calc(46% + 24px);background:#D4AF37;z-index:0}
+.hero::before{width:46%;background:#D0121B;z-index:1}
+.hero-inner{position:relative;z-index:2;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:48px;align-items:center}
+.hero h1{font-family:var(--display);font-style:italic;font-weight:800;font-size:clamp(2.9rem,7vw,5.4rem);line-height:1;letter-spacing:-.01em;margin:0 0 22px;max-width:9em}
+.hero .sub{font-family:var(--display);font-style:italic;font-weight:700;font-size:clamp(1.3rem,2.4vw,1.75rem);color:#E0BB4A;margin:0 0 26px}
+.hero .lead{max-width:33rem;color:#E4E0DA;font-size:1.1rem;margin:0}
+.hero svg{width:100%;height:auto;display:block;max-width:440px;margin-left:auto;box-shadow:10px 10px 0 #000}
+.hero{--c1:#F0424D;--c2:#E0BB4A;--c3:#EDEAE6;--mark-stroke:#000}
+.kit{height:12px;background:repeating-linear-gradient(-45deg,#D0121B 0 16px,#000 16px 20px,#D4AF37 20px 28px,#000 28px 32px)}
+
+/* ---------- layout ---------- */
+.layout{max-width:1200px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:196px minmax(0,1fr);gap:56px}
+.toc{position:sticky;top:56px;align-self:start;max-height:calc(100vh - 56px);overflow:auto;padding:36px 0}
+.toc h2{font-family:var(--display);font-style:italic;font-weight:800;font-size:1.15rem;margin:0 0 12px;padding:0}
+.toc h2::after,.toc h2::before{display:none}
+.toc ol{list-style:none;margin:0;padding:0;border-left:2px solid var(--border)}
+.toc a{display:block;padding:6px 0 6px 14px;margin-left:-2px;border-left:2px solid transparent;color:var(--muted);text-decoration:none;font-size:.92rem;line-height:1.35}
+.toc a:hover{color:var(--text)}
+.toc a[aria-current="true"]{color:var(--text);font-weight:700;border-left-color:var(--red)}
+main{min-width:0;max-width:860px;padding:44px 0 90px}
+@media (max-width:1079px){
+  .hero-inner{grid-template-columns:1fr}
+  .hero svg{margin:8px auto 0;max-width:340px}
+  .hero::before,.hero::after{top:auto;left:0;right:auto;width:100%;clip-path:polygon(0 70px,100% 0,100% 100%,0 100%)}
+  .hero::before{height:46%}.hero::after{height:calc(46% + 14px)}
+  .layout{display:block;padding:0 18px}
+  .toc{top:56px;z-index:20;background:var(--bg);padding:8px 0;max-height:none;overflow:visible;border-bottom:1px solid var(--border);margin:0 -18px;padding-left:18px;padding-right:18px}
+  .toc h2{display:none}
+  .toc ol{display:flex;gap:4px;overflow-x:auto;border-left:0;scrollbar-width:thin;padding-bottom:2px}
+  .toc a{border-left:0;border-bottom:2px solid transparent;margin:0;padding:6px 10px;white-space:nowrap}
+  .toc a[aria-current="true"]{border-bottom-color:var(--red)}
+  main{padding-top:24px}
+  .topbar{padding:0 16px}
+}
+@media (max-width:560px){.hero{padding:48px 18px 56px}.brand{font-size:.9rem}}
+
+/* ---------- typography ---------- */
+.chapter{margin-top:80px;scroll-margin-top:110px}
+.chapter:first-child{margin-top:0}
+h2{font-family:var(--display);font-style:italic;font-weight:800;font-size:clamp(2rem,4.2vw,3rem);line-height:1.06;margin:0 0 28px;padding-bottom:22px;position:relative}
+h2::after{content:"";position:absolute;left:6px;bottom:0;width:72px;height:8px;background:var(--red);transform:skewX(-28deg)}
+h2::before{content:"";position:absolute;left:92px;bottom:0;width:28px;height:8px;background:var(--gold);transform:skewX(-28deg)}
+h3{font-family:var(--display);font-style:italic;font-weight:700;font-size:1.65rem;line-height:1.2;margin:46px 0 12px}
+h4{font-family:var(--display);font-style:italic;font-weight:800;font-size:1.15rem;margin:0 0 6px;letter-spacing:.005em}
+.chapter>p,.chapter>ul,.chapter>ol{max-width:68ch}
+p{margin:0 0 1.05em}
+ul,ol{padding-left:1.3em}
+li{margin:.3em 0}
+strong{font-weight:700}
+code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);padding:.1em .38em;border-radius:3px}
+sub,sup{line-height:0}
+
+/* ---------- callouts ---------- */
+.key{margin:28px 0;padding:20px 26px;background:#000;color:#fff;border-left:8px solid var(--red);border-bottom:4px solid var(--gold);font-family:var(--serif);font-style:italic;font-size:1.3rem;line-height:1.5;max-width:68ch}
+.key p{margin:0}
+.rule{margin:24px 0;padding:14px 20px;background:var(--red-tint);border-left:6px solid var(--red);max-width:68ch}
+.rule p:last-child,.note p:last-child{margin-bottom:0}
+.note{margin:24px 0;padding:14px 20px;background:var(--gold-tint);border-left:6px solid var(--gold);max-width:68ch}
+.rule b:first-child,.note b:first-child{display:inline}
+.ticket{margin:28px 0;padding:22px 28px;background:var(--surface);border:2px dashed var(--gold);border-left:10px solid var(--red)}
+.ticket h4{font-size:1.02rem;margin:0}
+.ticket blockquote{margin:12px 0 0;font-family:var(--serif);font-style:italic;font-size:1.22rem;line-height:1.55}
+.ticket.closed{border-left-color:var(--text)}
+.checks{list-style:none;padding:0;margin:14px 0}
+.checks li{position:relative;padding-left:32px;margin:.55em 0}
+.checks li::before{content:"\2713";position:absolute;left:0;top:0;width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff;font-size:.8rem;text-align:center;line-height:22px;font-weight:700}
+:root[data-theme="dark"] .checks li::before{color:#000}
+
+/* ---------- tier chips ---------- */
+.mk{width:18px;height:18px;flex:none;vertical-align:-4px}
+.mk.t1{color:var(--c1)}.mk.t2{color:var(--c2)}.mk.t3{color:var(--c3)}
+.tier{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-weight:600}
+
+/* ---------- tables ---------- */
+.table-wrap{overflow-x:auto;margin:22px 0}
+table{border-collapse:collapse;width:100%;font-size:.95rem;background:var(--surface)}
+th{text-align:left;font-weight:700;padding:9px 12px;border-bottom:2px solid var(--red);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+thead th{background:#000;color:#fff;border-bottom:3px solid var(--gold)}
+tbody th{border-bottom:1px solid var(--border);font-weight:600}
+caption{caption-side:bottom;text-align:left;color:var(--muted);font-size:.85rem;padding-top:8px}
+
+/* ---------- widgets ---------- */
+.widget{background:var(--surface);border:1px solid var(--border);border-left:5px solid var(--gold);border-radius:4px;margin:30px 0;overflow:hidden}
+.widget-head{padding:14px 22px 15px;background:#000;color:#fff;border-bottom:3px solid var(--gold)}
+.widget-head h4{margin:0 0 3px;font-size:1.3rem;color:#fff}
+.widget-head p{margin:0;color:#D2CCC2;font-size:.9rem;line-height:1.5}
+.widget-body{padding:22px}
+.widget-body p{max-width:none}
+.btn{font:inherit;font-size:.9rem;line-height:1.3;padding:8px 14px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:4px;cursor:pointer;transition:background .15s,color .15s}
+.btn:hover{border-color:var(--text)}
+.btn[aria-pressed="true"]{background:var(--pressed-bg);color:var(--pressed-fg);border-color:var(--pressed-bg);box-shadow:inset 0 -3px 0 var(--gold)}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+input[type=range]{width:100%;accent-color:var(--red)}
+.ctl{display:grid;gap:4px;margin-bottom:14px}
+.ctl label{font-weight:600;font-size:.93rem;display:flex;justify-content:space-between;gap:12px}
+.ctl output{font-family:var(--mono);font-weight:600}
+.bar{display:flex;height:34px;border:1px solid var(--text);overflow:hidden;margin:6px 0}
+.bar>div{display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden}
+.readout{margin-top:14px;padding:12px 16px;background:var(--surface-2);border-left:4px solid var(--text);font-size:.97rem}
+.readout p{margin:0}
+.badge{display:inline-block;padding:1px 9px;border:1.5px solid currentColor;border-radius:99px;font-size:.78rem;font-weight:700;line-height:1.6}
+.badge.tie{color:var(--red)}
+
+/* trio */
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:26px 0}
+.trio>div{border-top:6px solid var(--red);background:var(--surface);padding:14px 16px 16px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.trio>div:nth-child(2){border-top-color:var(--gold)}.trio>div:nth-child(3){border-top-color:var(--text)}
+.trio h4{font-size:1.25rem}
+.trio p{margin:0;font-size:.95rem;line-height:1.55}
+@media (max-width:720px){.trio{grid-template-columns:1fr}}
+
+/* pipeline */
+.pipeline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:26px 0;counter-reset:pl}
+.pipeline>div{position:relative;background:var(--surface);border:1px solid var(--border);padding:16px 18px 18px 18px;border-top:6px solid var(--red)}
+.pipeline>div:nth-child(2){border-top-color:var(--gold)}.pipeline>div:nth-child(3){border-top-color:var(--text)}
+.pipeline>div+div{margin-left:26px}
+.pipeline>div+div::before{content:"";position:absolute;left:-27px;top:50%;width:26px;border-top:2px solid var(--text)}
+.pipeline>div+div::after{content:"";position:absolute;left:-9px;top:calc(50% - 6px);border:6px solid transparent;border-left:8px solid var(--text);border-right:0}
+.pipeline h4{font-size:1.3rem}
+.pipeline p{margin:0;font-size:.93rem;line-height:1.5}
+@media (max-width:720px){.pipeline{grid-template-columns:1fr;gap:26px}.pipeline>div+div{margin-left:0}.pipeline>div+div::before{left:50%;top:-26px;width:0;height:26px;border-top:0;border-left:2px solid var(--text)}.pipeline>div+div::after{left:calc(50% - 6px);top:-10px;border:6px solid transparent;border-top:8px solid var(--text);border-bottom:0}}
+
+/* ---------- figures ---------- */
+figure{margin:28px 0}
+figcaption{color:var(--muted);font-size:.9rem;margin-top:8px;line-height:1.5}
+.fig{background:var(--surface);border:1px solid var(--border);padding:16px}
+.fig svg{display:block;width:100%;height:auto}
+.idea-fig{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:24px;align-items:center}
+.idea-fig svg{max-width:520px;margin:0 auto}
+.tally h4{font-size:1.3rem;margin-bottom:10px}
+.tally ul{list-style:none;padding:0;margin:0 0 12px}
+.tally li{display:flex;align-items:center;gap:10px;margin:6px 0}
+.tally .pred{border-top:2px solid var(--text);padding-top:10px;font-family:var(--display);font-style:italic;font-size:1.5rem;font-weight:800;margin:0}
+@media (max-width:720px){.idea-fig{grid-template-columns:1fr}}
+.formula-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:center;margin:26px 0}
+@media (max-width:720px){.formula-row{grid-template-columns:1fr}}
+.formula{font-family:var(--serif);font-size:1.5rem;background:var(--surface);border:1px solid var(--border);padding:22px 20px;text-align:center;line-height:1.9}
+.rad{border-top:2px solid currentColor;padding:3px 5px 0}
+.svg-text{font-family:var(--sans);fill:var(--text)}
+
+/* ---------- code ---------- */
+details.code{margin:22px 0;border:1px solid var(--text);background:var(--surface)}
+details.code>summary{cursor:pointer;padding:12px 18px;font-weight:700;font-size:.95rem;list-style:none;display:flex;justify-content:space-between;gap:10px;background:var(--surface-2);border-left:5px solid var(--red)}
+details.code>summary::-webkit-details-marker{display:none}
+details.code>summary::after{content:"Show code";font-weight:600;color:var(--muted);font-size:.85rem}
+details.code[open]>summary::after{content:"Hide code"}
+figure.code{position:relative;margin:0;background:#0B0B0B}
+figure.code figcaption{position:static;margin:0;display:flex;align-items:center;justify-content:space-between;background:#000;padding:7px 12px;border-bottom:2px solid #D4AF37;color:#E0BB4A;font-size:.78rem;font-weight:700}
+figure.code figcaption::before{content:"Python"}
+figure.code pre{margin:0;padding:18px 22px;overflow-x:auto;background:#0B0B0B;color:#F1EEE9;font-family:var(--mono);font-size:.86rem;line-height:1.75;tab-size:4;border-left:5px solid #D0121B}
+figure.code pre code{display:block;background:none;padding:0;border-radius:0;font-size:inherit;color:inherit;white-space:pre}
+figure.code.code-open{margin:22px 0;border:1px solid #000}
+.copy{font:inherit;font-size:.78rem;background:#1A1A1A;color:#F1EEE9;border:1px solid #6b6660;padding:3px 12px;border-radius:3px;cursor:pointer}
+.copy:hover{border-color:#E0BB4A;color:#E0BB4A}
+.copy:focus-visible{outline-color:#E0BB4A}
+.tk-c{color:#9F998F;font-style:italic}.tk-s{color:#F2C14E}.tk-k{color:#FF5560;font-weight:700}.tk-n{color:#FF9AA0}.tk-f{color:#FFE6A8}
+
+/* ---------- quiz ---------- */
+.quiz{background:var(--surface);border:1px solid var(--border);border-left:5px solid var(--red);margin:34px 0}
+.quiz-head{padding:12px 22px;background:#000;border-bottom:3px solid var(--red)}
+.quiz-head h4{margin:0;color:#fff;font-size:1.25rem}
+.quiz-body{padding:20px 22px}
+.quiz .q{font-weight:600;margin-bottom:14px;max-width:62ch}
+.quiz .q ul{font-weight:400;margin:8px 0 0}
+.opts{display:grid;gap:8px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;font:inherit;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:4px;cursor:pointer}
+.opt:hover:not([disabled]){border-color:var(--text)}
+.opt .ltr{flex:none;width:26px;height:26px;border:1.5px solid currentColor;border-radius:50%;text-align:center;line-height:23px;font-weight:700;font-size:.85rem}
+.opt.correct{background:var(--ok-tint);border-color:var(--ok);color:var(--text)}
+.opt.wrong{background:var(--red-tint);border-color:var(--red)}
+.opt .res{margin-left:auto;font-weight:700;font-size:.85rem;white-space:nowrap}
+.opt.correct .res{color:var(--ok)}.opt.wrong .res{color:var(--red)}
+.opt[disabled]{cursor:default}
+.fb{margin-top:14px;min-height:1px}
+.fb .fb-msg{padding:12px 16px;border-left:4px solid var(--text);background:var(--surface-2)}
+.fb p{margin:0 0 .5em}
+.fb p:last-child{margin:0}
+.linkbtn{font:inherit;background:none;border:0;padding:0;color:var(--red);text-decoration:underline;cursor:pointer}
+
+/* ---------- explorer (dark panel) ---------- */
+.explorer{--surface:#0D0D0D;--surface-2:#1B1A19;--text:#F3F0EB;--muted:#B5AEA5;--border:#3A3632;--c1:#F0424D;--c2:#E0BB4A;--c3:#EDEAE6;--mark-stroke:#000;--gold-ink:#E0BB4A;--red:#F0424D;--focus:#E0BB4A;--pressed-bg:#E0BB4A;--pressed-fg:#000;background:#000;color:var(--text);border-color:#3A3632;border-left-color:#E0BB4A;container-type:inline-size}
+.ex-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--border)}
+.ex-step{font:inherit;text-align:left;padding:12px 14px;background:transparent;color:var(--muted);border:0;border-right:1px solid var(--border);cursor:pointer;line-height:1.35}
+.ex-step:last-child{border-right:0}
+.ex-step b{display:block;color:inherit;font-size:1.1rem;font-family:var(--display);font-style:italic;font-weight:800}
+.ex-step span{font-size:.8rem}
+.ex-step:hover{color:var(--text)}
+.ex-step[aria-pressed="true"]{color:var(--text);background:#171614;box-shadow:inset 0 -3px 0 #E0BB4A}
+.ex-step i{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border:1.5px solid currentColor;border-radius:50%;font-size:.75rem;font-style:normal;margin-right:7px;font-weight:700}
+@container (max-width:600px){.ex-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.ex-step:nth-child(2){border-right:0}.ex-step:nth-child(-n+2){border-bottom:1px solid var(--border)}}
+.ex-main{display:grid;gap:22px;padding:20px}
+@container (min-width:700px){.ex-main{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);align-items:start}.ex-tbl{grid-column:1 / -1}}
+.ex-svg{display:block;width:100%;height:auto;background:#080808;border:1px solid var(--border);touch-action:none;user-select:none}
+.ex-svg text{font-family:var(--sans)}
+.ex-grid line{stroke:#24211F;stroke-width:1}
+.ex-axis text{fill:#A8A198;font-size:14px}
+.ex-axis .ax-title{fill:#D9D4CC;font-size:17px;font-weight:600}
+.ex-ring{fill:rgba(224,187,74,.07);stroke:#E0BB4A;stroke-width:2.5;stroke-dasharray:9 7}
+.ex-line{stroke:#6F6960;stroke-width:1.2}
+.ex-line.keep{stroke:#E0BB4A;stroke-width:2.2}
+.ex-leg{stroke:#E0BB4A;stroke-width:1.5;stroke-dasharray:4 4}
+.ex-dl{fill:#E9E4DC;font-size:15px;paint-order:stroke;stroke:#080808;stroke-width:4px}
+.pt{cursor:pointer;transition:opacity .2s}
+.pt.dim{opacity:.32}
+.pt text.lbl{fill:#F3F0EB;font-size:16px;font-weight:600;paint-order:stroke;stroke:#080808;stroke-width:4px}
+.pt .selring{fill:none;stroke:#F3F0EB;stroke-width:1.5;stroke-dasharray:3 3}
+.rk circle{fill:#E0BB4A;stroke:#000;stroke-width:1.5}
+.rk text{fill:#000;font-size:13px;font-weight:800;text-anchor:middle;dominant-baseline:central}
+#exQ{cursor:grab}
+#exQ.drag{cursor:grabbing}
+#exQ .starshape{fill:#FFFFFF;stroke:#E0BB4A;stroke-width:2.5}
+#exQ text{fill:#F3F0EB;font-size:17px;font-weight:700;paint-order:stroke;stroke:#080808;stroke-width:4px}
+.ex-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:.85rem;color:var(--muted)}
+.ex-legend .tier{font-weight:500;color:var(--text)}
+.ex-k{margin-bottom:12px}
+.ex-table{font-size:.88rem;background:transparent}
+.ex-table th{border-bottom-color:#E0BB4A;padding:7px 8px}
+.ex-table td{padding:7px 8px;border-bottom-color:#2C2926}
+.ex-table tbody tr{cursor:pointer}
+.ex-table tbody tr:hover{background:#151413}
+.ex-table tbody tr[aria-selected="true"]{background:#1C1A17;outline:1px dashed #6F6960;outline-offset:-1px}
+.ex-table tr.keep td:first-child{box-shadow:inset 4px 0 0 #E0BB4A}
+.ex-table td.num{font-family:var(--mono);white-space:nowrap}
+.ex-side .readout{background:#151413;border-left-color:#E0BB4A;color:var(--text)}
+.ex-calc{margin-top:12px;padding:12px 14px;border:1px solid var(--border);font-size:.9rem;line-height:1.7}
+.ex-calc .eq{font-family:var(--serif);font-size:1.02rem;line-height:2}
+.votebar{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:.9rem}
+.votebar .vl{flex:none}
+.votebar .vb{flex:1;height:16px;background:#1C1A17;border:1px solid var(--border)}
+.votebar .vb i{display:block;height:100%;background:var(--c2)}
+.votebar .vn{width:1.5em;text-align:right;font-family:var(--mono);font-weight:700}
+@container (max-width:520px){.ex-dl,.pt text.lbl,#exQ text{font-size:21px}.ex-axis text{font-size:18px}.ex-axis .ax-title{font-size:22px}.rk text{font-size:16px}}
+.ex-foot{padding:0 20px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:.85rem}
+.explorer .btn{background:#141312;color:var(--text);border-color:#4A4540}
+.explorer .btn:hover{border-color:#E0BB4A}
+
+/* tie lab */
+.krow{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;font:inherit;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:9px 14px;margin-bottom:6px;border-radius:4px;cursor:pointer}
+.krow:hover{border-color:var(--text)}
+.krow[aria-pressed="true"]{border-color:var(--text);box-shadow:inset 5px 0 0 var(--gold);background:var(--surface-2)}
+.krow .kv{font-family:var(--mono);font-weight:700}
+.krow .votes{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.92rem}
+.vchip{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.cmp td:first-child{font-weight:600}
+.slots{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 14px}
+.slot{font:inherit;width:96px;padding:10px 6px;border:1.5px solid var(--text);background:var(--bg);color:var(--text);border-radius:4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.85rem}
+.slot .mk{width:26px;height:26px}
+.slot:hover{background:var(--surface-2)}
+.seg{display:inline-flex;border:1px solid var(--text);border-radius:4px;overflow:hidden}
+.seg .btn{border:0;border-radius:0;border-right:1px solid var(--border)}
+.seg .btn:last-child{border-right:0}
+.field{display:flex;flex-wrap:wrap;gap:6px 24px;margin-bottom:12px;align-items:center}
+.field>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.field .lab{font-weight:600;font-size:.93rem}
+
+/* split */
+.splitbar{display:flex;height:74px;margin:6px 0 16px}
+.splitbar button{font:inherit;border:1px solid var(--text);border-right-width:0;padding:6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--text);background:var(--surface);min-width:0;line-height:1.3}
+.splitbar button:last-child{border-right-width:1px}
+.splitbar button b{font-size:.95rem}
+.splitbar button span{font-size:.8rem}
+.splitbar button[aria-pressed="true"]{background:var(--pressed-bg);color:var(--pressed-fg)}
+.splitbar .s-test{background-image:repeating-linear-gradient(135deg,transparent 0 8px,rgba(127,127,127,.28) 8px 10px)}
+.splitbar .s-test[aria-pressed="true"]{background-image:none}
+
+/* balance bars */
+.hbars{display:grid;gap:12px;margin:8px 0 6px}
+.hb{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:center;font-size:.9rem}
+.hb .track{height:28px;border:1px solid var(--text);display:flex;background:var(--surface)}
+.hb .real{background:var(--text);transition:width .35s}
+.hb .syn{background-image:repeating-linear-gradient(135deg,var(--gold) 0 5px,transparent 5px 10px);border-left:1px dashed var(--text);transition:width .35s}
+.legend-inline{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:.85rem;color:var(--muted);margin-top:10px}
+.sw{display:inline-block;width:16px;height:12px;vertical-align:-1px;margin-right:6px;border:1px solid var(--text)}
+
+/* confusion */
+.cm{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:6px;max-width:560px;align-items:stretch}
+.cm .hd{font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;line-height:1.3}
+.cm .rl{justify-content:flex-end;text-align:right}
+.cm-cell{font:inherit;min-height:66px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.85rem;font-weight:600;padding:4px;border-radius:3px}
+.cm-cell .g{font-size:1.15rem;line-height:1}
+.cm-cell.diag{background:var(--surface-2);border-color:var(--text)}
+.cm-cell.costly{border-style:dashed;border-color:var(--red);border-width:2px}
+.cm-cell.costly2{border-style:dotted;border-color:var(--gold-ink);border-width:2.5px}
+.cm-cell[aria-pressed="true"]{background:var(--pressed-bg);color:var(--pressed-fg);border-color:var(--pressed-bg)}
+.cm-axis{font-size:.82rem;color:var(--muted);margin:6px 0 0}
+
+/* ovr */
+.ovr{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
+.ovr span{width:30px;height:24px;border:1.5px solid var(--text);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;background:var(--surface-2)}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:8px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.two>div{border:1px solid var(--border);padding:12px 14px;background:var(--bg)}
+.big{font-family:var(--display);font-style:italic;font-size:2.3rem;font-weight:800;line-height:1.1}
+
+/* explore accordion */
+details.acc{background:var(--surface);border:1px solid var(--border);border-left:5px solid var(--gold);margin:12px 0}
+details.acc>summary{cursor:pointer;padding:13px 18px;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:12px}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary::after{content:"+";font-size:1.3rem;line-height:1;font-weight:400}
+details.acc[open]>summary::after{content:"\2212"}
+details.acc .acc-body{padding:2px 20px 16px;max-width:68ch}
+details.acc .acc-body p{margin:0 0 .8em}
+.prompt{font-family:var(--mono);font-size:.85rem;background:#0B0B0B;color:#F1EEE9;border-left:5px solid var(--gold);padding:10px 14px;margin:8px 0 12px;line-height:1.6}
+
+/* takeaways */
+.take{list-style:none;padding:0;margin:26px 0;counter-reset:tk;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.take li{counter-increment:tk;position:relative;margin:0;padding:16px 18px 16px 62px;background:var(--surface);border:1px solid var(--border);min-height:84px;border-left:5px solid var(--red)}
+.take li:nth-child(even){border-left-color:var(--gold)}
+.take li::before{content:counter(tk);position:absolute;left:16px;top:12px;width:34px;height:38px;background:#D0121B;color:#fff;font-family:var(--display);font-style:italic;font-weight:800;font-size:1.35rem;text-align:center;line-height:38px;transform:skewX(-8deg)}
+.take li:nth-child(even)::before{background:#000;color:#E0BB4A}
+@media (max-width:720px){.take{grid-template-columns:1fr}}
+
+/* footer */
+footer{background:#000;color:#fff;padding:0 0 52px}
+footer .kit{margin-bottom:44px}
+.foot-inner{padding:0 24px}
+.foot-inner{max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px 40px;justify-content:space-between;align-items:baseline}
+footer .ft{font-family:var(--display);font-style:italic;font-size:1.9rem;font-weight:800}
+footer p{margin:0;color:#E0BB4A;font-family:var(--display);font-style:italic;font-weight:700;font-size:1.15rem}
+@media (max-width:560px){
+  .splitbar button span{display:none}.splitbar button b{font-size:.72rem;text-align:center;word-break:break-word}
+  .cm-cell{font-size:.72rem;min-height:74px}.cm .hd{font-size:.75rem}
+  .krow{grid-template-columns:52px minmax(0,1fr);}.krow>*:last-child{grid-column:2}
+  .slot{width:calc(50% - 5px)}
+}
+@media print{.topbar,.toc,.theme-btn{display:none}.layout{display:block}details.code>*{display:block}}
+
+/* ---------- class 2 additions ---------- */
+.trio.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:900px){.trio.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.trio.four{grid-template-columns:1fr}}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:26px 0}
+.cards>div{background:var(--surface);border:1px solid var(--border);border-top:6px solid var(--red);padding:14px 16px 16px}
+.cards>div:nth-child(2){border-top-color:var(--gold)}
+.cards>div:nth-child(3){border-top-color:var(--text)}
+.cards h4{font-size:1.25rem}
+.cards p{margin:0;font-size:.95rem;line-height:1.55}
+.cards .big{font-size:1.9rem;word-break:break-word}
+.widget-body .cards{margin:16px 0 0}
+.widget-body .cards>div{background:var(--bg)}
+.frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 .4em}
+.frac>span:first-child{border-bottom:2px solid currentColor;padding:0 .5em .12em}
+.frac>span:last-child{padding:.12em .5em 0}
+canvas.lab{display:block;width:100%;height:auto;border:1px solid var(--text);background:var(--surface);touch-action:none;margin:6px 0}
+canvas.lab:focus-visible{outline-offset:3px}
+.inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.inputs label{display:grid;gap:3px;font-size:.85rem;font-weight:600}
+.inputs input{font:inherit;font-family:var(--mono);padding:7px 9px;border:1px solid var(--text);background:var(--bg);color:var(--text);width:100%;border-radius:3px}
+.grp{font-family:var(--display);font-style:italic;font-weight:800;font-size:1.15rem;margin:4px 0 6px}
+.cm-cell.static{cursor:default;min-height:58px}
+.cm-cell.hit{border:3px solid var(--red);background:var(--red-tint)}
+.cm-cell.dim{opacity:.65}
+.bks{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.bk{border:1px solid var(--border);padding:2px 9px;font-family:var(--mono);font-size:.82rem;background:var(--bg)}
+.bk.on{background:var(--pressed-bg);color:var(--pressed-fg);border-color:var(--pressed-bg)}
+.imp-table td.q{font-weight:800;color:var(--red)}
+.imp-table tr.used td:first-child{box-shadow:inset 5px 0 0 var(--gold)}
+.imp-table tr.newrow td{background:var(--gold-tint);font-weight:600}
+.imp-table th.ign{text-decoration:line-through;color:#aaa}
+.hb .track .real.gold{background:var(--gold)}
+.mini{font-size:.86rem;color:var(--muted);margin:8px 0 0}
+svg.chart{display:block;width:100%;height:auto;background:var(--surface);border:1px solid var(--border)}
+svg.chart text{font-family:var(--sans);fill:var(--text)}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· DSML Supervised 2 · KNN with scikit-learn</span><span class="pn"><a href="../DSML-SL-1/" title="DSML Supervised 1 · K-nearest neighbors">← Prev</a><a href="../DSML-SL-3/" title="DSML Supervised 3 · Decision trees and impurity">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip" href="#main">Skip to content</a>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="m1" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="currentColor" stroke="var(--mark-stroke)" stroke-width="1.6"/></symbol>
+  <symbol id="m2" viewBox="0 0 24 24"><path d="M12 2.5 L21.5 12 L12 21.5 L2.5 12 Z" fill="currentColor" stroke="var(--mark-stroke)" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="m3" viewBox="0 0 24 24"><path d="M12 3 L22 21 L2 21 Z" fill="currentColor" stroke="var(--mark-stroke)" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand">K-nearest Neighbors 2 post read</div>
+  <button type="button" class="theme-btn" id="themeBtn" aria-pressed="false"><span class="lbl">Dark mode</span></button>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+</header>
+
+<section class="hero" aria-labelledby="title">
+  <div class="hero-inner">
+    <div>
+      <h1 id="title">K-nearest Neighbors 2 post read</h1>
+      <p class="sub">Make it fast, make it fair</p>
+      <p class="lead">The scratch-built model impressed Operations. Now it has to be easy to maintain, cope with ten times as many stores, and handle messy real-world data.</p>
+    </div>
+    <svg viewBox="0 0 440 440" role="img" aria-label="Many stores shown as dim dots. Only the few stores inside a dashed bucket around the new store, drawn as a star, are compared with it, instead of every store on the board.">
+      <rect x="1.5" y="1.5" width="437" height="437" fill="#000" stroke="#E0BB4A" stroke-width="3"/>
+      <g fill="#5B564F"><circle cx="386" cy="207" r="4.5"/><circle cx="96" cy="225" r="4.5"/><circle cx="271" cy="335" r="4.5"/><circle cx="61" cy="143" r="4.5"/><circle cx="60" cy="341" r="4.5"/><circle cx="296" cy="40" r="4.5"/><circle cx="409" cy="402" r="4.5"/><circle cx="86" cy="30" r="4.5"/><circle cx="231" cy="47" r="4.5"/><circle cx="99" cy="119" r="4.5"/><circle cx="36" cy="206" r="4.5"/><circle cx="197" cy="354" r="4.5"/><circle cx="353" cy="301" r="4.5"/><circle cx="148" cy="114" r="4.5"/><circle cx="137" cy="52" r="4.5"/><circle cx="356" cy="176" r="4.5"/><circle cx="400" cy="356" r="4.5"/><circle cx="24" cy="106" r="4.5"/><circle cx="408" cy="180" r="4.5"/><circle cx="53" cy="271" r="4.5"/><circle cx="329" cy="130" r="4.5"/><circle cx="402" cy="321" r="4.5"/><circle cx="70" cy="121" r="4.5"/><circle cx="64" cy="47" r="4.5"/><circle cx="336" cy="94" r="4.5"/><circle cx="99" cy="311" r="4.5"/><circle cx="75" cy="276" r="4.5"/><circle cx="70" cy="189" r="4.5"/><circle cx="143" cy="371" r="4.5"/><circle cx="107" cy="179" r="4.5"/><circle cx="359" cy="276" r="4.5"/><circle cx="63" cy="412" r="4.5"/><circle cx="119" cy="260" r="4.5"/><circle cx="249" cy="364" r="4.5"/><circle cx="96" cy="84" r="4.5"/><circle cx="380" cy="345" r="4.5"/><circle cx="122" cy="98" r="4.5"/><circle cx="314" cy="393" r="4.5"/><circle cx="101" cy="396" r="4.5"/><circle cx="189" cy="65" r="4.5"/><circle cx="39" cy="401" r="4.5"/><circle cx="125" cy="347" r="4.5"/><circle cx="384" cy="104" r="4.5"/><circle cx="30" cy="130" r="4.5"/><circle cx="248" cy="76" r="4.5"/><circle cx="166" cy="373" r="4.5"/><circle cx="408" cy="282" r="4.5"/><circle cx="31" cy="381" r="4.5"/><circle cx="149" cy="416" r="4.5"/><circle cx="54" cy="238" r="4.5"/><circle cx="335" cy="383" r="4.5"/><circle cx="162" cy="293" r="4.5"/><circle cx="188" cy="334" r="4.5"/><circle cx="362" cy="249" r="4.5"/><circle cx="57" cy="318" r="4.5"/><circle cx="265" cy="385" r="4.5"/><circle cx="124" cy="28" r="4.5"/><circle cx="352" cy="357" r="4.5"/><circle cx="366" cy="40" r="4.5"/><circle cx="145" cy="334" r="4.5"/><circle cx="31" cy="77" r="4.5"/><circle cx="202" cy="34" r="4.5"/><circle cx="349" cy="117" r="4.5"/><circle cx="210" cy="94" r="4.5"/><circle cx="304" cy="94" r="4.5"/><circle cx="131" cy="160" r="4.5"/><circle cx="379" cy="58" r="4.5"/><circle cx="307" cy="345" r="4.5"/><circle cx="234" cy="334" r="4.5"/><circle cx="341" cy="49" r="4.5"/><circle cx="138" cy="310" r="4.5"/><circle cx="404" cy="229" r="4.5"/><circle cx="261" cy="35" r="4.5"/><circle cx="130" cy="209" r="4.5"/><circle cx="163" cy="267" r="4.5"/><circle cx="72" cy="224" r="4.5"/><circle cx="378" cy="148" r="4.5"/><circle cx="291" cy="381" r="4.5"/></g>
+      <polygon points="168,128 300,108 348,190 322,290 214,304 158,232" fill="rgba(224,187,74,.10)" stroke="#E0BB4A" stroke-width="3" stroke-dasharray="10 8" stroke-linejoin="round"/>
+      <g stroke="#E0BB4A" stroke-width="1.5" opacity=".7"><line x1="238" y1="206" x2="205" y2="160"/><line x1="238" y1="206" x2="268" y2="148"/><line x1="238" y1="206" x2="302" y2="222"/><line x1="238" y1="206" x2="192" y2="236"/><line x1="238" y1="206" x2="262" y2="268"/></g>
+      <g><use href="#m1" x="191" y="146" width="28" height="28" style="color:var(--c1)"/><use href="#m1" x="254" y="134" width="28" height="28" style="color:var(--c1)"/><use href="#m2" x="288" y="208" width="28" height="28" style="color:var(--c2)"/><use href="#m1" x="178" y="222" width="28" height="28" style="color:var(--c1)"/><use href="#m1" x="248" y="254" width="28" height="28" style="color:var(--c1)"/></g>
+      <polygon points="0,-17 4.1,-5.7 16.2,-5.3 6.7,2.2 10,13.8 0,7 -10,13.8 -6.7,2.2 -16.2,-5.3 -4.1,-5.7" transform="translate(238 206) scale(1.3)" fill="#fff" stroke="#E0BB4A" stroke-width="2.2" stroke-linejoin="round"/>
+    </svg>
+  </div>
+</section>
+<div class="kit" aria-hidden="true"></div>
+
+<div class="layout">
+<nav class="toc" aria-label="Contents">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#ticket">Ticket #2</a></li>
+    <li><a href="#sklearn">Let scikit-learn help</a></li>
+    <li><a href="#k">What k really controls</a></li>
+    <li><a href="#boundary">Seeing the boundary</a></li>
+    <li><a href="#cost">Is kNN fast enough?</a></li>
+    <li><a href="#messy">Messy data</a></li>
+    <li><a href="#metric">Choosing a metric</a></li>
+    <li><a href="#lsh">Fast search with LSH</a></li>
+    <li><a href="#impute">Filling gaps with kNN</a></li>
+    <li><a href="#explore">Explore further</a></li>
+    <li><a href="#summary">Key takeaways</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<!-- ================= TICKET ================= -->
+<section class="chapter" id="ticket" aria-labelledby="h-ticket">
+  <h2 id="h-ticket">Back at Orbit Express</h2>
+  <p>Your scratch-built kNN model impressed the Operations team, but a new ticket has landed on your desk.</p>
+
+  <div class="ticket">
+    <h4>Ticket #2 from the Head of Operations</h4>
+    <blockquote>&ldquo;Good work on the first model. Three things before we roll it out. One, our data science lead wants it rebuilt with a standard library, not hand-written code, so it is easier to maintain. Two, we are about to 10x the number of stores. Will your model still work, and will it still be fast? Three, our delivery logs have missing values in half the columns. Can the same idea help us fill those gaps?&rdquo;</blockquote>
+  </div>
+
+  <div class="trio">
+    <div><h4>Maintainable</h4><p>Rebuild the model with a standard library instead of hand-written code.</p></div>
+    <div><h4>Fast at scale</h4><p>Work out what kNN costs, and what happens with 10x the stores.</p></div>
+    <div><h4>Ready for messy data</h4><p>Handle categorical and missing fields, and see whether kNN can fill the gaps.</p></div>
+  </div>
+
+  <h3>What you will be able to do</h3>
+  <ul class="checks">
+    <li>Build and evaluate a kNN classifier using scikit-learn.</li>
+    <li>Explain bias and variance in kNN, and how <em>k</em> controls the trade-off.</li>
+    <li>Choose <em>k</em> using a validation curve, and read a decision boundary.</li>
+    <li>State the training and prediction time complexity of kNN, and why it matters at scale.</li>
+    <li>Prepare categorical features for kNN and explain the curse of dimensionality.</li>
+    <li>Pick a distance metric (Euclidean, Manhattan, Cosine) for a given kind of data.</li>
+    <li>Explain, at a high level, how techniques like LSH make kNN usable on huge datasets.</li>
+    <li>Use kNN to impute missing values.</li>
+  </ul>
+
+  <h3>Where Class 1 left us</h3>
+  <p>This class continues directly from <a href="../DSML-SL-1/">K-nearest Neighbors 1 post read</a>. Four ideas carry over.</p>
+  <div class="trio four">
+    <div><h4>The vote</h4><p>A new store takes the class most common among its <em>k</em> nearest neighbours.</p></div>
+    <div><h4>The data recipe</h4><p>Split, scale, then balance with SMOTE, learning from the train set only.</p></div>
+    <div><h4>The locked test set</h4><p>It is opened only once, at the very end.</p></div>
+    <div><h4>Two open questions</h4><p><em>k</em> was chosen without checking, and every prediction compares with all stored points.</p></div>
+  </div>
+
+  <details class="code">
+    <summary>Code: rebuild the Class 1 setup</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.read_csv('multiclass.csv')
+
+X = df.drop(columns='class')
+y = df['class']
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from imblearn.over_sampling import SMOTE   # if not installed: !pip install -q imbalanced-learn
+
+X_train_val, X_test, y_train_val, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+X_train, X_val, y_train, y_val = train_test_split(
+    X_train_val, y_train_val, test_size=0.25, random_state=42, stratify=y_train_val)
+
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)
+X_val_s   = scaler.transform(X_val)
+X_test_s  = scaler.transform(X_test)
+
+X_bal, y_bal = SMOTE(random_state=42).fit_resample(X_train_s, y_train)
+
+tier_names = ['High', 'Moderate', 'Low']
+
+print('Train (balanced):', X_bal.shape)
+print('Validation       :', X_val_s.shape)
+print('Test             :', X_test_s.shape)</code></pre></figure>
+  </details>
+  <p>The names used throughout this class: <code>X_bal, y_bal</code> is the scaled and SMOTE-balanced training data, <code>X_val_s, y_val</code> is the scaled validation set, <code>X_test_s, y_test</code> is the scaled test set, and <code>tier_names</code> holds the tier labels for reports and plots.</p>
+</section>
+
+<!-- ================= SKLEARN ================= -->
+<section class="chapter" id="sklearn" aria-labelledby="h-sk">
+  <h2 id="h-sk">Let scikit-learn do the heavy lifting</h2>
+  <p>Writing kNN by hand was great for understanding it. In production, we use a tested, optimised library implementation instead. scikit-learn&rsquo;s <code>KNeighborsClassifier</code> does the distance, sorting and voting for us.</p>
+
+  <figure class="code code-open"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>from sklearn.neighbors import KNeighborsClassifier
+
+knn = KNeighborsClassifier(n_neighbors=5, metric='euclidean')
+knn.fit(X_bal, y_bal)
+
+print('Validation accuracy:', round(knn.score(X_val_s, y_val), 3))</code></pre></figure>
+
+  <ul>
+    <li><code>.fit()</code> <strong>stores</strong> the training data. Unlike Logistic Regression, it does not learn weights.</li>
+    <li><code>.predict()</code> and <code>.score()</code> handle distance, sorting and voting.</li>
+    <li><code>n_neighbors</code> is our <em>k</em>, and <code>metric</code> is the distance measure. Both are choices we make.</li>
+  </ul>
+  <p>Because <code>.fit()</code> only stores data, you should not expect it to take noticeably longer as the training set grows. The cost chapter shows why.</p>
+
+  <details class="code">
+    <summary>Code: evaluate with a report and confusion matrix</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>from sklearn.metrics import classification_report, ConfusionMatrixDisplay
+
+y_val_pred = knn.predict(X_val_s)
+print(classification_report(y_val, y_val_pred, target_names=tier_names))
+
+ConfusionMatrixDisplay.from_predictions(y_val, y_val_pred, display_labels=tier_names)
+plt.title('scikit-learn kNN (k=5) on validation stores')
+plt.show()</code></pre></figure>
+  </details>
+  <p>Run the report and compare it with your from-scratch model from Class 1. The two implement the same idea, so the numbers should be close. Check which tier the model still gets wrong most often.</p>
+
+  <h3>Reading a confusion matrix like an engineer</h3>
+  <p>For Orbit Express, is a <strong>False High-traffic</strong> prediction (a Low store predicted as High) worse than a <strong>False Low-traffic</strong> prediction (a High store predicted as Low)? Answering needs the right cells. For any one tier, <strong>false positives</strong> and <strong>false negatives</strong> live in different places in the matrix.</p>
+
+  <div class="widget" id="fpfnW"></div>
+
+  <p>Which of the two mistakes is worse is a business call. Locate those exact cells in your own matrix, and check whether the model makes more of one mistake than the other for the High tier.</p>
+</section>
+
+<!-- ================= K ================= -->
+<section class="chapter" id="k" aria-labelledby="h-k">
+  <h2 id="h-k">What <em>k</em> really controls</h2>
+  <p>We picked <em>k</em> = 5 in Class 1 without justifying it. Let us understand what <em>k</em> actually controls.</p>
+
+  <h3>A thought experiment</h3>
+  <p>Suppose our training data has 30 &ldquo;Moderate&rdquo; stores and 1 mislabelled &ldquo;High&rdquo; store sitting right in the middle of them, purely due to a data entry error.</p>
+  <ul>
+    <li>With <em>k</em> = 1, a new store near that mislabelled point is predicted &ldquo;High&rdquo;, purely because of one bad data point.</li>
+    <li>With <em>k</em> = 29 (almost the whole neighbourhood), that one bad point barely matters. The vote is dominated by the correctly labelled &ldquo;Moderate&rdquo; stores.</li>
+  </ul>
+
+  <div class="widget" id="outW"></div>
+
+  <div class="key"><p>If <em>k</em> equals the entire training set, kNN always predicts the overall majority class, no matter where the query point is.</p></div>
+
+  <h3>Overfitting and underfitting</h3>
+  <p>The two extremes have names. A model that fits every quirk and outlier extremely closely, and changes a lot if the training data changes slightly, has <strong>high variance and low bias</strong>. That is <strong>overfitting</strong>, and a very small <em>k</em> pushes kNN in this direction. A model that is too smooth to capture real patterns has <strong>high bias and low variance</strong>. That is <strong>underfitting</strong>, and a very large <em>k</em> pushes kNN there.</p>
+
+  <div class="quiz" data-quiz="q1"></div>
+
+  <h3>Choosing <em>k</em> with a validation curve</h3>
+  <p><em>k</em> is a <strong>hyperparameter</strong>. Training data is used to fit the model, test data is opened only once at the end, and <strong>validation data</strong> is exactly what we use to compare hyperparameter choices such as <em>k</em>.</p>
+
+  <div class="quiz" data-quiz="q2"></div>
+
+  <p>The plan: loop over <em>k</em> from 1 to 50, record training and validation accuracy for each, and plot both. The <em>k</em> with the highest validation accuracy is <code>best_k</code>.</p>
+
+  <details class="code">
+    <summary>Code: plot accuracy against k</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>train_acc = []
+val_acc = []
+k_values = range(1, 51)
+
+for k in k_values:
+    model = KNeighborsClassifier(n_neighbors=k, metric='euclidean')
+    model.fit(X_bal, y_bal)
+    train_acc.append(model.score(X_bal, y_bal))
+    val_acc.append(model.score(X_val_s, y_val))
+
+plt.figure(figsize=(10, 5))
+plt.plot(k_values, train_acc, marker='o', label='Training accuracy')
+plt.plot(k_values, val_acc, marker='o', label='Validation accuracy')
+plt.xlabel('k')
+plt.ylabel('Accuracy')
+plt.title('How accuracy changes with k')
+plt.legend()
+plt.show()
+
+best_k = k_values[np.argmax(val_acc)]
+print('Best k by validation accuracy:', best_k)</code></pre></figure>
+  </details>
+
+  <h3>A second way to pick <em>k</em>: the elbow method</h3>
+  <p>Looking for the single highest point on the validation curve works, but it can be noisy: the very top point is sometimes just a lucky value of <em>k</em>, not a genuinely better one. A more robust habit is the <strong>elbow method</strong>. Plot the <strong>error rate</strong> (1 &minus; accuracy) against <em>k</em> and look for the point where the curve stops dropping sharply and flattens out, like a bent elbow. Past that point, a larger <em>k</em> mostly adds smoothing (and eventual underfitting) rather than real improvement.</p>
+
+  <div class="widget" id="bvW"></div>
+
+  <details class="code">
+    <summary>Code: the elbow plot</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>error_rate = [1 - acc for acc in val_acc]
+
+plt.figure(figsize=(10, 5))
+plt.plot(k_values, error_rate, marker='o')
+plt.xlabel('k')
+plt.ylabel('Validation error rate (1 - accuracy)')
+plt.title('Elbow method: where does the error stop improving?')
+plt.show()</code></pre></figure>
+  </details>
+
+  <h3>Reading the curves</h3>
+  <details class="acc">
+    <summary>Training accuracy is highest for very small k. Why does it fall as k grows?</summary>
+    <div class="acc-body"><p>With a very small <em>k</em>, the model follows every training store closely, so it does well on the data it has stored. As <em>k</em> grows, each vote averages over more stores, so the model fits individual training points less closely and training accuracy falls.</p></div>
+  </details>
+  <details class="acc">
+    <summary>Validation accuracy rises, peaks, then falls. What does the peak represent?</summary>
+    <div class="acc-body"><p>The peak is the best balance between the two extremes: <em>k</em> is large enough to ignore noisy points and small enough to keep real patterns. To its left the model overfits, and to its right it underfits.</p></div>
+  </details>
+  <details class="acc">
+    <summary>Where is the elbow, and does it agree with best_k?</summary>
+    <div class="acc-body"><p>On the error-rate plot, the elbow is where the curve stops dropping sharply. It should roughly agree with <code>best_k</code>. If they differ slightly, remember that the single highest point can be a lucky value, which is why the elbow is the more robust habit.</p></div>
+  </details>
+  <details class="acc">
+    <summary>Where does overfitting happen, and where does underfitting start?</summary>
+    <div class="acc-body"><p>Overfitting happens at small <em>k</em>, where training accuracy is high but validation accuracy is lower. Underfitting starts at large <em>k</em>, where validation accuracy has fallen away from its peak because the vote is too smooth to reflect the data.</p></div>
+  </details>
+
+  <div class="ticket closed">
+    <h4>Ticket update</h4>
+    <blockquote>We now have two principled ways to choose <em>k</em> rather than guessing: the highest validation accuracy, and the elbow in the error curve. We carry <code>best_k</code> forward for the rest of the class.</blockquote>
+  </div>
+</section>
+
+<!-- ================= BOUNDARY ================= -->
+<section class="chapter" id="boundary" aria-labelledby="h-bd">
+  <h2 id="h-bd">Seeing <em>k</em> in the decision boundary</h2>
+  <p>kNN with a small <em>k</em> draws a jagged, twisty boundary between tiers. A larger <em>k</em> draws a smoother one. To see this directly, use two features so it is easy to plot. The lab below uses illustrative points, not the Orbit Express data, so you can vary <em>k</em> freely.</p>
+
+  <div class="widget" id="bdW"></div>
+
+  <details class="code">
+    <summary>Code: plot the boundary for k = 1 and k = best_k</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>from sklearn.inspection import DecisionBoundaryDisplay
+
+# Using two real features (not a projection) so the plot is directly interpretable
+two_feat_train = X_train[['Fresh', 'Grocery']].values
+two_feat_train_s = StandardScaler().fit_transform(two_feat_train)
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+for ax, k in zip(axes, [1, best_k]):
+    clf = KNeighborsClassifier(n_neighbors=k, metric='euclidean')
+    clf.fit(two_feat_train_s, y_train)
+
+    disp = DecisionBoundaryDisplay.from_estimator(
+        clf, two_feat_train_s, response_method='predict',
+        xlabel='Fresh (scaled)', ylabel='Grocery (scaled)',
+        alpha=0.4, cmap=plt.cm.coolwarm, ax=ax)
+    ax.scatter(two_feat_train_s[:, 0], two_feat_train_s[:, 1],
+               c=y_train, edgecolor='k', cmap=plt.cm.coolwarm)
+    ax.set_title(f'k = {k}')
+
+plt.tight_layout()
+plt.show()</code></pre></figure>
+  </details>
+  <p>Run it for <em>k</em> = 1 and for <code>best_k</code>, using the <code>Fresh</code> and <code>Grocery</code> columns only (the same two features from Class 1), and compare which is jagged and which is smoother. The plot uses only 2 of our 7 features, purely so we can draw it. Our actual model still uses all 7.</p>
+</section>
+
+<!-- ================= COST ================= -->
+<section class="chapter" id="cost" aria-labelledby="h-cost">
+  <h2 id="h-cost">Is kNN actually fast enough?</h2>
+  <p>The worry about scale is real. Let us work out exactly what kNN costs, in time and memory, so we can answer it properly. Say we have <strong><i>n</i></strong> training stores and <strong><i>d</i></strong> features.</p>
+
+  <div class="cards">
+    <div><h4>Training time</h4><p><code>.fit()</code> does no real computation. It just stores the data. The cost is <strong>constant</strong>: it does not grow at all, no matter how many stores we have.</p></div>
+    <div><h4>Space</h4><p>We keep every training point, with every feature. Memory grows in proportion to <strong><i>n</i> &times; <i>d</i></strong>.</p></div>
+    <div><h4>Prediction time, one new store</h4><p>Distances to all <i>n</i> points, each using <i>d</i> features: proportional to <i>n</i> &times; <i>d</i>. Sorting those <i>n</i> distances grows a little faster than <i>n</i> (roughly <i>n</i> times its own logarithm). Taking the top <i>k</i> is negligible.</p></div>
+  </div>
+
+  <div class="key"><p>Training barely costs anything, but every single prediction gets more expensive as the store count grows.</p></div>
+
+  <p>So per prediction, cost grows in proportion to <i>n</i> &times; <i>d</i>, plus a bit more for the sorting step. That answers the ticket&rsquo;s scaling question directly: with 10x the stores, each prediction does roughly 10x the distance work.</p>
+
+  <div class="widget" id="costLab"></div>
+
+  <div class="quiz" data-quiz="q3"></div>
+  <div class="quiz" data-quiz="q4"></div>
+
+  <h3>Measuring prediction time as data grows</h3>
+  <p>The same story shows up in a timing experiment. It builds models on random data of growing size, and always predicts the same 50 queries.</p>
+  <details class="code">
+    <summary>Code: time predictions as the training set grows</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>import time
+
+sizes = [500, 2000, 8000, 32000]
+times = []
+
+for n in sizes:
+    X_dummy = np.random.randn(n, X_bal.shape[1])
+    y_dummy = np.random.randint(1, 4, size=n)
+    model = KNeighborsClassifier(n_neighbors=5).fit(X_dummy, y_dummy)
+
+    start = time.time()
+    model.predict(X_val_s[:50])   # predicting the same 50 queries each time
+    times.append(time.time() - start)
+
+for n, t in zip(sizes, times):
+    print(f'Training set size {n:>6}: prediction time for 50 queries = {t:.4f} sec')</code></pre></figure>
+  </details>
+  <p>As the number of stored stores grows, prediction time grows with it, even though the 50 queries never change. Now imagine Orbit Express with lakhs of stores, and thousands of predictions per second during a lunchtime rush.</p>
+
+  <div class="ticket closed">
+    <h4>Ticket update</h4>
+    <blockquote>The &ldquo;is it fast enough&rdquo; worry is justified. A real fix comes later in this class.</blockquote>
+  </div>
+</section>
+
+<!-- ================= MESSY ================= -->
+<section class="chapter" id="messy" aria-labelledby="h-messy">
+  <h2 id="h-messy">When the data is not clean</h2>
+  <p>Real-world data is messy: fields go missing, and some fields are not numbers at all. kNN needs a real number for every feature, for every store, to compute a distance. Suppose a new field, <code>City_Type</code>, arrives with values like &ldquo;Metro&rdquo;, &ldquo;Tier-2&rdquo; and &ldquo;Tier-3&rdquo;. It cannot go into <code>knn.fit()</code> as it is.</p>
+
+  <h3>Categorical features need numbers</h3>
+  <p>A common fix is <strong>One-Hot Encoding (OHE)</strong>: turn one categorical column with <em>k</em> unique values into <em>k</em> binary (0/1) columns.</p>
+  <div class="table-wrap">
+    <table>
+      <caption>One-Hot Encoding of City_Type</caption>
+      <thead><tr><th>City_Type</th><th>is_Metro</th><th>is_Tier2</th><th>is_Tier3</th></tr></thead>
+      <tbody>
+        <tr><td>Metro</td><td>1</td><td>0</td><td>0</td></tr>
+        <tr><td>Tier-2</td><td>0</td><td>1</td><td>0</td></tr>
+        <tr><td>Tier-3</td><td>0</td><td>0</td><td>1</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>This works, but look at what it does to the number of features. A field with many unique values, like a <code>Locality</code> field with hundreds of neighbourhoods, can explode into hundreds of extra columns.</p>
+
+  <div class="widget" id="oheW"></div>
+
+  <details class="code">
+    <summary>Code: One-Hot Encoding with pandas</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>toy_categorical = pd.DataFrame({
+    'City_Type': ['Metro', 'Tier-2', 'Tier-3', 'Metro', 'Tier-3'],
+    'Store_Rating': [4.2, 3.8, 4.5, 3.1, 4.0]
+})
+
+encoded = pd.get_dummies(toy_categorical, columns=['City_Type'], dtype=int)
+encoded</code></pre></figure>
+  </details>
+
+  <h3>The curse of dimensionality</h3>
+  <p>Here is the problem with piling on dimensions carelessly. As the number of features grows very large, distances between points start to lose their meaning. Points that should look &ldquo;close&rdquo; and &ldquo;far&rdquo; start to look almost equally far from each other. The demo below measures this on random data: one query point, 500 random points, and the ratio (farthest &minus; nearest) / farthest.</p>
+
+  <div class="widget" id="curseW"></div>
+
+  <p>In low dimensions, the nearest and farthest points are clearly different distances away. As dimensions grow, that ratio shrinks, so every point looks about equally &ldquo;close&rdquo; or &ldquo;far&rdquo;, and the whole idea of a &ldquo;nearest neighbour&rdquo; starts to break down.</p>
+
+  <details class="code">
+    <summary>Code: measure the distance spread</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>def distance_spread(n_points, n_dims):
+    """Ratio of (farthest distance - nearest distance) to farthest distance,
+    from one query point to n_points random points in n_dims dimensions."""
+    points = np.random.rand(n_points, n_dims)
+    query = np.random.rand(n_dims)
+    dists = np.sqrt(((points - query) ** 2).sum(axis=1))
+    return (dists.max() - dists.min()) / dists.max()
+
+for d in [2, 10, 50, 200, 1000]:
+    ratio = distance_spread(n_points=500, n_dims=d)
+    print(f'Dimensions = {d:>4}: (farthest - nearest) / farthest = {ratio:.3f}')</code></pre></figure>
+  </details>
+
+  <div class="note"><p><strong>Take-away.</strong> One-Hot Encoding a field with many categories can push us into this territory. That is one reason <strong>Target Encoding</strong>, which keeps one column per feature and uses the average target value per category, is often preferred for high-cardinality categorical features in distance-based models.</p></div>
+
+  <div class="quiz" data-quiz="q5"></div>
+
+  <h3>Missing values</h3>
+  <p>Real store records sometimes arrive with a missing value, for example a missing <code>Detergents_Paper</code> figure. We cannot compute a distance using a missing number. Filling in a single global average is the simplest option, but kNN itself offers a better one, built later in this class.</p>
+</section>
+
+<!-- ================= METRIC ================= -->
+<section class="chapter" id="metric" aria-labelledby="h-met">
+  <h2 id="h-met">Choosing the right distance metric</h2>
+  <p>So far we have always used Euclidean distance. It is not the only option, and the right choice depends on the data. Take two points, A(1, 1, 3) and B(1, 3, 5).</p>
+
+  <figure class="code code-open"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>a = np.array([1, 1, 3])
+b = np.array([1, 3, 5])
+
+euclidean = np.sqrt(np.sum((a - b) ** 2))
+manhattan = np.sum(np.abs(a - b))
+
+print('Euclidean distance:', euclidean.round(3))
+print('Manhattan distance:', manhattan)</code></pre></figure>
+  <p>Manhattan distance sums the absolute difference along each feature: |1&minus;1| + |1&minus;3| + |3&minus;5| = 0 + 2 + 2 = 4. Euclidean distance takes the straight line: &radic;(0 + 4 + 4) = &radic;8 &asymp; 2.828.</p>
+
+  <div class="quiz" data-quiz="q6"></div>
+
+  <h3>Euclidean and Manhattan are two ends of the same family</h3>
+  <div class="formula" role="math" aria-label="Minkowski distance: the sum over j from 1 to d of the absolute difference between x j one and x j two, raised to the power p, all raised to the power one over p" style="font-size:1.35rem">
+    <span style="font-size:2.1rem;vertical-align:middle">(</span> &sum;<sub>j=1</sub><sup><i>d</i></sup> |<i>x</i><sub><i>j</i></sub><sup>(1)</sup> &minus; <i>x</i><sub><i>j</i></sub><sup>(2)</sup>|<sup><i>p</i></sup> <span style="font-size:2.1rem;vertical-align:middle">)</span><sup>1/<i>p</i></sup>
+  </div>
+  <ul>
+    <li><i>p</i> = 1 gives <strong>Manhattan distance</strong> (also called L1 distance): useful when movement happens along a grid, like city blocks on a map.</li>
+    <li><i>p</i> = 2 gives <strong>Euclidean distance</strong> (also called L2 distance): the straight-line distance we have used so far.</li>
+    <li>This general form is the <strong>Minkowski distance</strong>, and <i>p</i> is itself a hyperparameter.</li>
+  </ul>
+
+  <figure>
+    <div class="fig">
+      <svg viewBox="0 0 400 270" role="img" aria-labelledby="cbT cbD" style="max-width:520px;margin:0 auto">
+        <title id="cbT">Straight line versus city blocks</title>
+        <desc id="cbD">Two points on a street grid. The Euclidean distance is the straight diagonal line. The Manhattan distance follows the grid, 6 blocks across and 4 blocks up.</desc>
+        <g stroke="var(--border)" stroke-width="1">
+          <line x1="20" y1="240" x2="380" y2="240"/><line x1="20" y1="200" x2="380" y2="200"/><line x1="20" y1="160" x2="380" y2="160"/><line x1="20" y1="120" x2="380" y2="120"/><line x1="20" y1="80" x2="380" y2="80"/><line x1="20" y1="40" x2="380" y2="40"/>
+          <line x1="40" y1="30" x2="40" y2="250"/><line x1="80" y1="30" x2="80" y2="250"/><line x1="120" y1="30" x2="120" y2="250"/><line x1="160" y1="30" x2="160" y2="250"/><line x1="200" y1="30" x2="200" y2="250"/><line x1="240" y1="30" x2="240" y2="250"/><line x1="280" y1="30" x2="280" y2="250"/><line x1="320" y1="30" x2="320" y2="250"/><line x1="360" y1="30" x2="360" y2="250"/>
+        </g>
+        <polyline points="80,200 320,200 320,40" fill="none" stroke="var(--gold)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+        <line x1="80" y1="200" x2="320" y2="40" stroke="var(--red)" stroke-width="4" stroke-dasharray="1 0"/>
+        <circle cx="80" cy="200" r="8" fill="var(--text)"/><circle cx="320" cy="40" r="8" fill="var(--text)"/>
+        <text class="svg-text" x="80" y="226" font-size="15" font-weight="700" text-anchor="middle" stroke="var(--surface)" stroke-width="4" paint-order="stroke">A</text>
+        <text class="svg-text" x="320" y="28" font-size="15" font-weight="700" text-anchor="middle" stroke="var(--surface)" stroke-width="4" paint-order="stroke">B</text>
+        <text x="170" y="112" font-size="15" font-weight="700" fill="var(--red)" stroke="var(--surface)" stroke-width="4" paint-order="stroke" transform="rotate(-33 170 112)">Euclidean: straight line</text>
+        <text class="svg-text" x="200" y="190" font-size="15" font-weight="700" text-anchor="middle" stroke="var(--surface)" stroke-width="4" paint-order="stroke">Manhattan: along the blocks</text>
+      </svg>
+    </div>
+    <figcaption>Manhattan distance follows the grid, like city blocks on a map. Here A and B are 6 blocks across and 4 blocks up: 6 + 4 = 10 for Manhattan, against &radic;52 &asymp; 7.21 for Euclidean.</figcaption>
+  </figure>
+
+  <div class="widget" id="metW"></div>
+
+  <h3>Cosine similarity: when direction matters more than distance</h3>
+  <p>After One-Hot Encoding, our data can become <strong>sparse</strong> (mostly zeros) and high-dimensional. Manhattan and Euclidean distance treat every feature equally, including the many irrelevant zeros. <strong>Cosine similarity</strong> instead looks at the <em>angle</em> between two feature vectors, which tends to ignore those irrelevant zero features better.</p>
+  <div class="formula" role="math" aria-label="Cosine similarity equals the dot product of x one and x two, divided by the length of x one times the length of x two">
+    cosine similarity =
+    <span class="frac"><span><i>x</i><sup>(1)</sup> &middot; <i>x</i><sup>(2)</sup></span><span>&#8214;<i>x</i><sup>(1)</sup>&#8214; &#8214;<i>x</i><sup>(2)</sup>&#8214;</span></span>
+  </div>
+
+  <h3>Which metric to use</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Metric</th><th>Best suited for</th></tr></thead>
+      <tbody>
+        <tr><td>Euclidean</td><td>Low-dimensional, dense numeric data (most common default)</td></tr>
+        <tr><td>Manhattan</td><td>Grid-like or map-like data</td></tr>
+        <tr><td>Cosine similarity</td><td>High-dimensional, sparse data (for example, after heavy One-Hot Encoding)</td></tr>
+        <tr><td>Minkowski</td><td>When you want a custom <i>p</i> between Manhattan and Euclidean</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>All of these are simply <strong>hyperparameters</strong> of kNN, chosen and compared using the validation set, exactly like <em>k</em>.</p>
+
+  <details class="code">
+    <summary>Code: compare metrics on the validation set</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>for metric in ['euclidean', 'manhattan', 'cosine']:
+    model = KNeighborsClassifier(n_neighbors=best_k, metric=metric)
+    model.fit(X_bal, y_bal)
+    print(f'{metric:>10}: validation accuracy = {model.score(X_val_s, y_val):.3f}')</code></pre></figure>
+  </details>
+  <p>Our data is low-dimensional and dense, with no One-Hot Encoding, which is exactly the setting where Euclidean distance tends to do well. Keep this experiment in mind for later classes, once we work with sparse, high-dimensional features.</p>
+</section>
+
+<!-- ================= LSH ================= -->
+<section class="chapter" id="lsh" aria-labelledby="h-lsh">
+  <h2 id="h-lsh">Making search fast: Locality Sensitive Hashing</h2>
+  <p>Two worries remain: speed at scale, and one more useful trick, using kNN itself to fill in missing values. Start with speed.</p>
+  <p>We already worked out that prediction cost grows in proportion to <i>n</i> &times; <i>d</i> (plus a bit more for sorting) per query, comparing against every single stored point. Real systems, including large-scale image and product search, rarely do this literally. Instead, they use <strong>Locality Sensitive Hashing (LSH)</strong> to avoid comparing against everyone.</p>
+
+  <h3>The idea: a hash table of neighbourhoods</h3>
+  <p>The core idea is the same as a hash table, or a dictionary:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Key</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td><code>'Metro-HighFresh'</code></td><td>[Store A, Store B, Store C]</td></tr>
+        <tr><td><code>'Tier2-LowFresh'</code></td><td>[Store D, Store E]</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>LSH builds a hashing function so that <strong>similar stores tend to land in the same bucket</strong>. Then, for a new store, instead of comparing against every stored store, we only compare it against the (much smaller) bucket it hashes into.</p>
+
+  <figure>
+    <div class="fig">
+      <svg viewBox="0 0 640 250" role="img" aria-labelledby="fnT fnD">
+        <title id="fnT">A new store is hashed into one bucket</title>
+        <desc id="fnD">A new store passes through a hash function and lands in the bucket named Metro-HighFresh, which holds Store A, Store B and Store C. Only those stores are compared with it. The bucket named Tier2-LowFresh, with Store D and Store E, is skipped.</desc>
+        <rect x="10" y="90" width="120" height="70" fill="var(--surface)" stroke="var(--text)" stroke-width="2"/>
+        <polygon points="70,105 74.4,116.9 87.1,117.4 77.1,125.3 80.6,137.6 70,130.5 59.4,137.6 62.9,125.3 52.9,117.4 65.6,116.9" fill="var(--text)" stroke="var(--gold)" stroke-width="1.5" transform="translate(0 0)"/>
+        <text class="svg-text" x="70" y="152" font-size="13" font-weight="700" text-anchor="middle">New store</text>
+        <line x1="130" y1="125" x2="205" y2="125" stroke="var(--text)" stroke-width="2.5"/>
+        <polygon points="205,117 221,125 205,133" fill="var(--text)"/>
+        <rect x="222" y="90" width="120" height="70" fill="var(--text)"/>
+        <text x="282" y="122" font-size="15" font-weight="800" text-anchor="middle" fill="var(--bg)" style="font-family:var(--display);font-style:italic">Hash</text>
+        <text x="282" y="142" font-size="15" font-weight="800" text-anchor="middle" fill="var(--bg)" style="font-family:var(--display);font-style:italic">function</text>
+        <line x1="342" y1="110" x2="410" y2="66" stroke="var(--gold)" stroke-width="3.5"/>
+        <line x1="342" y1="140" x2="410" y2="184" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 6"/>
+        <rect x="412" y="30" width="218" height="74" fill="var(--gold-tint)" stroke="var(--gold)" stroke-width="3"/>
+        <text class="svg-text" x="521" y="55" font-size="14" font-weight="700" text-anchor="middle">'Metro-HighFresh'</text>
+        <text class="svg-text" x="521" y="78" font-size="13" text-anchor="middle">Store A, Store B, Store C</text>
+        <text x="521" y="96" font-size="12" font-weight="700" text-anchor="middle" fill="var(--gold-ink)">compare only with these</text>
+        <rect x="412" y="150" width="218" height="74" fill="var(--surface)" stroke="var(--border)" stroke-width="2" stroke-dasharray="6 5"/>
+        <text class="svg-text" x="521" y="175" font-size="14" text-anchor="middle" opacity=".75">'Tier2-LowFresh'</text>
+        <text class="svg-text" x="521" y="198" font-size="13" text-anchor="middle" opacity=".75">Store D, Store E</text>
+        <text x="521" y="216" font-size="12" text-anchor="middle" fill="var(--muted)">skipped</text>
+      </svg>
+    </div>
+    <figcaption>Instead of comparing the new store with every stored store, LSH sends it to one small bucket.</figcaption>
+  </figure>
+
+  <h3>A simplified LSH implementation</h3>
+  <p>One simple way to build such a hash: project each point onto a few random directions, and use the <em>sign</em> of each projection as one bit of the hash. Points that end up with the same hash string are the ones LSH considers &ldquo;probably close&rdquo;.</p>
+  <details class="code">
+    <summary>Code: a simplified LSH hash</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>def simple_lsh_hash(points, n_bits=3, seed=0):
+    """A simplified LSH: project points onto random directions,
+    and use the sign of each projection as one bit of the hash."""
+    rng = np.random.default_rng(seed)
+    random_directions = rng.normal(size=(points.shape[1], n_bits))
+    projections = points @ random_directions
+    bits = (projections > 0).astype(int)
+    return [''.join(map(str, row)) for row in bits]
+
+sample = X_bal[:12]
+hashes = simple_lsh_hash(sample, n_bits=3)
+
+for h, row in zip(hashes, sample):
+    print(h)</code></pre></figure>
+  </details>
+  <p>A real production system would only compare a new query against stores sharing its hash, instead of against all of them. Try the idea in two dimensions below.</p>
+
+  <div class="widget" id="lshW"></div>
+
+  <div class="ticket closed">
+    <h4>Ticket update</h4>
+    <blockquote>This is the standard building block behind fast, large-scale nearest-neighbour search, including the kind used by services like Google&rsquo;s ScaNN for image similarity search. We are only touching the surface here; a full implementation is beyond this class.</blockquote>
+  </div>
+</section>
+
+<!-- ================= IMPUTE ================= -->
+<section class="chapter" id="impute" aria-labelledby="h-imp">
+  <h2 id="h-imp">Bonus: using kNN to fill in missing values</h2>
+  <p>Earlier we asked how to handle missing fields. One neat answer is kNN itself. To impute a missing value for feature <i>f</i> in store <i>x</i>:</p>
+  <ol>
+    <li><strong>Ignore</strong> feature <i>f</i> temporarily.</li>
+    <li><strong>Find</strong> the nearest neighbours of <i>x</i>, using the remaining features.</li>
+    <li><strong>Fill in</strong> the missing value using the mean of feature <i>f</i> among those neighbours.</li>
+  </ol>
+
+  <div class="widget" id="impW"></div>
+
+  <h3>On the store data</h3>
+  <p>The imputation dataset has gaps in every column. Counting the missing values per column with <code>df_missing.isna().sum()</code> gives:</p>
+  <div class="widget" id="misW">
+    <div class="widget-head"><h4>Missing values per column</h4><p>Real output from the imputation dataset.</p></div>
+    <div class="widget-body"><div class="hbars" id="misBars"></div></div>
+  </div>
+
+  <details class="code">
+    <summary>Code: load the data with missing values</summary>
+    <figure class="code"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>df_missing = pd.read_csv('knn_imputation.csv').drop(columns=['Unnamed: 0'])
+
+print(df_missing.isna().sum())
+df_missing.head()</code></pre></figure>
+  </details>
+
+  <p>scikit-learn&rsquo;s <code>KNNImputer</code> does the three steps for us. We scale first, so that no single feature dominates the distance, exactly as in Class 1.</p>
+  <figure class="code code-open"><figcaption><button type="button" class="copy">Copy</button></figcaption><pre><code>from sklearn.pipeline import Pipeline
+from sklearn.impute import KNNImputer
+
+pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('imputer', KNNImputer(n_neighbors=5))
+])
+
+df_filled = pd.DataFrame(pipeline.fit_transform(df_missing), columns=df_missing.columns)
+
+print('Missing values remaining:')
+print(df_filled.isna().sum())
+df_filled.head()</code></pre></figure>
+  <p>Every missing value has been filled in, using information from similar stores rather than a single global average. This is the same &ldquo;ask your neighbours&rdquo; idea from Class 1, applied to a different problem: filling gaps instead of predicting a class.</p>
+
+  <div class="quiz" data-quiz="q7"></div>
+</section>
+
+<!-- ================= EXPLORE ================= -->
+<section class="chapter" id="explore" aria-labelledby="h-explore">
+  <h2 id="h-explore">Explore further</h2>
+  <p>Three small investigations deepen the ideas above. Form your own guess first, then check it in code. Suggested prompts for an AI assistant are included, but verify what comes back yourself.</p>
+
+  <details class="acc">
+    <summary>Reading a confusion matrix like an engineer</summary>
+    <div class="acc-body">
+      <p>For Orbit Express, is a False High-traffic prediction worse than a False Low-traffic prediction, or the other way round? Write one sentence with your reasoning.</p>
+      <div class="prompt">Given this confusion matrix for 3 classes (High, Moderate, Low), which row and column tell me about false positives for the High class, and which tell me about false negatives?</div>
+      <p><strong>Verify:</strong> paste your matrix values, then locate those exact cells in your confusion matrix. Does the model make more of one mistake than the other for the High tier?</p>
+    </div>
+  </details>
+  <details class="acc">
+    <summary>Visualise the decision boundary</summary>
+    <div class="acc-body">
+      <p>Will the boundary for <em>k</em> = 1 look smooth or jagged, compared with <em>k</em> = <code>best_k</code>? Write your guess first.</p>
+      <div class="prompt">Show me how to use sklearn.inspection.DecisionBoundaryDisplay to plot the decision boundary of a KNeighborsClassifier trained on two features.</div>
+      <p><strong>Verify:</strong> run the boundary code for <em>k</em> = 1 and for <em>k</em> = <code>best_k</code>, using the <code>Fresh</code> and <code>Grocery</code> columns only, and compare.</p>
+    </div>
+  </details>
+  <details class="acc">
+    <summary>Handling missing values</summary>
+    <div class="acc-body">
+      <p>Real store records sometimes arrive with a missing <code>Detergents_Paper</code> value. Name two simple ways to fill in a missing numeric value before running kNN.</p>
+      <div class="prompt">What are common ways to handle missing values before using a distance-based model like kNN, and what are the trade-offs of each?</div>
+      <p><strong>Verify:</strong> compare the AI&rsquo;s suggestions against kNN imputation from the last chapter.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ================= SUMMARY ================= -->
+<section class="chapter" id="summary" aria-labelledby="h-sum">
+  <h2 id="h-sum">Key takeaways</h2>
+  <ol class="take">
+    <li>scikit-learn&rsquo;s <code>KNeighborsClassifier</code> replaces our from-scratch version: <code>.fit()</code> stores the data, and <code>.predict()</code> and <code>.score()</code> handle distance, sorting and voting.</li>
+    <li>A very small <em>k</em> tends to overfit (high variance, low bias). A very large <em>k</em> tends to underfit (high bias, low variance). A validation accuracy-versus-<em>k</em> curve is how we choose <em>k</em> properly.</li>
+    <li>Training is constant, since kNN just stores data. Prediction is expensive, in proportion to <i>n</i> &times; <i>d</i> + <i>n</i> log <i>n</i> per query, since it compares against every stored point.</li>
+    <li>Categorical features must be converted to numbers, for example with One-Hot Encoding, but this can blow up the number of features.</li>
+    <li>In very high dimensions, distances lose meaning. This is the curse of dimensionality, and it is one reason Target Encoding is often preferred for high-cardinality features.</li>
+    <li>The choice of distance metric is itself a hyperparameter: Euclidean for dense low-dimensional data, Manhattan for grid-like data, Cosine similarity for sparse high-dimensional data.</li>
+    <li>Locality Sensitive Hashing groups similar points into buckets, so real systems compare a query against a small bucket instead of the entire dataset.</li>
+    <li>kNN can also impute missing values, by averaging a feature over the nearest neighbours that do have it.</li>
+  </ol>
+
+  <div class="ticket closed">
+    <h4>Ticket #2 closed: your reply</h4>
+    <blockquote>&ldquo;We have moved to a tested library implementation and tuned <em>k</em> properly using a validation curve. We understand why prediction is currently slow, and Locality Sensitive Hashing is the standard fix, worth a proper implementation before launch. We can also now handle missing and categorical fields.&rdquo;</blockquote>
+  </div>
+
+  <h3>Coming next: Decision Trees 1</h3>
+  <p>Orbit Express wants a model that is not just accurate, but one it can explain to store owners in plain rules. Can a model behave more like a flowchart than a neighbourhood vote?</p>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <div class="kit" aria-hidden="true"></div>
+  <div class="foot-inner">
+    <div class="ft">K-nearest Neighbors 2 post read</div>
+    <p>Make it fast, make it fair</p>
+  </div>
+</footer>
+<script>
+(function(){
+'use strict';
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.prototype.slice.call((r||document).querySelectorAll(s));
+const TIER={1:'High',2:'Moderate',3:'Low'};
+const f=n=>String(Math.round(n*100)/100);
+const nf=n=>Number(n).toLocaleString('en-US');
+const mk=c=>`<svg class="mk t${c}" viewBox="0 0 24 24" aria-hidden="true"><use href="#m${c}"/></svg>`;
+const chip=c=>`<span class="tier">${mk(c)}Class ${c} (${TIER[c]})</span>`;
+const chipS=c=>`<span class="tier">${mk(c)}Class ${c}</span>`;
+
+/* ---------- theme ---------- */
+const root=document.documentElement, tb=$('#themeBtn');
+function paintTheme(){
+  const dark=root.getAttribute('data-theme')==='dark';
+  tb.setAttribute('aria-pressed',String(dark));
+  $('.lbl',tb).textContent=dark?'Light mode':'Dark mode';
+}
+tb.addEventListener('click',()=>{
+  const t=root.getAttribute('data-theme')==='dark'?'light':'dark';
+  root.setAttribute('data-theme',t);
+  try{localStorage.setItem('knn1-theme',t);}catch(e){}
+  paintTheme();
+});
+paintTheme();
+
+/* ---------- progress + contents ---------- */
+const prog=$('#progress');
+function onScroll(){
+  const h=document.documentElement, max=h.scrollHeight-h.clientHeight;
+  prog.style.width=(max>0?Math.min(100,h.scrollTop/max*100):0)+'%';
+}
+addEventListener('scroll',onScroll,{passive:true});onScroll();
+const tocLinks=$$('.toc a');
+if('IntersectionObserver' in window){
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(!e.isIntersecting)return;
+      tocLinks.forEach(l=>l.removeAttribute('aria-current'));
+      const l=tocLinks.find(x=>x.getAttribute('href')==='#'+e.target.id);
+      if(l){
+        l.setAttribute('aria-current','true');
+        const ol=l.closest('ol');
+        if(ol&&getComputedStyle(ol).display==='flex'){ol.scrollLeft=l.offsetLeft-ol.clientWidth/2+l.clientWidth/2;}
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px'});
+  $$('.chapter').forEach(s=>io.observe(s));
+}
+
+/* ---------- code highlighting + copy ---------- */
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const KW=/^(import|from|as|def|return|for|in|print|if|else)$/;
+function hl(src){
+  return esc(src).replace(/(#.*$)|("[^"\n]*"|'[^'\n]*')|(\b[A-Za-z_]\w*(?=\())|(\b[A-Za-z_]\w*\b)|(\b\d+(?:\.\d+)?\b)/gm,(m,c,st,fn,w,n)=>{
+    if(c)return `<span class="tk-c">${c}</span>`;
+    if(st)return `<span class="tk-s">${st}</span>`;
+    if(fn)return KW.test(fn)?`<span class="tk-k">${fn}</span>`:`<span class="tk-f">${fn}</span>`;
+    if(w)return KW.test(w)?`<span class="tk-k">${w}</span>`:w;
+    if(n)return `<span class="tk-n">${n}</span>`;
+    return m;
+  });
+}
+function highlightAll(){$$('figure.code code').forEach(c=>{if(!c.dataset.hl){c.innerHTML=hl(c.textContent);c.dataset.hl='1';}});}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.copy'); if(!b)return;
+  const pre=b.closest('figure').querySelector('pre'); const txt=pre.textContent;
+  const done=()=>{b.textContent='Copied';setTimeout(()=>{b.textContent='Copy';},1600);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,()=>{});}
+  else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(_){}document.body.removeChild(ta);}
+});
+
+const QUIZ={
+ q1:{q:'A model fits every quirk and outlier in the training data extremely closely, changing a lot if the training data changes slightly. What do we call this?',
+  o:['The model overfits (high variance, low bias)','The model underfits (high bias, low variance)','The model is perfectly tuned','This has nothing to do with bias or variance'],a:0,
+  e:'Fitting closely to every point, including outliers, is a sign of high variance and low bias, which is overfitting. A very small <em>k</em> pushes kNN in this direction.'},
+ q2:{q:'<em>k</em> is a hyperparameter of kNN. Which data should we use to choose the best value of <em>k</em>?',
+  o:['Training data','Validation data','Test data','All the data combined'],a:1,
+  e:'Training data is used to fit the model, test data is opened only once at the end, and validation data is exactly what we use to compare hyperparameter choices such as <em>k</em>.'},
+ q3:{q:'How does kNN&rsquo;s training step scale as the number of stored stores (<i>n</i>) grows?',
+  o:['It grows in proportion to both the number of stores and the number of features','It grows in proportion to the number of stores only','It grows a little faster than the number of stores, because of sorting','It does not grow at all: it stays constant, no matter how much data there is'],a:3,
+  e:'Training just stores the data. There is no fitting computation involved, so its cost stays constant regardless of data size.'},
+ q4:{q:'True or False: kNN does more computation at prediction time than at training time.',
+  o:['True','False'],a:0,
+  e:'Training cost is constant. Every single prediction, on the other hand, grows in proportion to <i>n</i> &times; <i>d</i>, plus a bit more for sorting, because it compares against the entire stored training set.'},
+ q5:{q:'A <code>Locality</code> field is One-Hot Encoded and blows the feature count up to <i>d</i> = 1000. What is likely to happen to Euclidean distance as a way of finding &ldquo;similar&rdquo; stores?',
+  o:['It works better than ever, since more features mean more information','It becomes unreliable, since distances between points tend to look similar in very high dimensions','Nothing changes; dimension count does not affect distance','Euclidean distance becomes undefined'],a:1,
+  e:'This is the curse of dimensionality: in very high dimensions, distances lose their ability to separate &ldquo;near&rdquo; from &ldquo;far&rdquo;.'},
+ q6:{q:'What is the Manhattan distance between A(1, 1, 3) and B(1, 3, 5)?',
+  o:['1','2','4','5'],a:2,e:'|1&minus;1| + |1&minus;3| + |3&minus;5| = 0 + 2 + 2 = 4.'},
+ q7:{q:'Which of these statements are true?<ul><li>s1: kNN is less time-intensive at prediction time when LSH is used</li><li>s2: <i>k</i> must always be odd</li><li>s3: kNN can be used for imputing missing values</li><li>s4: for high-dimensional data, Euclidean distance is not always the best choice</li></ul>',
+  o:['Only s1 and s3','Only s2 and s3','s1, s3 and s4','All of the above'],a:2,
+  e:'s1 is true (that is the point of LSH). s2 is false: as we saw in Class 1, ties can still happen with an odd <em>k</em> when there are 3 or more classes. s3 is true, we just did it. s4 is true, this is the curse of dimensionality problem.'}
+};
+$$('.quiz').forEach(el=>{
+  const d=QUIZ[el.dataset.quiz]; if(!d)return;
+  el.innerHTML=`<div class="quiz-head"><h4>Check your understanding</h4></div><div class="quiz-body"><div class="q">${d.q}</div><div class="opts" role="group" aria-label="Answer choices">${d.o.map((t,i)=>`<button type="button" class="opt" data-i="${i}"><span class="ltr">${'ABCD'[i]}</span><span>${t}</span><span class="res"></span></button>`).join('')}</div><div class="fb" aria-live="polite"></div></div>`;
+  const opts=$$('.opt',el), fb=$('.fb',el); let solved=false;
+  const lock=()=>{opts.forEach(o=>o.disabled=true);};
+  const showCorrect=()=>{
+    opts.forEach((o,i)=>{if(i===d.a){o.classList.add('correct');$('.res',o).textContent='\u2713 Correct';}});
+  };
+  opts.forEach((o,i)=>o.addEventListener('click',()=>{
+    if(solved)return;
+    if(i===d.a){
+      solved=true;o.classList.remove('wrong');showCorrect();lock();
+      fb.innerHTML=`<div class="fb-msg"><p><strong>Correct.</strong> ${d.e}</p></div>`;
+    }else{
+      o.classList.add('wrong');o.disabled=true;$('.res',o).textContent='\u2717 Not quite';
+      fb.innerHTML=`<div class="fb-msg"><p>Not quite. Try another option, or <button type="button" class="linkbtn" data-reveal>reveal the answer</button>.</p></div>`;
+      $('[data-reveal]',fb).addEventListener('click',()=>{
+        solved=true;showCorrect();lock();
+        fb.innerHTML=`<div class="fb-msg"><p><strong>Answer: ${'ABCD'[d.a]}.</strong> ${d.e}</p></div>`;
+      });
+    }
+  }));
+});
+
+
+/* ---------- shared helpers ---------- */
+const STAR='0,-17 4.1,-5.7 16.2,-5.3 6.7,2.2 10,13.8 0,7 -10,13.8 -6.7,2.2 -16.2,-5.3 -4.1,-5.7';
+function shape(c){
+  const a='fill="var(--c'+c+')" stroke="var(--mark-stroke)" stroke-width="1.6" stroke-linejoin="round"';
+  if(c===1)return `<circle r="12.5" ${a}/>`;
+  if(c===2)return `<path d="M0 -17 L17 0 L0 17 L-17 0Z" ${a}/>`;
+  return `<path d="M0 -16 L17 13 L-17 13Z" ${a}/>`;
+}
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function gaussFrom(R){return function(){let u=0,v=0;while(u===0)u=R();while(v===0)v=R();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};}
+function cssRGBA(el,name,a){
+  const v=getComputedStyle(el).getPropertyValue(name).trim().replace('#','');
+  const h=v.length===3?v.split('').map(x=>x+x).join(''):v;
+  return `rgba(${parseInt(h.slice(0,2),16)||0},${parseInt(h.slice(2,4),16)||0},${parseInt(h.slice(4,6),16)||0},${a})`;
+}
+const themeWatchers=[];
+new MutationObserver(()=>themeWatchers.forEach(fn=>fn())).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ================= FALSE POSITIVES / NEGATIVES ================= */
+(function(){
+  const w=$('#fpfnW'),N=['High','Moderate','Low'],st={c:0,m:'fp'};
+  w.innerHTML=`<div class="widget-head"><h4>Where the mistakes live</h4><p>Pick a tier and a kind of mistake. The outlined cells are the ones to read.</p></div>
+  <div class="widget-body"><div class="field"><div><span class="lab">Tier</span><span class="seg" role="group" aria-label="Tier">${N.map((n,i)=>`<button type="button" class="btn" data-c="${i}">${n}</button>`).join('')}</span></div>
+  <div><span class="lab">Mistake</span><span class="seg" role="group" aria-label="Kind of mistake"><button type="button" class="btn" data-m="fp">False positives</button><button type="button" class="btn" data-m="fn">False negatives</button></span></div></div>
+  <div class="cm" id="fpGrid"></div><p class="cm-axis">Rows are the actual tier. Columns are the predicted tier.</p><div class="readout" id="fpRead" aria-live="polite"></div></div>`;
+  function render(){
+    const c=st.c,fp=st.m==='fp';
+    $$('[data-c]',w).forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.c===c)));
+    $$('[data-m]',w).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===st.m)));
+    let h='<div></div>'+N.map(n=>`<div class="hd">Predicted ${n}</div>`).join('');
+    for(let i=0;i<3;i++){
+      h+=`<div class="hd rl">Actual ${N[i]}</div>`;
+      for(let j=0;j<3;j++){
+        const diag=i===j,hit=!diag&&(fp?(j===c):(i===c));
+        h+=`<div class="cm-cell static${diag?' diag':''}${hit?' hit':''}${!diag&&!hit?' dim':''}"><span class="g" aria-hidden="true">${diag?'&#10003;':hit?'!':'&#10007;'}</span><span>${diag?'Correct':N[i]+' &rarr; '+N[j]}</span></div>`;
+      }
+    }
+    $('#fpGrid',w).innerHTML=h;
+    let m=fp
+      ?`<p><strong>False positives for ${N[c]}</strong> are stores the model predicts as ${N[c]} that actually belong to another tier. Read down the <em>${N[c]}</em> column, skipping the diagonal cell.</p>`
+      :`<p><strong>False negatives for ${N[c]}</strong> are stores that really are ${N[c]}, but the model predicts another tier. Read along the <em>${N[c]}</em> row, skipping the diagonal cell.</p>`;
+    if((fp&&c===0)||(!fp&&c===2))m+='<p style="margin-top:6px">This includes the <strong>False High-traffic</strong> prediction: a Low store predicted as High, so the store gets more delivery partners than it needs and salaries are wasted.</p>';
+    if((fp&&c===2)||(!fp&&c===0))m+='<p style="margin-top:6px">This includes the <strong>False Low-traffic</strong> prediction: a High store predicted as Low, so the store gets too few delivery partners and orders arrive late.</p>';
+    $('#fpRead',w).innerHTML=m;
+  }
+  w.addEventListener('click',e=>{const c=e.target.closest('[data-c]'),m=e.target.closest('[data-m]');if(c){st.c=+c.dataset.c;render();}else if(m){st.m=m.dataset.m;render();}});
+  render();
+})();
+
+/* ================= MISLABELLED STORE ================= */
+(function(){
+  const w=$('#outW'),C={x:200,y:150},pts=[];
+  [[8,46,.3],[10,82,.1],[12,118,.5]].forEach(([n,r,o])=>{for(let i=0;i<n;i++){const a=o+i*2*Math.PI/n;pts.push({x:C.x+r*Math.cos(a),y:C.y+r*Math.sin(a),c:2});}});
+  pts.push({x:C.x,y:C.y,c:1,bad:true});
+  const q={x:C.x+14,y:C.y+3};
+  pts.forEach(p=>{p.d=Math.hypot(p.x-q.x,p.y-q.y);});
+  const order=pts.slice().sort((a,b)=>a.d-b.d);
+  order.forEach((p,i)=>{p.rank=i+1;});
+  w.innerHTML=`<div class="widget-head"><h4>One bad label, many neighbours</h4><p>30 Moderate stores surround 1 mislabelled High store, and a new store sits right beside it. The layout is illustrative.</p></div>
+  <div class="widget-body"><div class="ctl"><label for="outK">Number of neighbours, k (odd values, since there are only two classes) <output id="outKo">1</output></label><input type="range" id="outK" min="1" max="31" step="2" value="1"></div>
+  <div class="btn-row"><button type="button" class="btn" data-k="1">k = 1</button><button type="button" class="btn" data-k="3">k = 3</button><button type="button" class="btn" data-k="29">k = 29</button><button type="button" class="btn" data-k="31">k = 31 (every store)</button></div>
+  <svg viewBox="0 0 400 300" class="chart" role="img" id="outSvg" aria-label="A new store beside one mislabelled High store, surrounded by 30 Moderate stores."></svg>
+  <div class="ex-legend legend-inline" style="margin-top:10px"><span class="tier">${mk(1)}High (mislabelled)</span><span class="tier">${mk(2)}Moderate</span><span class="tier">New store (star)</span></div>
+  <div id="outBars" style="margin-top:12px"></div><div class="readout" id="outRead" aria-live="polite"></div></div>`;
+  const svg=$('#outSvg',w),rng_=$('#outK',w);
+  function render(){
+    const k=+rng_.value;$('#outKo',w).textContent=k;
+    $$('[data-k]',w).forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.k===k)));
+    const keep=new Set(order.slice(0,k));
+    let h=`<circle cx="${q.x}" cy="${q.y}" r="${order[k-1].d+5}" fill="rgba(212,175,55,.12)" stroke="var(--gold)" stroke-width="2.5" stroke-dasharray="8 6"/>`;
+    pts.forEach(p=>{h+=`<g transform="translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) scale(.62)" opacity="${keep.has(p)?1:.3}">${shape(p.c)}</g>`;});
+    h+=`<text x="${C.x-8}" y="${C.y-16}" text-anchor="end" font-size="12" font-weight="700" stroke="var(--surface)" stroke-width="4" paint-order="stroke">mislabelled</text>`;
+    h+=`<polygon points="${STAR}" transform="translate(${q.x+2} ${q.y+8}) scale(.62)" fill="var(--text)" stroke="var(--gold)" stroke-width="2.5" stroke-linejoin="round"/>`;
+    svg.innerHTML=h;
+    const hi=keep.has(order.find(p=>p.bad))?1:0,mo=k-hi;
+    const bar=(lab,n,c)=>`<div class="hb" style="grid-template-columns:120px minmax(0,1fr) 30px"><div><strong>${lab}</strong></div><div class="track"><div class="real${c?' gold':''}" style="width:${n/k*100}%"></div></div><div style="font-family:var(--mono);font-weight:700">${n}</div></div>`;
+    $('#outBars',w).innerHTML=`<div class="hbars">${bar('High votes',hi,false)}${bar('Moderate votes',mo,true)}</div>`;
+    let m;
+    if(hi>mo)m='<p><strong>Prediction: High.</strong> Only the single nearest store votes, and it is the mislabelled one, so one bad data point decides the answer.</p>';
+    else if(k===31)m='<p><strong>Prediction: Moderate.</strong> Every training store votes, so the prediction is the overall majority class, wherever the new store sits.</p>';
+    else m=`<p><strong>Prediction: Moderate.</strong> The mislabelled store is only 1 vote out of ${k}, so the ${mo} Moderate votes outweigh it.</p>`;
+    $('#outRead',w).innerHTML=m;
+  }
+  rng_.addEventListener('input',render);
+  w.addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b){rng_.value=b.dataset.k;render();}});
+  render();
+})();
+
+/* ================= BIAS-VARIANCE / ELBOW ================= */
+(function(){
+  const w=$('#bvW');
+  const T=[0,.1,.2,.3,.5,.75,1],TR=[.99,.92,.89,.88,.83,.72,.60],VA=[.62,.75,.83,.86,.79,.68,.58];
+  function herm(xs,ys){
+    const n=xs.length,m=[];
+    for(let i=0;i<n;i++)m[i]=i===0?(ys[1]-ys[0])/(xs[1]-xs[0]):i===n-1?(ys[n-1]-ys[n-2])/(xs[n-1]-xs[n-2]):(ys[i+1]-ys[i-1])/(xs[i+1]-xs[i-1]);
+    return t=>{let i=0;while(i<n-2&&t>xs[i+1])i++;const h=xs[i+1]-xs[i],s=(t-xs[i])/h,s2=s*s,s3=s2*s;
+      return (2*s3-3*s2+1)*ys[i]+(s3-2*s2+s)*h*m[i]+(-2*s3+3*s2)*ys[i+1]+(s3-s2)*h*m[i+1];};
+  }
+  const fT=herm(T,TR),fV=herm(T,VA),fE=t=>1-fV(t);
+  let tmin=0,emin=9;for(let i=0;i<=200;i++){const t=i/200;if(fE(t)<emin){emin=fE(t);tmin=t;}}
+  const ELB=.2;
+  w.innerHTML=`<div class="widget-head"><h4>Bias, variance and the elbow</h4><p>A schematic of the typical shape of the curves. Move k from small to large, and switch between the two views.</p></div>
+  <div class="widget-body"><div class="btn-row" role="group" aria-label="View"><button type="button" class="btn" data-v="acc">Accuracy vs k</button><button type="button" class="btn" data-v="err">Error rate vs k (elbow)</button></div>
+  <svg class="chart" viewBox="0 0 560 300" id="bvSvg" role="img" aria-label="Schematic curves of accuracy and error rate against k."></svg>
+  <div class="ctl" style="margin-top:12px"><label for="bvT">Value of k, from small to large</label><input type="range" id="bvT" min="0" max="1" step="0.01" value="0.05"></div>
+  <div class="readout" id="bvRead" aria-live="polite"></div><p class="mini">Illustrative shape only, with no real values. Run the notebook to draw your own curve.</p></div>`;
+  const X0=64,X1=540,Y0=22,Y1=236,svg=$('#bvSvg',w);let view='acc';
+  const px=t=>X0+t*(X1-X0);
+  function render(){
+    const t=+$('#bvT',w).value,acc=view==='acc';
+    $$('[data-v]',w).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===view)));
+    const ya=v=>Y1-(v-.5)/.5*(Y1-Y0),ye=v=>Y1-(v-.1)/.35*(Y1-Y0),Y=acc?ya:ye;
+    const path=f=>{let d='';for(let i=0;i<=80;i++){const tt=i/80;d+=(i?'L':'M')+px(tt).toFixed(1)+' '+Y(f(tt)).toFixed(1);}return d;};
+    let h=`<rect x="${px(0)}" y="${Y0}" width="${px(.15)-px(0)}" height="${Y1-Y0}" fill="var(--red-tint)"/><rect x="${px(.55)}" y="${Y0}" width="${px(1)-px(.55)}" height="${Y1-Y0}" fill="var(--surface-2)"/>`;
+    h+=`<text x="${(px(0)+px(.15))/2}" y="${Y0+16}" font-size="12" font-weight="700" text-anchor="middle">overfit</text><text x="${(px(.55)+px(1))/2}" y="${Y0+16}" font-size="12" font-weight="700" text-anchor="middle">underfit</text>`;
+    h+=`<path d="M${X0} ${Y0}V${Y1}H${X1}" fill="none" stroke="var(--text)" stroke-width="2"/>`;
+    h+=`<text x="${(X0+X1)/2}" y="278" font-size="13" text-anchor="middle">k: small to large</text><text x="16" y="${(Y0+Y1)/2}" font-size="13" text-anchor="middle" transform="rotate(-90 16 ${(Y0+Y1)/2})">${acc?'Accuracy':'Validation error rate'}</text>`;
+    if(acc){
+      h+=`<path d="${path(fT)}" fill="none" stroke="var(--text)" stroke-width="3" stroke-dasharray="9 5"/><path d="${path(fV)}" fill="none" stroke="var(--red)" stroke-width="4"/>`;
+      h+=`<text x="${px(.62)}" y="${ya(fT(.62))-10}" font-size="13" font-weight="700">Training accuracy</text><text x="${px(.6)}" y="${ya(fV(.6))+24}" font-size="13" font-weight="700" fill="var(--red)" style="fill:var(--red)">Validation accuracy</text>`;
+      h+=`<circle cx="${px(t)}" cy="${ya(fT(t))}" r="6" fill="var(--text)"/><path d="M${px(t)} ${ya(fV(t))-8}l8 8-8 8-8-8z" fill="var(--red)" stroke="var(--surface)" stroke-width="1.5"/>`;
+    }else{
+      h+=`<path d="${path(fE)}" fill="none" stroke="var(--red)" stroke-width="4"/>`;
+      h+=`<circle cx="${px(ELB)}" cy="${ye(fE(ELB))}" r="8" fill="var(--surface)" stroke="var(--text)" stroke-width="3"/><text x="${px(ELB)+14}" y="${ye(fE(ELB))-10}" font-size="13" font-weight="700">elbow: the sharp drop ends</text>`;
+      h+=`<path d="M${px(tmin)} ${ye(emin)-9}l9 9-9 9-9-9z" fill="var(--gold)" stroke="var(--text)" stroke-width="2"/><text x="${px(tmin)+14}" y="${ye(emin)+30}" font-size="13" font-weight="700">lowest error (best k)</text>`;
+      h+=`<circle cx="${px(t)}" cy="${ye(fE(t))}" r="5" fill="var(--red)" stroke="var(--surface)" stroke-width="1.5"/>`;
+    }
+    h+=`<line x1="${px(t)}" y1="${Y0}" x2="${px(t)}" y2="${Y1}" stroke="var(--text)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    svg.innerHTML=h;
+    let m=t<.15?'<p><strong>Small k: overfitting.</strong> Training accuracy is at its highest because the model follows every store, including noisy ones, so validation accuracy is lower (high variance, low bias).</p>'
+      :t>.55?'<p><strong>Large k: underfitting.</strong> The vote is too smooth to reflect the data, and validation accuracy has fallen away from its peak (high bias, low variance).</p>'
+      :'<p><strong>In between: the balance zone.</strong> Validation accuracy rises, peaks and starts to fall here, and this is where a good <em>k</em> lives.</p>';
+    if(!acc)m+='<p style="margin-top:6px">The elbow marks where the error stops dropping sharply. The lowest point is what <code>best_k</code> picks. They can differ slightly, and the elbow is the more robust habit.</p>';
+    $('#bvRead',w).innerHTML=m;
+  }
+  $('#bvT',w).addEventListener('input',render);
+  w.addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(b){view=b.dataset.v;render();}});
+  render();
+})();
+
+/* ================= BOUNDARY LAB ================= */
+(function(){
+  const w=$('#bdW');
+  w.innerHTML=`<div class="widget-head"><h4>Boundary lab</h4><p>Change k and watch the boundary between tiers move. The points are illustrative, not the Orbit Express data.</p></div>
+  <div class="widget-body"><div class="ctl"><label for="bdK">Number of neighbours, k <output id="bdKo">1</output></label><input type="range" id="bdK" min="1" max="89" step="2" value="1"></div>
+  <div class="btn-row"><button type="button" class="btn" id="bdAll" aria-pressed="false">Use every store as a neighbour</button><button type="button" class="btn" id="bdOut" aria-pressed="false">Add a mislabelled store</button></div>
+  <canvas class="lab" id="bdCv" width="480" height="360" role="img" aria-label="Decision map of three store tiers. Regions are shaded by the tier that a kNN vote would predict at each spot."></canvas>
+  <div class="legend-inline"><span class="tier">${mk(1)}Class 1 (High)</span><span class="tier">${mk(2)}Class 2 (Moderate)</span><span class="tier">${mk(3)}Class 3 (Low)</span><span>Thin lines mark where the predicted tier changes</span></div>
+  <div class="readout" id="bdRead" aria-live="polite"></div></div>`;
+  const cv=$('#bdCv',w),ctx=cv.getContext('2d');
+  const GW=96,GH=72,CS=5,CW=GW*CS,CH=GH*CS;
+  const R=rng(7),G=gaussFrom(R);
+  const SPEC=[{c:1,n:36,mx:.30,my:.55,s:.09},{c:2,n:30,mx:.50,my:.38,s:.09},{c:3,n:24,mx:.72,my:.22,s:.08}];
+  const base=[];
+  SPEC.forEach(sp=>{for(let i=0;i<sp.n;i++){let x,y;do{x=sp.mx+G()*sp.s;y=sp.my+G()*sp.s;}while(x<.03||x>.97||y<.03||y>.72);base.push({x,y,c:sp.c});}});
+  const withOut=base.concat([{x:.50,y:.38,c:1,out:true}]);
+  const orders={};
+  function buildOrder(pts){
+    const n=pts.length,o=new Uint8Array(GW*GH*n),idx=new Array(n),d=new Float32Array(n);
+    for(let j=0;j<GH;j++)for(let i=0;i<GW;i++){
+      const cx=(i+.5)/GW,cy=.75*(1-(j+.5)/GH);
+      for(let m=0;m<n;m++){const dx=pts[m].x-cx,dy=pts[m].y-cy;d[m]=dx*dx+dy*dy;idx[m]=m;}
+      idx.sort((a,b)=>d[a]-d[b]);
+      const b0=(j*GW+i)*n;for(let m=0;m<n;m++)o[b0+m]=idx[m];
+    }
+    return o;
+  }
+  function predict(key,pts,k){
+    if(!orders[key])orders[key]=buildOrder(pts);
+    const o=orders[key],n=pts.length,out=new Uint8Array(GW*GH),kk=Math.min(k,n);
+    for(let c=0;c<GW*GH;c++){
+      const b0=c*n,cnt=[0,0,0,0];
+      for(let m=0;m<kk;m++)cnt[pts[o[b0+m]].c]++;
+      let best=1,bc=0;for(let cl=1;cl<=3;cl++)if(cnt[cl]>bc){bc=cnt[cl];best=cl;}
+      let tied=0;for(let cl=1;cl<=3;cl++)if(cnt[cl]===bc)tied++;
+      if(tied>1){for(let m=0;m<kk;m++){const cl=pts[o[b0+m]].c;if(cnt[cl]===bc){best=cl;break;}}}
+      out[c]=best;
+    }
+    return out;
+  }
+  const st={k:1,all:false,out:false};
+  function drawShape(x,y,c,r){
+    ctx.beginPath();
+    if(c===1)ctx.arc(x,y,r,0,Math.PI*2);
+    else if(c===2){ctx.moveTo(x,y-r*1.3);ctx.lineTo(x+r*1.3,y);ctx.lineTo(x,y+r*1.3);ctx.lineTo(x-r*1.3,y);ctx.closePath();}
+    else{ctx.moveTo(x,y-r*1.25);ctx.lineTo(x+r*1.3,y+r);ctx.lineTo(x-r*1.3,y+r);ctx.closePath();}
+    ctx.fillStyle=getComputedStyle(cv).getPropertyValue('--c'+c).trim();ctx.fill();
+    ctx.lineWidth=1.6;ctx.strokeStyle=getComputedStyle(cv).getPropertyValue('--mark-stroke').trim();ctx.stroke();
+  }
+  function render(){
+    const pts=st.out?withOut:base,key=st.out?'o':'b',n=pts.length;
+    const k=st.all?n:Math.min(st.k,n);
+    $('#bdKo',w).textContent=st.all?'all '+n:st.k;
+    $('#bdAll',w).setAttribute('aria-pressed',String(st.all));$('#bdOut',w).setAttribute('aria-pressed',String(st.out));
+    const grid=predict(key,pts,k);
+    ctx.fillStyle=getComputedStyle(cv).getPropertyValue('--surface').trim()||'#fff';ctx.fillRect(0,0,CW,CH);
+    const fills={1:cssRGBA(cv,'--c1',.32),2:cssRGBA(cv,'--c2',.40),3:cssRGBA(cv,'--c3',.24)};
+    for(let j=0;j<GH;j++)for(let i=0;i<GW;i++){ctx.fillStyle=fills[grid[j*GW+i]];ctx.fillRect(i*CS,j*CS,CS,CS);}
+    ctx.fillStyle=cssRGBA(cv,'--text',.7);
+    for(let j=0;j<GH;j++)for(let i=0;i<GW;i++){
+      const v=grid[j*GW+i];
+      if(i<GW-1&&grid[j*GW+i+1]!==v)ctx.fillRect((i+1)*CS-1,j*CS,1.6,CS);
+      if(j<GH-1&&grid[(j+1)*GW+i]!==v)ctx.fillRect(i*CS,(j+1)*CS-1,CS,1.6);
+    }
+    pts.forEach(p=>drawShape(p.x*CW,(1-p.y/.75)*CH,p.c,p.out?8:5.5));
+    const cnt=[0,0,0,0];pts.forEach(p=>cnt[p.c]++);
+    let msg;
+    if(st.all){
+      const maj=cnt.indexOf(Math.max(cnt[1],cnt[2],cnt[3]));
+      msg=`<p><strong>k = ${n}, every store.</strong> The whole map takes one colour, the overall majority class (Class ${maj}), no matter where the query point is.</p>`;
+    }else if(k===1){
+      msg='<p><strong>k = 1: a jagged, twisty boundary.</strong> Every single store, even a noisy one, carves out a patch of its own.</p>';
+    }else{
+      msg=`<p><strong>k = ${k}: a smoother boundary.</strong> Each patch is decided by a vote among ${k} stores, so single stores stop carving out patches of their own.</p>`;
+    }
+    if(st.out){
+      const g0=predict('b',base,st.all?base.length:Math.min(st.k,base.length));let diff=0;for(let c=0;c<GW*GH;c++)if(g0[c]!==grid[c])diff++;
+      const pct=diff/(GW*GH)*100;
+      msg+=`<p style="margin-top:6px">The mislabelled Class 1 store, drawn larger, changes <strong>${pct<0.05?'almost none':(Math.round(pct*10)/10+'%')}</strong> of the map at this setting.</p>`;
+    }
+    $('#bdRead',w).innerHTML=msg;
+  }
+  $('#bdK',w).addEventListener('input',e=>{st.k=+e.target.value;st.all=false;render();});
+  $('#bdAll',w).addEventListener('click',()=>{st.all=!st.all;render();});
+  $('#bdOut',w).addEventListener('click',()=>{st.out=!st.out;render();});
+  themeWatchers.push(render);
+  render();
+})();
+
+/* ================= COST LAB ================= */
+(function(){
+  const w=$('#costLab'),st={e:3,d:7};
+  const D=[7,50,200,1000];
+  w.innerHTML=`<div class="widget-head"><h4>What one prediction costs</h4><p>Change the number of stores and features. The work is a proportional model, not a measured time.</p></div>
+  <div class="widget-body"><div class="ctl"><label for="cE">Stored stores, <i>n</i> <output id="cEo"></output></label><input type="range" id="cE" min="2" max="6" step="0.05" value="3"></div>
+  <div class="field"><div><span class="lab">Features, <i>d</i></span><span class="seg" role="group" aria-label="Number of features">${D.map(d=>`<button type="button" class="btn" data-d="${d}">${d}${d===7?' (our data)':''}</button>`).join('')}</span></div><div><button type="button" class="btn" id="cX">10x the stores</button></div></div>
+  <div class="cards"><div><h4>Training (<code>.fit</code>)</h4><div class="big">Constant</div><p>Only stores the data.</p></div>
+  <div><h4>Memory</h4><div class="big" id="cMem"></div><p><i>n</i> &times; <i>d</i> stored values</p></div>
+  <div><h4>One prediction</h4><div class="big" id="cPred"></div><p>feature comparisons for the distances, plus sorting</p></div></div>
+  <div class="readout" id="cRead" aria-live="polite"></div></div>`;
+  function render(){
+    const n=Math.round(Math.pow(10,st.e)),d=st.d;
+    $('#cE',w).value=st.e;$('#cEo',w).textContent=nf(n);
+    $$('[data-d]',w).forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.d===d)));
+    $('#cMem',w).textContent=nf(n*d);$('#cPred',w).textContent=nf(n*d);
+    $('#cX',w).disabled=st.e>5.95;
+    $('#cRead',w).innerHTML=`<p>With ${nf(n)} stores and ${nf(d)} features, each prediction needs about ${nf(n*d)} feature comparisons for the distances, then a sort of ${nf(n)} distances (roughly ${nf(Math.round(n*Math.log2(n)))} steps). Training still costs nothing extra. Ten times the stores means about ten times the distance work per prediction, plus a little more for sorting.</p>`;
+  }
+  $('#cE',w).addEventListener('input',e=>{st.e=+e.target.value;render();});
+  w.addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(b){st.d=+b.dataset.d;render();}});
+  $('#cX',w).addEventListener('click',()=>{st.e=Math.min(6,st.e+1);render();});
+  render();
+})();
+
+/* ================= ONE-HOT ================= */
+(function(){
+  const w=$('#oheW');
+  w.innerHTML=`<div class="widget-head"><h4>How One-Hot Encoding grows the data</h4><p>Change how many unique values the categorical field has.</p></div>
+  <div class="widget-body"><div class="table-wrap" style="margin-top:0"><table><caption>What <code>pd.get_dummies</code> returns for the toy table</caption><thead><tr><th>Store_Rating</th><th>City_Type_Metro</th><th>City_Type_Tier-2</th><th>City_Type_Tier-3</th></tr></thead><tbody>
+  <tr><td>4.2</td><td>1</td><td>0</td><td>0</td></tr><tr><td>3.8</td><td>0</td><td>1</td><td>0</td></tr><tr><td>4.5</td><td>0</td><td>0</td><td>1</td></tr><tr><td>3.1</td><td>1</td><td>0</td><td>0</td></tr><tr><td>4.0</td><td>0</td><td>0</td><td>1</td></tr></tbody></table></div>
+  <div class="ctl"><label for="oU">Unique values in one categorical field <output id="oUo">3</output></label><input type="range" id="oU" min="2" max="1000" step="1" value="3"></div>
+  <div class="cards"><div><h4>Before</h4><div class="big">1 column</div><p>the categorical field</p></div><div><h4>After encoding</h4><div class="big" id="oA"></div><p>binary columns</p></div><div><h4>With our 7 numeric features</h4><div class="big" id="oT"></div><p>features in total</p></div></div>
+  <div class="readout" id="oR" aria-live="polite"></div></div>`;
+  const u=$('#oU',w);
+  function go(){
+    const v=+u.value;$('#oUo',w).textContent=v;$('#oA',w).textContent=nf(v);$('#oT',w).textContent=nf(7+v);
+    $('#oR',w).innerHTML=v<20?'<p>A field with few values adds only a few columns.</p>':v<100?'<p>The column count is already several times what we started with.</p>':'<p>Hundreds of extra columns push the data into very high dimensions, which is where distances start to lose their meaning. See the next demo.</p>';
+  }
+  u.addEventListener('input',go);go();
+})();
+
+/* ================= CURSE OF DIMENSIONALITY ================= */
+(function(){
+  const w=$('#curseW'),DIMS=[2,10,50,200,1000];
+  w.innerHTML=`<div class="widget-head"><h4>Do nearest and farthest still differ?</h4><p>For each number of dimensions, one random query point is compared with 500 random points. The bar is (farthest &minus; nearest) / farthest.</p></div>
+  <div class="widget-body"><div class="btn-row"><button type="button" class="btn" id="cuRun">Run again with new random data</button></div><div class="hbars" id="cuBars"></div><div class="readout" id="cuRead" aria-live="polite"></div></div>`;
+  function spread(n,d){
+    const q=new Float64Array(d);for(let k=0;k<d;k++)q[k]=Math.random();
+    let mx=0,mn=Infinity;
+    for(let i=0;i<n;i++){let s=0;for(let k=0;k<d;k++){const x=Math.random()-q[k];s+=x*x;}const r=Math.sqrt(s);if(r>mx)mx=r;if(r<mn)mn=r;}
+    return (mx-mn)/mx;
+  }
+  function run(){
+    const rs=DIMS.map(d=>spread(500,d));
+    $('#cuBars',w).innerHTML=DIMS.map((d,i)=>`<div class="hb" style="grid-template-columns:130px minmax(0,1fr) 60px"><div><strong>${nf(d)} dimensions</strong></div><div class="track" role="img" aria-label="${nf(d)} dimensions: ${rs[i].toFixed(3)}"><div class="real" style="width:${rs[i]*100}%"></div></div><div style="font-family:var(--mono);font-weight:700">${rs[i].toFixed(3)}</div></div>`).join('');
+    $('#cuRead',w).innerHTML=`<p>In 2 dimensions the farthest point is much farther than the nearest (${rs[0].toFixed(3)}). By 1,000 dimensions the ratio has shrunk to ${rs[4].toFixed(3)}, so every point looks about equally close or far. Run it again: the exact values change, but the shrinking trend does not.</p>`;
+  }
+  $('#cuRun',w).addEventListener('click',run);run();
+})();
+
+/* ================= METRIC LAB ================= */
+(function(){
+  const w=$('#metW'),A0=[1,1,3],B0=[1,3,5];
+  const ins=(pre,vals)=>vals.map((v,i)=>`<label>Feature ${i+1}<input type="number" step="any" id="${pre}${i}" value="${v}" aria-label="${pre==='mA'?'A':'B'} feature ${i+1}"></label>`).join('');
+  w.innerHTML=`<div class="widget-head"><h4>Metric lab</h4><p>Edit the two points and compare the measures. The starting points are A(1, 1, 3) and B(1, 3, 5).</p></div>
+  <div class="widget-body"><div class="grp">Point A</div><div class="inputs">${ins('mA',A0)}</div><div class="grp">Point B</div><div class="inputs">${ins('mB',B0)}</div>
+  <div class="ctl"><label for="mP">Minkowski power, <i>p</i> <output id="mPo">2</output></label><input type="range" id="mP" min="1" max="5" step="0.1" value="2"></div>
+  <div class="btn-row"><button type="button" class="btn" id="mDbl">Double B (same direction)</button><button type="button" class="btn" id="mRst">Reset both points</button></div>
+  <div class="cards" id="mCards"></div><div class="readout" id="mRead" aria-live="polite"></div></div>`;
+  const get=pre=>[0,1,2].map(i=>+($('#'+pre+i,w).value)||0);
+  function go(){
+    const a=get('mA'),b=get('mB'),p=+$('#mP',w).value;$('#mPo',w).textContent=p;
+    const df=a.map((x,i)=>Math.abs(x-b[i]));
+    const man=df.reduce((s,x)=>s+x,0),euc=Math.sqrt(df.reduce((s,x)=>s+x*x,0)),mink=Math.pow(df.reduce((s,x)=>s+Math.pow(x,p),0),1/p);
+    const na=Math.sqrt(a.reduce((s,x)=>s+x*x,0)),nb=Math.sqrt(b.reduce((s,x)=>s+x*x,0)),dot=a.reduce((s,x,i)=>s+x*b[i],0);
+    const cos=na&&nb?dot/(na*nb):null;
+    const card=(t,v,s)=>`<div><h4>${t}</h4><div class="big">${v}</div><p>${s}</p></div>`;
+    $('#mCards',w).innerHTML=card('Manhattan (<i>p</i> = 1)',Math.round(man*1000)/1000,'sum of the absolute gaps')+card('Euclidean (<i>p</i> = 2)',euc.toFixed(3),'straight-line distance')+card('Minkowski, <i>p</i> = '+p,mink.toFixed(3),'the general family')+card('Cosine similarity',cos===null?'undefined':cos.toFixed(3),'compares the angle between the vectors');
+    let m='';
+    if(Math.abs(p-1)<1e-9)m='With <i>p</i> = 1 the Minkowski value equals the Manhattan distance.';
+    else if(Math.abs(p-2)<1e-9)m='With <i>p</i> = 2 the Minkowski value equals the Euclidean distance.';
+    else m='Move <i>p</i> to 1 or 2 to see Minkowski match Manhattan or Euclidean.';
+    m+=' Try &ldquo;Double B&rdquo;: the direction of B does not change, so cosine similarity stays put while the distances grow.';
+    $('#mRead',w).innerHTML='<p>'+m+'</p>';
+  }
+  w.addEventListener('input',go);
+  $('#mDbl',w).addEventListener('click',()=>{get('mB').forEach((v,i)=>{$('#mB'+i,w).value=v*2;});go();});
+  $('#mRst',w).addEventListener('click',()=>{A0.forEach((v,i)=>{$('#mA'+i,w).value=v;});B0.forEach((v,i)=>{$('#mB'+i,w).value=v;});$('#mP',w).value=2;go();});
+  go();
+})();
+
+/* ================= LSH LAB ================= */
+(function(){
+  const w=$('#lshW');
+  w.innerHTML=`<div class="widget-head"><h4>LSH in two dimensions</h4><p>Random lines cut the plane into buckets. Click or drag on the plot (or focus it and use the arrow keys) to move the query, and see which stores it would be compared with. The points are illustrative.</p></div>
+  <div class="widget-body"><div class="field"><div class="ctl" style="min-width:240px;margin:0"><label for="lB">Hash bits (random lines) <output id="lBo">3</output></label><input type="range" id="lB" min="1" max="4" step="1" value="3"></div><div><button type="button" class="btn" id="lN">New random lines</button></div></div>
+  <canvas class="lab" id="lCv" width="480" height="360" tabindex="0" role="img" aria-label="Plane divided into buckets by random lines. The bucket of the query point is shaded gold and its stores are drawn as filled circles."></canvas>
+  <div class="legend-inline"><span><i class="sw" style="background:rgba(212,175,55,.5)"></i>Query&rsquo;s bucket</span><span class="tier">${mk(1)}Stores in that bucket (compared)</span><span>Hollow circles: stores skipped</span><span>Dashed ring: true nearest store</span></div>
+  <div class="bks" id="lBk" aria-label="Number of stores in each bucket"></div>
+  <div class="readout" id="lRead" aria-live="polite"></div></div>`;
+  const cv=$('#lCv',w),ctx=cv.getContext('2d'),SC=100,OX=240,OY=180,NP=80,XM=2.3,YM=1.7;
+  const R=rng(21),G=gaussFrom(R),P=[];
+  for(let i=0;i<NP;i++){let x,y;do{x=G()*.9;y=G()*.6;}while(Math.abs(x)>XM||Math.abs(y)>YM);P.push({x,y});}
+  const st={bits:3,seed:5,q:{x:.6,y:.35}};
+  let dirs=[];
+  function mkDirs(){const r=rng(st.seed*977+13);dirs=[0,1,2,3].map(()=>{const a=r()*2*Math.PI;return [Math.cos(a),Math.sin(a)];});}
+  mkDirs();
+  const hash=(x,y)=>dirs.slice(0,st.bits).map(d=>(x*d[0]+y*d[1])>0?'1':'0').join('');
+  const wx=px=>(px-OX)/SC,wy=py=>(OY-py)/SC;
+  function render(){
+    $('#lBo',w).textContent=st.bits;
+    const qh=hash(st.q.x,st.q.y);
+    ctx.fillStyle=getComputedStyle(cv).getPropertyValue('--surface').trim()||'#fff';ctx.fillRect(0,0,480,360);
+    ctx.fillStyle='rgba(212,175,55,.34)';
+    for(let py=0;py<360;py+=4)for(let px=0;px<480;px+=4){if(hash(wx(px+2),wy(py+2))===qh)ctx.fillRect(px,py,4,4);}
+    ctx.strokeStyle=cssRGBA(cv,'--text',.75);ctx.lineWidth=1.8;ctx.setLineDash([7,5]);
+    dirs.slice(0,st.bits).forEach(d=>{ctx.beginPath();ctx.moveTo(OX+(-d[1])*600,OY-(d[0])*600);ctx.lineTo(OX-(-d[1])*600,OY+(d[0])*600);ctx.stroke();});
+    ctx.setLineDash([]);
+    let inB=0,nn=null,nd=1e9;const counts={};
+    P.forEach(p=>{const h=hash(p.x,p.y);counts[h]=(counts[h]||0)+1;if(h===qh)inB++;const dd=Math.hypot(p.x-st.q.x,p.y-st.q.y);if(dd<nd){nd=dd;nn=p;}});
+    P.forEach(p=>{
+      const h=hash(p.x,p.y),x=OX+p.x*SC,y=OY-p.y*SC;
+      ctx.beginPath();
+      if(h===qh){ctx.arc(x,y,6.5,0,7);ctx.fillStyle=getComputedStyle(cv).getPropertyValue('--c1').trim();ctx.fill();ctx.lineWidth=1.6;ctx.strokeStyle=getComputedStyle(cv).getPropertyValue('--mark-stroke').trim();ctx.stroke();}
+      else{ctx.arc(x,y,4.5,0,7);ctx.lineWidth=1.6;ctx.strokeStyle=cssRGBA(cv,'--text',.6);ctx.stroke();}
+    });
+    const nx=OX+nn.x*SC,ny=OY-nn.y*SC;
+    ctx.beginPath();ctx.arc(nx,ny,12,0,7);ctx.setLineDash([4,3]);ctx.lineWidth=2;ctx.strokeStyle=cssRGBA(cv,'--text',1);ctx.stroke();ctx.setLineDash([]);
+    const qx=OX+st.q.x*SC,qy=OY-st.q.y*SC;
+    ctx.beginPath();for(let i=0;i<10;i++){const r=i%2?8:19,a=-Math.PI/2+i*Math.PI/5;ctx.lineTo(qx+r*Math.cos(a),qy+r*Math.sin(a));}ctx.closePath();
+    ctx.fillStyle=cssRGBA(cv,'--text',1);ctx.fill();ctx.lineWidth=2.5;ctx.strokeStyle=getComputedStyle(cv).getPropertyValue('--gold').trim();ctx.stroke();
+    const total=1<<st.bits,keys=[];for(let i=0;i<total;i++)keys.push(i.toString(2).padStart(st.bits,'0'));
+    $('#lBk',w).innerHTML=keys.map(k=>`<span class="bk${k===qh?' on':''}">${k}: ${counts[k]||0}</span>`).join('');
+    const same=hash(nn.x,nn.y)===qh;
+    let m=`<p>The query hashes to <code>${qh}</code>. Its bucket holds <strong>${inB} of ${NP}</strong> stores, so it is compared with ${Math.round(inB/NP*100)}% of them instead of all ${NP}.</p>`;
+    if(inB===0)m+='<p style="margin-top:6px">This bucket is empty, so there is nothing to compare with. Move the query, or add another bit.</p>';
+    else m+=same?'<p style="margin-top:6px">The true nearest store landed in the same bucket, so the shortcut finds it.</p>':'<p style="margin-top:6px">The true nearest store was hashed into a <strong>different</strong> bucket, so this shortcut would miss it. LSH is approximate: similar stores only <em>tend</em> to share a bucket.</p>';
+    $('#lRead',w).innerHTML=m;
+    cv.setAttribute('aria-label',`Buckets of a plane cut by ${st.bits} random lines. The query is in bucket ${qh}, which holds ${inB} of ${NP} stores.`);
+  }
+  function setQ(x,y){st.q.x=Math.max(-XM,Math.min(XM,x));st.q.y=Math.max(-YM,Math.min(YM,y));render();}
+  function fromEvent(e){const r=cv.getBoundingClientRect();const px=(e.clientX-r.left)/r.width*480,py=(e.clientY-r.top)/r.height*360;setQ(wx(px),wy(py));}
+  let drag=false;
+  cv.addEventListener('pointerdown',e=>{drag=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}fromEvent(e);e.preventDefault();cv.focus();});
+  cv.addEventListener('pointermove',e=>{if(drag)fromEvent(e);});
+  cv.addEventListener('pointerup',()=>{drag=false;});cv.addEventListener('pointercancel',()=>{drag=false;});
+  cv.addEventListener('keydown',e=>{const s=e.shiftKey?.02:.1;let dx=0,dy=0;
+    if(e.key==='ArrowLeft')dx=-s;else if(e.key==='ArrowRight')dx=s;else if(e.key==='ArrowUp')dy=s;else if(e.key==='ArrowDown')dy=-s;else return;
+    e.preventDefault();setQ(st.q.x+dx,st.q.y+dy);});
+  $('#lB',w).addEventListener('input',e=>{st.bits=+e.target.value;render();});
+  $('#lN',w).addEventListener('click',()=>{st.seed++;mkDirs();render();});
+  themeWatchers.push(render);
+  render();
+})();
+
+/* ================= IMPUTATION ================= */
+(function(){
+  const w=$('#impW');
+  const ST=[{n:'A',f:11,g:9,m:2},{n:'B',f:9,g:6,m:3},{n:'C',f:10,g:10,m:2},{n:'D',f:2,g:3,m:9},{n:'E',f:3,g:2,m:10},{n:'F',f:18,g:15,m:12}];
+  const X={f:10,g:8},st={step:1,k:3};
+  ST.forEach(s=>{s.d=Math.hypot(s.f-X.f,s.g-X.g);});
+  const sorted=ST.slice().sort((a,b)=>a.d-b.d);
+  const gmean=ST.reduce((s,r)=>s+r.m,0)/ST.length;
+  const r2=v=>(Math.round(v*100)/100).toString();
+  w.innerHTML=`<div class="widget-head"><h4>Impute one missing value</h4><p>Store X has no Milk figure. Follow the three steps, and change k. The numbers are illustrative and left unscaled to keep the arithmetic easy.</p></div>
+  <div class="widget-body"><div class="btn-row" role="group" aria-label="Steps"><button type="button" class="btn" data-s="1">1 Ignore Milk</button><button type="button" class="btn" data-s="2">2 Find neighbours</button><button type="button" class="btn" data-s="3">3 Average their Milk</button></div>
+  <div class="ctl"><label for="iK">Number of neighbours, k <output id="iKo">3</output></label><input type="range" id="iK" min="1" max="5" step="1" value="3"></div>
+  <div class="table-wrap" style="margin:8px 0"><table class="imp-table"><thead id="iH"></thead><tbody id="iB"></tbody></table></div>
+  <div class="readout" id="iR" aria-live="polite"></div></div>`;
+  function render(){
+    const k=st.k,s=st.step,used=new Set(sorted.slice(0,k).map(x=>x.n)),near=sorted.slice(0,k),est=near.reduce((a,b)=>a+b.m,0)/k;
+    $('#iKo',w).textContent=k;
+    $$('[data-s]',w).forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.s===s)));
+    $('#iH',w).innerHTML=`<tr><th>Store</th><th>Fresh</th><th>Grocery</th><th${s===1?' class="ign"':''}>Milk</th>${s>=2?'<th>Distance (Fresh, Grocery)</th>':''}${s>=2?'<th>Used?</th>':''}</tr>`;
+    const rows=s>=2?sorted:ST;
+    let h=`<tr class="newrow"><td>X (new)</td><td>${X.f}</td><td>${X.g}</td><td class="${s===3?'':'q'}">${s===3?'&asymp; '+r2(est):'?'}</td>${s>=2?'<td>&ndash;</td><td>&ndash;</td>':''}</tr>`;
+    h+=rows.map(r=>`<tr class="${s>=2&&used.has(r.n)?'used':''}"><td>${r.n}</td><td>${r.f}</td><td>${r.g}</td><td>${r.m}</td>${s>=2?`<td>${r2(r.d)}</td><td>${used.has(r.n)?'Yes':'No'}</td>`:''}</tr>`).join('');
+    $('#iB',w).innerHTML=h;
+    let m;
+    if(s===1)m='<p>Milk is missing for X, so set the Milk column aside. The next step measures distance using only the remaining features, Fresh and Grocery.</p>';
+    else if(s===2)m=`<p>Distances from X using Fresh and Grocery only. The ${k} nearest store${k>1?'s are':' is'} <strong>${near.map(x=>x.n).join(', ')}</strong>.</p>`;
+    else m=`<p>Mean Milk of ${near.map(x=>x.n).join(', ')} = (${near.map(x=>x.m).join(' + ')}) / ${k} = <strong>${r2(est)}</strong>.</p><p style="margin-top:6px">A single global average of Milk over all six stores would be ${r2(gmean)}, which treats far-away stores exactly like near ones. Change k to see how the estimate moves.</p>`;
+    $('#iR',w).innerHTML=m;
+  }
+  w.addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){st.step=+b.dataset.s;render();}});
+  $('#iK',w).addEventListener('input',e=>{st.k=+e.target.value;render();});
+  render();
+})();
+
+/* ================= MISSING COUNTS ================= */
+(function(){
+  const D=[['Region',8],['Fresh',13],['Milk',15],['Grocery',9],['Frozen',8],['Detergents_Paper',10],['Delicassen',11]];
+  $('#misBars').innerHTML=D.map(([n,v])=>`<div class="hb" style="grid-template-columns:160px minmax(0,1fr) 34px"><div><strong>${n}</strong></div><div class="track" role="img" aria-label="${n}: ${v} missing"><div class="real gold" style="width:${v/15*100}%"></div></div><div style="font-family:var(--mono);font-weight:700">${v}</div></div>`).join('');
+})();
+
+highlightAll();
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-SL-2" target="_blank" rel="noopener">github.com/scaler-content/DSML-SL-2</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

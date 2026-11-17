@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear regression 3 post read</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+:root{
+  --cyan-50:#ecfeff; --cyan-100:#cffafe; --cyan-200:#a5f3fc; --cyan-300:#67e8f9;
+  --cyan-400:#22d3ee; --cyan-500:#06b6d4; --cyan-600:#0891b2; --cyan-700:#0e7490;
+  --cyan-800:#155e75; --cyan-900:#164e63; --cyan-950:#0b3742;
+  --ink:#0c2027; --ink-soft:#3b5a62; --paper:#ffffff; --paper-soft:#f4fdfe;
+  --border:#d3ecf0; --warn:#b45309; --warn-bg:#fff7ed; --good:#0f766e;
+  --shadow: 0 1px 2px rgba(12,32,39,.04), 0 8px 24px rgba(12,32,39,.06);
+  --radius: 14px;
+  --maxw: 780px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:var(--paper-soft); color:var(--ink);
+  font-family: "Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  line-height:1.7; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,.ui{ font-family: -apple-system, BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif; }
+a{color:var(--cyan-700);}
+::selection{ background:var(--cyan-200); }
+img,svg{max-width:100%;}
+:focus-visible{ outline:3px solid var(--cyan-400); outline-offset:2px; }
+
+/* ---------- layout shell ---------- */
+.shell{ display:grid; grid-template-columns: 250px minmax(0,1fr); gap:0; max-width:1180px; margin:0 auto; }
+.toc{
+  position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+  padding: 28px 18px 40px 24px; border-right:1px solid var(--border);
+}
+.toc-title{ font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; color:var(--cyan-700); font-weight:700; margin:0 0 12px; }
+.toc a{
+  display:block; font-size:.86rem; color:var(--ink-soft); text-decoration:none; padding:6px 10px;
+  border-radius:8px; margin-bottom:2px; border-left:2px solid transparent; font-family: -apple-system,Segoe UI,Inter,sans-serif;
+}
+.toc a:hover{ background:var(--cyan-50); color:var(--cyan-800); }
+.toc a.active{ background:var(--cyan-100); color:var(--cyan-900); border-left-color:var(--cyan-600); font-weight:600; }
+.toc .grp{ margin-top:14px; }
+main{ min-width:0; padding: 0 0 80px; }
+
+/* ---------- hero ---------- */
+.hero{
+  padding: 64px 48px 40px; background:
+    radial-gradient(1100px 420px at 15% -10%, var(--cyan-100), transparent 60%),
+    linear-gradient(180deg, var(--cyan-950) 0%, var(--cyan-800) 100%);
+  color:#eafcff; position:relative; overflow:hidden;
+}
+.hero::after{ content:""; position:absolute; inset:0; background: radial-gradient(600px 300px at 90% 110%, rgba(103,232,249,.18), transparent 70%); }
+.kicker{ font-family:-apple-system,Segoe UI,Inter,sans-serif; text-transform:uppercase; letter-spacing:.16em; font-size:.72rem; color:var(--cyan-300); font-weight:700; position:relative;}
+.hero h1{ font-size:2.6rem; line-height:1.15; margin:.5rem 0 .75rem; max-width:640px; position:relative; font-weight:800; letter-spacing:-.01em;}
+.hero p.lead{ max-width:600px; color:var(--cyan-100); font-size:1.05rem; position:relative; font-family: Georgia, serif;}
+.hero .meta{ display:flex; gap:18px; margin-top:22px; flex-wrap:wrap; position:relative; font-family:-apple-system,Segoe UI,sans-serif; font-size:.82rem; color:var(--cyan-200);}
+.hero .meta span{ display:flex; align-items:center; gap:6px; }
+.dot{ width:6px;height:6px;border-radius:50%;background:var(--cyan-400); display:inline-block;}
+
+/* ---------- content blocks ---------- */
+.wrap{ padding: 0 48px; max-width:var(--maxw); }
+section{ padding-top:56px; scroll-margin-top: 20px; }
+section > h2{ font-size:1.55rem; color:var(--cyan-900); margin:0 0 6px; letter-spacing:-.01em;}
+section > .section-sub{ color:var(--ink-soft); font-family:-apple-system,Segoe UI,sans-serif; font-size:.92rem; margin:0 0 22px; }
+h3{ color:var(--cyan-800); font-size:1.15rem; margin:28px 0 10px;}
+h4{ color:var(--cyan-700); font-size:1.02rem; margin:20px 0 8px; font-family:-apple-system,Segoe UI,sans-serif;}
+p{ margin:0 0 16px; }
+strong{ color:var(--cyan-900); }
+.story{
+  background:var(--paper); border:1px solid var(--border); border-left:4px solid var(--cyan-500);
+  border-radius:10px; padding:18px 22px; margin:18px 0; box-shadow:var(--shadow);
+}
+.story h4{ margin-top:0; }
+.callout{ background:var(--cyan-50); border:1px solid var(--cyan-200); border-radius:10px; padding:16px 20px; margin:18px 0; font-size:.95rem;}
+.callout-title{ font-family:-apple-system,Segoe UI,sans-serif; font-weight:700; color:var(--cyan-800); font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px; display:flex; align-items:center; gap:6px;}
+.explore{ background:var(--paper); border:1px dashed var(--cyan-400); border-radius:10px; padding:14px 20px; margin:18px 0; font-size:.93rem; color:var(--ink-soft);}
+.explore .callout-title{ color:var(--cyan-700); }
+
+/* analogy */
+.analogy{ display:flex; gap:14px; background:linear-gradient(135deg,var(--cyan-50),#fff); border:1px solid var(--cyan-200); border-radius:10px; padding:16px 20px; margin:18px 0; align-items:flex-start;}
+.analogy .ico{ font-size:1.4rem; flex:0 0 auto; }
+.analogy b{ color:var(--cyan-800); }
+
+/* formula card */
+.formula{
+  background:var(--cyan-900); color:#eafcff; border-radius:12px; padding:22px 26px; margin:20px 0;
+  overflow-x:auto; box-shadow:var(--shadow);
+}
+.formula .katex{ color:#eafcff; font-size:1.15rem; }
+.formula-legend{ list-style:none; padding:0; margin:14px 0 0; font-size:.9rem; }
+.formula-legend li{ margin-bottom:6px; padding-left:1.1em; text-indent:-1.1em; color:#cdeef4; }
+.formula-legend code{ color:#8fe9fb; font-weight:700; }
+
+/* feature grid */
+.feature-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; margin:18px 0; }
+.feature-card{ background:var(--paper); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+.feature-card code{ display:block; color:var(--cyan-700); font-size:.85rem; font-weight:700; margin-bottom:4px;}
+.feature-card span{ font-size:.85rem; color:var(--ink-soft); }
+
+/* code block */
+details.code-toggle{ margin:14px 0; border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--paper);}
+details.code-toggle summary{
+  cursor:pointer; list-style:none; padding:10px 16px; font-family:-apple-system,Segoe UI,sans-serif; font-size:.82rem;
+  color:var(--cyan-700); font-weight:600; display:flex; align-items:center; gap:8px; background:var(--cyan-50);
+}
+details.code-toggle summary::-webkit-details-marker{ display:none; }
+details.code-toggle summary::before{ content:"▸"; transition:transform .15s; }
+details.code-toggle[open] summary::before{ transform:rotate(90deg); }
+details.code-toggle pre{ margin:0; padding:16px; background:#0b1e24; color:#c9f3fa; font-size:.82rem; overflow-x:auto; }
+details.code-toggle .out-label{ padding:8px 16px 0; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); font-family:-apple-system,Segoe UI,sans-serif;}
+
+/* tables */
+.tbl-wrap{ overflow-x:auto; margin:18px 0; border:1px solid var(--border); border-radius:10px; }
+table{ border-collapse:collapse; width:100%; font-size:.86rem; font-family:-apple-system,Segoe UI,sans-serif; min-width:480px;}
+th,td{ padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+thead th{ background:var(--cyan-800); color:#fff; font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;}
+tbody tr:nth-child(even){ background:var(--cyan-50); }
+tbody tr.flag td{ background:var(--warn-bg); }
+tbody tr.flag td:first-child{ font-weight:700; color:var(--warn); }
+.badge{ display:inline-block; font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:999px; font-family:-apple-system,Segoe UI,sans-serif;}
+.badge.ok{ background:#ecfdf5; color:var(--good); }
+.badge.warn{ background:var(--warn-bg); color:var(--warn); }
+
+/* accordion (assumptions) */
+.assumption{
+  border:1px solid var(--border); border-radius:12px; margin:12px 0; background:var(--paper); box-shadow:var(--shadow); overflow:hidden;
+}
+.assumption summary{
+  cursor:pointer; list-style:none; padding:16px 20px; display:flex; align-items:center; gap:14px;
+  font-family:-apple-system,Segoe UI,sans-serif;
+}
+.assumption summary::-webkit-details-marker{ display:none; }
+.assumption summary .num{
+  flex:0 0 auto; width:32px; height:32px; border-radius:50%; background:var(--cyan-600); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.9rem;
+}
+.assumption summary .ttl{ font-weight:700; color:var(--cyan-900); font-size:1rem; flex:1; }
+.assumption summary .chev{ color:var(--cyan-500); transition:transform .18s; font-size:1.1rem; }
+.assumption[open] summary .chev{ transform:rotate(180deg); }
+.assumption .body{ padding:0 22px 22px; border-top:1px solid var(--border); }
+.assumption .body > *:first-child{ margin-top:18px; }
+
+/* quiz */
+.quiz{ background:var(--paper); border:1px solid var(--cyan-300); border-radius:12px; padding:20px 22px; margin:24px 0; box-shadow:var(--shadow);}
+.quiz-label{ font-family:-apple-system,Segoe UI,sans-serif; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--cyan-600); margin-bottom:8px;}
+.quiz-q{ font-weight:600; color:var(--ink); margin-bottom:14px; font-family:-apple-system,Segoe UI,sans-serif; font-size:.98rem;}
+.quiz-choices{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+.quiz-choice{
+  display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border:1px solid var(--border); border-radius:8px;
+  cursor:pointer; font-family:-apple-system,Segoe UI,sans-serif; font-size:.9rem; transition:.12s;
+}
+.quiz-choice:hover{ border-color:var(--cyan-400); background:var(--cyan-50); }
+.quiz-choice input{ margin-top:3px; accent-color: var(--cyan-600); }
+.quiz-choice.correct{ border-color:var(--good); background:#ecfdf5; }
+.quiz-choice.incorrect{ border-color:#b91c1c; background:#fef2f2; }
+.quiz-btn{
+  background:var(--cyan-700); color:#fff; border:none; padding:9px 18px; border-radius:8px; font-weight:600;
+  cursor:pointer; font-family:-apple-system,Segoe UI,sans-serif; font-size:.86rem;
+}
+.quiz-btn:hover{ background:var(--cyan-800); }
+.quiz-btn:disabled{ background:var(--cyan-300); cursor:not-allowed; }
+.quiz-feedback{ margin-top:14px; padding:12px 14px; border-radius:8px; font-size:.9rem; display:none; }
+.quiz-feedback.show{ display:block; }
+.quiz-feedback.right{ background:#ecfdf5; color:#065f46; }
+.quiz-feedback.wrong{ background:#fef2f2; color:#7f1d1d; }
+
+/* demo panels */
+.demo{ background:var(--paper); border:1px solid var(--border); border-radius:14px; padding:22px; margin:22px 0; box-shadow:var(--shadow);}
+.demo-head{ display:flex; align-items:center; gap:10px; margin-bottom:4px; font-family:-apple-system,Segoe UI,sans-serif;}
+.demo-head .tag{ font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; background:var(--cyan-600); color:#fff; padding:3px 9px; border-radius:999px;}
+.demo-head h4{ margin:0; color:var(--cyan-900); }
+.demo p.demo-desc{ font-size:.9rem; color:var(--ink-soft); font-family:-apple-system,Segoe UI,sans-serif; margin-top:8px;}
+.demo-controls{ display:flex; align-items:center; gap:14px; margin:16px 0; font-family:-apple-system,Segoe UI,sans-serif; flex-wrap:wrap;}
+.demo-controls label{ font-size:.85rem; font-weight:600; color:var(--cyan-800); }
+.demo-controls input[type=range]{ flex:1; min-width:160px; accent-color:var(--cyan-600); }
+.demo-controls .val{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--cyan-700); min-width:2.5em; text-align:right;}
+.demo-grid{ display:grid; grid-template-columns: 1.3fr 1fr; gap:18px; }
+@media (max-width:640px){ .demo-grid{ grid-template-columns:1fr; } }
+.demo-panel{ background:var(--cyan-50); border-radius:10px; padding:10px; }
+.demo-panel svg{ width:100%; height:auto; display:block; }
+.demo-readout{ display:flex; gap:16px; margin-top:12px; flex-wrap:wrap; font-family:-apple-system,Segoe UI,sans-serif;}
+.readout-item{ background:var(--cyan-50); border-radius:8px; padding:8px 14px; }
+.readout-item .l{ font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--cyan-700); font-weight:700;}
+.readout-item .v{ font-size:1.05rem; font-weight:700; color:var(--cyan-900); font-variant-numeric:tabular-nums;}
+.legend-line{ display:flex; gap:16px; font-size:.78rem; font-family:-apple-system,Segoe UI,sans-serif; margin-top:8px; flex-wrap:wrap;}
+.legend-line span{ display:flex; align-items:center; gap:6px; }
+.legend-line i{ width:14px; height:3px; display:inline-block; border-radius:2px; }
+
+/* diagram */
+.diagram-wrap{ background:var(--paper); border:1px solid var(--border); border-radius:14px; padding:22px; margin:20px 0; box-shadow:var(--shadow); overflow-x:auto;}
+
+/* recap */
+.recap-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; margin:18px 0; }
+.recap-card{ background:var(--paper); border:1px solid var(--border); border-left:4px solid var(--cyan-500); border-radius:10px; padding:14px 16px; font-size:.9rem; }
+.recap-card b{ display:block; color:var(--cyan-800); margin-bottom:4px; font-family:-apple-system,Segoe UI,sans-serif; font-size:.85rem;}
+
+/* footer */
+footer{ margin-top:70px; padding:34px 48px; border-top:1px solid var(--border); color:var(--ink-soft); font-family:-apple-system,Segoe UI,sans-serif; font-size:.82rem; text-align:center;}
+
+/* mobile toc */
+.toc-toggle{ display:none; }
+@media (max-width:900px){
+  .shell{ grid-template-columns:1fr; }
+  .toc{ position:relative; height:auto; border-right:none; border-bottom:1px solid var(--border); padding:14px 20px; }
+  .toc.collapsed .toc-list{ display:none; }
+  .toc-toggle{
+    display:flex; justify-content:space-between; align-items:center; width:100%; background:none; border:none;
+    font-family:-apple-system,Segoe UI,sans-serif; color:var(--cyan-800); font-weight:700; font-size:.85rem; cursor:pointer; padding:4px 0;
+  }
+  .hero{ padding:44px 24px 32px; }
+  .hero h1{ font-size:1.9rem; }
+  .wrap{ padding:0 22px; }
+  .demo-grid{ gap:14px; }
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML with AI 4 · Trusting a regression model</span><span class="pn"><a href="../ML-with-AI-workflows-3/" title="ML with AI 3 · Coefficients and gradient descent">← Prev</a><a href="../ML-with-AI-workflows-5/" title="ML with AI 5 · Regression diagnostics practice">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="shell">
+  <nav class="toc" id="toc">
+    <button class="toc-toggle" id="tocToggle" aria-expanded="true" aria-controls="tocList">
+      <span>Contents</span><span aria-hidden="true">▾</span>
+    </button>
+    <div id="tocList">
+      <p class="toc-title">On this page</p>
+      <a href="#intro">The scenario</a>
+      <a href="#data">Preparing the data</a>
+      <a href="#scaling">Feature scaling</a>
+      <a href="#r-squared">Trouble with R²</a>
+      <a href="#adj-r-squared">Adjusted R²</a>
+      <a href="#statsmodels">Reading a statsmodels table</a>
+      <a href="#checklist">The trust checklist</a>
+      <a href="#assumptions">Five assumptions</a>
+      <a href="#resolution">The story resolves</a>
+      <a href="#recap">Wrap-up</a>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <p class="kicker">Regression Diagnostics · Post-Read</p>
+      <h1>Linear regression 3: building a model you can actually trust</h1>
+      <p class="lead">A good R² is not enough to put a model in front of a customer. This is the story of how one data scientist learns to scale features fairly, judge a model's fit honestly, and check the five assumptions that decide whether a linear regression can be trusted at all.</p>
+      <div class="meta">
+        <span><i class="dot"></i>Feature scaling</span>
+        <span><i class="dot"></i>R² vs Adjusted R²</span>
+        <span><i class="dot"></i>statsmodels diagnostics</span>
+        <span><i class="dot"></i>5 model assumptions</span>
+      </div>
+    </header>
+
+    <div class="wrap">
+
+      <!-- ============ INTRO ============ -->
+      <section id="intro">
+        <h2>Before we begin: a scenario</h2>
+        <p class="section-sub">Why any of this matters</p>
+        <div class="story">
+          <h4>Meet Kabir</h4>
+          <p>Kabir is a data scientist at Fleetline, a last-mile delivery startup. The app promises customers an estimated delivery time the moment they place an order, and Kabir has been asked to build the model behind that estimate. It takes in details available right when an order is placed — the distance the courier has to travel, the package weight, a traffic congestion index for the route, the courier's average speed on past deliveries, and a few other signals — and outputs a predicted number of minutes until the order arrives.</p>
+          <p>This sounds like a plain linear regression problem, and it is. But this number gets shown directly to customers on their screens, over and over, thousands of times a day. If the model is quietly unreliable in some situations, customers notice fast, and so does the support team fielding complaints. Before Kabir's manager will let this model anywhere near the live app, she wants to know not just how accurate it looks on paper, but <strong>why</strong> it can actually be trusted.</p>
+          <p>Every idea in this post shows up because Kabir ran into a question he had to answer before his model could be trusted with a real customer's delivery estimate.</p>
+        </div>
+      </section>
+
+      <!-- ============ DATA ============ -->
+      <section id="data">
+        <h2>Setting the stage: preparing today's data</h2>
+        <p class="section-sub">A realistic, imperfect delivery dataset</p>
+        <p>Fleetline's real order database isn't something we can work with directly, so we simulate a dataset that mirrors what Kabir actually works with: the same features, the same rough relationships, and — importantly — the same kind of imperfections a real dataset has. Real delivery data is noisy, a few features overlap in what they measure, the spread of errors isn't perfectly tidy, and every now and then something genuinely unusual happens, like an order getting caught in a flash flood. That messiness is built in on purpose, because learning to spot these issues is the whole point of this material.</p>
+
+        <div class="feature-grid">
+          <div class="feature-card"><code>distance_m</code><span>Route distance for the delivery, in meters</span></div>
+          <div class="feature-card"><code>traffic_index</code><span>A 0–1 score for how congested the route is</span></div>
+          <div class="feature-card"><code>package_weight_kg</code><span>Weight of the package, in kilograms</span></div>
+          <div class="feature-card"><code>courier_avg_speed_kmph</code><span>Courier's average speed on past deliveries</span></div>
+          <div class="feature-card"><code>order_value_inr</code><span>Value of the order, in rupees</span></div>
+          <div class="feature-card"><code>estimated_fuel_cost_inr</code><span>Fleetline's fuel-cost estimate, calculated mostly from distance</span></div>
+          <div class="feature-card"><code>is_city_center</code><span>1 if the route passes through the dense city center, else 0</span></div>
+          <div class="feature-card"><code>delivery_time_min</code><span>Actual delivery time — the target we want to predict</span></div>
+        </div>
+
+        <p>Two imperfections are baked in deliberately and matter later: routes through the city center get disproportionately slower once they stretch past a few kilometers (a non-linear effect), and the spread of unpredictable delay grows with distance — a short hop is fairly predictable, a long cross-city trip can go wrong in more ways. One flash-flood order is also planted in the training data as a genuine outlier.</p>
+
+        <details class="code-toggle">
+          <summary>View: generating the synthetic dataset</summary>
+          <pre>rng = np.random.default_rng(11)
+n_orders = 4000
+
+distance_m = rng.uniform(300, 20000, n_orders)
+traffic_index = rng.beta(2, 2, n_orders)
+package_weight_kg = rng.uniform(0.2, 20, n_orders)
+courier_avg_speed_kmph = np.clip(rng.normal(28, 5, n_orders), 12, 45)
+order_value_inr = rng.uniform(150, 3000, n_orders)
+is_city_center = rng.binomial(1, 0.3, n_orders)
+
+# Fuel cost is estimated mostly from distance -> will end up highly
+# correlated with distance_m (relevant later, for multicollinearity)
+estimated_fuel_cost_inr = np.clip(6.5 * distance_km + rng.normal(0, 3, n_orders), 5, None)
+
+delivery_time_min = (
+    8 + 2.3 * distance_km + 20 * traffic_index - 0.12 * courier_avg_speed_kmph
+    + 0.35 * package_weight_kg + city_center_bump + noise
+)</pre>
+        </details>
+      </section>
+
+      <!-- ============ SCALING ============ -->
+      <section id="scaling">
+        <h2>Why did we scale the features before training?</h2>
+        <p class="section-sub">Putting every feature on the same footing</p>
+        <p>Every feature was scaled into the same 0-to-1 range before training, using min-max scaling:</p>
+        <div class="formula">
+          $$x_{scaled} = \dfrac{x - x_{min}}{x_{max} - x_{min}}$$
+          <ul class="formula-legend">
+            <li><code>x</code> — the original value of a feature for one data point</li>
+            <li><code>x_min, x_max</code> — the smallest and largest values that feature takes across the training set</li>
+            <li><code>x_scaled</code> — the rescaled value, always between 0 and 1</li>
+          </ul>
+        </div>
+
+        <div class="analogy">
+          <span class="ico">🔊</span>
+          <p style="margin:0;"><b>The intuition.</b> Route distance runs from a few hundred to over twenty thousand meters; traffic congestion sits on a simple 0-to-1 scale. Left unscaled, an optimizer ends up taking much larger steps for the feature with the larger raw values — not because it's more important, but purely because of the size of its numbers. It's a bit like judging how much two people have to say based on how loudly they happen to be speaking, rather than the substance of what they're saying. Scaling removes that unfair advantage.</p>
+        </div>
+
+        <div class="quiz" data-quiz>
+          <div class="quiz-label">Quiz 1</div>
+          <div class="quiz-q">A delivery-time dataset has route distance recorded in meters (typically in the thousands) and a traffic congestion index recorded on a 0-to-1 scale. If a linear regression model is trained on this data without any scaling, what is the most likely consequence?</div>
+          <div class="quiz-choices">
+            <label class="quiz-choice"><input type="radio" name="q1"><span>The model will refuse to train because the ranges are too different</span></label>
+            <label class="quiz-choice"><input type="radio" name="q1" data-correct><span>The coefficient for the congestion index may end up looking misleadingly small in scale, even if the feature is genuinely important, simply because of how the raw numbers compare to distance</span></label>
+            <label class="quiz-choice"><input type="radio" name="q1"><span>Distance will always be assigned a coefficient of exactly zero</span></label>
+            <label class="quiz-choice"><input type="radio" name="q1"><span>The model will automatically convert itself into a non-linear model</span></label>
+          </div>
+          <button class="quiz-btn" data-check>Check answer</button>
+          <div class="quiz-feedback" data-feedback>
+            <strong data-verdict></strong> Linear regression doesn't understand units on its own. When one feature's raw values are far larger than another's, the optimization process and the resulting coefficients get skewed by that difference in scale — not by which feature is truly more predictive. Scaling puts every feature on the same footing.
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ R-SQUARED TROUBLE ============ -->
+      <section id="r-squared">
+        <h2>The trouble with R²</h2>
+        <p class="section-sub">"If we add a few more columns, would the model get better?"</p>
+        <div class="story">
+          <p>Kabir shows his manager the first model's R² value. She's pleased, and asks a natural follow-up: if we add a few more columns from the order data — even ones we're not sure matter — would the model get better? Kabir tries it, adding a feature that is essentially random and unrelated to delivery time, just to test the idea. To his surprise, the R² score goes up anyway. That doesn't feel right — and it isn't.</p>
+        </div>
+
+        <div class="formula">
+          $$R^2 = 1 - \dfrac{SS_{res}}{SS_{tot}}$$
+          <ul class="formula-legend">
+            <li><code>SS_res</code> — sum of squared residuals, <code>Σ(y_i − ŷ_i)²</code></li>
+            <li><code>SS_tot</code> — total sum of squares, <code>Σ(y_i − ȳ)²</code>, where <code>ȳ</code> is the mean of all actual values</li>
+          </ul>
+        </div>
+
+        <p>R² tells us what fraction of the variation in the target the model manages to explain. The trouble is that adding <em>any</em> extra feature, even a useless one, can never make <code>SS_res</code> larger — at worst the model assigns it a coefficient of zero. In practice, with real data, the model usually finds at least a tiny, coincidental pattern to latch onto, so R² creeps up even though nothing meaningful was added.</p>
+
+        <div class="analogy">
+          <span class="ico">🎟️</span>
+          <p style="margin:0;"><b>Think of it like a raffle</b> where you're allowed to keep buying more tickets for free. Buying an extra ticket can never lower your odds of winning, so of course you'd keep buying more — whether or not it reflects skill. R² behaves the same way with features: it can only go up or stay flat as you add more, whether or not those features carry real information.</p>
+        </div>
+      </section>
+
+      <!-- ============ ADJUSTED R2 ============ -->
+      <section id="adj-r-squared">
+        <h2>Adjusted R²</h2>
+        <p class="section-sub">A metric that charges rent for every feature</p>
+        <p>Adjusted R² fixes the raffle problem by charging the model a small penalty for every feature it adds, so a feature only helps the score if it earns its place.</p>
+
+        <div class="formula">
+          $$Adj.\,R^2 = 1 - \left[\dfrac{(1 - R^2)(n - 1)}{n - d - 1}\right]$$
+          <ul class="formula-legend">
+            <li><code>R²</code> — the regular R² value</li>
+            <li><code>n</code> — number of data points used to fit the model</li>
+            <li><code>d</code> — number of predictor features in the model (not counting the intercept)</li>
+          </ul>
+        </div>
+        <p>As <code>d</code> grows, the denominator <code>n − d − 1</code> shrinks, making the penalty larger. If a new feature doesn't meaningfully reduce <code>SS_res</code>, the penalty outweighs the tiny gain in R², and Adjusted R² actually goes <em>down</em> — a warning that the feature isn't pulling its weight.</p>
+
+        <div class="analogy">
+          <span class="ico">🏅</span>
+          <p style="margin:0;"><b>Sports-roster analogy.</b> Imagine a team's efficiency rating that accounts for squad size. Just having more players on the roster shouldn't automatically make a team look better on paper — a good rating should only rise if the extra players actually contribute to winning, and fall if they're just taking up space. Adjusted R² plays that same role for a regression model's feature set.</p>
+        </div>
+
+        <details class="code-toggle">
+          <summary>View: computing R² and Adjusted R² on Fleetline's test data</summary>
+          <pre>y_hat = lr.predict(X_test)
+Adj_R = 1 - ((1 - lr.score(X_test, y_test)) * (len(y_test) - 1)
+             / (len(y_test) - X_test.shape[1] - 1))
+print("R-squared:", lr.score(X_test, y_test))
+print("Adjusted R-squared:", Adj_R)</pre>
+          <div class="out-label">Output</div>
+          <pre>R-squared: 0.7622307584318843
+Adjusted R-squared: 0.7608344625501923</pre>
+        </details>
+
+        <div class="explore">
+          <div class="callout-title">💡 Explore further</div>
+          Ask an AI assistant to explain Adjusted R² using an analogy from a field you enjoy — sports, music, cooking, finance — then compare it with the roster analogy above. Notice where the two agree, and where one captures something the other misses.
+        </div>
+
+        <div class="demo" id="demo1">
+          <div class="demo-head"><span class="tag">Try it</span><h4>R² vs. Adjusted R² as junk features pile up</h4></div>
+          <p class="demo-desc">Two informative features drive the target here. The slider adds increasing numbers of completely random, meaningless "junk" features alongside them. Watch what happens to the two scores.</p>
+          <div class="demo-controls">
+            <label for="d1-slider">Junk features added</label>
+            <input type="range" id="d1-slider" min="1" max="40" step="1" value="15">
+            <span class="val" id="d1-val">15</span>
+          </div>
+          <div class="demo-grid">
+            <div class="demo-panel"><svg id="d1-svg" viewBox="0 0 520 300" preserveAspectRatio="xMidYMid meet"></svg></div>
+            <div>
+              <div class="legend-line">
+                <span><i style="background:var(--cyan-600)"></i>R²</span>
+                <span><i style="background:#e08a2b"></i>Adjusted R²</span>
+              </div>
+              <div class="demo-readout">
+                <div class="readout-item"><div class="l">R² at max</div><div class="v" id="d1-r2">–</div></div>
+                <div class="readout-item"><div class="l">Adj. R² at max</div><div class="v" id="d1-adj">–</div></div>
+              </div>
+              <p class="demo-desc" style="margin-top:12px;">R² climbs steadily toward 1 as junk features are added — it has no way to penalize noise. Adjusted R² rises briefly, then turns and falls as the per-feature penalty overtakes the negligible gain in fit.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ STATSMODELS ============ -->
+      <section id="statsmodels">
+        <h2>Getting a fuller picture: introducing <code>statsmodels</code></h2>
+        <p class="section-sub">A diagnostic table, not just an accuracy score</p>
+        <p><code>scikit-learn</code> is great for training and predicting, but it doesn't easily surface the kind of detailed diagnostic table Kabir needs to defend his model before it goes live. <code>statsmodels</code> fills that gap with a full OLS regression summary.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Feature</th><th>coef</th><th>std err</th><th>t</th><th>P&gt;|t|</th><th>[0.025</th><th>0.975]</th></tr></thead>
+            <tbody>
+              <tr><td>const</td><td>−0.0189</td><td>0.008</td><td>−2.333</td><td>0.020</td><td>−0.035</td><td>−0.003</td></tr>
+              <tr><td>distance_m</td><td>0.5608</td><td>0.070</td><td>8.065</td><td>0.000</td><td>0.424</td><td>0.697</td></tr>
+              <tr><td>traffic_index</td><td>0.1719</td><td>0.007</td><td>24.946</td><td>0.000</td><td>0.158</td><td>0.185</td></tr>
+              <tr><td>package_weight_kg</td><td>0.0550</td><td>0.006</td><td>9.908</td><td>0.000</td><td>0.044</td><td>0.066</td></tr>
+              <tr><td>courier_avg_speed_kmph</td><td>−0.0303</td><td>0.011</td><td>−2.863</td><td>0.004</td><td>−0.051</td><td>−0.010</td></tr>
+              <tr><td>order_value_inr</td><td>−0.0137</td><td>0.006</td><td>−2.480</td><td>0.013</td><td>−0.025</td><td>−0.003</td></tr>
+              <tr class="flag"><td>estimated_fuel_cost_inr</td><td>−0.0846</td><td>0.070</td><td>−1.205</td><td>0.228</td><td>−0.222</td><td>0.053</td></tr>
+              <tr><td>is_city_center</td><td>0.0755</td><td>0.003</td><td>21.909</td><td>0.000</td><td>0.069</td><td>0.082</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:.85rem;color:var(--ink-soft);">R² = 0.759 · Adj. R² = 0.758 · F-statistic = 1255 (n = 2792, 7 predictors). The highlighted row, <code>estimated_fuel_cost_inr</code>, has a P&gt;|t| of 0.228 — not statistically distinguishable from zero, an early hint of trouble revisited in the multicollinearity check below.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td>Dep. Variable</td><td>The target the model is predicting (delivery time)</td></tr>
+              <tr><td>Model</td><td>The type of model fit — here, Ordinary Least Squares (OLS)</td></tr>
+              <tr><td>R-squared</td><td>Fraction of variance in the target explained by the model</td></tr>
+              <tr><td>Adj. R-squared</td><td>R² penalized for the number of predictors, computed automatically</td></tr>
+              <tr><td>coef</td><td>The learned coefficient for each feature</td></tr>
+              <tr><td>P&gt;|t|</td><td>Roughly, how confident we can be a coefficient is genuinely non-zero, rather than noise</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ CHECKLIST INTRO ============ -->
+      <section id="checklist">
+        <h2>Earning trust: the five-assumption checklist</h2>
+        <p class="section-sub">A good score isn't the same as a trustworthy model</p>
+        <div class="story">
+          <p>Kabir now has a model with a respectable Adjusted R² and a detailed summary table. He brings this to his manager, expecting a green light. Instead she asks a harder question: <em>"Before we let this model print an estimated delivery time on a customer's screen, how do we know it's actually reliable — and not just lucky on this one batch of data?"</em></p>
+          <p>Linear regression makes several assumptions about the data it's trained on, and the model is only as trustworthy as those assumptions are true. Kabir decides to run his model through a trust checklist — five assumptions, one at a time.</p>
+        </div>
+
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 760 190" role="img" aria-label="Flow diagram: five assumptions leading to a trustworthy model">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="#0891b2"/>
+              </marker>
+            </defs>
+            <g font-family="-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600">
+              <!-- five boxes -->
+              <g>
+                <rect x="10" y="55" width="118" height="66" rx="10" fill="#ecfeff" stroke="#22d3ee" stroke-width="1.5"/>
+                <text x="69" y="82" text-anchor="middle" fill="#0e7490">Linearity</text>
+                <text x="69" y="98" text-anchor="middle" fill="#0e7490" font-weight="400" font-size="10">straight-line effect</text>
+              </g>
+              <g>
+                <rect x="146" y="55" width="118" height="66" rx="10" fill="#ecfeff" stroke="#22d3ee" stroke-width="1.5"/>
+                <text x="205" y="76" text-anchor="middle" fill="#0e7490">No</text>
+                <text x="205" y="91" text-anchor="middle" fill="#0e7490">multicollinearity</text>
+                <text x="205" y="107" text-anchor="middle" fill="#0e7490" font-weight="400" font-size="10">checked via VIF</text>
+              </g>
+              <g>
+                <rect x="282" y="55" width="118" height="66" rx="10" fill="#ecfeff" stroke="#22d3ee" stroke-width="1.5"/>
+                <text x="341" y="82" text-anchor="middle" fill="#0e7490">Normal errors</text>
+                <text x="341" y="98" text-anchor="middle" fill="#0e7490" font-weight="400" font-size="10">Shapiro-Wilk test</text>
+              </g>
+              <g>
+                <rect x="418" y="55" width="118" height="66" rx="10" fill="#ecfeff" stroke="#22d3ee" stroke-width="1.5"/>
+                <text x="477" y="76" text-anchor="middle" fill="#0e7490">Constant</text>
+                <text x="477" y="91" text-anchor="middle" fill="#0e7490">error spread</text>
+                <text x="477" y="107" text-anchor="middle" fill="#0e7490" font-weight="400" font-size="10">Goldfeld-Quandt test</text>
+              </g>
+              <g>
+                <rect x="554" y="55" width="118" height="66" rx="10" fill="#ecfeff" stroke="#22d3ee" stroke-width="1.5"/>
+                <text x="613" y="76" text-anchor="middle" fill="#0e7490">No</text>
+                <text x="613" y="91" text-anchor="middle" fill="#0e7490">autocorrelation</text>
+                <text x="613" y="107" text-anchor="middle" fill="#0e7490" font-weight="400" font-size="10">sequential errors</text>
+              </g>
+              <line x1="128" y1="88" x2="144" y2="88" stroke="#0891b2" stroke-width="1.5" marker-end="url(#arrow)"/>
+              <line x1="264" y1="88" x2="280" y2="88" stroke="#0891b2" stroke-width="1.5" marker-end="url(#arrow)"/>
+              <line x1="400" y1="88" x2="416" y2="88" stroke="#0891b2" stroke-width="1.5" marker-end="url(#arrow)"/>
+              <line x1="536" y1="88" x2="552" y2="88" stroke="#0891b2" stroke-width="1.5" marker-end="url(#arrow)"/>
+              <rect x="255" y="150" width="250" height="34" rx="17" fill="#0e7490"/>
+              <text x="380" y="171" text-anchor="middle" fill="#ecfeff" font-weight="700">A model you can defend</text>
+              <path d="M613 121 C613 138, 460 138, 390 149" fill="none" stroke="#67e8f9" stroke-width="1.5" marker-end="url(#arrow)"/>
+            </g>
+          </svg>
+        </div>
+      </section>
+
+      <!-- ============ ASSUMPTIONS ============ -->
+      <section id="assumptions">
+        <h2>The five assumptions, one at a time</h2>
+        <p class="section-sub">Each accordion below expands into the full check</p>
+
+        <details class="assumption" open>
+          <summary><span class="num">1</span><span class="ttl">Linearity</span><span class="chev">⌄</span></summary>
+          <div class="body">
+            <p>Linear regression assumes the relationship between each feature and the target is a straight-line relationship: a fixed increase in a feature produces roughly the same fixed change in the prediction, no matter where you are on that feature's range.</p>
+            <p>For Kabir, this means the model assumes each extra kilometer of route distance adds roughly the same number of minutes to a delivery, whether the route is 2 km or 20. If routes through the crowded city center take disproportionately longer per kilometer than routes on open highway, a plain linear model will systematically get those cases wrong.</p>
+            <div class="analogy">
+              <span class="ico">🏃</span>
+              <p style="margin:0;">Imagine judging how tired someone is after a run purely by distance covered, assuming tiredness increases at a constant rate per kilometer. That might hold for the first few kilometers, but a marathon runner at kilometer 40 is often far more exhausted, relative to distance, than at kilometer 4. A straight line drawn through the whole race would miss that curve.</p>
+            </div>
+            <div class="quiz" data-quiz>
+              <div class="quiz-label">Quiz 2</div>
+              <div class="quiz-q">Which of the following situations would violate the linearity assumption of linear regression?</div>
+              <div class="quiz-choices">
+                <label class="quiz-choice"><input type="radio" name="q2"><span>Delivery time increasing by roughly the same fixed number of minutes for every additional kilometer of route distance, across the whole range observed</span></label>
+                <label class="quiz-choice"><input type="radio" name="q2" data-correct><span>Delivery time rising only slightly with distance for short routes, and then rising much more sharply once a route enters a dense city-center zone</span></label>
+                <label class="quiz-choice"><input type="radio" name="q2"><span>Delivery time having a small constant offset added for every order, regardless of any feature</span></label>
+                <label class="quiz-choice"><input type="radio" name="q2"><span>Delivery time depending on a single feature that behaves in a clearly straight-line fashion</span></label>
+              </div>
+              <button class="quiz-btn" data-check>Check answer</button>
+              <div class="quiz-feedback" data-feedback><strong data-verdict></strong> A relationship that stays flat for a while and then bends sharply upward past a threshold is a curved relationship, not a straight line. A plain linear model forced onto this pattern will underpredict past the threshold and overpredict before it.</div>
+            </div>
+          </div>
+        </details>
+
+        <details class="assumption">
+          <summary><span class="num">2</span><span class="ttl">No multicollinearity between features</span><span class="chev">⌄</span></summary>
+          <div class="body">
+            <p>Multicollinearity happens when two or more features carry almost the same information. Route distance and estimated fuel cost are a good example here: Fleetline's ops team calculates estimated fuel cost as roughly a fixed rate multiplied by distance, so it moves in near lock-step with distance itself.</p>
+            <p>When two features tell the model almost the exact same story, it has no reliable way to decide how much credit each deserves. Small changes in the data can cause coefficients to swing wildly between the two, even though the combined prediction barely changes — making individual coefficients untrustworthy even when overall predictions still look fine.</p>
+            <div class="analogy">
+              <span class="ico">⚖️</span>
+              <p style="margin:0;">Like two witnesses in a courtroom who saw the exact same thing and describe it identically. The second witness adds no new confidence — they're just repeating the first. But splitting credit between them would be arbitrary and unstable, because there was never really two independent sources of information.</p>
+            </div>
+
+            <h4>Measuring it: the Variance Inflation Factor (VIF)</h4>
+            <div class="formula">
+              $$VIF_j = \dfrac{1}{1 - R_j^2}$$
+              <ul class="formula-legend">
+                <li><code>VIF_j</code> — variance inflation factor for feature <code>j</code></li>
+                <li><code>R_j²</code> — R² from regressing feature <code>j</code> against every other feature</li>
+              </ul>
+            </div>
+            <p>A common rule of thumb: a VIF above 5 — and especially above 10 — signals serious multicollinearity for that feature.</p>
+
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Feature</th><th>VIF</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr class="flag"><td>distance_m</td><td>156.55</td><td><span class="badge warn">High</span></td></tr>
+                  <tr class="flag"><td>estimated_fuel_cost_inr</td><td>156.53</td><td><span class="badge warn">High</span></td></tr>
+                  <tr><td>traffic_index</td><td>1.004</td><td><span class="badge ok">OK</span></td></tr>
+                  <tr><td>order_value_inr</td><td>1.003</td><td><span class="badge ok">OK</span></td></tr>
+                  <tr><td>courier_avg_speed_kmph</td><td>1.002</td><td><span class="badge ok">OK</span></td></tr>
+                  <tr><td>package_weight_kg</td><td>1.001</td><td><span class="badge ok">OK</span></td></tr>
+                  <tr><td>is_city_center</td><td>1.001</td><td><span class="badge ok">OK</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p style="font-size:.88rem;">A VIF can shoot toward infinity when two features are perfectly (or almost perfectly) correlated. The fix here: drop the more redundant feature, refit, and check whether Adjusted R² holds steady — if it does, the removed feature wasn't adding independent information in the first place.</p>
+
+            <div class="demo" id="demo2" style="margin-top:22px;">
+              <div class="demo-head"><span class="tag">Try it</span><h4>Watching multicollinearity break a model</h4></div>
+              <p class="demo-desc">Two synthetic features drive a target together. The slider controls how strongly correlated the two features are with each other. Watch VIF and the fitted coefficients as correlation climbs toward 1.</p>
+              <div class="demo-controls">
+                <label for="d2-slider">Correlation between features</label>
+                <input type="range" id="d2-slider" min="0" max="0.98" step="0.02" value="0">
+                <span class="val" id="d2-val">0.00</span>
+              </div>
+              <div class="demo-grid">
+                <div class="demo-panel"><svg id="d2-scatter" viewBox="0 0 300 260" preserveAspectRatio="xMidYMid meet"></svg></div>
+                <div class="demo-panel"><svg id="d2-bars" viewBox="0 0 300 260" preserveAspectRatio="xMidYMid meet"></svg></div>
+              </div>
+              <div class="demo-readout">
+                <div class="readout-item"><div class="l">VIF — Feature A</div><div class="v" id="d2-vifa">–</div></div>
+                <div class="readout-item"><div class="l">VIF — Feature B</div><div class="v" id="d2-vifb">–</div></div>
+                <div class="readout-item"><div class="l">Coef A</div><div class="v" id="d2-coefa">–</div></div>
+                <div class="readout-item"><div class="l">Coef B</div><div class="v" id="d2-coefb">–</div></div>
+              </div>
+              <p class="demo-desc" style="margin-top:10px;">As correlation rises, VIF for both features grows sharply and the individual coefficients become unstable — even while the combined fit barely changes.</p>
+            </div>
+
+            <div class="quiz" data-quiz style="margin-top:22px;">
+              <div class="quiz-label">Quiz 3</div>
+              <div class="quiz-q">A model includes both a delivery's route distance and its estimated fuel cost, calculated as roughly a fixed rate multiplied by that same distance. What would you expect in the VIF table for these two features?</div>
+              <div class="quiz-choices">
+                <label class="quiz-choice"><input type="radio" name="q3"><span>A VIF close to 1 for both features</span></label>
+                <label class="quiz-choice"><input type="radio" name="q3" data-correct><span>A very high VIF for both features, since they carry almost the same information</span></label>
+                <label class="quiz-choice"><input type="radio" name="q3"><span>A VIF that is undefined only for estimated fuel cost, and normal for distance</span></label>
+                <label class="quiz-choice"><input type="radio" name="q3"><span>VIF has no relationship with how correlated two features are with each other</span></label>
+              </div>
+              <button class="quiz-btn" data-check>Check answer</button>
+              <div class="quiz-feedback" data-feedback><strong data-verdict></strong> Since estimated fuel cost is computed directly from distance, the two are highly correlated. Regressing either against the rest of the dataset — including the other — yields a very high R², pushing both VIF values well above common caution thresholds like 5 or 10.</div>
+            </div>
+            <div class="explore">
+              <div class="callout-title">💡 Explore further</div>
+              Think of a dataset from a field you're interested in — sports statistics, e-commerce, personal finance — and ask an AI assistant to help identify a pair of features likely to be multicollinear, and why they'd carry overlapping information.
+            </div>
+          </div>
+        </details>
+
+        <details class="assumption">
+          <summary><span class="num">3</span><span class="ttl">Errors are normally distributed</span><span class="chev">⌄</span></summary>
+          <div class="body">
+            <p>Every prediction has an error, or residual, attached to it:</p>
+            <div class="formula">$$e_i = y_i - \hat{y}_i$$</div>
+            <p>Linear regression assumes these errors, taken across the whole dataset, roughly follow a normal (bell-curve) distribution centered around zero: most predictions close to correct, with a few a bit too high and a few a bit too low, symmetrically. If errors are heavily skewed or dominated by a handful of extreme values, several statistical guarantees behind linear regression start to break down — including how much we can trust the p-values in the summary table.</p>
+            <h4>Why outliers matter</h4>
+            <p>The one delivery caught in a flash flood, delayed far outside anything else in the data, behaves like one unusually loud voice in an otherwise calm room: it can pull the model's fitted line toward itself, distorting predictions for every other, far more typical delivery, just to accommodate one unusual case.</p>
+            <h4>Checking it: the Shapiro-Wilk test</h4>
+            <p>The Shapiro-Wilk test produces a statistic <code>W</code> measuring how closely a set of values resembles a normal distribution. <code>W</code> ranges up to 1 — the closer to 1, the more normal the errors look.</p>
+            <details class="code-toggle">
+              <summary>View: computing the Shapiro-Wilk statistic</summary>
+              <pre>from scipy import stats
+res = stats.shapiro(errors)
+print("Shapiro-Wilk statistic (W):", res.statistic)</pre>
+              <div class="out-label">Output</div>
+              <pre>Shapiro-Wilk statistic (W): 0.9723562152221223</pre>
+            </details>
+            <p>A histogram of residuals that looks roughly bell-shaped, together with a Shapiro-Wilk statistic close to 1, is a reasonable sanity check that the errors are close to normally distributed — one more box checked.</p>
+            <div class="quiz" data-quiz>
+              <div class="quiz-label">Quiz 4</div>
+              <div class="quiz-q">One delivery was delayed by a sudden flash flood that shut down the only bridge on its route, producing a delay far outside the pattern followed by every other delivery. What is the most likely effect of this single data point on the model's error distribution?</div>
+              <div class="quiz-choices">
+                <label class="quiz-choice"><input type="radio" name="q4"><span>It will have no effect, since it is only one data point out of many</span></label>
+                <label class="quiz-choice"><input type="radio" name="q4" data-correct><span>It can skew the error distribution and pull the fitted model away from the pattern that most deliveries actually follow</span></label>
+                <label class="quiz-choice"><input type="radio" name="q4"><span>It will automatically be excluded by the linear regression algorithm before fitting</span></label>
+                <label class="quiz-choice"><input type="radio" name="q4"><span>It will only affect R-squared, and has no connection to the shape of the error distribution</span></label>
+              </div>
+              <button class="quiz-btn" data-check>Check answer</button>
+              <div class="quiz-feedback" data-feedback><strong data-verdict></strong> A single extreme outlier can have an outsized effect on a linear regression fit, since the model minimizes squared error and a very large individual error contributes a disproportionately large penalty — distorting both the fitted coefficients and the shape of the error distribution.</div>
+            </div>
+          </div>
+        </details>
+
+        <details class="assumption">
+          <summary><span class="num">4</span><span class="ttl">Constant error spread (no heteroskedasticity)</span><span class="chev">⌄</span></summary>
+          <div class="body">
+            <p>Beyond looking normal, we also want the spread of errors to stay roughly constant across the full range of predictions — a property called <strong>homoskedasticity</strong>. Its opposite, heteroskedasticity, is when the error spread grows or shrinks depending on the predicted value.</p>
+            <div class="analogy">
+              <span class="ico">📣</span>
+              <p style="margin:0;">Picture pointing a megaphone at a crowd. If the cone stays the same width all the way to the back, that's constant spread — homoskedasticity. If the cone widens dramatically the further back you go, so people far away hear something far noisier than people close by, that's heteroskedasticity: the "noise" depends on how far away they are.</p>
+            </div>
+            <p>For Kabir, this means checking whether predictions are equally reliable for short, nearby deliveries and long, cross-city ones — or whether errors balloon specifically for deliveries predicted to take a long time.</p>
+            <h4>Visual check</h4>
+            <p>The residual-vs-predicted plot shows a reasonably consistent spread across the range of predictions, without a strong funnel or megaphone pattern — visually supporting homoskedasticity.</p>
+            <h4>The Goldfeld-Quandt test</h4>
+            <p>This test removes a chunk of observations from the middle of the dataset (ranked by a chosen variable), then compares the error spread of the remaining low group against the remaining high group. Similar spread in both groups supports homoskedasticity.</p>
+            <ul style="margin:0 0 16px 1.1em; padding:0; font-size:.95rem;">
+              <li>A p-value above a chosen significance level (commonly 0.05) means no strong evidence against homoskedasticity</li>
+              <li>A p-value below that threshold would suggest heteroskedasticity is present</li>
+            </ul>
+            <details class="code-toggle">
+              <summary>View: running the Goldfeld-Quandt test</summary>
+              <pre>import statsmodels.stats.api as sms
+gq_test = sms.het_goldfeldquandt(sm_model.resid, sm_model.model.exog)
+gq_f_statistic, gq_p_value = gq_test[0], gq_test[1]</pre>
+              <div class="out-label">Output</div>
+              <pre>F statistic: 0.8642168016770395
+p-value: 0.9967420600452369</pre>
+            </details>
+            <p>Since the p-value (<strong>0.9967</strong>) is far greater than the 0.05 significance level, we <strong>fail to reject the null hypothesis of homoskedasticity</strong> — there's no strong statistical evidence of heteroskedasticity here.</p>
+            <p style="font-size:.9rem;">If heteroskedasticity is found, common fixes include applying a transformation to the target (log, square-root, or Box-Cox) or removing outliers driving the uneven spread.</p>
+            <div class="quiz" data-quiz>
+              <div class="quiz-label">Quiz 5</div>
+              <div class="quiz-q">In a scatter plot of residuals against predicted values, the spread of residuals visibly fans out, like a megaphone, as predicted values increase. What does this indicate?</div>
+              <div class="quiz-choices">
+                <label class="quiz-choice"><input type="radio" name="q5"><span>The model has autocorrelated errors</span></label>
+                <label class="quiz-choice"><input type="radio" name="q5" data-correct><span>The model shows heteroskedasticity — the spread of errors is not constant across the range of predictions</span></label>
+                <label class="quiz-choice"><input type="radio" name="q5"><span>The model has perfect multicollinearity between its features</span></label>
+                <label class="quiz-choice"><input type="radio" name="q5"><span>The model's R-squared value must be negative</span></label>
+              </div>
+              <button class="quiz-btn" data-check>Check answer</button>
+              <div class="quiz-feedback" data-feedback><strong data-verdict></strong> A residual-vs-predicted plot that widens as predictions increase is the classic visual signature of heteroskedasticity — non-constant error spread — distinct from multicollinearity (checked with VIF), autocorrelation (checked via sequential patterns), or R², which has no fixed relationship with residual spread.</div>
+            </div>
+          </div>
+        </details>
+
+        <details class="assumption">
+          <summary><span class="num">5</span><span class="ttl">No autocorrelation between errors</span><span class="chev">⌄</span></summary>
+          <div class="body">
+            <p>The last assumption is that one data point's error shouldn't help predict the next data point's error. If errors are correlated in sequence, the model is systematically missing some structure in the data — usually tied to order or time.</p>
+            <p>This matters most when data has a natural sequence, such as orders placed over the course of a day. If the model tends to underpredict delivery time for several orders in a row during the dinner rush, then overpredict for several in a row during a quiet mid-afternoon lull, that's autocorrelation: the errors aren't random and independent, they're tracking something the model hasn't captured — a time-of-day traffic pattern.</p>
+            <div class="analogy">
+              <span class="ico">🌦️</span>
+              <p style="margin:0;">Similar to weather forecasting: if a forecaster's error yesterday tells you something about the direction of their error today — say, they've been consistently underestimating temperature all week — that's a sign their model is missing a pattern, rather than making independent, random mistakes each day.</p>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- ============ RESOLUTION ============ -->
+      <section id="resolution">
+        <h2>The story resolves</h2>
+        <p class="section-sub">What finally earns the model its place on the live app</p>
+        <div class="story">
+          <p>Kabir works through his trust checklist: the relationship between his features and delivery time looks reasonably linear, his VIF values are all comfortably low after dropping the redundant fuel-cost feature, his residuals look close to normal aside from the one flash-flood outlier documented separately, his Goldfeld-Quandt test doesn't raise a red flag on constant error spread, and after grouping his data by time of day, he doesn't find strong autocorrelation either.</p>
+          <p>He brings this checklist — not just a single accuracy number — back to his manager. That's what finally earns the model a place on the live app: not a high R² alone, but a model whose behavior Kabir can explain, defend, and monitor.</p>
+        </div>
+        <div class="callout">
+          <div class="callout-title">🧭 The foundational assumption underneath all five</div>
+          Each data point, <span class="ib">(x⁽ⁱ⁾, y⁽ⁱ⁾)</span>, is drawn as a random, representative sample — rather than being selected in some biased way.
+        </div>
+      </section>
+
+      <!-- ============ RECAP ============ -->
+      <section id="recap">
+        <h2>Wrap-up: what this covered</h2>
+        <p class="section-sub">The full recap</p>
+        <div class="recap-grid">
+          <div class="recap-card"><b>Feature scaling</b>Puts every feature on the same footing, so the model learns based on true importance rather than the size of a feature's raw numbers.</div>
+          <div class="recap-card"><b>R² can mislead</b>It never decreases when you add more features, even useless ones.</div>
+          <div class="recap-card"><b>Adjusted R² corrects it</b>By penalizing the score for extra features that don't meaningfully improve the fit.</div>
+          <div class="recap-card"><b>statsmodels summary</b>Coefficients, R², Adjusted R², and significance values — helps diagnose a model, not just measure its accuracy.</div>
+          <div class="recap-card"><b>Linearity</b>A genuinely straight-line relationship between features and the target.</div>
+          <div class="recap-card"><b>No multicollinearity</b>Checked using VIF, so coefficients stay stable and interpretable.</div>
+          <div class="recap-card"><b>Normal errors</b>Checked using the Shapiro-Wilk test.</div>
+          <div class="recap-card"><b>Constant error spread</b>No heteroskedasticity, checked using the Goldfeld-Quandt test.</div>
+          <div class="recap-card"><b>No autocorrelation</b>Especially relevant for sequential or time-based data.</div>
+        </div>
+        <p>Checking these assumptions is what turns a model with a good score into a model you can actually explain and defend.</p>
+      </section>
+
+    </div>
+
+    <footer>Linear regression 3 post read</footer>
+  </main>
+</div>
+
+<script>
+/* ---------------- TOC active state + mobile toggle ---------------- */
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var sections = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  function onScroll(){
+    var y = window.scrollY + 120;
+    var idx = 0;
+    for(var i=0;i<sections.length;i++){ if(sections[i] && sections[i].offsetTop <= y) idx = i; }
+    links.forEach(function(a,i){ a.classList.toggle('active', i===idx); });
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  var toggle = document.getElementById('tocToggle');
+  var toc = document.getElementById('toc');
+  if(window.matchMedia('(max-width:900px)').matches){ toc.classList.add('collapsed'); }
+  toggle.addEventListener('click', function(){
+    toc.classList.toggle('collapsed');
+    var collapsed = toc.classList.contains('collapsed');
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+  });
+})();
+
+/* ---------------- KaTeX render ---------------- */
+document.addEventListener('DOMContentLoaded', function(){
+  if(window.renderMathInElement){
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left:"$$", right:"$$", display:true},
+        {left:"$", right:"$", display:false}
+      ],
+      throwOnError:false
+    });
+  }
+});
+
+/* ---------------- Quiz logic ---------------- */
+document.querySelectorAll('[data-quiz]').forEach(function(q){
+  var btn = q.querySelector('[data-check]');
+  var fb = q.querySelector('[data-feedback]');
+  var verdict = q.querySelector('[data-verdict]');
+  btn.addEventListener('click', function(){
+    var chosen = q.querySelector('input[type=radio]:checked');
+    if(!chosen){ return; }
+    var choices = q.querySelectorAll('.quiz-choice');
+    choices.forEach(function(c){
+      var input = c.querySelector('input');
+      if(input.hasAttribute('data-correct')){ c.classList.add('correct'); }
+      else if(input===chosen){ c.classList.add('incorrect'); }
+      input.disabled = true;
+    });
+    var isCorrect = chosen.hasAttribute('data-correct');
+    fb.classList.add('show', isCorrect ? 'right':'wrong');
+    verdict.textContent = isCorrect ? "That's right. " : "Not quite. ";
+    btn.disabled = true;
+  });
+});
+
+/* ---------------- Matrix helpers ---------------- */
+function zeros(r,c){ var m=[]; for(var i=0;i<r;i++){ m.push(new Array(c).fill(0)); } return m; }
+function transpose(A){ var r=A.length,c=A[0].length; var T=zeros(c,r); for(var i=0;i<r;i++) for(var j=0;j<c;j++) T[j][i]=A[i][j]; return T; }
+function matmul(A,B){
+  var r=A.length,k=A[0].length,c=B[0].length; var C=zeros(r,c);
+  for(var i=0;i<r;i++) for(var j=0;j<c;j++){ var s=0; for(var t=0;t<k;t++) s+=A[i][t]*B[t][j]; C[i][j]=s; }
+  return C;
+}
+function matvec(A,v){ var r=A.length,c=A[0].length; var out=new Array(r).fill(0); for(var i=0;i<r;i++){ var s=0; for(var j=0;j<c;j++) s+=A[i][j]*v[j]; out[i]=s; } return out; }
+function invert(A){
+  var n=A.length;
+  var M=A.map(function(row,i){ var r=row.slice(); for(var j=0;j<n;j++) r.push(i===j?1:0); return r; });
+  for(var col=0; col<n; col++){
+    var piv=col;
+    for(var r2=col+1;r2<n;r2++){ if(Math.abs(M[r2][col])>Math.abs(M[piv][col])) piv=r2; }
+    var tmp=M[col]; M[col]=M[piv]; M[piv]=tmp;
+    var pv=M[col][col]|| 1e-12;
+    for(var j=0;j<2*n;j++) M[col][j]/=pv;
+    for(var r3=0;r3<n;r3++){
+      if(r3===col) continue;
+      var f=M[r3][col];
+      for(var j2=0;j2<2*n;j2++) M[r3][j2]-=f*M[col][j2];
+    }
+  }
+  return M.map(function(row){ return row.slice(n); });
+}
+function olsFit(X, y){ // X: array of rows (no intercept col), y: array
+  var n=X.length;
+  var Xi=X.map(function(row){ return [1].concat(row); });
+  var Xt=transpose(Xi);
+  var XtX=matmul(Xt,Xi);
+  var XtXinv=invert(XtX);
+  var Xty=matvec(Xt,y);
+  var beta=matvec(XtXinv,Xty); // includes intercept at index 0
+  var yhat=Xi.map(function(row){ var s=0; for(var j=0;j<row.length;j++) s+=row[j]*beta[j]; return s; });
+  var mean=y.reduce(function(a,b){return a+b;},0)/n;
+  var ssRes=0, ssTot=0;
+  for(var i=0;i<n;i++){ ssRes+=Math.pow(y[i]-yhat[i],2); ssTot+=Math.pow(y[i]-mean,2); }
+  var r2=1-ssRes/ssTot;
+  var d=X[0].length;
+  var adjR2 = 1 - ((1-r2)*(n-1)/(n-d-1));
+  return {beta:beta, r2:r2, adjR2:adjR2};
+}
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rand){
+  var u=0,v=0; while(u===0) u=rand(); while(v===0) v=rand();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+/* ---------------- Demo 1: junk features vs R2/AdjR2 ---------------- */
+(function(){
+  var rand = mulberry32(42);
+  var nPoints = 200;
+  var x1=[], x2=[], y=[];
+  for(var i=0;i<nPoints;i++){
+    var a=gaussian(rand), b=gaussian(rand), noise=gaussian(rand);
+    x1.push(a); x2.push(b); y.push(3*a - 2*b + noise);
+  }
+  var junkRand = mulberry32(7);
+  var maxJunkGlobal = 40;
+  var junkCols = [];
+  for(var k=0;k<maxJunkGlobal;k++){
+    var col=[]; for(var i2=0;i2<nPoints;i2++){ col.push(gaussian(junkRand)); }
+    junkCols.push(col);
+  }
+  function computeCurve(maxJunk){
+    var r2s=[], adjs=[];
+    for(var k=0;k<=maxJunk;k++){
+      var X=[];
+      for(var i=0;i<nPoints;i++){
+        var row=[x1[i],x2[i]];
+        for(var j=0;j<k;j++) row.push(junkCols[j][i]);
+        X.push(row);
+      }
+      var fit = olsFit(X, y);
+      r2s.push(fit.r2); adjs.push(fit.adjR2);
+    }
+    return {r2s:r2s, adjs:adjs};
+  }
+  function draw(maxJunk){
+    var data = computeCurve(maxJunk);
+    var svg = document.getElementById('d1-svg');
+    var W=520,H=300, padL=42, padR=14, padT=16, padB=34;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var n = data.r2s.length;
+    var yMin=0, yMax=1;
+    function xPos(i){ return padL + (n===1?0:(i/(n-1))*plotW); }
+    function yPos(v){ return padT + (1-(v-yMin)/(yMax-yMin))*plotH; }
+    var pathR2 = data.r2s.map(function(v,i){ return (i===0?'M':'L')+xPos(i).toFixed(1)+','+yPos(v).toFixed(1); }).join(' ');
+    var pathAdj = data.adjs.map(function(v,i){ return (i===0?'M':'L')+xPos(i).toFixed(1)+','+yPos(v).toFixed(1); }).join(' ');
+    var gridLines='';
+    [0,0.25,0.5,0.75,1].forEach(function(g){
+      var gy=yPos(g);
+      gridLines += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#cffafe" stroke-width="1"/>';
+      gridLines += '<text x="'+(padL-8)+'" y="'+(gy+3)+'" text-anchor="end" font-size="9" fill="#0e7490" font-family="sans-serif">'+g+'</text>';
+    });
+    var xAxisLabel = '<text x="'+(padL+plotW/2)+'" y="'+(H-6)+'" text-anchor="middle" font-size="10" fill="#155e75" font-family="sans-serif">Junk features added (0 – '+maxJunk+')</text>';
+    svg.innerHTML =
+      gridLines +
+      '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(H-padB)+'" stroke="#67e8f9"/>' +
+      '<line x1="'+padL+'" y1="'+(H-padB)+'" x2="'+(W-padR)+'" y2="'+(H-padB)+'" stroke="#67e8f9"/>' +
+      '<path d="'+pathR2+'" fill="none" stroke="#0891b2" stroke-width="2.5"/>' +
+      '<path d="'+pathAdj+'" fill="none" stroke="#e08a2b" stroke-width="2.5"/>' +
+      xAxisLabel;
+    document.getElementById('d1-r2').textContent = data.r2s[data.r2s.length-1].toFixed(3);
+    document.getElementById('d1-adj').textContent = data.adjs[data.adjs.length-1].toFixed(3);
+  }
+  var slider = document.getElementById('d1-slider');
+  var valEl = document.getElementById('d1-val');
+  slider.addEventListener('input', function(){ valEl.textContent=slider.value; draw(parseInt(slider.value,10)); });
+  draw(parseInt(slider.value,10));
+})();
+
+/* ---------------- Demo 2: multicollinearity ---------------- */
+(function(){
+  var nPoints=120;
+  function run(correlation){
+    var rand = mulberry32(101);
+    var fa=[], fb=[], target=[];
+    for(var i=0;i<nPoints;i++){
+      var a=gaussian(rand);
+      var n2=gaussian(rand);
+      var b=correlation*a + Math.sqrt(Math.max(0,1-correlation*correlation))*n2;
+      var noise=gaussian(rand);
+      fa.push(a); fb.push(b); target.push(4*a+4*b+noise);
+    }
+    var X = fa.map(function(v,i){ return [v, fb[i]]; });
+    var fit = olsFit(X, target);
+    var coefA=fit.beta[1], coefB=fit.beta[2];
+    // sample correlation between fa & fb
+    var meanA=fa.reduce(function(s,v){return s+v;},0)/nPoints;
+    var meanB=fb.reduce(function(s,v){return s+v;},0)/nPoints;
+    var cov=0, varA=0, varB=0;
+    for(var i2=0;i2<nPoints;i2++){ cov+=(fa[i2]-meanA)*(fb[i2]-meanB); varA+=Math.pow(fa[i2]-meanA,2); varB+=Math.pow(fb[i2]-meanB,2); }
+    var r = cov/Math.sqrt(varA*varB);
+    var vif = 1/(1-r*r);
+    return {fa:fa, fb:fb, coefA:coefA, coefB:coefB, vifA:vif, vifB:vif};
+  }
+  function drawScatter(fa, fb){
+    var svg=document.getElementById('d2-scatter');
+    var W=300,H=260, pad=28;
+    var xs=fa.concat(), ys=fb.concat();
+    var xMin=Math.min.apply(null,xs), xMax=Math.max.apply(null,xs);
+    var yMin=Math.min.apply(null,ys), yMax=Math.max.apply(null,ys);
+    function xPos(v){ return pad + (v-xMin)/(xMax-xMin)*(W-2*pad); }
+    function yPos(v){ return H-pad - (v-yMin)/(yMax-yMin)*(H-2*pad); }
+    var dots = fa.map(function(v,i){ return '<circle cx="'+xPos(v).toFixed(1)+'" cy="'+yPos(fb[i]).toFixed(1)+'" r="2.6" fill="#0891b2" fill-opacity="0.55"/>'; }).join('');
+    svg.innerHTML =
+      '<text x="'+(W/2)+'" y="14" text-anchor="middle" font-size="10.5" fill="#155e75" font-family="sans-serif" font-weight="600">Feature A vs Feature B</text>' +
+      '<line x1="'+pad+'" y1="'+(H-pad)+'" x2="'+(W-pad)+'" y2="'+(H-pad)+'" stroke="#67e8f9"/>' +
+      '<line x1="'+pad+'" y1="'+pad+'" x2="'+pad+'" y2="'+(H-pad)+'" stroke="#67e8f9"/>' +
+      dots;
+  }
+  function drawBars(vifA, vifB){
+    var svg=document.getElementById('d2-bars');
+    var W=300,H=260, pad=30, padT=28, padB=34;
+    var maxV=Math.max(20, vifA, vifB)*1.1;
+    var barW=70;
+    var x1=70, x2=180;
+    function hFor(v){ return (v/maxV)*(H-padT-padB); }
+    var h1=hFor(vifA), h2=hFor(vifB);
+    var cautionY = H-padB - (5/maxV)*(H-padT-padB);
+    svg.innerHTML =
+      '<text x="'+(W/2)+'" y="14" text-anchor="middle" font-size="10.5" fill="#155e75" font-family="sans-serif" font-weight="600">VIF by feature</text>' +
+      '<line x1="20" y1="'+cautionY+'" x2="'+(W-14)+'" y2="'+cautionY+'" stroke="#e08a2b" stroke-dasharray="4,3" stroke-width="1.2"/>' +
+      '<text x="'+(W-16)+'" y="'+(cautionY-4)+'" text-anchor="end" font-size="8.5" fill="#b45309" font-family="sans-serif">caution (VIF=5)</text>' +
+      '<rect x="'+x1+'" y="'+(H-padB-h1)+'" width="'+barW+'" height="'+h1+'" fill="#0891b2" rx="3"/>' +
+      '<rect x="'+x2+'" y="'+(H-padB-h2)+'" width="'+barW+'" height="'+h2+'" fill="#e08a2b" rx="3"/>' +
+      '<text x="'+(x1+barW/2)+'" y="'+(H-padB+16)+'" text-anchor="middle" font-size="10" fill="#155e75" font-family="sans-serif">A</text>' +
+      '<text x="'+(x2+barW/2)+'" y="'+(H-padB+16)+'" text-anchor="middle" font-size="10" fill="#155e75" font-family="sans-serif">B</text>' +
+      '<line x1="20" y1="'+(H-padB)+'" x2="'+(W-14)+'" y2="'+(H-padB)+'" stroke="#67e8f9"/>';
+  }
+  function update(correlation){
+    var res = run(correlation);
+    drawScatter(res.fa, res.fb);
+    drawBars(res.vifA, res.vifB);
+    document.getElementById('d2-vifa').textContent = res.vifA.toFixed(1);
+    document.getElementById('d2-vifb').textContent = res.vifB.toFixed(1);
+    document.getElementById('d2-coefa').textContent = res.coefA.toFixed(2);
+    document.getElementById('d2-coefb').textContent = res.coefB.toFixed(2);
+  }
+  var slider2=document.getElementById('d2-slider');
+  var val2=document.getElementById('d2-val');
+  slider2.addEventListener('input', function(){
+    var c=parseFloat(slider2.value);
+    val2.textContent=c.toFixed(2);
+    update(c);
+  });
+  update(parseFloat(slider2.value));
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/ML-with-AI-workflows-4" target="_blank" rel="noopener">github.com/scaler-content/ML-with-AI-workflows-4</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

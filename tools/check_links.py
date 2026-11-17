@@ -23,7 +23,7 @@ from bootcamp_nav import V2, WEEKS  # noqa: E402
 
 # Source code and downloads are not pages; their own links are not ours to check.
 SKIP = ("zips/", ".git/", ".claude/", "data-dump/")
-LINK = re.compile(r'\b(?:href|src)\s*=\s*"([^"]*)"', re.I)
+LINK = re.compile(r'(?<![\w-])(?:href|src)\s*=\s*"([^"]*)"', re.I)
 
 
 def pages():

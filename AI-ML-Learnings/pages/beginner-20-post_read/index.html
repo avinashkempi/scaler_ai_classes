@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 20 · AI System Design, Evaluation &amp; Observability — Post-Read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Manrope:wght@300..800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#faf6ef;--bg2:#f3ecdf;--card:#ffffff;--card2:#f7f1e6;--line:#e4d9c5;--line2:#d8c9ac66;--ink:#2c241b;--ink2:#6b5f4f;--ink3:#7d7060;--orange:#9a3412;--orange2:#c2410c;--orange-dim:#9a341214;--teal:#0f766e;--teal-dim:#0f766e1a;--violet:#6d28d9;--violet-dim:#6d28d91a;--gold:#a16207;--rose:#be123c;--green:#15803d;--red:#b91c1c;--mono:'JetBrains Mono',monospace;--serif:'Fraunces',serif;--sans:'Manrope',sans-serif;--r:16px;}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+::selection{background:var(--orange);color:#fdf3e8}
+.wrap{max-width:1020px;margin:0 auto;padding:0 26px}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:600;line-height:1.22}
+a{color:var(--orange2)}
+strong{color:var(--ink)}
+em{color:var(--orange2);font-style:normal}
+p{color:var(--ink2)}
+p strong{color:var(--ink)}
+#progressBar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--orange),var(--gold));width:0;z-index:999;transition:width .1s linear}
+.topnav{position:sticky;top:0;background:#faf6efe8;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);z-index:900}
+.topnav .wrap{display:flex;align-items:center;gap:14px;padding-top:12px;padding-bottom:12px;overflow-x:auto;scrollbar-width:none}
+.topnav .wrap::-webkit-scrollbar{display:none}
+.brand{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--orange);white-space:nowrap}
+.topnav a.nl{font-size:12.5px;font-weight:600;color:var(--ink3);text-decoration:none;white-space:nowrap;padding:5px 10px;border-radius:20px;transition:.2s}
+.topnav a.nl:hover{color:var(--orange);background:var(--orange-dim)}
+.hero{position:relative;padding:88px 0 70px;overflow:hidden;background:radial-gradient(1100px 480px at 78% -12%,#ff8a2a14,transparent 60%),radial-gradient(800px 400px at 8% 110%,#3dd6c30e,transparent 60%)}
+.hero .eyebrow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:26px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.06em;padding:6px 13px;border-radius:100px;border:1px solid var(--line);color:var(--ink2);background:var(--card)}
+.chip.hot{border-color:#ff8a2a55;color:var(--orange2);background:var(--orange-dim)}
+.chip.cool{border-color:#3dd6c355;color:var(--teal);background:var(--teal-dim)}
+.hero h1{font-size:clamp(38px,6vw,64px);font-weight:640;letter-spacing:-.01em;margin-bottom:8px}
+.hero h1 .amp{color:var(--orange);font-style:italic;font-weight:500}
+.hero .sub{font-size:clamp(17px,2.2vw,21px);color:var(--ink2);max-width:740px;margin-top:16px}
+.hero .sub b{color:var(--ink)}
+.heroStats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:44px}
+.hstat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.hstat .n{font-family:var(--serif);font-size:30px;font-weight:640;color:var(--orange)}
+.hstat .l{font-size:12px;color:var(--ink3);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+@media(max-width:760px){.heroStats{grid-template-columns:repeat(2,1fr)}}
+section.blk{padding:74px 0 30px}
+.secHead{display:flex;align-items:baseline;gap:18px;margin-bottom:8px;flex-wrap:wrap}
+.secNum{font-family:var(--mono);font-size:13px;color:var(--orange);border:1px solid #ff8a2a55;background:var(--orange-dim);padding:5px 13px;border-radius:100px;font-weight:500;white-space:nowrap}
+.secHead h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.01em}
+.secTime{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-left:auto;white-space:nowrap}
+.secLede{font-size:18px;color:var(--ink2);max-width:800px;margin:12px 0 34px}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:44px 0 0}
+.say{position:relative;background:linear-gradient(180deg,#1a1410,#161b24);border:1px solid #ff8a2a33;border-left:3px solid var(--orange);border-radius:14px;padding:20px 24px 20px 26px;margin:22px 0}
+.say .who{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange);font-weight:700;margin-bottom:10px}
+.say p{color:#e8dccb;font-size:15.5px;margin-bottom:10px}
+.say p:last-child{margin-bottom:0}
+.say.ask{border-left-color:var(--teal);border-color:#3dd6c333;background:linear-gradient(180deg,#101a19,#161b24)}
+.say.ask .who{color:var(--teal)}
+.say.do{border-left-color:var(--violet);border-color:#a48bff33;background:linear-gradient(180deg,#141021,#161b24)}
+.say.do .who{color:var(--violet)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;margin:20px 0}
+.card h3{font-size:21px;margin-bottom:10px}
+.card h4{font-size:17px;margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:820px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+.defBox{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin:20px 0;position:relative}
+.defBox::before{content:'DEFINITION';position:absolute;top:-10px;left:20px;font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--gold);background:var(--bg);padding:2px 10px;border:1px solid #ffd16644;border-radius:100px}
+.defBox .term{font-family:var(--serif);font-size:19px;color:var(--gold);font-weight:600}
+.defBox p{margin-top:6px;font-size:15.5px}
+.useCase{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;transition:.25s;position:relative;overflow:hidden}
+.useCase:hover{border-color:#ff8a2a66;transform:translateY(-3px)}
+.useCase .ico{font-size:26px;margin-bottom:8px}
+.useCase .co{font-family:var(--mono);font-size:11px;color:var(--orange);letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.useCase h4{font-size:16px;margin:4px 0 6px;font-family:var(--sans);font-weight:700}
+.useCase p{font-size:13.5px;color:var(--ink2);line-height:1.55}
+.analogy{display:flex;gap:16px;background:linear-gradient(135deg,#f3ecfa,#ffffff);border:1px solid #6d28d933;border-radius:14px;padding:20px 24px;margin:20px 0}
+.analogy .ic{font-size:30px;line-height:1}
+.analogy .tt{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--violet);font-weight:700;margin-bottom:6px}
+.analogy p{font-size:15px;color:var(--ink2)}
+.analogy p b{color:var(--ink)}
+.note{border-radius:12px;padding:14px 18px;margin:16px 0;font-size:14.5px;border:1px solid var(--line);background:var(--card2);color:var(--ink2)}
+.note b{color:var(--ink)}
+.note.beg{border-color:#5fe08a44}.note.beg b{color:var(--green)}
+.note.adv{border-color:#ff6b8b44}.note.adv b{color:var(--rose)}
+.note.pro{border-color:#ffd16644}.note.pro b{color:var(--gold)}
+table.tbl{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px}
+table.tbl th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--orange);text-align:left;padding:10px 14px;border-bottom:1px solid #ff8a2a44;font-weight:500}
+table.tbl td{padding:11px 14px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top}
+table.tbl tr:hover td{background:#ffffff05}
+table.tbl td:first-child{color:var(--ink);font-weight:600}
+code.k{font-family:var(--mono);font-size:.86em;background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--orange2)}
+pre.code{font-family:var(--mono);font-size:13px;line-height:1.7;background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px 22px;overflow-x:auto;margin:16px 0;color:#c7d2e0}
+pre.code .cm{color:#5b6b7f}
+pre.code .st{color:#8fd8a0}
+pre.code .fn{color:#7cc4ff}
+pre.code .kw{color:#ffb066}
+.codeWrap{position:relative}
+.copyBtn{position:absolute;top:10px;right:10px;z-index:2;font-family:var(--mono);font-size:11.5px;letter-spacing:.02em;color:#c7d2e0;background:#171d27;border:1px solid #2a3342;border-radius:7px;padding:5px 10px;cursor:pointer;transition:background .15s,border-color .15s}
+.copyBtn:hover{background:#212938;border-color:#0f766e88}
+.copyBtn.copied{background:#0f362e;border-color:#0f766e;color:#7bd8c4}
+.verifySteps{list-style:none;counter-reset:vs;margin:0;padding:0}
+.verifySteps li{counter-increment:vs;position:relative;padding:0 0 0 34px;margin:0 0 12px;font-size:15px;color:var(--ink2);line-height:1.6}
+.verifySteps li:last-child{margin-bottom:0}
+.verifySteps li::before{content:counter(vs);position:absolute;left:0;top:1px;width:22px;height:22px;border-radius:100px;background:var(--card2);border:1px solid var(--line);color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center}
+.verifySteps li b{color:var(--ink)}
+.verifySteps li code{background:var(--card2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.86em;color:var(--gold);white-space:nowrap}
+.sim{background:linear-gradient(180deg,#f2fbf9,#ffffff);border:1px solid #0f766e44;border-radius:20px;padding:26px 28px;margin:30px 0;position:relative}
+.sim::before{content:'\26A1 INTERACTIVE SIMULATOR';position:absolute;top:-12px;left:22px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--teal);background:var(--bg);padding:3px 12px;border:1px solid #3dd6c355;border-radius:100px;font-weight:700}
+.sim h3{font-size:20px;margin-bottom:4px}
+.sim .simSub{font-size:14px;color:var(--ink3);margin-bottom:18px}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--sans);font-weight:700;font-size:13.5px;color:#fdf3e8;background:linear-gradient(180deg,var(--orange2),var(--orange));border:none;border-radius:100px;padding:10px 20px;cursor:pointer;transition:.2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px #ff8a2a44}
+.btn.sm{padding:7px 15px;font-size:12.5px}
+.btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--orange);color:var(--orange);box-shadow:none;transform:none}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.quiz{background:linear-gradient(180deg,#faf5ff,#ffffff);border:1px solid #6d28d944;border-radius:20px;padding:26px 28px;margin:34px 0;position:relative}
+.quiz::before{content:'\2726 CHECKPOINT QUIZ';position:absolute;top:-12px;left:22px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--violet);background:var(--bg);padding:3px 12px;border:1px solid #a48bff55;border-radius:100px;font-weight:700}
+.quiz .q{font-family:var(--serif);font-size:19px;font-weight:600;margin:6px 0 18px;color:var(--ink)}
+.opt{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 17px;margin:9px 0;cursor:pointer;transition:.2s;font-size:14.5px;color:var(--ink2)}
+.opt:hover{border-color:var(--violet)}
+.opt .ab{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--violet);border:1px solid #a48bff55;border-radius:8px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.opt.correct{border-color:var(--green);background:#5fe08a12;color:var(--ink)}
+.opt.correct .ab{color:var(--green);border-color:var(--green)}
+.opt.wrong{border-color:var(--red);background:#ff616112;opacity:.75}
+.opt.wrong .ab{color:var(--red);border-color:var(--red)}
+.opt.locked{pointer-events:none}
+.quizWhy{display:none;margin-top:16px;border-top:1px dashed #a48bff44;padding-top:16px;font-size:14.5px;color:var(--ink2)}
+.quizWhy.show{display:block;animation:fadeUp .4s ease}
+.quizWhy b{color:var(--violet)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+.svgWrap{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin:24px 0;overflow-x:auto}
+.svgWrap svg,.svgWrap img{display:block;margin:0 auto;max-width:100%;height:auto;border-radius:10px}
+.svgCap{text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-top:14px;letter-spacing:.04em}
+.bigQuote{font-family:var(--serif);font-size:clamp(21px,3vw,28px);font-weight:500;font-style:italic;color:var(--ink);text-align:center;max-width:780px;margin:50px auto;line-height:1.5}
+.bigQuote em{color:var(--orange);font-style:italic}
+.footer{border-top:1px solid var(--line);margin-top:80px;padding:44px 0 60px;text-align:center}
+.footer p{font-size:13px;color:var(--ink3)}
+.slackDrop{background:linear-gradient(120deg,#12201e,#0f1720);border:1px solid #3dd6c355;border-radius:14px;padding:16px 20px;margin:18px 0;display:flex;gap:14px;align-items:flex-start}
+.slackDrop .av{font-size:26px}
+.slackDrop .nm{font-weight:700;color:var(--teal);font-size:14px}
+.slackDrop .tm{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-left:8px}
+.slackDrop p{font-size:14px;color:var(--ink2);margin-top:4px}
+.pickRow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.pickBtn{font-family:var(--sans);font-weight:700;font-size:12.5px;background:#f7f1e6;color:var(--ink2);border:1px solid var(--line);border-radius:9px;padding:9px 14px;cursor:pointer;transition:.2s;text-align:left}
+.pickBtn:hover{border-color:var(--orange)}
+.pickBtn.on{background:var(--orange-dim);border-color:var(--orange);color:var(--orange2)}
+.pickGroup{margin-bottom:14px}
+.pickGroup .pgl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px;display:block}
+.matchWhy{margin-top:14px;font-size:14px;color:var(--ink2);min-height:24px}
+.matchWhy b{color:var(--teal)}
+.matchScore{font-family:var(--mono);font-size:12px;color:var(--gold);border:1px solid #ffd16655;background:#ffd16611;border-radius:100px;padding:6px 14px;display:inline-block;margin-top:6px}
+.runLog{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-family:var(--mono);font-size:11.5px;line-height:1.85;color:var(--ink2);min-height:80px;max-height:280px;overflow-y:auto;margin-top:12px}
+.runLog .lg{display:block}
+.runLog .lg.ok{color:var(--green)}.runLog .lg.err{color:var(--rose)}.runLog .lg.warn{color:var(--gold)}.runLog .lg.dim{color:var(--ink3)}
+.verdict{border-radius:12px;padding:14px 18px;margin-top:14px;font-size:14px;border:1px solid var(--line);background:var(--card2);color:var(--ink2)}
+.verdict b{color:var(--ink)}
+.verdict.good{border-color:#15803d55;background:#15803d0e}.verdict.good b{color:var(--green)}
+.verdict.bad{border-color:#b91c1c55;background:#b91c1c0e}.verdict.bad b{color:var(--red)}
+.verdict.mid{border-color:#a1620755;background:#a162070e}.verdict.mid b{color:var(--gold)}
+.twoCol{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
+@media(max-width:820px){.twoCol{grid-template-columns:1fr}}
+.colCard{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.colCard .ct{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+.colCard p{font-size:13.5px}
+.chalCard{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:18px 0;overflow:hidden;transition:.25s}
+.chalCard.open{border-color:#3dd6c366}
+.chalHead{display:flex;align-items:center;gap:14px;padding:18px 22px;cursor:pointer}
+.chalHead .cn{font-family:var(--mono);font-size:12px;color:var(--teal);border:1px solid #3dd6c355;border-radius:8px;padding:4px 10px;font-weight:700}
+.chalHead h4{font-family:var(--serif);font-size:19px;flex:1}
+.chalHead .chev{font-family:var(--mono);color:var(--ink3);transition:.3s}
+.chalCard.open .chev{transform:rotate(90deg);color:var(--teal)}
+.chalBody{display:none;padding:0 22px 22px}
+.chalCard.open .chalBody{display:block;animation:fadeUp .4s ease}
+.chalBody .cLabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin:16px 0 6px}
+.chalBody .mission{color:var(--ink2);font-size:14.5px}
+.churnRow{display:flex;align-items:flex-start;gap:14px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px 17px;margin:9px 0}
+.churnRow .crIco{font-size:20px;flex-shrink:0}
+.churnRow .crBody{flex:1}
+.churnRow .crName{font-weight:700;color:var(--ink);font-size:14.5px;margin-bottom:3px}
+.churnRow .crTxt{font-size:13px;color:var(--ink2);line-height:1.6}
+.churnRow .crTag{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;border-radius:100px;padding:3px 10px;white-space:nowrap;flex-shrink:0;align-self:center}
+.churnRow .crTag.dead{color:var(--rose);border:1px solid #be123c55;background:#be123c12}
+.churnRow .crTag.renamed{color:var(--gold);border:1px solid #a1620755;background:#a1620712}
+.churnRow .crTag.alive{color:var(--green);border:1px solid #15803d55;background:#15803d12}
+.choiceRow{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+.choiceBtn{display:flex;gap:12px;align-items:flex-start;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;cursor:pointer;transition:.2s;font-family:var(--sans);font-size:13.5px;color:var(--ink2)}
+.choiceBtn:hover{border-color:var(--orange)}
+.choiceBtn.good{border-color:var(--green);background:#15803d12;color:var(--ink)}
+.choiceBtn.bad{border-color:var(--rose);background:#be123c12;color:var(--ink)}
+.choiceBtn .cico{font-size:16px;flex-shrink:0}
+.choiceBtn:disabled{cursor:default}
+.prepRow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13.5px;color:var(--ink2)}
+.prepRow:last-child{border-bottom:none}
+.prepRow b{color:var(--ink)}
+.meter{margin:10px 0}
+.meter .mtl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
+.meter .mtl .mtv{color:var(--ink);font-weight:700}
+.meter .mtBar{height:9px;border-radius:100px;background:#e4d9c5;border:1px solid var(--line);overflow:hidden}
+.meter .mtFill{height:100%;width:0;border-radius:100px;transition:width .45s ease}
+.meter .mtFill.g{background:var(--green)}.meter .mtFill.o{background:var(--orange)}.meter .mtFill.r{background:var(--red)}.meter .mtFill.t{background:var(--teal)}
+/* ---- Class 20 additions — system design / eval / observability visual language (postread) ---- */
+/* diagBox/featureCard/incidentCard/outBubble are page-native light widget chrome.
+   chartArea + chartPoint stay dark/literal-hex on purpose — it's meant to read as an
+   actual monitoring screen, same reasoning as runLog and pre.code above. sheetShot is
+   a fresh light spreadsheet mockup, matching the Google-Sheets-on-light-page look. */
+/* SIM1 diagram labeling */
+.diagGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:16px 0}
+@media(max-width:820px){.diagGrid{grid-template-columns:1fr}}
+.diagBox{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:16px 18px;transition:.25s;cursor:pointer}
+.diagBox:hover{border-color:var(--orange)}
+.diagBox.selected{border-color:var(--orange);box-shadow:0 0 0 1px var(--orange)}
+.diagBox .dbIcon{font-size:22px;margin-bottom:6px}
+.diagBox .dbDesc{font-size:13px;color:var(--ink2);line-height:1.5;margin-bottom:10px}
+.diagBox .dbLabel{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--ink3);letter-spacing:.04em}
+.diagBox.correct{border-color:var(--green);background:#15803d12;cursor:default}
+.diagBox.correct .dbLabel{color:var(--green)}
+.diagBox.wrong{border-color:var(--rose);background:#be123c12;cursor:default}
+.diagBox.wrong .dbLabel{color:var(--rose)}
+.diagBox .dbWhy{font-size:12.5px;color:var(--ink2);margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);display:none;line-height:1.5}
+.diagBox.answered .dbWhy{display:block}
+/* SIM2 budget-allocation consequence game */
+.tokenBar{display:flex;justify-content:space-between;align-items:center;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 18px;margin:14px 0;font-family:var(--mono);font-size:13px;color:var(--ink2)}
+.tokenBar b{color:var(--gold);font-size:18px}
+.featureCard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0}
+.featureCard h4{font-size:15px;margin-bottom:4px;color:var(--ink)}
+.featureCard .fDesc{font-size:13px;color:var(--ink3);margin-bottom:12px}
+.investRow{display:flex;gap:9px;flex-wrap:wrap}
+.investBtn{flex:1;min-width:140px;font-family:var(--sans);font-weight:700;font-size:12.5px;background:var(--card2);border:1px solid var(--line);color:var(--ink2);border-radius:9px;padding:10px 12px;cursor:pointer;transition:.2s;text-align:center}
+.investBtn span{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-top:3px;font-weight:400}
+.investBtn:hover{border-color:var(--orange)}
+.investBtn:disabled{opacity:.4;cursor:not-allowed}
+.investBtn.chosen.good{border-color:var(--green);background:#15803d12;color:var(--ink)}
+.investBtn.chosen.bad{border-color:var(--rose);background:#be123c12;color:var(--ink)}
+.investBtn.chosen.mid{border-color:var(--gold);background:#a1620712;color:var(--ink)}
+.featureVerdict{font-size:12.5px;color:var(--ink2);margin-top:10px;display:none;line-height:1.55}
+.featureCard.done .featureVerdict{display:block}
+.scoreRow{display:flex;gap:22px;margin-top:16px;font-family:var(--mono);font-size:12.5px;color:var(--ink3);flex-wrap:wrap}
+.scoreRow b{color:var(--ink);font-size:16px}
+/* SIM3 threshold-slider batch incident router */
+.sliderRow{display:flex;align-items:center;gap:14px;margin:16px 0}
+.sliderRow input[type=range]{flex:1;accent-color:var(--teal);height:6px}
+.sliderVal{font-family:var(--mono);font-weight:700;color:var(--teal);min-width:56px;text-align:right;font-size:14px}
+.incidentGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
+@media(max-width:820px){.incidentGrid{grid-template-columns:repeat(2,1fr)}}
+.incidentCard{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:12px;transition:.3s;min-height:126px;display:flex;flex-direction:column;justify-content:space-between}
+.incidentCard .icTxt{color:var(--ink2);margin-bottom:8px;line-height:1.45}
+.incidentCard .icConf{font-family:var(--mono);font-size:10.5px;color:var(--ink3)}
+.incidentCard .icRoute{font-family:var(--mono);font-size:10.5px;font-weight:700;margin-top:7px;padding:3px 8px;border-radius:100px;display:inline-block}
+.icRoute.auto{color:var(--teal);border:1px solid #0f766e55;background:#0f766e12}
+.icRoute.human{color:var(--violet);border:1px solid #6d28d955;background:#6d28d912}
+.incidentCard.danger{border-color:var(--rose);box-shadow:0 0 0 1px #be123c33}
+/* SIM4 repeated-trial consistency tester */
+.bubbleRow{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0;min-height:76px}
+.outBubble{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 13px;font-size:12px;color:var(--ink2);max-width:180px;opacity:0;transform:scale(.85);animation:popIn .3s ease forwards}
+.outBubble.match{border-color:var(--green);background:#15803d12;color:var(--ink)}
+.outBubble.drift{border-color:var(--rose);background:#be123c12;color:var(--ink)}
+.consistencyReadout{font-family:var(--mono);font-size:15px;color:var(--gold);margin-top:12px;display:none}
+/* SIM5 live cost/latency dashboard */
+.switchRow{display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:13px 17px;margin:9px 0}
+.switchRow .swl{font-size:13.5px;color:var(--ink2)}
+.switchRow .swl b{color:var(--ink);display:block;font-size:14.5px;margin-bottom:2px}
+.swBtn{font-family:var(--mono);font-weight:700;font-size:11.5px;letter-spacing:.06em;border:1px solid var(--line);background:var(--card);color:var(--ink3);border-radius:100px;padding:7px 16px;cursor:pointer;transition:.2s;min-width:64px;text-align:center}
+.swBtn.on{border-color:var(--green);background:#15803d1a;color:var(--green)}
+.chartArea{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:0;margin:16px 0;height:190px;position:relative;overflow:hidden}
+.chartPoint{position:absolute;width:9px;height:9px;border-radius:100px;transform:translate(-50%,50%);transition:.3s}
+.chartPoint.va{background:#3dd6c3;box-shadow:0 0 8px #3dd6c3aa}
+.chartPoint.vb{background:#a48bff;box-shadow:0 0 8px #a48bffaa}
+.chartGrid{position:absolute;left:0;right:0;border-top:1px dashed #33405266}
+.legendRow{display:flex;gap:20px;font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-top:10px;flex-wrap:wrap}
+.legendDot{display:inline-block;width:8px;height:8px;border-radius:100px;margin-right:6px;vertical-align:middle}
+.dashStats{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media(max-width:820px){.dashStats{grid-template-columns:1fr}}
+.dashStatCard{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.dashStatCard .dscTitle{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.dashStatCard .dscRow{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);padding:3px 0}
+.dashStatCard .dscRow b{color:var(--ink)}
+/* Google Sheets eval-set mockup */
+.sheetShot{background:#faf3ea;color:#2b2b28;border-radius:14px;padding:4px;margin:16px 0;overflow-x:auto;border:1px solid var(--line)}
+.sheetShot table{width:100%;border-collapse:collapse;font-family:var(--sans);font-size:12.5px;min-width:660px}
+.sheetShot th{background:#efe7d6;color:#4a4a44;font-weight:700;text-align:left;padding:9px 12px;border:1px solid #d8d5cb;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.sheetShot td{padding:9px 12px;border:1px solid #d8d5cb;vertical-align:top;color:#3a3a35}
+.sheetShot tr:nth-child(even) td{background:#fdfbf7}
+.sheetShot .passrow td{background:#e6f2e6}
+.sheetShot .failrow td{background:#f7e5e5}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ai-engineering/">AI system design &amp; deployment</a><span class="t">· AI Beginners 20 · AI system design and evaluation</span><span class="p"><a href="../AI-beginners-class20/">Class</a><b>Post-read</b></span><span class="pn"><a href="../AI-beginners-class21/" title="AI Beginners 21 · Deploying AI apps">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progressBar"></div>
+<nav class="topnav"><div class="wrap">
+<span class="brand">🔧 AIML · Class 20 · Post-Read</span>
+<a class="nl" href="#open">The Gas Leak</a>
+<a class="nl" href="#system">A System, Not a Spell</a>
+<a class="nl" href="#shape">Chatbot vs Workflow vs Agent</a>
+<a class="nl" href="#failure">Designing for Failure</a>
+<a class="nl" href="#eval">Evaluation II</a>
+<a class="nl" href="#observability">Observability</a>
+<a class="nl" href="#aiops">AI-Ops Mindset</a>
+<a class="nl" href="#takehome">Take-Home</a>
+<a class="nl" href="#wrap">Wrap-Up</a>
+</div></nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero"><div class="wrap">
+  <div class="eyebrow">
+    <span class="chip hot">CLASS 20 / POST-READ</span>
+    <span class="chip">AI SYSTEM DESIGN · EVALUATION · OBSERVABILITY</span>
+    <span class="chip cool">DRAW.IO · GOOGLE SHEETS · HELICONE · GEMINI 2.5 FLASH</span>
+    <span class="chip">FREE TIER FIRST</span>
+  </div>
+  <h1>Ship It Fast Isn't Ship It Safe. <span class="amp">Architect It, Test It, Watch It.</span></h1>
+  <p class="sub"><b>A bot that was never designed on paper, never tested against edge cases, and never watched almost sent a gas leak to an electrician's weekly schedule.</b> This isn't about building a smarter AI feature — it's about the three habits that stand between "it works on my laptop" and "it's safe to run a real business on": a system diagram, an evaluation set, and a dashboard somebody actually watches.</p>
+
+  <div class="slackDrop" style="margin-top:32px">
+    <div class="av">🔧</div>
+    <div><span class="nm">Leela → TradeLine Ops (incident review)</span><span class="tm">9:14 AM · Thursday</span>
+    <p>"Pulling the transcript from yesterday: customer called saying 'I smell gas in the kitchen.' Our triage bot classified it as <b>low urgency, routed it to an electrician, scheduled for next week.</b> Wrong on urgency AND wrong on trade — a gas smell is a utility emergency, not an electrical callback. Nothing bad happened, but only because the customer didn't trust us and called the gas company directly instead of waiting for our appointment. We have no idea how many times it's been wrong before this, because nobody tested it before we shipped it — and nobody's watching it now."</p></div>
+  </div>
+  <p style="font-family:var(--mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--orange2);margin-top:14px">🔧📐📊 Today's rule: architect it on paper, test it before it ships, and watch it while it runs. In that order.</p>
+
+  <div class="heroStats">
+    <div class="hstat"><div class="n" data-count="4">0</div><div class="l">AI System Components Mapped</div></div>
+    <div class="hstat"><div class="n" data-count="5">0</div><div class="l">Live Simulators</div></div>
+    <div class="hstat"><div class="n" data-count="5">0</div><div class="l">Checkpoint Quizzes</div></div>
+    <div class="hstat"><div class="n" data-count="0">0</div><div class="l">Rupees Spent</div></div>
+  </div>
+</div></header>
+
+<!-- ============ SECTION: OPEN ============ -->
+<section class="blk" id="open"><div class="wrap">
+  <div class="secHead"><span class="secNum">SETUP</span><h2>The Gas Leak Near-Miss</h2><span class="secTime">⏱ 5 min</span></div>
+  <p class="secLede">Nobody drew the system, nobody tested it, nobody was watching it run. All three failures happened at once — this is the wound today's whole class is stitching up.</p>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says — Cold Open</span>
+    <p>"New shop today: <b>TradeLine</b>, a home-services dispatch startup in Pune that matches customers to plumbers, electricians, and handymen. Four people you'll see all class — <b>Nikhil</b>, Ops Lead, who built TradeLine's AI triage chatbot himself in an afternoon — no design doc, no eval set, no monitoring; <b>Reema</b>, the founder, who wanted speed above everything and pushed Nikhil to launch fast; <b>Leela</b>, Safety &amp; Quality lead, who catches problems before they become disasters; and <b>Omar</b>, Field Coordinator — not an engineer, talks to plumbers and electricians all day, and is the one who'll actually watch a dashboard once we build one."</p>
+    <p>"Yesterday, a customer called in and said: 'I smell gas in the kitchen.' TradeLine's bot — vibe-coded, never tested against edge cases, never monitored — classified it as <b>low urgency</b>, routed it to an <b>electrician</b>, and scheduled it for <b>next week</b>. Wrong on urgency. Wrong on trade. A gas smell isn't an electrical scheduling problem — it's a call-the-utility-right-now emergency. No disaster happened, and only because the customer's own gut told them to call the gas company directly instead of trusting our appointment."</p>
+    <p>"Here's Leela's line from this morning's incident review, and it's the whole hook for today: <b>'We have no idea how many times it's been wrong, because nobody tested it before we shipped it, and nobody's watching it now.'</b> That's not one bug. That's three separate missing habits — architecture, evaluation, and observability — and today builds all three, for real, on free tools."</p>
+  </div>
+
+  <div class="card">
+    <h3>TradeLine — the cast</h3>
+    <div class="grid4">
+      <div class="useCase"><div class="ico">🛠️</div><div class="co">Ops Lead</div><h4>Nikhil</h4><p>Built the triage bot himself in an afternoon. Does the work — today he learns to design it properly instead of just fast.</p></div>
+      <div class="useCase"><div class="ico">🚀</div><div class="co">Founder / CEO</div><h4>Reema</h4><p>Wanted speed above all — "just ship it." Spends today realizing reliability isn't a nice-to-have, it's the business.</p></div>
+      <div class="useCase"><div class="ico">🛡️</div><div class="co">Safety &amp; Quality</div><h4>Leela</h4><p>Caught the gas-leak incident. The voice pushing for design rigor, evals, and guardrails all class.</p></div>
+      <div class="useCase"><div class="ico">📋</div><div class="co">Field Coordinator</div><h4>Omar</h4><p>Not an engineer — talks to plumbers and electricians daily. By the end of class, he's the one watching the dashboard.</p></div>
+    </div>
+  </div>
+
+  <div class="note beg"><b>Why this class exists:</b> a feature that makes real decisions with real consequences needs three things before it ships and while it runs: a diagram of what it's actually made of, a test set that checks it against known failure modes, and a dashboard somebody watches. Skip any one of the three and you get exactly what TradeLine got — a near-miss nobody could have predicted, because nobody looked.</div>
+
+  <div class="say ask">
+    <span class="who">💬 Chat Drop</span>
+    <p>"Think of one AI feature you've used, built, or heard about at work that makes a real decision — routing, approving, scheduling, flagging. Do you know what it's actually made of? Has anyone tested it against the weird cases? Is anyone watching it run right now? Keep that honest answer in mind."</p>
+  </div>
+</div></section>
+
+<!-- ============ SECTION 1: A SYSTEM, NOT A SPELL ============ -->
+<section class="blk" id="system"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 1</span><h2>A System, Not a Spell</h2><span class="secTime">⏱ 13 min</span></div>
+  <p class="secLede">An AI feature isn't one mysterious black box — it's four separate parts, and each one can fail on its own. Naming them is the first step toward being able to fix them.</p>
+
+  <div class="analogy">
+    <div class="ic">📻</div>
+    <div><div class="tt">The Analogy</div>
+    <p>Think about what makes a genuinely great human dispatcher great — which, at TradeLine, is Nikhil's own domain. The <b>model</b> is the person actually reasoning through the call and deciding what to say. The <b>prompt</b> is the job description they were handed for how to triage — the instructions, in words. The <b>grounding</b> is the reference binder on their desk — which trade handles what, who's available right now, and which situations are always safety emergencies, no matter what else is happening. The <b>workflow</b> is the standard operating procedure — the fixed order a call moves through before it's scheduled. A great dispatcher needs all four. Miss one, and it doesn't matter how good the other three are.</p></div>
+  </div>
+
+  <div class="defBox">
+    <span class="term">The Four Components</span>
+    <p><b>Model</b> — the reasoning engine that decides what to say and how to classify. <b>Prompt</b> — the explicit instructions it was given for the task. <b>Grounding</b> — the reference data it can look up: trade coverage, technician availability, safety-priority rules. <b>Workflow</b> — the fixed sequence of steps a request moves through, in order, regardless of who or what is handling it. Every AI feature is built from some mix of these four — and a failure in one doesn't mean the other three are broken too.</p>
+  </div>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"Now let's actually diagnose the gas leak, properly, instead of just calling it 'the bot got it wrong.' The model reasoned just fine — it's a capable model. The prompt told it to classify urgency and route to a trade — that instruction was there. The workflow ran in the right order — category, then urgency, then trade, then schedule. What was missing? Nothing told it, anywhere, that <b>a gas smell is always a utility emergency, regardless of what trade it superficially sounds like.</b> That's not a prompt problem or a model problem. That's a <b>missing-grounding</b> failure — the reference binder had a blank page exactly where the one page that mattered should have been."</p>
+  </div>
+
+  <!-- SIM 1 -->
+  <div class="sim" id="sim1">
+    <h3>SIM 1 · Label TradeLine's Dispatch System</h3>
+    <p class="simSub">Four boxes, one blank system diagram. Click a box to select it, then click the label you think belongs on it — Model, Prompt, Grounding, or Workflow. Each box tells you exactly what it does; figure out which component that is.</p>
+
+    <div class="diagGrid" id="s1grid"></div>
+
+    <div class="pickGroup">
+      <span class="pgl">Assign to the selected box</span>
+      <div class="pickRow" id="s1picker"></div>
+    </div>
+
+    <div class="verdict" id="s1verdict" style="display:none"></div>
+  </div>
+
+  <div class="note beg"><b>Tie this to the take-home:</b> this exact 4-box diagram is what you'd sketch first in <a href="https://www.drawio.com" target="_blank" rel="noopener">draw.io / diagrams.net</a> — completely free, zero signup, works instantly in a browser tab — before writing a single line of code on a new AI feature. Challenge 1 later asks you to do exactly this for a feature of your own.</div>
+
+  <div class="quiz" id="quiz1">
+    <div class="q">Q1. The gas-leak bot had clear instructions in its prompt ("classify urgency, route to the correct trade") and a perfectly capable model doing the reasoning. What actually failed?</div>
+    <div class="opt" data-c="0"><span class="ab">A</span><span>The model — a smarter model would have caught this automatically, no other changes needed.</span></div>
+    <div class="opt" data-c="1"><span class="ab">B</span><span>The grounding — nothing told it that a gas smell is always a utility emergency rather than a normal electrical request, so it had nothing correct to look up and improvised.</span></div>
+    <div class="opt" data-c="0"><span class="ab">C</span><span>The workflow — the steps ran in the wrong order.</span></div>
+    <div class="quizWhy">Correct answer: <b>B</b>. The model reasoned fine and the workflow ran in the right sequence — what was missing was reference data telling the system that certain phrases are always safety emergencies. That's a grounding gap, not a model or workflow gap.</div>
+  </div>
+</div></section>
+
+<div class="divider"></div>
+
+<!-- ============ SECTION 2: CHATBOT VS WORKFLOW VS AGENT ============ -->
+<section class="blk" id="shape"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 2</span><h2>Chatbot vs. Workflow vs. Agent — Pick the Right Shape</h2><span class="secTime">⏱ 15 min</span></div>
+  <p class="secLede">Before you build anything, decide what shape it should be. Getting this wrong costs money and reliability in both directions — over-building and under-building are both real mistakes.</p>
+
+  <table class="tbl">
+    <tr><th>Shape</th><th>What it actually is</th><th>Courier-tier analogy</th></tr>
+    <tr><td>Chatbot</td><td>Answers one-off questions. No memory of steps, no fixed sequence — just a reply to whatever's asked.</td><td>Same-day-if-simple courier — cheap and fast, but only for easy, simple parcels.</td></tr>
+    <tr><td>Workflow</td><td>A fixed sequence of steps every single time — the same order, no matter the input.</td><td>A fixed delivery route — predictable cost and time, reliable, but rigid.</td></tr>
+    <tr><td>Agent</td><td>Decides its own steps, can loop and replan as it goes based on what it learns mid-task.</td><td>A courier allowed to replan the route mid-delivery — most capable, but least predictable in cost and time, and easiest to get lost.</td></tr>
+  </table>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"Map this straight onto TradeLine. A 'what are your business hours' question is a chatbot — one-off, no steps to track. The 5-step call triage — category, urgency, trade, technician, confirm, every single time — that's a workflow; it should never need to improvise. But a customer who wants to reschedule, negotiate a partial refund, <em>and</em> swap technicians, all in one flexible back-and-forth conversation? That's genuinely an agent's job — too many interdependent, open-ended decisions to hard-code into one fixed order."</p>
+  </div>
+
+  <div class="note beg"><b>The trap in both directions:</b> building an agent for a chatbot's job is expensive and unpredictable for no reason. Building a chatbot for an agent's job means it breaks the moment a request needs more than one step of judgment. Neither mistake is obviously wrong on day one — they both look fine until the wrong request arrives.</div>
+
+  <!-- SIM 2 -->
+  <div class="sim" id="sim2">
+    <h3>SIM 2 · Right-Size Five TradeLine Features</h3>
+    <p class="simSub">You have a limited pool of engineering-effort tokens. Five real feature requests are coming — each genuinely needs one specific shape. Chatbot costs 1 token, Workflow costs 2, Agent costs 4. Spend wisely; you can't afford to over-build everything.</p>
+
+    <div class="tokenBar"><span>Engineering-effort tokens remaining</span><b id="s2tokens">8</b></div>
+
+    <div id="s2features"></div>
+
+    <div class="scoreRow">
+      <span>Right-sized: <b id="s2safe">0</b></span>
+      <span>Wasted effort: <b id="s2wasted">0</b></span>
+      <span>Features decided: <b id="s2done">0</b>/5</span>
+    </div>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="q">Q2. TradeLine wants customers to be able to negotiate a reschedule, a partial refund, AND a technician swap — all in one flexible back-and-forth conversation. Why is a fixed workflow the wrong shape here?</div>
+    <div class="opt" data-c="0"><span class="ab">A</span><span>Workflows are always more reliable, so they're never the wrong choice.</span></div>
+    <div class="opt" data-c="1"><span class="ab">B</span><span>The request has multiple open-ended, interdependent decisions that can't be reduced to one fixed order of steps decided in advance — that's exactly what an agent is for.</span></div>
+    <div class="opt" data-c="0"><span class="ab">C</span><span>It's simple enough that a plain chatbot with no memory of steps would handle it fine.</span></div>
+    <div class="quizWhy">Correct answer: <b>B</b>. A workflow only works when every case follows the same order every time. The moment steps depend on each other and can branch based on what's negotiated, you need something that can decide its own next step — an agent.</div>
+  </div>
+</div></section>
+
+<div class="divider"></div>
+
+<!-- ============ SECTION 3: DESIGNING FOR FAILURE ============ -->
+<section class="blk" id="failure"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 3</span><h2>Designing for Failure — Fallbacks &amp; Human-in-the-Loop</h2><span class="secTime">⏱ 15 min</span></div>
+  <p class="secLede">A system doesn't need to be perfect. It needs to know when to admit it isn't sure, and hand off cleanly when it doesn't.</p>
+
+  <div class="analogy">
+    <div class="ic">🛒</div>
+    <div><div class="tt">The Analogy</div>
+    <p>A self-checkout register doesn't need to correctly scan every unusual item, weigh every loose vegetable perfectly, or verify every ID itself. It needs one thing: a <b>"call an attendant"</b> button, and the good sense to press it when something's outside what it can confidently handle. Human-in-the-loop isn't a failure of automation — it's a design feature, deliberately built in, for exactly the cases automation shouldn't touch alone.</p></div>
+  </div>
+
+  <div class="defBox">
+    <span class="term">Confidence Thresholds &amp; Fallback Design</span>
+    <p>A well-designed system attaches a <b>confidence score</b> to its own classifications, and routes anything below a set threshold to a human instead of acting on it automatically. A good fallback message doesn't pretend everything's fine — it says plainly "this needs a person to check" and hands off cleanly, instead of guessing and hoping.</p>
+  </div>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"Reframe the gas leak with this lens. A properly designed system would have flagged 'gas smell' as a safety-relevant keyword, attached low confidence to auto-scheduling it, and routed it straight to a human — not auto-scheduled it for next week with total confidence it didn't deserve. The failure wasn't that the bot didn't know the right answer. The failure was that it acted like it did, with nothing built in to say 'I'm not sure enough to handle this alone.'"</p>
+  </div>
+
+  <!-- SIM 3 -->
+  <div class="sim" id="sim3">
+    <h3>SIM 3 · Threshold Slider — Run the Batch</h3>
+    <p class="simSub">Set the confidence threshold below which a request goes to human review instead of auto-handling. Then run today's batch of 8 incoming TradeLine requests and see what gets through — and what gets missed.</p>
+
+    <div class="sliderRow">
+      <span style="font-family:var(--mono);font-size:11px;color:var(--ink3)">SEND TO HUMAN BELOW</span>
+      <input type="range" id="s3slider" min="0" max="100" value="50" step="1">
+      <span class="sliderVal" id="s3sliderval">50%</span>
+    </div>
+
+    <button class="btn sm" id="s3run">▶ Run Today's Batch</button>
+
+    <div class="incidentGrid" id="s3grid"></div>
+
+    <div class="verdict" id="s3verdict" style="display:none"></div>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="q">Q3. Reema asks: "why not just set the threshold to 100%, so nothing risky ever gets auto-handled?" What's the real problem with that setting?</div>
+    <div class="opt" data-c="0"><span class="ab">A</span><span>Nothing — 100% is always the safest setting with no downside.</span></div>
+    <div class="opt" data-c="1"><span class="ab">B</span><span>Every single request — including trivial, unambiguous ones — gets dumped on a human reviewer, who gets overloaded and stops meaningfully checking anything. That's its own kind of failure.</span></div>
+    <div class="opt" data-c="0"><span class="ab">C</span><span>A 100% threshold is technically impossible to configure in most tools.</span></div>
+    <div class="quizWhy">Correct answer: <b>B</b>. There's no free "set it to 100% and be safe" answer — an overloaded human reviewer starts rubber-stamping everything, which quietly reintroduces the exact risk the threshold was supposed to prevent.</div>
+  </div>
+</div></section>
+
+<div class="divider"></div>
+
+<!-- ============ SECTION 4: EVALUATION II ============ -->
+<section class="blk" id="eval"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 4</span><h2>Evaluation II — Test Cases, Gold Answers, Consistency</h2><span class="secTime">⏱ 15 min</span></div>
+  <p class="secLede">Versioning and regression-testing a single prompt is the muscle from an earlier class. Today adds the piece that would have caught the gas leak before it ever shipped: a proper evaluation set, run more than once.</p>
+
+  <div class="defBox">
+    <span class="term">Gold Answer &amp; Consistency Testing</span>
+    <p>A <b>gold answer</b> is the correct, ideal output for a given test input — written down in advance, before you run anything. A good evaluation set has several test cases covering known failure modes; the gas leak becomes <b>test case #1</b>. <b>Consistency testing</b> means running the exact same input multiple times and checking whether the model gives the same answer every time — non-determinism is real, and for a safety-relevant classification, it matters a great deal whether "usually right" actually means "right 3 times out of 5."</p>
+  </div>
+
+  <div class="say do">
+    <span class="who">🛠 Instructor Does</span>
+    <p>Sketch this eval set in a Google Sheet: four columns — <b>Test Input | Gold Answer | Actual Output | Pass/Fail.</b> The gas leak is row one, exactly the case that should have been caught first.</p>
+  </div>
+
+  <div class="sheetShot">
+    <table>
+      <tr><th>Test Input</th><th>Gold Answer</th><th>Actual Output</th><th>Pass / Fail</th></tr>
+      <tr class="failrow"><td>"I smell gas in the kitchen"</td><td>URGENT — Gas Safety Emergency. Escalate to utility, do not auto-schedule.</td><td>Low urgency — Electrician, scheduled next week.</td><td>FAIL</td></tr>
+      <tr class="passrow"><td>"My AC stopped cooling"</td><td>Medium urgency — AC Technician, schedule within 48h.</td><td>Medium urgency — AC Technician, schedule within 48h.</td><td>PASS</td></tr>
+      <tr class="passrow"><td>"Sparking outlet, visible smoke"</td><td>URGENT — Electrical Fire Risk. Escalate immediately.</td><td>URGENT — Electrical Fire Risk. Escalate immediately.</td><td>PASS</td></tr>
+      <tr class="failrow"><td>"Leaking pipe under the sink"</td><td>Medium urgency — Plumber, same day.</td><td>Low urgency — Plumber, next week.</td><td>FAIL</td></tr>
+      <tr class="passrow"><td>"Just want a quote for AC install"</td><td>Low urgency — Sales / Quote flow.</td><td>Low urgency — Sales / Quote flow.</td><td>PASS</td></tr>
+    </table>
+  </div>
+
+  <div class="note beg"><b>Notice what this sheet catches that a single "looks fine" test run never would:</b> row 1 and row 4 both fail on the exact same pattern — real-world urgency being flagged as routine. That's a genuine, checkable signal, not a vibe.</div>
+
+  <!-- SIM 4 -->
+  <div class="sim" id="sim4">
+    <h3>SIM 4 · Run It Five Times — Is It Consistent?</h3>
+    <p class="simSub">Pick a test case, then click Run 5x. The exact same input goes in every time — watch whether the exact same classification comes back out.</p>
+
+    <div class="pickRow" id="s4cases">
+      <button class="pickBtn on" data-case="gas">Test Case 1 — "I smell gas in the kitchen" (the incident)</button>
+      <button class="pickBtn" data-case="ac">Test Case 2 — "My AC stopped cooling" (routine)</button>
+    </div>
+
+    <button class="btn sm" id="s4run">▶ Run 5x</button>
+
+    <div class="bubbleRow" id="s4bubbles"></div>
+    <div class="consistencyReadout" id="s4readout"></div>
+  </div>
+
+  <div class="note beg"><b>The payoff, once both cases have run:</b> the routine AC question comes back the same way almost every time — the model isn't confused. The gas leak comes back different ways across identical runs — that's the ambiguity a good eval set is built to catch, and it's exactly the case where a single "it worked once" test would have shipped it anyway.</div>
+
+  <div class="quiz" id="quiz4">
+    <div class="q">Q4. Leela runs the gas-leak test case five times and gets three different classifications back. A teammate says "it passed once, so it's fine." What's wrong with that logic?</div>
+    <div class="opt" data-c="0"><span class="ab">A</span><span>Nothing — one pass is enough evidence to ship a feature.</span></div>
+    <div class="opt" data-c="1"><span class="ab">B</span><span>A single pass doesn't tell you whether the classification is reliably correct or just got lucky once — repeated-run consistency testing is what actually reveals whether a safety-relevant case can be trusted.</span></div>
+    <div class="opt" data-c="0"><span class="ab">C</span><span>Running the same input more than once is wasted effort, since language models are fully deterministic.</span></div>
+    <div class="quizWhy">Correct answer: <b>B</b>. "Passed once" and "reliably correct" are different claims — only running the same input repeatedly can tell them apart, and that gap matters most on exactly the ambiguous, high-stakes cases.</div>
+  </div>
+</div></section>
+
+<div class="divider"></div>
+
+<!-- ============ SECTION 5: OBSERVABILITY ============ -->
+<section class="blk" id="observability"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 5</span><h2>Observability — Watching a System That's Already Running</h2><span class="secTime">⏱ 22 min</span></div>
+  <p class="secLede">Evaluation checks a system before it ships. Observability checks it after — every single day it keeps running in the real world.</p>
+
+  <div class="analogy">
+    <div class="ic">🚗</div>
+    <div><div class="tt">The Analogy</div>
+    <p>You don't want to pop the hood every time you want to know your speed or how much fuel is left — that's what the dashboard is for. An observability tool is the dashboard for a running AI system: it shows you cost, latency, and what actually got said, without needing to re-read the code every time something feels off.</p></div>
+  </div>
+
+  <div class="defBox">
+    <span class="term">Helicone</span>
+    <p>A free proxy-based observability layer: point your API call at Helicone's URL instead of the model provider's directly, add one auth header, and every request gets logged automatically — cost, latency, and the full request/response — with zero code changes to your actual prompt logic.</p>
+  </div>
+
+  <div class="note beg"><b>Genuinely free, no card needed:</b> Helicone's Hobby tier gives 10,000 requests/month, 1GB storage, 7-day log retention, one seat on one org — request logs, cost/latency tracking, and comparing prompt versions are all included. (Helicone was acquired by Mintlify in March 2026 and is now in maintenance mode — still fully live and reliable to demo, just not receiving new features.)</div>
+
+  <div class="say do">
+    <span class="who">🛠 Instructor Does</span>
+    <p>Model behind the demo: a free <b>Gemini 2.5 Flash</b> API key from <code class="k">aistudio.google.com</code>, no card required — proxied through Helicone.</p>
+  </div>
+
+  <ol class="verifySteps">
+    <li><b>Sign up for Helicone:</b> <code class="k">helicone.ai</code> → free Hobby plan, no card. Once in, go to <b>Settings → API Keys</b> and generate a key — this is your <code class="k">$HELICONE_API_KEY</code>.</li>
+    <li><b>Get a Gemini API key:</b> <code class="k">aistudio.google.com</code> → "Get API key" → no card. This is your <code class="k">$GOOGLE_API_KEY</code>.</li>
+    <li><b>Open a terminal and export both keys</b> as environment variables, so the commands below can just reference them:
+      <div class="codeWrap"><button class="copyBtn" type="button">Copy</button><pre class="code"><span class="cm"># Terminal — paste your own keys in place of the placeholders</span>
+<span class="fn">export</span> HELICONE_API_KEY=<span class="st">"sk-helicone-..."</span>
+<span class="fn">export</span> GOOGLE_API_KEY=<span class="st">"AIza..."</span></pre></div>
+    </li>
+    <li><b>Send TradeLine's v1 triage prompt</b> — the one that shipped without the gas-safety rule — through Helicone's Gemini proxy with this exact command (run it as-is; only the two exported keys change):
+      <div class="codeWrap"><button class="copyBtn" type="button">Copy</button><pre class="code"><span class="cm"># v1 — broken prompt, no gas-safety grounding</span>
+curl --request POST \
+  --url <span class="st">"https://gateway.helicone.ai/v1beta/models/gemini-2.5-flash:generateContent?key=$GOOGLE_API_KEY"</span> \
+  --header <span class="st">"Content-Type: application/json"</span> \
+  --header <span class="st">"Helicone-Auth: Bearer $HELICONE_API_KEY"</span> \
+  --header <span class="st">"Helicone-Target-URL: https://generativelanguage.googleapis.com"</span> \
+  --data <span class="st">'{
+    "contents": [{
+      "parts": [{
+        "text": "You are the TradeLine triage assistant. Classify the customer message into category (plumbing/electrical/HVAC/general), urgency (low/medium/urgent), and next_step (schedule/escalate). Respond as JSON only: {\"category\":...,\"urgency\":...,\"next_step\":...}. Customer message: \"I smell gas in the kitchen\""
+      }]
+    }]
+  }'</span></pre></div>
+      Three things happened in that one call: Gemini answered, Helicone logged it, and you changed zero lines of prompt-handling code to make that logging happen — the proxy did it.
+    </li>
+    <li><b>Open the Requests dashboard</b> at <code class="k">helicone.ai/requests</code> (sidebar → Requests) — the call you just sent is already there: exact prompt, exact response, latency in milliseconds, cost in fractions of a cent, timestamped seconds ago.</li>
+    <li><b>Fix the grounding gap and send v2</b> — same command, one line added to the prompt text so the safety rule actually exists this time:
+      <div class="codeWrap"><button class="copyBtn" type="button">Copy</button><pre class="code"><span class="cm"># v2 — same call, prompt text now includes the missing grounding rule</span>
+curl --request POST \
+  --url <span class="st">"https://gateway.helicone.ai/v1beta/models/gemini-2.5-flash:generateContent?key=$GOOGLE_API_KEY"</span> \
+  --header <span class="st">"Content-Type: application/json"</span> \
+  --header <span class="st">"Helicone-Auth: Bearer $HELICONE_API_KEY"</span> \
+  --header <span class="st">"Helicone-Target-URL: https://generativelanguage.googleapis.com"</span> \
+  --data <span class="st">'{
+    "contents": [{
+      "parts": [{
+        "text": "You are the TradeLine triage assistant. Classify the customer message into category (plumbing/electrical/HVAC/general), urgency (low/medium/urgent), and next_step (schedule/escalate). IMPORTANT: any message reporting a gas smell is always urgency=urgent and next_step=escalate, regardless of what trade it superficially sounds like — never schedule it. Respond as JSON only: {\"category\":...,\"urgency\":...,\"next_step\":...}. Customer message: \"I smell gas in the kitchen\""
+      }]
+    }]
+  }'</span></pre></div>
+    </li>
+    <li><b>Refresh the Requests dashboard</b> — both calls are now sitting in the same list, newest first. Open each one and put them side by side: same input, different prompt text, different JSON output, and Helicone already has cost and latency logged for both. No guessing which version is "the real one" — the log is the record.</li>
+  </ol>
+
+  <div class="note pro"><b>Instructor — verify before you teach this live:</b> re-check the base URL, header names, and model name against <a href="https://docs.helicone.ai/integrations/gemini/api/curl" target="_blank" rel="noopener">docs.helicone.ai/integrations/gemini/api/curl</a> the night before — the commands above were pulled from that page directly (Sept 2026), but Helicone is in maintenance mode, not frozen, so a quick diff against the live docs costs two minutes and catches anything that moved.</div>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"Here's the second free observability source hiding in plain sight: if you built n8n workflows earlier in this course, <b>you already have logs — you just hadn't looked.</b> n8n's execution log viewer is a native, free feature of Community Edition. Every run of every workflow is sitting there, timestamped, with exactly what each node received and returned. It's less polished than Helicone's dashboard, but it's already running, right now, for free, on work you've already built."</p>
+  </div>
+
+  <div class="note"><b>One name worth knowing — Langfuse (concept only):</b> Langfuse is the leading open-source alternative to Helicone — same core idea (request logs, cost/latency tracking, prompt comparison), self-hostable if you want full control, with a free Hobby cloud tier too (50,000 units/month, 30-day retention). Not something we're building with here, but it's the name to know if a team ever needs an open-source, self-hosted observability stack instead of a hosted one.</div>
+
+  <!-- SIM 5 -->
+  <div class="sim" id="sim5">
+    <h3>SIM 5 · Watch the Dashboard While It Runs</h3>
+    <p class="simSub">Pick which prompt version is live, then send requests. Cost and latency land on the chart in real time — watch for the version that's quietly getting slower and pricier.</p>
+
+    <div class="switchRow">
+      <div class="swl"><b>Live Prompt Version</b>Switch before sending to compare v1 and v2 on the same chart.</div>
+      <button class="swBtn on" id="s5verA">v1</button>
+      <button class="swBtn" id="s5verB">v2</button>
+    </div>
+
+    <button class="btn sm" id="s5send">📡 Send Request</button>
+    <button class="btn sm ghost" id="s5reset">↺ Reset Dashboard</button>
+
+    <div class="chartArea" id="s5chart">
+      <div class="chartGrid" style="bottom:25%"></div>
+      <div class="chartGrid" style="bottom:50%"></div>
+      <div class="chartGrid" style="bottom:75%"></div>
+    </div>
+    <div class="legendRow">
+      <span><span class="legendDot" style="background:#3dd6c3"></span>v1 — original triage prompt</span>
+      <span><span class="legendDot" style="background:#a48bff"></span>v2 — "added extra grounding lookup"</span>
+    </div>
+
+    <div class="dashStats">
+      <div class="dashStatCard"><div class="dscTitle" style="color:var(--teal)">v1 TOTALS</div><div class="dscRow"><span>Requests</span><b id="s5aCount">0</b></div><div class="dscRow"><span>Avg latency</span><b id="s5aLat">—</b></div><div class="dscRow"><span>Total cost</span><b id="s5aCost">$0.0000</b></div></div>
+      <div class="dashStatCard"><div class="dscTitle" style="color:var(--violet)">v2 TOTALS</div><div class="dscRow"><span>Requests</span><b id="s5bCount">0</b></div><div class="dscRow"><span>Avg latency</span><b id="s5bLat">—</b></div><div class="dscRow"><span>Total cost</span><b id="s5bCost">$0.0000</b></div></div>
+    </div>
+
+    <div class="runLog" id="s5log"></div>
+  </div>
+
+  <div class="quiz" id="quiz5">
+    <div class="q">Q5. Omar notices v2's average latency climbing steadily on the Helicone dashboard across the day, while v1 stays flat. What's the right next step for someone in his role — not an engineer?</div>
+    <div class="opt" data-c="0"><span class="ab">A</span><span>Ignore it — latency numbers aren't his job to worry about.</span></div>
+    <div class="opt" data-c="0"><span class="ab">B</span><span>Open the prompt himself and try to rewrite it to be faster.</span></div>
+    <div class="opt" data-c="1"><span class="ab">C</span><span>Flag the pattern back to Nikhil with the specific numbers from the dashboard — noticing and escalating is the job. He doesn't need to write code to own reliability.</span></div>
+    <div class="quizWhy">Correct answer: <b>C</b>. Observability's value for a non-engineer isn't fixing the underlying prompt — it's noticing the pattern early and getting it in front of the person who can act on it.</div>
+  </div>
+</div></section>
+
+<div class="divider"></div>
+
+<!-- ============ SECTION 6: AI-OPS MINDSET ============ -->
+<section class="blk" id="aiops"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 6</span><h2>The AI-Ops Mindset for Non-Engineers</h2><span class="secTime">⏱ 10 min</span></div>
+  <p class="secLede">You don't need to write a line of code to own reliability. Watching a dashboard, noticing a pattern, and knowing when to escalate is a real, valuable job — and it's Omar's, starting today.</p>
+
+  <table class="tbl">
+    <tr><th>What Omar can own</th><th>What it actually requires</th></tr>
+    <tr><td>Watching cost &amp; latency trends</td><td>Reading a dashboard, noticing when a line climbs — no code, no model knowledge needed.</td></tr>
+    <tr><td>Spotting a pattern of wrong classifications</td><td>Comparing outputs against what he already knows about trades and urgency from the field — domain knowledge, not engineering.</td></tr>
+    <tr><td>Knowing the escalation threshold</td><td>A clear, agreed rule for "this is worth flagging to Nikhil" versus "this is normal noise."</td></tr>
+    <tr><td>Checking n8n execution logs after a workflow run</td><td>Opening a page that's already there and reading what failed and why — zero new tools to learn.</td></tr>
+  </table>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"This is the emotional center of today, so say it plainly: Omar will never write the triage prompt, and he doesn't need to. His job — watching the Helicone dashboard, noticing when something drifts, knowing exactly when a bad pattern is worth a message to Nikhil instead of a shrug — that's not a lesser job than Nikhil's. It's a different, genuinely necessary one. The gas leak didn't happen because nobody was smart enough. It happened because nobody's job, that day, was to be watching."</p>
+  </div>
+</div></section>
+
+<div class="divider"></div>
+
+<!-- ============ TAKE-HOME ============ -->
+<section class="blk" id="takehome"><div class="wrap">
+  <div class="secHead"><span class="secNum">TAKE-HOME</span><h2>Three Challenges</h2><span class="secTime">⏱ homework</span></div>
+  <p class="secLede">One challenge per learning outcome — architect it, evaluate it, watch it. Do all three on the same feature if you want to feel the whole arc in one sitting.</p>
+
+  <div class="chalCard" id="chal1">
+    <div class="chalHead"><span class="cn">01</span><h4>Architect a feature on paper, in draw.io</h4><span class="chev">›</span></div>
+    <div class="chalBody">
+      <div class="cLabel">Mission</div>
+      <p class="mission">Pick one AI feature idea — yours, TradeLine's, or one from an earlier class in this course. Open <code class="k">draw.io</code> (free, no signup) and draw four labeled boxes: Model, Prompt, Grounding, Workflow. For each box, write one sentence describing exactly what goes in it for your feature. If you genuinely can't fill in the Grounding box, that's a real finding — write down what reference data is actually missing.</p>
+    </div>
+  </div>
+  <div class="chalCard" id="chal2">
+    <div class="chalHead"><span class="cn">02</span><h4>Build a 5-row evaluation set with gold answers</h4><span class="chev">›</span></div>
+    <div class="chalBody">
+      <div class="cLabel">Mission</div>
+      <p class="mission">Pick a prompt you wrote in an earlier class of this course. In a Google Sheet, build the four columns from §4 (Test Input, Gold Answer, Actual Output, Pass/Fail) and fill in five real test cases — including at least one deliberately edge-case or ambiguous input, the way the gas leak was for TradeLine. Run each input through the prompt for real, fill in Actual Output, and mark pass or fail honestly.</p>
+    </div>
+  </div>
+  <div class="chalCard" id="chal3">
+    <div class="chalHead"><span class="cn">03</span><h4>Connect one real call through Helicone</h4><span class="chev">›</span></div>
+    <div class="chalBody">
+      <div class="cLabel">Mission</div>
+      <p class="mission">Follow §5's steps end to end with a real, free Gemini 2.5 Flash API key: sign up for Helicone's free Hobby tier, proxy one real API call through it, and open the Requests dashboard to see the logged call — cost, latency, and output. Screenshot the log entry as proof.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============ WRAP-UP ============ -->
+<section class="blk" id="wrap"><div class="wrap">
+  <div class="secHead"><span class="secNum">WRAP-UP</span><h2>Architected, Tested, Watched</h2><span class="secTime">⏱ 6 min</span></div>
+
+  <div class="card">
+    <h3>A Day in Omar's Life — before and after today</h3>
+    <div class="prepRow"><b>9:00 AM</b><span>Before: has no idea the triage bot exists as anything other than "the thing that assigns jobs." After: opens the Helicone dashboard as part of his morning routine.</span></div>
+    <div class="prepRow"><b>9:15 AM</b><span>Before: a technician mentions a weird misroute in passing; nobody writes it down. After: Omar checks it against the eval set — is this a known failure mode, or a new one?</span></div>
+    <div class="prepRow"><b>11:00 AM</b><span>Before: no way to know if today's calls are being handled normally. After: a quick glance at the cost/latency chart tells him if anything's drifting.</span></div>
+    <div class="prepRow"><b>3:30 PM</b><span>Before: a bad pattern would only surface days later, from a customer complaint. After: Omar flags a rising-latency pattern to Nikhil the same afternoon, with numbers.</span></div>
+  </div>
+
+  <table class="tbl">
+    <tr><th>Thing you can now bill for</th><th>Where it came from today</th></tr>
+    <tr><td>A system diagram — Model / Prompt / Grounding / Workflow — for a real feature</td><td>§1</td></tr>
+    <tr><td>Choosing chatbot vs. workflow vs. agent, and defending the choice on cost/latency/reliability</td><td>§2</td></tr>
+    <tr><td>Designing a confidence-threshold fallback instead of shipping blind confidence</td><td>§3</td></tr>
+    <tr><td>Building an evaluation set with gold answers and running consistency checks</td><td>§4</td></tr>
+    <tr><td>Connecting a real API call through Helicone and reading cost/latency logs</td><td>§5</td></tr>
+    <tr><td>Being the person who watches the dashboard and knows when to escalate</td><td>§6</td></tr>
+  </table>
+
+  <div class="card">
+    <h3>Key Takeaways</h3>
+    <p>1. <b>Every AI feature is four separate parts, not one black box.</b> Model, Prompt, Grounding, Workflow — a failure in one doesn't mean the others are broken.</p>
+    <p>2. <b>Chatbot, workflow, and agent are a real decision, not a default.</b> Over-building and under-building are both real costs, in both directions.</p>
+    <p>3. <b>A system doesn't need to be perfect — it needs to know when to hand off.</b> Confidence thresholds and human-in-the-loop are a design feature, not an admission of failure.</p>
+    <p>4. <b>"Passed once" and "reliably correct" are different claims.</b> Gold answers and repeated-run consistency testing are what tell them apart — before something ships, not after.</p>
+    <p>5. <b>Watching a running system is a real job, and it doesn't require code.</b> Cost, latency, and pattern-spotting on a dashboard is a legitimate, billable, non-engineering skill.</p>
+  </div>
+
+  <p class="bigQuote">A gas leak almost got scheduled for next week by a bot nobody had designed, tested, or watched. <em>Now TradeLine has a diagram, an eval set, and a dashboard — but the eval set only covers today's known failure modes.</em></p>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says — Closing</span>
+    <p>"Leave the room with Leela's actual closing question from this morning's review, because it's deliberately not answered today: <b>'What happens the day a completely new kind of request comes in — one nobody thought to write a test case for?'</b> The gas leak is covered now. Mismatched trades are covered now. But an eval set only knows what it was told to look for. What TradeLine does the day something genuinely new shows up — that's next class's problem, not today's."</p>
+  </div>
+</div></section>
+
+<div class="footer"><div class="wrap">
+  <p>Class 20 · AI System Design, Evaluation &amp; Observability — GenAI x Academy</p>
+  <p style="margin-top:8px">Interactive teaching companion · 5 simulators · 5 checkpoint quizzes</p>
+</div></div>
+
+<script>
+/* progress bar + hero counters */
+addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%'});
+document.querySelectorAll('.hstat .n').forEach(el=>{const t=+el.dataset.count;if(t===0){el.textContent='0';return;}let c=0;const iv=setInterval(()=>{c+=Math.max(1,Math.round(t/30));if(c>=t){c=t;clearInterval(iv);}el.textContent=c;},40)});
+
+/* quizzes — data-c="1" marks the correct option */
+document.querySelectorAll('.quiz').forEach(q=>{
+  const opts=q.querySelectorAll('.opt'),why=q.querySelector('.quizWhy');
+  opts.forEach(o=>o.addEventListener('click',()=>{
+    if(q.classList.contains('answered'))return;
+    q.classList.add('answered');
+    opts.forEach(x=>{x.classList.add('locked');if(x.dataset.c==='1')x.classList.add('correct');});
+    if(o.dataset.c!=='1')o.classList.add('wrong');
+    why.classList.add('show');
+  }));
+});
+
+/* copy-to-clipboard for code blocks */
+document.querySelectorAll('.copyBtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const code=btn.nextElementSibling.innerText;
+    const flash=label=>{
+      btn.textContent=label;
+      btn.classList.toggle('copied',label==='Copied!');
+      setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},1500);
+    };
+    const fallbackCopy=()=>{
+      const ta=document.createElement('textarea');
+      ta.value=code;ta.style.position='fixed';ta.style.opacity='0';
+      document.body.appendChild(ta);ta.select();
+      let ok=false;
+      try{ok=document.execCommand('copy');}catch(e){}
+      document.body.removeChild(ta);
+      flash(ok?'Copied!':'Copy failed');
+    };
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(()=>flash('Copied!')).catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  });
+});
+
+/* challenge accordion cards */
+document.querySelectorAll('.chalHead').forEach(h=>h.addEventListener('click',()=>h.closest('.chalCard').classList.toggle('open')));
+
+/* ---------- SIM 1: Label the Dispatch System ---------- */
+(function(){
+  var boxes = [
+    { id:'b1', icon:'📁', desc:'Reference data it can look up mid-call — which trade handles what, which technicians are free right now, and which situations are always safety emergencies.', correct:'grounding', label:'Grounding', why:'This is the reference binder. TradeLine’s bot never had this — no data telling it "gas smell = utility emergency" — so it improvised.' },
+    { id:'b2', icon:'🧠', desc:'The part that actually reasons about the call and decides what to say and which category to assign.', correct:'model', label:'Model', why:'This is the dispatcher’s own judgment — the reasoning engine making the call.' },
+    { id:'b3', icon:'📋', desc:'The exact instructions it was given for how to triage a call — the job description handed to whoever answers the phone.', correct:'prompt', label:'Prompt', why:'This is the job description — how the dispatcher was told to behave, step by step, in words.' },
+    { id:'b4', icon:'🔀', desc:'The fixed sequence every call moves through, in order, before it gets scheduled with a technician.', correct:'workflow', label:'Workflow', why:'This is the SOP — the standard order of operations a call is routed through, no matter who or what is handling it.' }
+  ];
+  var labelOptions = [
+    { k:'model', label:'Model' },
+    { k:'prompt', label:'Prompt' },
+    { k:'grounding', label:'Grounding' },
+    { k:'workflow', label:'Workflow' }
+  ];
+  var grid = document.getElementById('s1grid');
+  var selected = null;
+  var answered = {};
+
+  boxes.forEach(function(b){
+    var div = document.createElement('div');
+    div.className = 'diagBox';
+    div.id = 's1_' + b.id;
+    div.innerHTML = '<div class="dbIcon">' + b.icon + '</div><div class="dbDesc">' + b.desc + '</div><div class="dbLabel">— unlabeled —</div><div class="dbWhy"></div>';
+    div.addEventListener('click', function(){
+      if(answered[b.id]) return;
+      grid.querySelectorAll('.diagBox').forEach(function(x){ x.classList.remove('selected'); });
+      div.classList.add('selected');
+      selected = b.id;
+    });
+    grid.appendChild(div);
+  });
+
+  var pickRow = document.getElementById('s1picker');
+  labelOptions.forEach(function(l){
+    var btn = document.createElement('button');
+    btn.className = 'pickBtn';
+    btn.textContent = l.label;
+    btn.addEventListener('click', function(){
+      if(!selected) return;
+      var b = boxes.filter(function(x){ return x.id === selected; })[0];
+      if(answered[selected]) return;
+      answered[selected] = true;
+      var div = document.getElementById('s1_' + selected);
+      div.classList.remove('selected');
+      var ok = l.k === b.correct;
+      div.classList.add(ok ? 'correct' : 'wrong', 'answered');
+      div.querySelector('.dbLabel').textContent = ok ? (l.label + ' ✓') : (l.label + ' ✗ — this one is ' + b.label);
+      div.querySelector('.dbWhy').textContent = b.why;
+      selected = null;
+      checkDone();
+    });
+    pickRow.appendChild(btn);
+  });
+
+  function checkDone(){
+    var doneCount = Object.keys(answered).length;
+    if(doneCount === boxes.length){
+      var v = document.getElementById('s1verdict');
+      v.style.display = 'block';
+      v.className = 'verdict good';
+      v.innerHTML = '<b>All four labeled.</b> The gas-leak near-miss traces straight back to the Grounding box — the model and workflow were fine, but with no reference data telling it "gas smell = utility emergency, not electrical," it had nothing correct to look up. This is exactly the diagram you’d sketch in draw.io — free, no signup — before writing a single line of code.';
+    }
+  }
+})();
+
+/* ---------- SIM 2: Right-Size Five Features ---------- */
+(function(){
+  var costs = { chatbot:1, workflow:2, agent:4 };
+  var features = [
+    { id:'f1', name:'"Are you open on Sundays?"', desc:'A simple FAQ-style question customers ask constantly — no follow-up steps needed.', correct:'chatbot' },
+    { id:'f2', name:'Standard call triage', desc:'Every incoming call needs the same 5 fixed steps, in order: category → urgency → trade → technician → confirm.', correct:'workflow' },
+    { id:'f3', name:'Reschedule + refund + technician swap, one chat', desc:'A customer wants to negotiate a reschedule, a partial refund, AND a technician swap — open-ended, in one back-and-forth.', correct:'agent' },
+    { id:'f4', name:'AC installation quote calculator', desc:'Gather 3 fixed inputs, look up a price table, return a number. Same steps, every single time.', correct:'workflow' },
+    { id:'f5', name:'"What’s your cancellation policy?"', desc:'Another one-off FAQ-style question with a fixed answer.', correct:'chatbot' }
+  ];
+  var budget = 8;
+  var spent = 0, safe = 0, wasted = 0, doneCount = 0;
+
+  var wrap = document.getElementById('s2features');
+
+  function verdictFor(chosen, correct){
+    if(chosen === correct) return { cls:'good', tone:'good', text:'Right-sized. This matches what the request actually needs — no wasted spend, no missing capability.' };
+    if(costs[chosen] < costs[correct]) return { cls:'bad', tone:'bad', text:'Under-built. This shape can’t actually handle what the request needs — it will break the moment a real case shows up, and you’ll pay to rebuild it anyway.' };
+    return { cls:'mid', tone:'mid', text:'Over-built. It will technically work, but slower, pricier, and less predictable than the job called for — effort spent that didn’t need spending.' };
+  }
+
+  features.forEach(function(f){
+    var card = document.createElement('div');
+    card.className = 'featureCard';
+    card.id = 's2_' + f.id;
+    var row = document.createElement('div');
+    row.className = 'investRow';
+    ['chatbot','workflow','agent'].forEach(function(shape){
+      var b = document.createElement('button');
+      b.className = 'investBtn';
+      b.innerHTML = shape.charAt(0).toUpperCase() + shape.slice(1) + '<span>' + costs[shape] + ' token' + (costs[shape] > 1 ? 's' : '') + '</span>';
+      b.addEventListener('click', function(){
+        if(card.classList.contains('done')) return;
+        if(spent + costs[shape] > budget){
+          var vv = card.querySelector('.featureVerdict');
+          vv.style.display = 'block';
+          vv.innerHTML = '<b style="color:var(--rose)">Not enough tokens left</b> — you spent too much on earlier features. Pick a cheaper shape here.';
+          return;
+        }
+        spent += costs[shape];
+        var v = verdictFor(shape, f.correct);
+        if(v.tone === 'good') safe++; else wasted++;
+        doneCount++;
+        row.querySelectorAll('.investBtn').forEach(function(x){ x.disabled = true; });
+        b.classList.add('chosen', v.cls);
+        var vv = card.querySelector('.featureVerdict');
+        vv.style.display = 'block';
+        vv.innerHTML = '<b>' + (v.tone === 'good' ? 'Right-sized.' : v.tone === 'bad' ? 'Under-built.' : 'Over-built.') + '</b> ' + v.text;
+        card.classList.add('done');
+        document.getElementById('s2tokens').textContent = (budget - spent);
+        document.getElementById('s2safe').textContent = safe;
+        document.getElementById('s2wasted').textContent = wasted;
+        document.getElementById('s2done').textContent = doneCount;
+      });
+      row.appendChild(b);
+    });
+    card.innerHTML = '<h4>' + f.name + '</h4><div class="fDesc">' + f.desc + '</div>';
+    card.appendChild(row);
+    var verdictDiv = document.createElement('div');
+    verdictDiv.className = 'featureVerdict';
+    card.appendChild(verdictDiv);
+    wrap.appendChild(card);
+  });
+})();
+
+/* ---------- SIM 3: Threshold Slider Batch Router ---------- */
+(function(){
+  var incidents = [
+    { txt:'AC not cooling, standard repair request', conf:92, safe:true },
+    { txt:'Reschedule appointment to tomorrow', conf:88, safe:true },
+    { txt:'Leaking pipe under sink, moderate flow', conf:75, safe:true },
+    { txt:'"I smell gas in the kitchen"', conf:81, safe:false },
+    { txt:'Sparking outlet, visible smoke', conf:60, safe:false },
+    { txt:'Quote request for new AC installation', conf:95, safe:true },
+    { txt:'Water heater not heating, minor issue', conf:70, safe:true },
+    { txt:'"Burning smell" reported near breaker box', conf:55, safe:false }
+  ];
+  var slider = document.getElementById('s3slider');
+  var sliderval = document.getElementById('s3sliderval');
+  var grid = document.getElementById('s3grid');
+
+  slider.addEventListener('input', function(){
+    sliderval.textContent = slider.value + '%';
+  });
+
+  function render(){
+    var threshold = parseInt(slider.value, 10);
+    grid.innerHTML = '';
+    var autoSafe = 0, escaped = 0, reviewQueue = 0;
+    incidents.forEach(function(inc){
+      var toHuman = inc.conf < threshold;
+      var div = document.createElement('div');
+      div.className = 'incidentCard';
+      var routeHtml;
+      if(toHuman){
+        reviewQueue++;
+        routeHtml = '<span class="icRoute human">→ HUMAN REVIEW</span>';
+      } else {
+        if(inc.safe){
+          autoSafe++;
+        } else {
+          escaped++;
+          div.classList.add('danger');
+        }
+        routeHtml = '<span class="icRoute auto">→ AUTO-HANDLED</span>';
+      }
+      div.innerHTML = '<div><div class="icTxt">' + inc.txt + '</div><div class="icConf">bot confidence: ' + inc.conf + '%</div></div>' + routeHtml;
+      grid.appendChild(div);
+    });
+
+    var v = document.getElementById('s3verdict');
+    v.style.display = 'block';
+    var msg = '<b>At a ' + threshold + '% threshold:</b> ' + autoSafe + ' safely auto-handled, ' + reviewQueue + ' sent to human review, ' + escaped + ' near-miss' + (escaped === 1 ? '' : 'es') + ' escaped through automation. ';
+    if(escaped > 0){
+      msg += '<b style="color:var(--rose)">Danger:</b> at least one risky case slipped through auto-handling at this setting — including cases that looked confident but weren’t actually safe, exactly like the real gas leak.';
+      v.className = 'verdict bad';
+    } else if(reviewQueue >= 6){
+      msg += '<b style="color:var(--gold)">Overload risk:</b> most requests — including totally routine ones — are being dumped on a human reviewer. At this volume, a tired reviewer starts rubber-stamping everything, which quietly brings the risk right back.';
+      v.className = 'verdict mid';
+    } else {
+      msg += '<b style="color:var(--green)">Balanced.</b> Dangerous cases are being caught without burying the reviewer in routine trivia — though notice this is a specific setting, not a universal safe number.';
+      v.className = 'verdict good';
+    }
+    v.innerHTML = msg;
+  }
+
+  document.getElementById('s3run').addEventListener('click', render);
+})();
+
+/* ---------- SIM 4: Repeated-Trial Consistency Tester ---------- */
+(function(){
+  var cases = {
+    gas: {
+      label: '"I smell gas in the kitchen"',
+      gold: 'URGENT — Gas Safety Emergency',
+      outputs: [
+        { txt:'URGENT — Gas Safety Emergency. Escalate to utility now.', match:true },
+        { txt:'Low urgency — Electrician, next week.', match:false },
+        { txt:'URGENT — Gas Safety Emergency. Do not auto-schedule.', match:true },
+        { txt:'Medium urgency — Plumber, within 24h.', match:false },
+        { txt:'URGENT — Gas Safety Emergency. Escalate immediately.', match:true }
+      ]
+    },
+    ac: {
+      label: '"My AC stopped cooling"',
+      gold: 'Medium urgency — AC Technician, 48h',
+      outputs: [
+        { txt:'Medium urgency — AC Technician, schedule within 48h.', match:true },
+        { txt:'Medium urgency — AC Technician, schedule within 48h.', match:true },
+        { txt:'Medium urgency — AC Technician, schedule within 48h.', match:true },
+        { txt:'Medium urgency — AC Technician, schedule within 48h.', match:true },
+        { txt:'Medium urgency — AC Technician, schedule within 48h.', match:true }
+      ]
+    }
+  };
+  var current = 'gas';
+
+  document.querySelectorAll('#s4cases .pickBtn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('#s4cases .pickBtn').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      current = btn.getAttribute('data-case');
+      document.getElementById('s4bubbles').innerHTML = '';
+      var r = document.getElementById('s4readout');
+      r.style.display = 'none';
+      r.textContent = '';
+    });
+  });
+
+  document.getElementById('s4run').addEventListener('click', function(){
+    var c = cases[current];
+    var bubbles = document.getElementById('s4bubbles');
+    var readout = document.getElementById('s4readout');
+    bubbles.innerHTML = '';
+    readout.style.display = 'none';
+    var i = 0;
+    var matchCount = 0;
+    function next(){
+      if(i >= c.outputs.length){
+        var pct = Math.round(matchCount / c.outputs.length * 100);
+        readout.style.display = 'block';
+        readout.innerHTML = '<b>' + matchCount + '/' + c.outputs.length + ' matched the gold answer — ' + pct + '% consistent.</b> Gold answer: "' + c.gold + '"';
+        return;
+      }
+      var o = c.outputs[i];
+      if(o.match) matchCount++;
+      var div = document.createElement('div');
+      div.className = 'outBubble ' + (o.match ? 'match' : 'drift');
+      div.textContent = 'Run ' + (i+1) + ': ' + o.txt;
+      bubbles.appendChild(div);
+      i++;
+      setTimeout(next, 420);
+    }
+    next();
+  });
+})();
+
+/* ---------- SIM 5: Live Cost/Latency Dashboard ---------- */
+(function(){
+  var version = 'a';
+  var data = {
+    a: { count:0, totalLat:0, totalCost:0 },
+    b: { count:0, totalLat:0, totalCost:0 }
+  };
+  var globalCount = 0;
+  var chart = document.getElementById('s5chart');
+  var log = document.getElementById('s5log');
+
+  document.getElementById('s5verA').addEventListener('click', function(){
+    version = 'a';
+    document.getElementById('s5verA').classList.add('on');
+    document.getElementById('s5verB').classList.remove('on');
+  });
+  document.getElementById('s5verB').addEventListener('click', function(){
+    version = 'b';
+    document.getElementById('s5verB').classList.add('on');
+    document.getElementById('s5verA').classList.remove('on');
+  });
+
+  function fmt(n){ return '$' + n.toFixed(4); }
+
+  function addLog(text, cls){
+    var span = document.createElement('span');
+    span.className = 'lg ' + cls;
+    span.textContent = text;
+    log.appendChild(span);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  document.getElementById('s5send').addEventListener('click', function(){
+    var d = data[version];
+    var latency, cost;
+    if(version === 'a'){
+      latency = 380 + Math.round(Math.random() * 150);
+      cost = 0.00035 + Math.random() * 0.0001;
+    } else {
+      var drift = d.count * 55;
+      latency = 700 + drift + Math.round(Math.random() * 120);
+      cost = 0.00055 + (d.count * 0.00007) + Math.random() * 0.00005;
+    }
+    d.count++;
+    d.totalLat += latency;
+    d.totalCost += cost;
+    globalCount++;
+
+    var point = document.createElement('div');
+    point.className = 'chartPoint ' + (version === 'a' ? 'va' : 'vb');
+    var leftPct = 4 + ((globalCount - 1) % 16) * 6;
+    var maxLat = 1700;
+    var bottomPct = Math.min(90, (latency / maxLat) * 100);
+    point.style.left = leftPct + '%';
+    point.style.bottom = bottomPct + '%';
+    chart.appendChild(point);
+
+    document.getElementById('s5aCount').textContent = data.a.count;
+    document.getElementById('s5bCount').textContent = data.b.count;
+    document.getElementById('s5aLat').textContent = data.a.count ? Math.round(data.a.totalLat / data.a.count) + 'ms' : '—';
+    document.getElementById('s5bLat').textContent = data.b.count ? Math.round(data.b.totalLat / data.b.count) + 'ms' : '—';
+    document.getElementById('s5aCost').textContent = fmt(data.a.totalCost);
+    document.getElementById('s5bCost').textContent = fmt(data.b.totalCost);
+
+    var warn = (version === 'b' && latency > 1000);
+    addLog('[REQ #' + globalCount + '] v' + (version === 'a' ? '1' : '2') + ' · ' + latency + 'ms · ' + fmt(cost), warn ? 'warn' : (version === 'a' ? 'ok' : 'dim'));
+  });
+
+  document.getElementById('s5reset').addEventListener('click', function(){
+    data.a = { count:0, totalLat:0, totalCost:0 };
+    data.b = { count:0, totalLat:0, totalCost:0 };
+    globalCount = 0;
+    chart.querySelectorAll('.chartPoint').forEach(function(p){ p.remove(); });
+    log.innerHTML = '';
+    document.getElementById('s5aCount').textContent = '0';
+    document.getElementById('s5bCount').textContent = '0';
+    document.getElementById('s5aLat').textContent = '—';
+    document.getElementById('s5bLat').textContent = '—';
+    document.getElementById('s5aCost').textContent = '$0.0000';
+    document.getElementById('s5bCost').textContent = '$0.0000';
+  });
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/beginner-20-post_read" target="_blank" rel="noopener">github.com/scaler-content/beginner-20-post_read</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

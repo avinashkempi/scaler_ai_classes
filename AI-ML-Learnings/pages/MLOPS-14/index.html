@@ -1,0 +1,1702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sagemaker Feature store part 2 post read</title>
+<meta name="description" content="An interactive read on the SageMaker Feature Store online store: serving a model live, checking it sees what training saw, and the quiet failures along the way.">
+<style>
+:root{
+  --bg:#0a0a0b; --bg2:#111113; --card:#161618; --card2:#1e1e21;
+  --line:#2c2c30; --line2:#3d3d43;
+  --text:#ece9e2; --mut:#a6a6ac; --dim:#7b7b82;
+  --gold:#d4af37; --gold2:#f0d77a; --gold3:#8f7420; --goldbg:rgba(212,175,55,.10); --goldbg2:rgba(212,175,55,.18);
+  --serif:ui-serif,Georgia,"Times New Roman",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.7 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--gold2);text-underline-offset:3px}
+a:hover{color:var(--gold)}
+:focus-visible{outline:2px solid var(--gold2);outline-offset:2px;border-radius:3px}
+.skip{position:absolute;left:-999px;top:8px;background:var(--gold);color:#000;padding:8px 14px;z-index:100;border-radius:6px}
+.skip:focus{left:8px}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:60;background:rgba(10,10,11,.93);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .in{max-width:1180px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font:600 14px var(--sans);letter-spacing:.04em;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu{display:none;background:var(--card2);color:var(--text);border:1px solid var(--line2);border-radius:8px;padding:7px 12px;font:500 14px var(--sans);cursor:pointer}
+#bar{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:linear-gradient(90deg,var(--gold3),var(--gold2))}
+
+/* layout */
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:56px}
+nav#toc{position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow:auto;padding:28px 0 0;font-size:14px}
+nav#toc h2{font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0 0 12px}
+nav#toc ol{list-style:none;margin:0;padding:0;border-left:1px solid var(--line)}
+nav#toc a{display:block;padding:6px 0 6px 14px;margin-left:-1px;border-left:2px solid transparent;color:var(--mut);text-decoration:none;line-height:1.35}
+nav#toc a:hover{color:var(--text)}
+nav#toc a.on{color:var(--gold2);border-left-color:var(--gold)}
+main{min-width:0;padding-bottom:40px}
+@media (max-width:1080px){
+  .wrap{display:block}
+  .menu{display:inline-block}
+  nav#toc{display:none;position:fixed;top:56px;right:0;left:0;max-height:calc(100vh - 56px);background:var(--bg2);border-bottom:1px solid var(--line2);padding:18px 24px 22px;z-index:55}
+  nav#toc.open{display:block}
+}
+
+/* hero */
+.hero{padding:64px 0 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+h1{font:700 clamp(34px,6vw,58px)/1.08 var(--serif);margin:14px 0 18px;letter-spacing:-.01em}
+h1 em{font-style:normal;color:var(--gold)}
+.lede{font-size:clamp(18px,2.3vw,21px);color:var(--mut);max-width:720px;margin:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:34px 0 8px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.stat b{display:block;font:700 28px var(--serif);color:var(--gold2)}
+.stat span{font-size:13px;color:var(--mut)}
+
+/* sections */
+section{padding:56px 0 8px;border-bottom:1px solid var(--line)}
+section:last-of-type{border-bottom:0}
+h2.sec{font:700 clamp(27px,4vw,36px)/1.15 var(--serif);margin:0 0 20px;display:flex;gap:14px;align-items:baseline}
+h2.sec .num{font:600 15px var(--sans);color:var(--gold);letter-spacing:.1em;flex:none}
+h3{font:700 22px/1.3 var(--serif);margin:40px 0 12px;color:var(--text)}
+h3 .n{color:var(--gold);font-family:var(--sans);font-size:14px;letter-spacing:.08em;margin-right:8px}
+h4{font:600 13px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin:26px 0 8px}
+p,ul,ol{max-width:740px}
+p{margin:0 0 16px}
+ul,ol{padding-left:22px;margin:0 0 18px}
+li{margin:6px 0}
+li::marker{color:var(--gold3)}
+strong{color:#fff}
+code{font:.88em var(--mono);background:var(--card2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--gold2)}
+.callout{background:var(--goldbg);border:1px solid rgba(212,175,55,.28);border-left:4px solid var(--gold);border-radius:10px;padding:16px 20px;margin:24px 0;max-width:780px}
+.callout.gray{background:var(--card);border-color:var(--line2);border-left-color:var(--mut)}
+.callout h5{margin:0 0 6px;font:700 12px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.callout.gray h5{color:var(--mut)}
+.callout p:last-child,.callout ul:last-child{margin-bottom:0}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:20px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.card h5{margin:0 0 8px;font:700 17px var(--serif)}
+.card p,.card ul{font-size:15px;color:var(--mut);margin-bottom:8px}
+.card.gold{border-color:rgba(212,175,55,.4);background:linear-gradient(180deg,var(--goldbg),var(--card))}
+
+/* tables */
+.tw{overflow-x:auto;margin:20px 0;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--gold);background:var(--bg2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td code{white-space:nowrap}
+.mono{font-family:var(--mono);font-size:13px}
+
+/* figures */
+figure.viz{margin:30px 0;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:100%}
+figure.viz>figcaption.cap{font:600 12px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+figure.viz>.sub{color:var(--mut);font-size:14.5px;margin:0 0 16px;max-width:720px}
+svg{display:block;width:100%;height:auto}
+.note{font-size:13.5px;color:var(--mut);margin:12px 0 0}
+.svgt{fill:var(--text);font-family:var(--sans)}
+.svgm{fill:var(--mut);font-family:var(--sans)}
+.svgd{fill:var(--dim);font-family:var(--sans)}
+.svgg{fill:var(--gold2);font-family:var(--sans)}
+.grid{stroke:var(--line);stroke-width:1}
+.ax{stroke:var(--line2);stroke-width:1}
+
+/* controls */
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px;padding:4px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;width:fit-content;max-width:100%}
+.tabs [role=tab],.seg button{background:transparent;border:0;color:var(--mut);font:500 14px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer}
+.tabs [role=tab]:hover,.seg button:hover{color:var(--text)}
+.tabs [role=tab][aria-selected=true],.seg button[aria-pressed=true]{background:var(--gold);color:#0a0a0b;font-weight:700}
+.seg{display:flex;flex-wrap:wrap;gap:6px;padding:4px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;width:fit-content;max-width:100%}
+.btn{background:var(--card2);color:var(--text);border:1px solid var(--line2);border-radius:9px;padding:8px 16px;font:500 14px var(--sans);cursor:pointer}
+.btn:hover{border-color:var(--gold);color:var(--gold2)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+select,input[type=range]{font:inherit}
+select{background:var(--card2);color:var(--text);border:1px solid var(--line2);border-radius:9px;padding:8px 12px;max-width:100%}
+input[type=range]{accent-color:var(--gold);width:100%}
+label.lb{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--mut);display:block;margin-bottom:6px}
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:16px}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:6px;font:600 12px var(--sans);padding:3px 10px;border-radius:99px;border:1px solid var(--line2);white-space:nowrap}
+.badge.ok{background:var(--goldbg2);border-color:var(--gold3);color:var(--gold2)}
+.badge.no{background:transparent;border-color:var(--dim);color:var(--mut);text-decoration:line-through;text-decoration-color:transparent}
+.badge.type{font-family:var(--mono);font-weight:500;color:var(--mut)}
+
+/* pipeline */
+.pipe{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.pipe .st{flex:1 1 150px;position:relative;background:var(--card2);border:1px solid var(--line2);border-radius:12px;padding:14px;color:var(--text);text-align:left;cursor:pointer;font:inherit;min-height:96px}
+.pipe .st:hover{border-color:var(--gold)}
+.pipe .st[aria-pressed=true]{border-color:var(--gold);background:var(--goldbg2)}
+.pipe .st small{display:block;color:var(--gold);font:700 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+.pipe .st b{font:600 14px var(--mono);word-break:break-word}
+.pipe .st span{display:block;font-size:12.5px;color:var(--mut);margin-top:4px;line-height:1.4}
+.pipe .st.ghost{border-style:dashed;background:transparent;color:var(--dim);cursor:default}
+.pipe .st.ghost small{color:var(--dim)}
+.pipe .ar{align-self:center;color:var(--gold3);font-size:20px;flex:0 0 auto}
+.info{margin-top:14px;padding:14px 18px;background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:10px;font-size:15px;min-height:70px}
+.info b.t{color:var(--gold2)}
+
+/* stepper readouts */
+.read{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}
+.read div{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.read small{display:block;font:600 11px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.read b{font:700 24px var(--serif);color:var(--gold2);font-variant-numeric:tabular-nums}
+.read .eq{grid-column:1/-1;font:14px var(--mono);color:var(--mut)}
+.dots{display:flex;gap:6px;align-items:center;margin:14px 0 6px;flex-wrap:wrap}
+.dots i{width:26px;height:26px;border-radius:50%;border:2px solid var(--line2);display:grid;place-items:center;font:600 11px var(--sans);color:var(--dim);font-style:normal}
+.dots i.past{border-color:var(--gold3);color:var(--mut)}
+.dots i.cur{background:var(--gold);border-color:var(--gold);color:#000}
+.dots i.ret{border-radius:6px}
+
+/* waterfall */
+.wf{display:grid;gap:10px;margin-top:6px}
+.wf .r{display:grid;grid-template-columns:minmax(120px,230px) 1fr 74px;gap:12px;align-items:center;font-size:14px}
+.wf .tr{position:relative;height:26px;background:var(--bg2);border-radius:6px;border:1px solid var(--line)}
+.wf .bar{position:absolute;top:2px;bottom:2px;border-radius:4px;background:var(--gold)}
+.wf .bar.g{background:#8b8b92}
+.wf .bar.cut{background:repeating-linear-gradient(135deg,#6b6b72 0 4px,#3a3a3f 4px 8px)}
+.wf .bar.tot{background:linear-gradient(90deg,var(--gold3),var(--gold2))}
+.wf .v{text-align:right;font:600 14px var(--mono);font-variant-numeric:tabular-nums}
+@media (max-width:560px){.wf .r{grid-template-columns:1fr 64px}.wf .r .tr{grid-column:1/-1;order:3}}
+
+/* chain */
+.chain{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font:13px var(--mono)}
+.chain button{background:var(--card2);color:var(--text);border:1px solid var(--line2);border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}
+.chain button:hover,.chain button[aria-pressed=true]{border-color:var(--gold);color:var(--gold2)}
+.chain .s{color:var(--gold3)}
+
+/* clocks */
+.clocks{display:grid;gap:10px}
+.clk{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+.clk b{font:600 13px var(--mono);color:var(--gold2)}
+.clk span{font-size:14.5px;color:var(--mut)}
+.clk span em{font-style:normal;color:var(--text);font-family:var(--mono);font-size:13px}
+@media (max-width:560px){.clk{grid-template-columns:1fr}}
+
+/* status grid */
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.sg div{display:flex;justify-content:space-between;gap:10px;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:13.5px}
+.sg .badge{font-size:11px;padding:2px 8px}
+.badge.miss{border-style:dashed;color:var(--dim)}
+
+/* code */
+details.code{margin:18px 0;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;max-width:100%}
+details.code>summary{cursor:pointer;padding:12px 18px;font:600 14px var(--mono);color:var(--gold2);list-style:none;display:flex;justify-content:space-between;gap:10px;align-items:center}
+details.code>summary::-webkit-details-marker{display:none}
+details.code>summary::after{content:"Show code";font:500 12px var(--sans);color:var(--mut);border:1px solid var(--line2);border-radius:99px;padding:3px 10px}
+details.code[open]>summary::after{content:"Hide code"}
+details.code>summary small{font:400 12.5px var(--sans);color:var(--mut);margin-left:10px}
+.cw{position:relative;border-top:1px solid var(--line)}
+.cw pre{margin:0;padding:18px 20px;overflow:auto;max-height:560px;background:#0d0d0e;font:13px/1.6 var(--mono);color:#d9d6cd;tab-size:4}
+.cw pre code{background:none;border:0;padding:0;color:inherit;font:inherit}
+.cp{position:absolute;right:10px;top:10px;z-index:2;background:var(--card2);border:1px solid var(--line2);color:var(--mut);border-radius:7px;padding:4px 10px;font:500 12px var(--sans);cursor:pointer}
+.cp:hover{color:var(--gold2);border-color:var(--gold)}
+.tk{color:var(--gold)} .ts{color:#cfc8a6} .tc{color:var(--dim);font-style:italic} .tn{color:var(--gold2)}
+.out{margin:14px 0 22px}
+.out>.lab{font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.out pre{margin:0;padding:14px 18px;background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--gold3);border-radius:10px;overflow:auto;max-height:420px;font:12.5px/1.55 var(--mono);color:var(--mut)}
+.out pre code{background:none;border:0;padding:0;color:inherit;font:inherit}
+
+/* tooltip */
+#tip{position:fixed;z-index:90;pointer-events:none;background:#000;border:1px solid var(--gold);color:var(--text);padding:8px 12px;border-radius:8px;font:13px/1.45 var(--sans);max-width:260px;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+.pt{cursor:pointer}
+.pt:focus-visible,.pt:hover{stroke:#fff;stroke-width:2}
+
+/* failures */
+.res{display:inline-flex;gap:6px;align-items:center;font:700 12px var(--sans);padding:3px 10px;border-radius:99px;white-space:nowrap}
+.res.a{background:var(--goldbg2);color:var(--gold2);border:1px solid var(--gold3)}
+.res.r{background:transparent;color:var(--mut);border:1px dashed var(--dim)}
+
+/* summary */
+.take{counter-reset:t;display:grid;gap:12px;margin:20px 0}
+.take li{list-style:none;counter-increment:t;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px 14px 58px;position:relative;margin:0;max-width:none}
+.take li::before{content:counter(t);position:absolute;left:16px;top:12px;width:30px;height:30px;border-radius:50%;background:var(--goldbg2);border:1px solid var(--gold3);color:var(--gold2);display:grid;place-items:center;font:700 14px var(--sans)}
+.take{padding:0}
+
+footer{border-top:1px solid var(--line);margin-top:20px;padding:34px 20px 46px;text-align:center;color:var(--gold);font:600 14px var(--sans);letter-spacing:.06em}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--mut);margin:10px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend svg{width:16px;height:16px;flex:none}
+@media (max-width:620px){body{font-size:16px}figure.viz{padding:16px}.hero{padding-top:40px}}
+
+/* part 2 additions */
+.cgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;max-width:520px}
+.cgrid .c{aspect-ratio:1;border-radius:6px;border:2px solid var(--gold3);background:var(--gold);padding:0;cursor:default;font:600 10px var(--mono);color:#0a0a0b;display:grid;place-items:center;overflow:hidden}
+.cgrid .c.m{background:transparent;border:2px dashed var(--mut);color:var(--text);cursor:pointer}
+.cgrid .c.m:hover,.cgrid .c.m[aria-pressed=true]{border-color:var(--gold2);background:var(--goldbg2);color:var(--gold2)}
+@media (max-width:560px){.cgrid .c{font-size:0}.cgrid{gap:4px}}
+.rec{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin:6px 0 0}
+.rec div{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:12.5px var(--mono);color:var(--mut)}
+.rec div b{display:block;color:var(--gold2);font:700 16px var(--serif)}
+.rec small{display:block;font:600 10.5px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.lrow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 0 8px;font-size:13.5px}
+.lrow.new{border-color:var(--gold);background:var(--goldbg)}
+.lrow .d{font:600 12.5px var(--mono);color:var(--gold2)}
+.lrow .k{color:var(--mut)}
+.lrow .tag{margin-left:auto;font:700 11px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.empty{color:var(--dim);font-size:14px;font-style:italic}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(54px,1fr));gap:6px;margin:12px 0}
+.nums div{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px 4px;text-align:center;font:600 13px var(--mono);color:var(--text)}
+.nums div small{display:block;font:600 9.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
+.nums div.store{border-color:var(--gold);background:var(--goldbg2);color:var(--gold2)}
+.nums div.ord{border-style:dashed}
+.bars{display:grid;gap:10px}
+.bars .b{display:grid;grid-template-columns:minmax(120px,170px) 1fr 70px;gap:10px;align-items:center;font-size:13.5px}
+.bars .tr{position:relative;height:28px;background:var(--bg2);border:1px solid var(--line);border-radius:6px;overflow:hidden;display:flex}
+.bars .f{height:100%}
+.bars .f.g1{background:var(--gold)}
+.bars .f.g1h{background:repeating-linear-gradient(135deg,var(--gold) 0 5px,var(--gold3) 5px 10px)}
+.bars .f.g2{background:#8b8b92}
+.bars .f.g2h{background:repeating-linear-gradient(135deg,#8b8b92 0 5px,#55555b 5px 10px)}
+.bars .v{text-align:right;font:600 14px var(--mono);font-variant-numeric:tabular-nums}
+@media (max-width:560px){.bars .b{grid-template-columns:1fr 64px}.bars .b .tr{grid-column:1/-1;order:3}}
+.gline{position:relative;height:56px;margin:26px 0 8px}
+.gline .track{position:absolute;left:0;right:0;top:24px;height:8px;background:var(--bg2);border:1px solid var(--line);border-radius:99px}
+.gline .fill{position:absolute;left:0;top:24px;height:8px;background:linear-gradient(90deg,var(--gold3),var(--gold2));border-radius:99px;transition:width .35s}
+.gline .mid{position:absolute;left:50%;top:12px;bottom:6px;border-left:2px dashed var(--mut)}
+.gline .mid span{position:absolute;top:-16px;left:-14px;font:600 11px var(--sans);color:var(--mut)}
+.gline .dot{position:absolute;top:16px;width:24px;height:24px;margin-left:-12px;border-radius:50%;background:var(--gold);border:3px solid #0a0a0b;box-shadow:0 0 0 2px var(--gold2);transition:left .35s}
+.gval{font:700 40px var(--serif);color:var(--gold2)}
+.tl{position:relative;height:96px;margin:10px 0 4px}
+.tl .ln{position:absolute;left:0;right:0;top:44px;border-top:2px solid var(--line2)}
+.tl .span{position:absolute;top:36px;height:16px;border-radius:5px;background:var(--gold)}
+.tl .span.h{background:repeating-linear-gradient(135deg,var(--gold) 0 5px,var(--gold3) 5px 10px)}
+.tl .mk{position:absolute;top:30px;width:0;height:28px;border-left:2px solid var(--text)}
+.tl .lb2{position:absolute;font:600 12px var(--sans);color:var(--mut);white-space:nowrap}
+.invt td.st-on{color:var(--gold2);font-weight:600}
+.invt td.st-off{color:var(--dim)}
+.invt td.st-bill{color:var(--text);font-weight:600}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/mlops/">MLOps</a><span class="t">· MLOps 14 · SageMaker Feature Store part 2</span><span class="pn"><a href="../MLOPS-13/" title="MLOps 13 · SageMaker Feature Store part 1">← Prev</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="in">
+    <div class="brand">Sagemaker Feature store part 2 post read</div>
+    <button class="menu" id="menuBtn" aria-expanded="false" aria-controls="toc">Sections</button>
+  </div>
+  <div id="bar" aria-hidden="true"></div>
+</header>
+
+<div class="wrap">
+<nav id="toc" aria-label="Sections">
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#top">Overview</a></li>
+    <li><a href="#s1">1 · Why an online store</a></li>
+    <li><a href="#s2">2 · The platform</a></li>
+    <li><a href="#s3">3 · A model on an endpoint</a></li>
+    <li><a href="#s4">4 · A group with both stores</a></li>
+    <li><a href="#s5">5 · Loading the store</a></li>
+    <li><a href="#s6">6 · Reading the store</a></li>
+    <li><a href="#s7">7 · The live path</a></li>
+    <li><a href="#s8">8 · Same rows as training?</a></li>
+    <li><a href="#s9">9 · Failure modes</a></li>
+    <li><a href="#s10">10 · More than you need</a></li>
+    <li><a href="#s11">11 · Tearing it down</a></li>
+    <li><a href="#s12">12 · Summary</a></li>
+    <li><a href="#s13">13 · References</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<!-- ================= HERO ================= -->
+<header class="hero" id="top">
+  <div class="eyebrow">AWS SageMaker · Feature Store · Part 2 · The Online Store</div>
+  <h1>From a customer ID to <em>a live prediction</em></h1>
+  <p class="lede">Part 1 kept every version of each customer's history for training. This part gives the checkout a fast way to read the latest version, and checks that the model sees the same numbers live as it did in training.</p>
+  <div class="stats" role="list">
+    <div class="stat" role="listitem"><b>9 ms</b><span>median single read from the online store</span></div>
+    <div class="stat" role="listitem"><b>11,565</b><span>customer rows loaded before 1 July 2026</span></div>
+    <div class="stat" role="listitem"><b>2,986</b><span>orders replayed, July to September</span></div>
+    <div class="stat" role="listitem"><b>0 of 2,986</b><span>orders that saw training's row when written first</span></div>
+  </div>
+</header>
+
+<section id="preface" style="padding-top:40px">
+  <p>In the previous part, the customer's history got a home. A feature group kept every version of every customer's counts in its offline store, and a point-in-time join built training data that did not cheat. The honest model trained on it scored an AUC of 0.721.</p>
+  <p>That model still cannot help at checkout. When an order comes in, the checkout knows the customer's ID and the order, and nothing else. Something has to fetch the customer's history in a few milliseconds, lay it out the way the model learned it, and send it to the endpoint. The offline store is too slow for that: it answers SQL queries in seconds, and it runs minutes behind the writes. This part adds the other half of the feature store, the <strong>online store</strong>, and builds that live path.</p>
+
+  <div class="two">
+    <div class="card gold">
+      <h5>What you will be able to do</h5>
+      <ul>
+        <li>Explain what the online store keeps, how it differs from the offline store, and why serving needs it.</li>
+        <li>Put the previous part's honest model on a real-time endpoint.</li>
+        <li>Create a feature group with both an online and an offline store.</li>
+        <li>Write a customer's row, read it back straight away, and load every customer.</li>
+        <li>Read customers one at a time and in batches, and measure how long it takes.</li>
+        <li>Score one order through the live path, from a customer ID to a prediction.</li>
+        <li>Replay three months of orders and show whether the live path feeds the model the rows training used.</li>
+        <li>Recognise the online store's quiet failures, and clean up everything that bills.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h5>Prerequisites</h5>
+      <p>Part 1, so that feature groups, records, event time and the point-in-time join are familiar. The lesson before it, for endpoints and <code>invoke_endpoint</code>. AUC.</p>
+      <h5 style="margin-top:14px">How to read the code</h5>
+      <p>Six pieces of code are files: <code>config.py</code>, <code>features.py</code>, <code>deploy.py</code>, <code>store.py</code>, <code>rows.py</code> and <code>predict.py</code>. Everything else runs in one notebook, in order, where later cells use names that earlier cells made. Outputs come from a real run, so timings in your account will differ a little. The account ID is masked as <code>111122223333</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 1 ================= -->
+<section id="s1">
+  <h2 class="sec"><span class="num">01</span>Why an online store</h2>
+  <p>In simple words, <strong>an online store is a table that keeps only the latest row for each customer, and answers a lookup by customer ID in a few milliseconds.</strong> This section shows why the checkout needs one.</p>
+
+  <h3><span class="n">1.1</span>What the model needs</h3>
+  <p>The model from the previous part takes 18 numbers for every order.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Part</th><th>Columns</th><th>Where they come from at checkout</th></tr></thead>
+    <tbody>
+      <tr><td>The order, 5 numbers</td><td><code>price</code>, <code>discount_pct</code>, <code>delivery_days</code>, <code>is_gift</code>, <code>seller_rating</code></td><td>The order itself</td></tr>
+      <tr><td>Category and payment, 9 numbers</td><td>One-hot columns for the 5 categories and the 4 payment methods</td><td>The order itself</td></tr>
+      <tr><td>The customer, 4 numbers</td><td><code>orders_so_far</code>, <code>returns_so_far</code>, <code>return_rate</code>, <code>tenure_days</code></td><td><strong>Nowhere yet</strong></td></tr>
+    </tbody></table></div>
+  <p>The checkout has the order, so the first 14 numbers are easy. The customer's 4 numbers are the problem. They come from the customer's whole history of orders and returns. Working them out from the raw orders on every request would be slow, and it would copy <code>features.py</code> into a second place. Two pieces of code working out the same thing is how training and serving drift apart, as Part 1 showed.</p>
+
+  <figure class="viz" aria-labelledby="f18cap">
+    <figcaption class="cap" id="f18cap">Visualizer · The 18 numbers, and where each part comes from</figcaption>
+    <p class="sub">Select a segment. Widths are proportional to how many numbers each part contributes.</p>
+    <div class="pipe" id="p18" style="flex-wrap:nowrap">
+      <button class="st" data-i="0" aria-pressed="true" style="flex:5 1 0"><small>5 numbers</small><b>The order</b><span>price, discount, delivery, gift, seller rating</span></button>
+      <button class="st" data-i="1" aria-pressed="false" style="flex:9 1 0"><small>9 numbers</small><b>Category and payment</b><span>one-hot columns</span></button>
+      <button class="st" data-i="2" aria-pressed="false" style="flex:4 1 0;border-color:var(--gold)"><small>4 numbers</small><b>The customer</b><span>needs a lookup</span></button>
+    </div>
+    <div class="info" id="p18info" aria-live="polite"></div>
+  </figure>
+
+  <h3><span class="n">1.2</span>Two stores for one feature group</h3>
+  <p>A feature group can keep its rows in two stores at once.</p>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>Offline store</th><th>Online store</th></tr></thead>
+    <tbody>
+      <tr><td>What it keeps</td><td>Every version of every customer</td><td>Only the latest row of each customer</td></tr>
+      <tr><td>Who reads it</td><td>Training, with SQL in Athena</td><td>The checkout, by customer ID</td></tr>
+      <tr><td>How fast</td><td>Seconds, and minutes behind the writes</td><td>Milliseconds, straight after the write</td></tr>
+    </tbody></table></div>
+  <p>Think of a bank. The offline store is the statement, with every transaction and its date. The online store is the balance on the app's home screen.</p>
+  <p>One <code>put_record</code> call writes to both. The online store <em>replaces</em> the customer's row with the new one, and the offline store <em>adds</em> the new row to its files. So training and the checkout read numbers that came from the same write.</p>
+
+  <figure class="viz" aria-labelledby="w2cap">
+    <figcaption class="cap" id="w2cap">Visualizer · One write, two stores</figcaption>
+    <p class="sub">Write <code>C-00001</code>'s first five rows one at a time. The online store always holds exactly one row; the offline store keeps growing.</p>
+    <div class="row">
+      <button class="btn" id="wrBtn">put_record: write next row →</button>
+      <button class="btn" id="wrReset">Reset</button>
+      <span id="wrCount" style="color:var(--mut);font-size:14px"></span>
+    </div>
+    <div class="two" style="margin:0">
+      <div class="card gold"><h5>Online store · replaces</h5><div id="onl" aria-live="polite"></div></div>
+      <div class="card"><h5>Offline store · appends</h5><div id="offl" aria-live="polite"></div></div>
+    </div>
+  </figure>
+
+  <h3><span class="n">1.3</span>The plan</h3>
+  <p>Select any step to see what it does. The offline store is greyed out, because the previous part covered it.</p>
+  <figure class="viz" aria-labelledby="pipecap">
+    <figcaption class="cap" id="pipecap">Visualizer · The path from raw order to prediction</figcaption>
+    <div class="pipe" id="pipe">
+      <button class="st" data-i="0" aria-pressed="true"><small>Step 1</small><b>returns_events.csv</b><span>Raw orders in S3</span></button>
+      <div class="ar" aria-hidden="true">→</div>
+      <button class="st" data-i="1" aria-pressed="false"><small>Step 2</small><b>features.py</b><span>Unchanged</span></button>
+      <div class="ar" aria-hidden="true">→</div>
+      <button class="st" data-i="2" aria-pressed="false"><small>Step 3</small><b>put_record</b><span>Feature group, both stores</span></button>
+      <div class="ar" aria-hidden="true">→</div>
+      <button class="st" data-i="3" aria-pressed="false"><small>Step 4</small><b>predict.py</b><span>get_record + model_row</span></button>
+      <div class="ar" aria-hidden="true">→</div>
+      <button class="st" data-i="4" aria-pressed="false"><small>Step 5</small><b>invoke_endpoint</b><span>The honest model answers</span></button>
+    </div>
+    <div class="pipe" style="margin-top:10px" aria-label="Covered in Part 1">
+      <div class="st ghost"><small>Part 1</small><b>Offline store</b><span>Fed by the same put_record</span></div>
+    </div>
+    <div class="info" id="pipeinfo" aria-live="polite"></div>
+  </figure>
+
+  <h3><span class="n">1.4</span>The question this read answers</h3>
+  <p>The model learned from rows built by a point-in-time join. Every order got the customer's row from strictly before the order, so the row never counted the order being scored. At checkout, the online store hands over whatever row it holds at that moment. Is that the same row? It depends on what happens first.</p>
+  <div class="two">
+    <div class="card gold"><h5>Score first, then write</h5><p>The shop scores the order and only then writes it into the store. The store still holds the row from before, so the two <strong>match</strong>.</p></div>
+    <div class="card"><h5>Write first, then score</h5><p>The shop writes the order first and scores it after. The store already counts it. That is the <code>&lt;=</code> mistake from Part 1, <strong>happening live</strong>.</p></div>
+  </div>
+  <div class="callout">
+    <h5>The core question</h5>
+    <p>Section 8 replays three months of orders both ways and measures the difference. To try any of this, the platform has to come back first.</p>
+  </div>
+</section>
+
+<!-- ================= 2 ================= -->
+<section id="s2">
+  <h2 class="sec"><span class="num">02</span>Building the platform from nothing</h2>
+  <p>This work starts from an empty AWS account, so the VPC, the role, the bucket and the Studio domain come back the same way as in Part 1. A read-only <code>check.sh</code> looks at what is there, and a <code>restore.sh</code> builds what is missing and is safe to run again. Both take your bucket name, such as <code>returns-ml-</code> followed by your initials and today's date, as their only argument.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Piece</th><th>What it is for</th><th>New in this part</th></tr></thead>
+    <tbody>
+      <tr><td>VPC, subnets, NAT gateway and VPC endpoints</td><td>A private network for Studio, with a way out to the internet and to AWS services</td><td>No</td></tr>
+      <tr><td>Role <code>returns-ml-sagemaker-role</code> and its policies</td><td>What SageMaker may do on your behalf</td><td>No</td></tr>
+      <tr><td>Bucket, with <code>raw/events/returns_events.csv</code></td><td>The raw orders</td><td>No</td></tr>
+      <tr><td><code>model/pit/model.tar.gz</code> in the bucket</td><td>The previous part's honest model, ready to serve instead of being trained again</td><td><strong>Yes</strong></td></tr>
+      <tr><td>Domain, <code>instructor</code> profile and <code>returns-lab</code> space</td><td>Studio, and the machine VS Code connects to</td><td>No</td></tr>
+    </tbody></table></div>
+
+  <figure class="viz" aria-labelledby="chkcap">
+    <figcaption class="cap" id="chkcap">Visualizer · What the check reports</figcaption>
+    <p class="sub">On an empty account every line says <strong>MISSING</strong>; after the restore, every line says <strong>OK</strong>. The list is Part 1's with one more line, the model file. If the VPC is missing, the script skips the gateways, endpoints and security groups that would live inside it, because none of them can exist.</p>
+    <div class="seg" id="chkseg" role="group" aria-label="Account state">
+      <button aria-pressed="true" data-s="0">Empty account</button>
+      <button aria-pressed="false" data-s="1">After restore.sh</button>
+    </div>
+    <div class="sg" id="chkgrid" style="margin-top:14px"></div>
+    <p class="note">Interface endpoints can take another minute to become available after the restore finishes, so a line may say <strong>NOT-YET</strong> for a moment. Do not start the space until every line says OK.</p>
+  </figure>
+
+  <p>Every file and cell reads its settings from <code>config.py</code>. It has three new names. <code>ENDPOINT</code> names the endpoint section 3 creates. <code>CUT</code> is 1 July 2026, the day the model's training orders end. <code>FEAT_COLS</code> lists the four customer features the model uses. <code>FEATURE_GROUP</code> keeps its name from Part 1, though the group itself is new.</p>
+  <details class="code"><summary>config.py<small>change BUCKET to your own</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-config" data-lang="py"></code></pre></div></details>
+  <p><code>features.py</code> is copied from Part 1 exactly as it is. It turns the raw orders into customer rows, one row each time a customer's history changes, and nothing about it changes here.</p>
+</section>
+
+<!-- ================= 3 ================= -->
+<section id="s3">
+  <h2 class="sec"><span class="num">03</span>Putting the model on an endpoint</h2>
+  <p>The model file is already in the bucket. Putting it on an endpoint takes a few minutes, so it goes first, as a script running on its own, while the rest of the work carries on in the notebook. Serving a model takes three steps.</p>
+  <figure class="viz" aria-labelledby="depcap">
+    <figcaption class="cap" id="depcap">Visualizer · The three steps of deploy.py</figcaption>
+    <div class="pipe" id="dep">
+      <button class="st" data-i="0" aria-pressed="true"><small>Step 1</small><b>Model.create(...)</b><span>Image + model file</span></button>
+      <div class="ar" aria-hidden="true">→</div>
+      <button class="st" data-i="1" aria-pressed="false"><small>Step 2</small><b>EndpointConfig.create(...)</b><span>The machine</span></button>
+      <div class="ar" aria-hidden="true">→</div>
+      <button class="st" data-i="2" aria-pressed="false"><small>Step 3</small><b>Endpoint.create(...)</b><span>Wait for InService</span></button>
+    </div>
+    <div class="info" id="depinfo" aria-live="polite"></div>
+  </figure>
+  <details class="code"><summary>deploy.py<small>model, configuration, endpoint</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-deploy" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-deploy" data-lang="out"></code></pre></div>
+  <p>One line for each step. The endpoint was ready after 194 seconds. All three names start with <code>returns-fs-rt</code>, which makes them easy to find and to delete in section 11.</p>
+</section>
+
+<!-- ================= 4 ================= -->
+<section id="s4">
+  <h2 class="sec"><span class="num">04</span>A feature group with both stores</h2>
+  <p>While the endpoint starts, build the store. The feature group is Part 1's, with one new setting.</p>
+  <h3><span class="n">4.1</span>Create the group</h3>
+  <p>Every line is the same as in Part 1 except one: <code>OnlineStoreConfig={"EnableOnlineStore": True}</code>. That line switches the online store on. The record identifier is still <code>customer_id</code>, the event time is still <code>event_time</code>, and the offline store still writes under <code>feature-store/</code> in your bucket. Run the cell only once: a second time, AWS answers that the group already exists, and nothing changes.</p>
+  <details class="code"><summary>Notebook cell · create the group<small>one new line</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-fgcreate" data-lang="py"></code></pre></div></details>
+
+  <h3><span class="n">4.2</span>Wait until it is ready</h3>
+  <p>Creating a group takes a little while. This cell asks for its status every five seconds until it stops saying <code>Creating</code>.</p>
+  <details class="code"><summary>Notebook cell · wait for the status<small>polls every 5 s</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-fgwait" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-fgwait" data-lang="out"></code></pre></div>
+  <p>The group was ready about 45 seconds after the create call. <code>online store</code> shows <code>EnableOnlineStore</code> as <code>True</code>. The offline store got its own folder in your bucket, named after the group with a number on the end, exactly as in Part 1.</p>
+
+  <h3><span class="n">4.3</span>The group in the console</h3>
+  <div class="two">
+    <div class="card gold"><h5>Store configuration</h5><p>Now says <strong>Online/Offline</strong>.</p></div>
+    <div class="card"><h5>Throughput mode</h5><p><strong>On-demand</strong>: the online store bills for each read and write instead of for capacity booked in advance.</p></div>
+    <div class="card"><h5>Time to Live (TTL)</h5><p><strong>Off</strong>. Section 9 shows what turning it on does.</p></div>
+  </div>
+</section>
+
+<!-- ================= 5 ================= -->
+<section id="s5">
+  <h2 class="sec"><span class="num">05</span>Loading the online store</h2>
+  <p>The group is empty. This section writes one customer by hand and reads it back, then loads every customer.</p>
+
+  <h3><span class="n">5.1</span>Write one row and read it back</h3>
+  <p><code>put_record</code> writes one row. <code>get_record</code> reads one customer back by ID. Both are on the <code>sagemaker-featurestore-runtime</code> client, as in Part 1. The row below is <code>C-00001</code>'s real row from 27 June 2026, typed by hand. If AWS answers <code>Resource Not Found</code> straight after section 4, the new group is not taking writes yet: wait ten seconds and run the cell again.</p>
+  <details class="code"><summary>Notebook cell · write, then read<small>put_record, get_record</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-rw" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-rw" data-lang="out"></code></pre></div>
+  <p>The read came straight after the write, and the row was already there. Notice two things.</p>
+  <ul>
+    <li><strong>Every value comes back as text.</strong> <code>put_record</code> sends each value as a string, and <code>get_record</code> returns strings. The feature group's types decide how they are stored, but the code that reads them has to turn them back into numbers.</li>
+    <li><strong>The record has the six features and nothing else.</strong> The extra columns from Part 1, <code>write_time</code>, <code>api_invocation_time</code> and <code>is_deleted</code>, belong to the offline store only.</li>
+  </ul>
+
+  <h3><span class="n">5.2</span><code>store.py</code>, write and read in one line</h3>
+  <p>The rest of the work writes and reads many customers, so the two calls go into a small file with two functions.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Function</th><th>What it does</th><th>Used in</th></tr></thead>
+    <tbody>
+      <tr><td><code>put(row)</code></td><td>Writes one row with <code>put_record</code>, every value as a string</td><td>Sections 5, 8 and 9</td></tr>
+      <tr><td><code>get(customer_id)</code></td><td>Reads the four features the model uses, as numbers. Returns <code>{}</code> when the store has no record</td><td>Sections 6 to 9</td></tr>
+    </tbody></table></div>
+  <details class="code"><summary>store.py<small>put and get</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-store" data-lang="py"></code></pre></div></details>
+
+  <h3><span class="n">5.3</span>Which rows go in</h3>
+  <p>Not every customer row goes in. The model was trained on orders before 1 July 2026, the date saved as <code>CUT</code> in <code>config.py</code>. Section 8 replays the orders from 1 July onward, one day at a time, as if the shop were open. So the store has to start the way it was on the morning of 1 July, with only the rows from before that day.</p>
+  <details class="code"><summary>Notebook cell · keep rows before 1 July<small>customer_features, then filter</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-rowsload" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-rowsload" data-lang="out"></code></pre></div>
+  <p><code>event_time</code> is text such as <code>2026-06-27T00:00:00Z</code>. Text in this year-month-day form sorts the same way as dates, so <code>&lt; CUT</code> keeps every row from before 1 July.</p>
+
+  <h3><span class="n">5.4</span>Load them</h3>
+  <p>The cell writes the 11,565 rows with <code>put</code>, eight at a time, as Part 1 did.</p>
+  <details class="code"><summary>Notebook cell · load the store<small>8 threads</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-load" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-load" data-lang="out"></code></pre></div>
+
+  <h3><span class="n">5.5</span>Look at both stores straight away</h3>
+  <p>The same writes went to both stores. Look at each one straight after the load.</p>
+  <details class="code"><summary>Notebook cell · compare the stores<small>get, then count offline files</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-look" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-look" data-lang="out"></code></pre></div>
+  <figure class="viz" aria-labelledby="lookcap">
+    <figcaption class="cap" id="lookcap">Visualizer · Same writes, very different readiness</figcaption>
+    <div class="two" style="margin:0">
+      <div class="card gold"><h5>Online store, straight after the load</h5>
+        <div class="read" style="margin:8px 0 0">
+          <div><small>orders_so_far</small><b>11</b></div><div><small>returns_so_far</small><b>9</b></div>
+          <div><small>return_rate</small><b>0.625</b></div><div><small>tenure_days</small><b>1047</b></div></div>
+        <p style="margin-top:10px">Answered at once for <code>C-00001</code>, with the row from 27 June, the customer's last row before July.</p></div>
+      <div class="card"><h5>Offline store, at the same moment</h5>
+        <div class="read" style="margin:8px 0 0"><div><small>files in its folder</small><b>0</b></div></div>
+        <p style="margin-top:10px">No files at all. The offline store takes minutes, as Part 1 showed.</p></div>
+    </div>
+  </figure>
+</section>
+
+<!-- ================= 6 ================= -->
+<section id="s6">
+  <h2 class="sec"><span class="num">06</span>Reading the online store</h2>
+  <p>The checkout reads one customer per order. A nightly job might read thousands. This section measures both.</p>
+
+  <h3><span class="n">6.1</span>One customer at a time</h3>
+  <p>The cell reads the first 200 customers one by one with <code>get</code>, and times each read.</p>
+  <details class="code"><summary>Notebook cell · 200 single reads<small>median and slowest</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-lat" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-lat" data-lang="out"></code></pre></div>
+  <p>Half the reads came back within 9 milliseconds, and the slowest took 24. A checkout can afford that on every request. Part 1's Athena queries took seconds each.</p>
+
+  <h3><span class="n">6.2</span>A hundred customers in one call</h3>
+  <p><code>batch_get_record</code> reads up to 100 customers in one call.</p>
+  <details class="code"><summary>Notebook cell · one batch call<small>100 customers</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-batch" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-batch" data-lang="out"></code></pre></div>
+
+  <figure class="viz" aria-labelledby="latcap">
+    <figcaption class="cap" id="latcap">Visualizer · Read times, in milliseconds</figcaption>
+    <p class="sub">One batch call read 100 customers in 86 milliseconds, about the time of ten single reads. Hover or focus a bar.</p>
+    <div id="lat"></div>
+  </figure>
+
+  <p>But the batch call brought back 94 records, not 100, and reported no error. Each square below is one customer ID from <code>C-00001</code> to <code>C-00100</code>. Select the six hollow ones to see why the store had no row for them.</p>
+  <figure class="viz" aria-labelledby="gridcap">
+    <figcaption class="cap" id="gridcap">Visualizer · 100 customers asked for, 94 returned</figcaption>
+    <div class="cgrid" id="cgrid" role="img" aria-label="Grid of 100 customer IDs. 94 were returned. Six were not: C-00010, C-00049, C-00059, C-00064, C-00071 and C-00087."></div>
+    <div class="legend" style="margin-top:12px">
+      <span><svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="#d4af37"/></svg>Record returned (94)</span>
+      <span><svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="#a6a6ac" stroke-width="2" stroke-dasharray="3 2"/></svg>Left out, no error (6)</span>
+    </div>
+    <div class="info" id="cginfo" aria-live="polite">Select a hollow square.</div>
+    <div class="tw" style="margin-top:14px"><table>
+      <thead><tr><th>Customer</th><th>First order in the file</th><th>Why the store has no row</th></tr></thead>
+      <tbody>
+        <tr><td><code>C-00010</code></td><td>None</td><td>Not in the orders file at all</td></tr>
+        <tr><td><code>C-00049</code></td><td>None</td><td>Not in the orders file at all</td></tr>
+        <tr><td><code>C-00059</code></td><td>22 August 2026</td><td>First order after 1 July</td></tr>
+        <tr><td><code>C-00064</code></td><td>3 July 2026</td><td>First order after 1 July</td></tr>
+        <tr><td><code>C-00071</code></td><td>None</td><td>Not in the orders file at all</td></tr>
+        <tr><td><code>C-00087</code></td><td>23 July 2026</td><td>First order after 1 July</td></tr>
+      </tbody></table></div>
+  </figure>
+  <p>A customer row is made only from orders. Three of these customers had not ordered by 1 July, so section 5 loaded nothing for them. The other three IDs never appear in the file, because the customer numbers have gaps. Neither case is an error, and the batch call did not report one. It simply left out what it could not find. Section 9 comes back to that.</p>
+
+  <div class="callout gray">
+    <h5>Try it yourself · Checkpoint 6.1</h5>
+    <p>Read all 1,440 customers with <code>batch_get_record</code>, 100 at a time, and time the whole read. Take the customer IDs from the orders file, since the numbers have gaps. A nightly job that scores every customer would read the store this way, because one call cannot ask for more than 100 customers. Count the records that come back against the customers you asked for, too. Section 9 shows why that count matters.</p>
+  </div>
+</section>
+
+<!-- ================= 7 ================= -->
+<section id="s7">
+  <h2 class="sec"><span class="num">07</span>The live path</h2>
+  <p>At checkout, three things turn an order into a prediction.</p>
+  <ol>
+    <li>Read the customer's four features from the online store, with <code>get</code>.</li>
+    <li>Lay out all 18 numbers in the order the model learned them, with <code>model_row</code>.</li>
+    <li>Send them to the endpoint, with <code>invoke_endpoint</code>.</li>
+  </ol>
+
+  <h3><span class="n">7.1</span><code>rows.py</code>, the layout</h3>
+  <p><code>model_row(order, features)</code> lays out one row exactly as the previous part's training files did. Both the training code and the serving code should call this one function, so that the two cannot lay a row out differently.</p>
+  <details class="code"><summary>rows.py<small>model_row</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-rowspy" data-lang="py"></code></pre></div></details>
+  <div class="tw"><table>
+    <thead><tr><th>Part of the row</th><th>Code</th><th>Example for one order</th></tr></thead>
+    <tbody>
+      <tr><td>The order, 5 numbers</td><td><code>[order[c] for c in ORDER_COLS]</code></td><td class="mono">1723.0, 28, 9, 0, 3.5</td></tr>
+      <tr><td>The customer, 4 numbers</td><td><code>[f[c] for c in FEAT_COLS]</code></td><td class="mono">11.0, 9.0, 0.625, 1047.0</td></tr>
+      <tr><td>One-hot, 9 numbers</td><td>the loop over <code>DUMMIES</code></td><td class="mono">0, 0, 0, 0, 1, 0, 0, 1, 0</td></tr>
+    </tbody></table></div>
+  <div class="callout">
+    <h5>One detail that matters later</h5>
+    <p>When <code>features</code> is empty, because the store has no row for the customer, <code>model_row</code> fills in what training filled in for a customer with no history: 0 orders, 0 returns, a return rate of 0.2, and the tenure from the sign up date.</p>
+  </div>
+
+  <h3><span class="n">7.2</span><code>predict.py</code>, the three steps</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>Code</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>get(order["customer_id"])</code></td><td>The customer's four features from the online store</td></tr>
+      <tr><td>2</td><td><code>model_row(order, features)</code></td><td>The 18 numbers, joined with commas</td></tr>
+      <tr><td>3</td><td><code>runtime.invoke_endpoint(...)</code></td><td>Sends them to the endpoint and reads back the probability of a return</td></tr>
+    </tbody></table></div>
+  <details class="code"><summary>predict.py<small>customer ID in, probability out</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-predict" data-lang="py"></code></pre></div></details>
+
+  <h3><span class="n">7.3</span>Score one order</h3>
+  <p>Take <code>C-00001</code>'s order <code>ORD-210337</code>, placed on 10 August 2026, and send it through the live path.</p>
+  <details class="code"><summary>Notebook cell · score one order<small>predict, model_row</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-score1" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-score1" data-lang="out"></code></pre></div>
+  <p>The model put the chance of a return at 0.570, and the order did come back. This first call took 638 milliseconds. The first call to a new endpoint is the slowest. Section 8 makes almost 6,000 calls in a little over two minutes.</p>
+
+  <figure class="viz" aria-labelledby="livecap">
+    <figcaption class="cap" id="livecap">Visualizer · One order through the live path</figcaption>
+    <p class="sub">Step through <code>ORD-210337</code>. In step 2, each of the 18 numbers is labelled by where it came from.</p>
+    <div class="row">
+      <button class="btn" id="lvPrev">← Previous</button>
+      <button class="btn" id="lvNext">Next →</button>
+      <span id="lvN" style="color:var(--mut);font-size:14px"></span>
+    </div>
+    <div id="lvBody" aria-live="polite"></div>
+  </figure>
+
+  <p>The two middle lines of the output are only numbers. To connect them to the data, here is a snapshot of <code>C-00001</code>'s data around this order. First, the customer's last three orders in the raw file. The third one is the order being scored.</p>
+  <div class="tw"><table>
+    <thead><tr><th>order_id</th><th>order_date</th><th class="num">price</th><th class="num">discount_pct</th><th class="num">delivery_days</th><th class="num">is_gift</th><th class="num">seller_rating</th><th>category</th><th>payment_method</th><th class="num">returned</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">ORD-208081</td><td class="mono">2026-06-04</td><td class="num">372.0</td><td class="num">4</td><td class="num">7</td><td class="num">0</td><td class="num">4.8</td><td>electronics</td><td>wallet</td><td class="num">1</td></tr>
+      <tr><td class="mono">ORD-208877</td><td class="mono">2026-06-27</td><td class="num">2747.0</td><td class="num">45</td><td class="num">9</td><td class="num">0</td><td class="num">4.1</td><td>books</td><td>wallet</td><td class="num">0</td></tr>
+      <tr style="background:var(--goldbg)"><td class="mono">ORD-210337</td><td class="mono">2026-08-10</td><td class="num">1723.0</td><td class="num">28</td><td class="num">9</td><td class="num">0</td><td class="num">3.5</td><td>home</td><td>upi</td><td class="num">1</td></tr>
+    </tbody></table></div>
+  <p>Next, the customer rows that <code>customer_features</code> builds from those orders.</p>
+  <div class="tw"><table>
+    <thead><tr><th>event_time</th><th class="num">orders_so_far</th><th class="num">returns_so_far</th><th class="num">return_rate</th><th class="num">tenure_days</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">2026-06-04T00:00:00Z</td><td class="num">10</td><td class="num">8</td><td class="num">0.6000</td><td class="num">1024</td><td></td></tr>
+      <tr><td class="mono">2026-06-18T00:00:00Z</td><td class="num">10</td><td class="num">9</td><td class="num">0.6667</td><td class="num">1038</td><td></td></tr>
+      <tr style="background:var(--goldbg)"><td class="mono">2026-06-27T00:00:00Z</td><td class="num">11</td><td class="num">9</td><td class="num">0.6250</td><td class="num">1047</td><td><span class="badge ok">✓ The row the store holds</span></td></tr>
+      <tr><td class="mono">2026-08-10T00:00:00Z</td><td class="num">12</td><td class="num">9</td><td class="num">0.5882</td><td class="num">1091</td><td><span class="badge no">Already counts this order</span></td></tr>
+    </tbody></table></div>
+  <p>Each order adds a row on its own day, with one more order. A return adds a row 14 days later, when it becomes known. The 4 June order was returned, so <code>returns_so_far</code> goes up to 9 on 18 June. The 27 June order was not returned, so nothing changes in July. <code>tenure_days</code> counts the days since <code>C-00001</code> signed up, on 15 August 2023.</p>
+  <p>The online store gave the 27 June row, because it is the latest row the store holds. It is also the last row before the order, so it is the row Part 1's point-in-time join would pick. The 10 August row already counts the order being scored, as 12 orders. The store does not have it yet, since section 5 loaded only the rows from before 1 July.</p>
+
+  <div class="callout gray">
+    <h5>Try it yourself · Checkpoint 7.1</h5>
+    <p>Make <code>predict</code> refuse to score an order when the customer's stored row is from the order's own day or later. Ask <code>get_record</code> for <code>event_time</code> as well, and compare it with the order date. A row from the order's own day already counts the order being scored. Section 8 shows what that does to the predictions.</p>
+  </div>
+</section>
+
+<!-- ================= 8 ================= -->
+<section id="s8">
+  <h2 class="sec"><span class="num">08</span>Does the live path see what training saw?</h2>
+  <p>Section 1.4 asked whether the row the checkout reads is the row training used. This section answers it, first for one order, then for three months of orders.</p>
+
+  <h3><span class="n">8.1</span>One order, two rows</h3>
+  <p>The snapshot in section 7.3 showed two rows for <code>C-00001</code> around the order. The 27 June row is from before the order. The 10 August row already counts it. Score the same order with each one.</p>
+  <details class="code"><summary>Notebook cell · same order, two rows<small>invoke_endpoint twice</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-two" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-two" data-lang="out"></code></pre></div>
+
+  <figure class="viz" aria-labelledby="gaugecap">
+    <figcaption class="cap" id="gaugecap">Visualizer · Same order, same model, different row</figcaption>
+    <p class="sub">Switch the row the endpoint receives and watch the probability move against the 0.5 line.</p>
+    <div class="seg" id="gsel" role="group" aria-label="Row">
+      <button aria-pressed="true" data-r="0">Row from 27 June · before the order</button>
+      <button aria-pressed="false" data-r="1">Row from 10 August · counts the order</button>
+    </div>
+    <div id="gauge" style="margin-top:14px"></div>
+    <div class="tw" style="margin-top:6px"><table id="gtbl"></table></div>
+  </figure>
+  <p>With the 27 June row, the chance of a return is 0.570. With the 10 August row, it falls to 0.531. That row already counts the order being scored, so <code>orders_so_far</code> is one higher and <code>return_rate</code> drops from 0.625 to 0.5882. Whether this order comes back cannot be known yet, so the extra order makes the customer look a little less likely to return things. For this order both scores are still above 0.5. Over three months of orders, the same small push adds up.</p>
+
+  <h3><span class="n">8.2</span>Replay three months, both ways</h3>
+  <p>Now do the same for every order from July to September 2026. The replay walks through the days in order, the way the shop lived them, and does three things each day.</p>
+  <ol>
+    <li>Score the day's orders with <code>predict</code>. The store holds only rows from before today. This is <strong>score first</strong>.</li>
+    <li>Write the day's new customer rows with <code>put</code>.</li>
+    <li>Score the same orders again. The store now counts today's orders too. This is <strong>write first</strong>, what a shop that updates the customer before scoring would see.</li>
+  </ol>
+
+  <figure class="viz" aria-labelledby="daycap">
+    <figcaption class="cap" id="daycap">Visualizer · One day of the replay, 10 August 2026</figcaption>
+    <p class="sub">What the store holds for <code>C-00001</code> at each moment, and what <code>ORD-210337</code> gets scored with.</p>
+    <div class="row">
+      <button class="btn" id="dyPrev">← Previous</button>
+      <button class="btn" id="dyNext">Next →</button>
+      <div style="flex:1;min-width:160px"><label class="lb" for="dyRange">Moment <span id="dyN">1</span> of 4</label><input type="range" id="dyRange" min="1" max="4" value="1"></div>
+    </div>
+    <div class="two" style="margin:0">
+      <div class="card gold"><h5>The store holds</h5><div id="dyStore"></div></div>
+      <div class="card"><h5>What happens</h5><div id="dyWhat" aria-live="polite"></div></div>
+    </div>
+  </figure>
+
+  <p>The cell keeps both probabilities and both sets of features for every order. Run the replay only once. After one replay the store holds every customer's rows up to the end of September, and a second replay would read those instead. Section 9.2 shows why.</p>
+  <details class="code"><summary>Notebook cell · the replay<small>2,986 orders, each scored twice</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-replay" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-replay" data-lang="out"></code></pre></div>
+
+  <h3><span class="n">8.3</span>The scores</h3>
+  <p>AUC, and what the shop would do with the scores. Say every order that scores above 0.5 gets a message asking the customer to check the size before it ships.</p>
+  <details class="code"><summary>Notebook cell · AUC and flagged orders<small>both ways</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-auc" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-auc" data-lang="out"></code></pre></div>
+
+  <figure class="viz" aria-labelledby="aucap">
+    <figcaption class="cap" id="aucap">Visualizer · The score barely moved. The decisions did.</figcaption>
+    <p class="sub">Hover or focus a bar. If AUC were all you watched, you would call the two ways the same.</p>
+    <div class="two" style="margin:0;align-items:start">
+      <div><h4 style="margin-top:0">AUC</h4><div id="auc"></div></div>
+      <div><h4 style="margin-top:0">Orders flagged above 0.5</h4><div id="flag"></div></div>
+    </div>
+    <div class="legend" id="aucleg"></div>
+    <div class="read" style="margin-top:14px">
+      <div><small>Fewer orders flagged</small><b>106</b></div>
+      <div><small>Returned orders no longer flagged</small><b>57</b></div>
+    </div>
+  </figure>
+  <p>Score first gives an AUC of 0.721, the same number the training job reported in Part 1. Write first gives 0.719. The other numbers tell a different story. With score first, 608 orders would get the message, and 371 of them did come back. With write first, only 502 would get it, and 314 came back. The shop would miss 57 customers who went on to return their order.</p>
+  <p>Why? Counting the order being scored raises <code>orders_so_far</code>, but its return cannot be known yet. So <code>return_rate</code> falls, and the customer looks less likely to send things back, exactly as for <code>C-00001</code> in section 8.1. Fewer orders cross 0.5.</p>
+
+  <h3><span class="n">8.4</span>The inputs</h3>
+  <p>The score barely moved, so it cannot warn you. The inputs can. This cell works out, for every order, the row Part 1's point-in-time join would pick: the customer's last row strictly before the order. It uses pandas' <code>merge_asof</code>, which does the same strictly-before join Part 1 wrote in SQL. Then it counts the orders whose live features match that row.</p>
+  <details class="code"><summary>Notebook cell · compare inputs with training's rows<small>merge_asof, strictly before</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-inputs" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-inputs" data-lang="out"></code></pre></div>
+
+  <figure class="viz" aria-labelledby="matchcap">
+    <figcaption class="cap" id="matchcap">Visualizer · Orders that got the row training used</figcaption>
+    <div class="wf">
+      <div class="r"><span>Score first</span><div class="tr"><div class="bar tot" style="left:0;width:100%"></div></div><span class="v">2,986</span></div>
+      <div class="r"><span>Write first</span><div class="tr"><div class="bar tot" style="left:0;width:0%"></div></div><span class="v">0</span></div>
+    </div>
+    <p class="note">Out of 2,986 orders. With write first, each order saw its own day's row, which already counts the order being scored.</p>
+  </figure>
+  <div class="callout">
+    <h5>Compare inputs, not only scores</h5>
+    <p>With score first, every one of the 2,986 orders got exactly the row training used. With write first, not one did. That is the <code>&lt;=</code> mistake from Part 1, and no error said so. So the safe check is not the AUC: compare what the live path fed the model with what training used. In a real shop, this mistake comes from an order system that updates the customer's counts the moment an order is placed, with the scoring call a moment later. Checkpoint 7.1 is the guard against it.</p>
+  </div>
+</section>
+
+<!-- ================= 9 ================= -->
+<section id="s9">
+  <h2 class="sec"><span class="num">09</span>Failure modes</h2>
+  <p>The replay showed that the store keeps what it is given, in the order it is given. The online store also has rules of its own, and three of them fail quietly. The tests below use customer IDs that start with <code>C-TEST</code>, so they cannot be mistaken for real ones.</p>
+
+  <h3><span class="n">9.1</span>A customer the store has never seen</h3>
+  <details class="code"><summary>Notebook cell · an unknown customer<small>C-99999</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-unknown" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-unknown" data-lang="out"></code></pre></div>
+  <p><code>get_record</code> for a customer the store has never seen does not raise an error. Its answer simply has no <code>Record</code>, so <code>get</code> returns an empty dict. Section 6.2 showed the batch call doing the same, leaving such customers out without an error.</p>
+  <div class="callout">
+    <h5>When "no history" is the wrong answer</h5>
+    <p>An empty dict reaches <code>model_row</code>, which fills in the defaults for a customer with no history. That is the right answer for a brand new customer. It is the wrong answer when the customer is not new at all, for example when an ID has a typo or an extra space. The model then scores a regular customer as a stranger, and nothing complains. <strong>Empty lookups are worth counting and watching.</strong></p>
+  </div>
+
+  <h3><span class="n">9.2</span>A row older than the one stored</h3>
+  <p>Write a row for <code>C-TEST-1</code> from 1 September with 5 orders. Then write one from 1 August with 3 orders.</p>
+  <details class="code"><summary>Notebook cell · an older event time<small>two writes</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-older" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-older" data-lang="out"></code></pre></div>
+
+  <figure class="viz" aria-labelledby="ordcap">
+    <figcaption class="cap" id="ordcap">Visualizer · The newest event time wins, whatever the arrival order</figcaption>
+    <div class="seg" id="ordseg" role="group" aria-label="Arrival order">
+      <button aria-pressed="true" data-o="0">September write arrives first</button>
+      <button aria-pressed="false" data-o="1">August write arrives first</button>
+    </div>
+    <div class="two" style="margin:14px 0 0">
+      <div class="card"><h5>Writes, in arrival order</h5><div id="ordList"></div></div>
+      <div class="card gold"><h5>What the online store holds at the end</h5><div id="ordEnd"></div></div>
+    </div>
+  </figure>
+  <p>The store still says 5 orders. The second write, with an older event time, was accepted without an error and then ignored. The online store keeps the row with the newest event time, whatever order the writes arrive in. That protects the store from a slow job writing old rows over new ones. But a correction stamped with an older time never reaches the online store. If a row was wrong and you fix it by writing it again with its original event time, the checkout keeps reading the value you meant to fix.</p>
+  <div class="callout">
+    <h5>Why the replay runs only once</h5>
+    <p>After one replay, the store holds every customer's row from late September. Loading the rows from before July again changes nothing, because they are older. A second replay's daily writes are older too, and they are ignored. So every order would read the customer's September row, which often already counts the order's own return. No error appears, and the AUC rises well above 0.721.</p>
+  </div>
+
+  <h3><span class="n">9.3</span>Time to live</h3>
+  <p>A <strong>time to live</strong> makes the online store forget a record after a while. It is set per record with <code>TtlDuration</code> on <code>put_record</code>, so this cell calls <code>put_record</code> directly. It writes two rows.</p>
+  <ul>
+    <li><code>C-TEST-2</code>, with the event time set to now and a time to live of 1 minute.</li>
+    <li><code>C-TEST-3</code>, with the event time 1 September 2026 and a time to live of 30 days.</li>
+  </ul>
+  <details class="code"><summary>Notebook cell · two records with a time to live<small>TtlDuration</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-ttl" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-ttl" data-lang="out"></code></pre></div>
+  <p><code>C-TEST-2</code> came back. <code>C-TEST-3</code> did not, although it was written a moment ago. The time to live counts from the <strong>event time</strong>, not from the moment of the write. 1 September plus 30 days is 1 October 2026, which had already passed, so the row was dead on arrival. Now wait for <code>C-TEST-2</code> to go.</p>
+  <details class="code"><summary>Notebook cell · wait for it to expire<small>poll every 5 s</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-ttlwait" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-ttlwait" data-lang="out"></code></pre></div>
+
+  <figure class="viz" aria-labelledby="ttlcap">
+    <figcaption class="cap" id="ttlcap">Visualizer · The clock starts at the event time</figcaption>
+    <p class="sub">Select a record to see when it expires relative to when it was written.</p>
+    <div class="seg" id="ttlseg" role="group" aria-label="Record">
+      <button aria-pressed="true" data-t="0">C-TEST-2 · event time now, 1 minute</button>
+      <button aria-pressed="false" data-t="1">C-TEST-3 · event time 1 Sep, 30 days</button>
+    </div>
+    <div id="ttl" style="margin-top:12px"></div>
+    <div class="info" id="ttlinfo" aria-live="polite"></div>
+  </figure>
+  <p>It was gone about a minute after it was written, as its time to live said. A time to live is useful for features that go stale, such as items in a basket. Set it on a backfill of old rows, though, and some of them disappear the moment they are written, without an error.</p>
+</section>
+
+<!-- ================= 10 ================= -->
+<section id="s10">
+  <h2 class="sec"><span class="num">10</span>When an online store is more than you need</h2>
+  <p>The online store earned its place here for two reasons. A checkout needs one customer's latest row in milliseconds. And the same <code>put_record</code> call that feeds it also feeds the offline store that training reads. Take either reason away and it may not be worth it.</p>
+  <div class="two">
+    <div class="card"><h5>Batch scoring needs no online store</h5><p>If the shop scored yesterday's orders overnight instead of at checkout, the batch transform from the lesson before last would do, fed by the point-in-time join from Part 1. Nothing would need an answer in milliseconds.</p></div>
+    <div class="card"><h5>A plain key-value table can also answer fast</h5><p>A team that never trains from the offline store could write the latest row to any fast database and read it by customer ID. What the feature group adds is that one write lands in both stores, so the training rows and the serving rows come from the same code. Without the offline half, that benefit is gone, and the feature group is one more service to pay for and look after.</p></div>
+    <div class="card"><h5>There is more than one kind of online store</h5><p>This part used the <strong>standard tier</strong>, the default. It bills for the data it stores, by the month, and for each read and write. Feature Store also has an <strong>in-memory tier</strong>, run on Amazon ElastiCache, for very high read rates. It works only for groups with no offline store, and it bills for storage by the hour, with a minimum size, so it costs money for as long as it exists. At the speed section 6 measured, the standard tier is fast enough for a checkout. Check the pricing page linked below before you choose.</p></div>
+  </div>
+</section>
+
+<!-- ================= 11 ================= -->
+<section id="s11">
+  <h2 class="sec"><span class="num">11</span>Tearing it down</h2>
+  <p>That is the last of the online store work, so everything it made can go. Unlike Part 1, one thing here bills by the hour: <strong>the endpoint</strong>. It goes first.</p>
+
+  <h3><span class="n">11.1</span>The endpoint</h3>
+  <details class="code"><summary>Notebook cell · delete the endpoint<small>endpoint, configuration, model</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-delep" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-delep" data-lang="out"></code></pre></div>
+  <p>The three things <code>deploy.py</code> made in section 3, deleted in the opposite order.</p>
+
+  <h3><span class="n">11.2</span>The feature group</h3>
+  <p>Deleting the group deletes its online store with it. The cell waits until the group has gone from the list.</p>
+  <details class="code"><summary>Notebook cell · delete the feature group<small>waits for it to disappear</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-delfg" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-delfg" data-lang="out"></code></pre></div>
+
+  <h3><span class="n">11.3</span>What the offline store left behind</h3>
+  <p>As in Part 1, deleting a group leaves its offline files in S3 and its table in Glue. This cell removes both. <code>remove_offline_files</code> lists every file under <code>feature-store/</code> and deletes them, 1,000 at a time, which is the most one <code>delete_objects</code> call takes.</p>
+  <details class="code"><summary>Notebook cell · remove files and the Glue table<small>remove_offline_files</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-rm" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output</div><pre><code data-src="o-rm" data-lang="out"></code></pre></div>
+  <figure class="viz" aria-labelledby="invcap">
+    <figcaption class="cap" id="invcap">Visualizer · What each delete removes</figcaption>
+    <div class="seg" id="invseg" role="group" aria-label="Stage">
+      <button aria-pressed="true" data-s="0">Before</button>
+      <button aria-pressed="false" data-s="1">After 11.1</button>
+      <button aria-pressed="false" data-s="2">After 11.2</button>
+      <button aria-pressed="false" data-s="3">After 11.3</button>
+    </div>
+    <div class="tw" style="margin-top:14px"><table id="invTbl"></table></div>
+    <div class="info" id="invInfo" aria-live="polite"></div>
+  </figure>
+  <p>The files and the group's Glue table are gone. But the offline store writes its files minutes behind the writes, so files from the last writes before the delete can still be on their way. Wait a few minutes and look again.</p>
+  <details class="code"><summary>Notebook cell · look again<small>run a few minutes later</small></summary><div class="cw"><button class="cp">Copy</button><pre><code data-src="c-rm2" data-lang="py"></code></pre></div></details>
+  <div class="out"><div class="lab">Output, five minutes later</div><pre><code data-src="o-rm2" data-lang="out"></code></pre></div>
+  <p>Nothing more had arrived this time, because the offline store had caught up before the group was deleted. It does not always. The gap between a write and its file varies from seconds to minutes, so a group deleted straight after a burst of writes can keep receiving files for a few minutes after it is gone. Those files sit in the bucket and cost storage until someone looks, so one more look is worth it.</p>
+
+  <h3><span class="n">11.4</span>What still bills</h3>
+  <p>The rest is the same as at the end of Part 1. The space, the NAT gateway and the interface endpoints still bill by the hour: stop the space, then delete the interface endpoints (every endpoint of type Interface, which is all except the S3 gateway endpoint) and the NAT gateway. A few minutes later, the Elastic IP AWS gave the NAT gateway goes away by itself. Also check that the SageMaker endpoints list is empty. What is left costs nothing or almost nothing.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Left behind</th><th>Costs</th><th>To remove it</th></tr></thead>
+    <tbody>
+      <tr><td>The space, stopped</td><td>Its 5 GB disk, a few cents a month</td><td>Delete the space in Studio</td></tr>
+      <tr><td>The domain and user profile</td><td>Nothing</td><td>Delete spaces, then the user profile, then the domain</td></tr>
+      <tr><td>The VPC, its subnets, security groups and S3 endpoint</td><td>Nothing</td><td>After the domain is gone, delete the S3 endpoint, then the VPC</td></tr>
+      <tr><td>The role</td><td>Nothing</td><td>Delete it in IAM after the domain is gone</td></tr>
+      <tr><td>The bucket, with the raw file and the model</td><td>Under 1 MB of storage</td><td>Empty it, then delete it</td></tr>
+      <tr><td>The Glue database <code>sagemaker_featurestore</code>, now empty</td><td>Nothing</td><td>Delete it in AWS Glue under Data Catalog → Databases</td></tr>
+    </tbody></table></div>
+  <p>If you are done with SageMaker in this account, remove those too, in that order. A domain cannot be deleted while it still has user profiles, a user profile cannot be deleted while it still has spaces, and a VPC cannot be deleted while anything is still inside it.</p>
+</section>
+
+<!-- ================= 12 ================= -->
+<section id="s12">
+  <h2 class="sec"><span class="num">12</span>Summary</h2>
+  <p>Part 1 built the offline store and an honest model from it. This part gave that model a live path. A feature group with both stores took the customer rows through one <code>put_record</code> call. The online store kept only the latest row of each customer and answered a lookup in about 9 milliseconds, where an Athena query takes seconds. The live path read the customer's row with <code>get</code>, laid out the 18 numbers with <code>model_row</code> in the training layout, and called the endpoint.</p>
+  <ol class="take">
+    <li><strong>The core question was whether the live path feeds the model what training used.</strong> The replay scored every order from July to September 2026 twice, once before that day's writes and once after. Scoring first, all 2,986 orders got exactly the row training used, and the AUC was 0.721, the training job's own number. Writing first, not one order did. Yet the AUC barely moved, to 0.719, while 57 of the orders that came back would no longer have been flagged. <strong>Compare inputs, not only scores.</strong></li>
+    <li><strong>Unknown customers vanish quietly.</strong> An unknown customer comes back as an empty answer, alone or in a batch, and turns into a new customer.</li>
+    <li><strong>Older writes are ignored.</strong> A write with an older event time is accepted and ignored, which is also why a replay cannot be run twice.</li>
+    <li><strong>A time to live counts from the event time.</strong> An old row with a short time to live is gone before anyone reads it. And the offline store runs minutes behind, so its files can keep arriving after the group is deleted, which is why the cleanup looks twice.</li>
+    <li><strong>Know when to skip it.</strong> The online store is worth having when a request needs one customer's latest features in milliseconds, and when the same writes also build the training data. For batch scoring, it is more than you need.</li>
+  </ol>
+  <h3>Where this goes</h3>
+  <p>The endpoint here serves one model file, copied into the bucket by hand. Teams keep many versions of a model, and need to know which one is serving and how it was trained. Keeping track of that is the job of a model registry, which comes next in the course.</p>
+</section>
+
+<!-- ================= 13 ================= -->
+<section id="s13">
+  <h2 class="sec"><span class="num">13</span>References and further reading</h2>
+  <h4>Official documentation</h4>
+  <ul>
+    <li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/feature-store-storage-configurations-online-store.html">Online store</a>. The standard and in-memory tiers, and how to reach the online store privately from a VPC.</li>
+    <li><a href="https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_feature_store_GetRecord.html">GetRecord</a>, <a href="https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_feature_store_BatchGetRecord.html">BatchGetRecord</a> and <a href="https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_feature_store_PutRecord.html">PutRecord</a>. The three calls used here, with every option.</li>
+    <li><a href="https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_OnlineStoreConfig.html">OnlineStoreConfig</a>. The setting that switches the online store on, and where a group-wide time to live goes.</li>
+    <li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/feature-store-time-to-live.html">Time to live duration for records</a>. How <code>ExpiresAt</code> is worked out from the event time.</li>
+    <li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/feature-store-concepts.html">Feature Store concepts</a>. Records, event time, and the two stores, in AWS's own words.</li>
+  </ul>
+  <h4>Practitioner reading</h4>
+  <ul>
+    <li><a href="https://docs.feast.dev/getting-started/components/online-store">Online store, in the Feast documentation</a>. The same idea in an open source feature store, where the online store also keeps only the latest values.</li>
+    <li><a href="https://docs.feast.dev/getting-started/concepts/point-in-time-joins">Point-in-time joins, in the Feast documentation</a>. The training side of the same question, for comparison with section 8.</li>
+  </ul>
+  <h4>Pricing</h4>
+  <ul>
+    <li><a href="https://aws.amazon.com/sagemaker/ai/pricing/">Amazon SageMaker AI pricing</a>, under Feature Store and real-time inference. Prices change, so check them before relying on them.</li>
+  </ul>
+</section>
+
+</main>
+</div>
+
+<footer>Sagemaker Feature store part 2 post read</footer>
+<div id="tip" role="tooltip" hidden></div>
+
+<!-- ================= CODE SOURCES ================= -->
+<script type="text/plain" id="c-config">
+"""Settings every script in this folder shares. Change BUCKET to your own bucket."""
+BUCKET = "returns-ml-fs2-demo"
+REGION = "us-east-1"
+FEATURE_GROUP = "returns-customers"
+ENDPOINT = "returns-fs-rt"
+CUT = "2026-07-01"   # the model was trained on orders before this day
+FEAT_COLS = ["orders_so_far", "returns_so_far", "return_rate", "tenure_days"]   # the customer features the model uses
+</script>
+
+<script type="text/plain" id="c-deploy">
+"""Put the previous class's honest model on a real-time endpoint: a model, a configuration, then the endpoint."""
+import time
+
+from sagemaker.core import image_uris
+from sagemaker.core.helper.session_helper import get_execution_role
+from sagemaker.core.resources import Endpoint, EndpointConfig, Model
+from sagemaker.core.shapes import ContainerDefinition, ProductionVariant
+
+from config import BUCKET, REGION, ENDPOINT
+
+model = Model.create(
+    model_name=f"{ENDPOINT}-model",
+    primary_container=ContainerDefinition(
+        image=image_uris.retrieve("xgboost", REGION, "1.7-1"),
+        model_data_url=f"s3://{BUCKET}/model/pit/model.tar.gz",
+    ),
+    execution_role_arn=get_execution_role(),
+)
+print("model:", model.model_name)
+
+config = EndpointConfig.create(
+    endpoint_config_name=f"{ENDPOINT}-config",
+    production_variants=[ProductionVariant(
+        variant_name="AllTraffic",
+        model_name=model.model_name,
+        instance_type="ml.m5.large",
+        initial_instance_count=1,
+    )],
+)
+print("endpoint config:", config.endpoint_config_name)
+
+start = time.time()
+endpoint = Endpoint.create(endpoint_name=ENDPOINT, endpoint_config_name=config.endpoint_config_name)
+endpoint.wait_for_status("InService")
+print("endpoint:", endpoint.endpoint_name, "InService after", round(time.time() - start), "s")
+</script>
+
+<script type="text/plain" id="o-deploy">
+model: returns-fs-rt-model
+endpoint config: returns-fs-rt-config
+endpoint: returns-fs-rt InService after 194 s
+</script>
+
+<script type="text/plain" id="c-fgcreate">
+import boto3
+from sagemaker.core.helper.session_helper import get_execution_role
+
+from config import BUCKET, REGION, FEATURE_GROUP
+
+sm = boto3.client("sagemaker", region_name=REGION)
+sm.create_feature_group(
+    FeatureGroupName=FEATURE_GROUP,
+    RecordIdentifierFeatureName="customer_id",
+    EventTimeFeatureName="event_time",
+    FeatureDefinitions=[
+        {"FeatureName": "customer_id", "FeatureType": "String"},
+        {"FeatureName": "event_time", "FeatureType": "String"},
+        {"FeatureName": "orders_so_far", "FeatureType": "Integral"},
+        {"FeatureName": "returns_so_far", "FeatureType": "Integral"},
+        {"FeatureName": "return_rate", "FeatureType": "Fractional"},
+        {"FeatureName": "tenure_days", "FeatureType": "Integral"},
+    ],
+    OnlineStoreConfig={"EnableOnlineStore": True},
+    OfflineStoreConfig={"S3StorageConfig": {"S3Uri": f"s3://{BUCKET}/feature-store"}},
+    RoleArn=get_execution_role(),
+)
+print("creating", FEATURE_GROUP)
+</script>
+
+<script type="text/plain" id="c-fgwait">
+import time
+
+while sm.describe_feature_group(FeatureGroupName=FEATURE_GROUP)["FeatureGroupStatus"] == "Creating":
+    time.sleep(5)
+fg = sm.describe_feature_group(FeatureGroupName=FEATURE_GROUP)
+print("status:", fg["FeatureGroupStatus"])
+print("online store:", fg["OnlineStoreConfig"])
+print("offline store:", fg["OfflineStoreConfig"]["S3StorageConfig"]["ResolvedOutputS3Uri"])
+</script>
+
+<script type="text/plain" id="o-fgwait">
+status: Created
+online store: {'EnableOnlineStore': True}
+offline store: s3://returns-ml-fs2-demo/feature-store/111122223333/sagemaker/us-east-1/offline-store/returns-customers-1792677279/data
+</script>
+
+<script type="text/plain" id="c-rw">
+featurestore = boto3.client("sagemaker-featurestore-runtime", region_name=REGION)
+
+row = {"customer_id": "C-00001", "event_time": "2026-06-27T00:00:00Z",
+       "orders_so_far": 11, "returns_so_far": 9, "return_rate": 0.625, "tenure_days": 1047}
+featurestore.put_record(FeatureGroupName=FEATURE_GROUP,
+                        Record=[{"FeatureName": k, "ValueAsString": str(v)} for k, v in row.items()])
+
+r = featurestore.get_record(FeatureGroupName=FEATURE_GROUP, RecordIdentifierValueAsString="C-00001")
+for f in r["Record"]:
+    print(f"{f['FeatureName']:15s} {f['ValueAsString']}")
+</script>
+
+<script type="text/plain" id="o-rw">
+customer_id     C-00001
+event_time      2026-06-27T00:00:00Z
+orders_so_far   11
+returns_so_far  9
+return_rate     0.625
+tenure_days     1047
+</script>
+
+<script type="text/plain" id="c-store">
+"""Write one customer row to the online store, or read one customer's four features back."""
+import boto3
+
+from config import REGION, FEATURE_GROUP, FEAT_COLS
+
+featurestore = boto3.client("sagemaker-featurestore-runtime", region_name=REGION)
+
+
+def put(row):
+    # every value travels as a string; the feature group's types decide how it is stored
+    record = [{"FeatureName": name, "ValueAsString": str(value)} for name, value in row.items()]
+    featurestore.put_record(FeatureGroupName=FEATURE_GROUP, Record=record)
+
+
+def get(customer_id):
+    """The customer's four features as numbers, or {} when the store has no record for them."""
+    r = featurestore.get_record(FeatureGroupName=FEATURE_GROUP, RecordIdentifierValueAsString=customer_id,
+                                FeatureNames=FEAT_COLS)
+    return {f["FeatureName"]: float(f["ValueAsString"]) for f in r.get("Record", [])}
+</script>
+
+<script type="text/plain" id="c-rowsload">
+import pandas as pd
+
+from config import CUT
+from features import customer_features
+
+s3 = boto3.client("s3", region_name=REGION)
+orders = pd.read_csv(s3.get_object(Bucket=BUCKET, Key="raw/events/returns_events.csv")["Body"])
+rows = customer_features(orders)
+before_cut = rows[rows["event_time"] < CUT]
+print(len(orders), "orders became", len(rows), "customer rows.", len(before_cut), "of them are from before", CUT)
+</script>
+
+<script type="text/plain" id="o-rowsload">
+12000 orders became 15598 customer rows. 11565 of them are from before 2026-07-01
+</script>
+
+<script type="text/plain" id="c-load">
+from concurrent.futures import ThreadPoolExecutor
+
+from store import put, get
+
+start = time.time()
+with ThreadPoolExecutor(max_workers=8) as pool:   # eight writes at a time
+    list(pool.map(put, before_cut.to_dict("records")))
+print("wrote", len(before_cut), "rows in", round(time.time() - start), "s")
+</script>
+
+<script type="text/plain" id="o-load">
+wrote 11565 rows in 17 s
+</script>
+
+<script type="text/plain" id="c-look">
+print("online store, C-00001:", get("C-00001"))
+
+folder = fg["OfflineStoreConfig"]["S3StorageConfig"]["ResolvedOutputS3Uri"].split(f"{BUCKET}/")[1]
+print("offline store, files so far:", s3.list_objects_v2(Bucket=BUCKET, Prefix=folder)["KeyCount"])
+</script>
+
+<script type="text/plain" id="o-look">
+online store, C-00001: {'orders_so_far': 11.0, 'returns_so_far': 9.0, 'return_rate': 0.625, 'tenure_days': 1047.0}
+offline store, files so far: 0
+</script>
+
+<script type="text/plain" id="c-lat">
+import statistics
+
+ids = [f"C-{i:05d}" for i in range(1, 201)]
+ms = []
+for customer_id in ids:
+    start = time.perf_counter()
+    get(customer_id)
+    ms.append((time.perf_counter() - start) * 1000)
+print(f"200 reads, one at a time. Median {statistics.median(ms):.0f} ms, slowest {max(ms):.0f} ms")
+</script>
+
+<script type="text/plain" id="o-lat">
+200 reads, one at a time. Median 9 ms, slowest 24 ms
+</script>
+
+<script type="text/plain" id="c-batch">
+from config import FEAT_COLS
+
+start = time.perf_counter()
+batch = featurestore.batch_get_record(Identifiers=[{"FeatureGroupName": FEATURE_GROUP,
+                                                    "RecordIdentifiersValueAsString": ids[:100],
+                                                    "FeatureNames": FEAT_COLS}])
+print(f"100 customers in one call. {(time.perf_counter() - start) * 1000:.0f} ms, "
+      f"{len(batch['Records'])} records, {len(batch['Errors'])} errors")
+found = [r["RecordIdentifierValueAsString"] for r in batch["Records"]]
+print("not returned:", [c for c in ids[:100] if c not in found])
+</script>
+
+<script type="text/plain" id="o-batch">
+100 customers in one call. 86 ms, 94 records, 0 errors
+not returned: ['C-00010', 'C-00049', 'C-00059', 'C-00064', 'C-00071', 'C-00087']
+</script>
+
+<script type="text/plain" id="c-rowspy">
+"""Lay out one model row exactly as the training files did. Training and serving both use model_row."""
+import pandas as pd
+
+from config import FEAT_COLS
+
+ORDER_COLS = ["price", "discount_pct", "delivery_days", "is_gift", "seller_rating"]
+FILL = {"orders_so_far": 0, "returns_so_far": 0, "return_rate": 0.2}   # a customer with no history yet
+DUMMIES = {"category": ["apparel", "beauty", "books", "electronics", "home"],
+           "payment_method": ["card", "cod", "upi", "wallet"]}
+
+
+def model_row(order, features):
+    """order: one raw order as a dict. features: the customer's stored features, or {} when there are none."""
+    f = {**FILL, **features}
+    if "tenure_days" not in features:   # no history yet: tenure from the sign up date, as training did
+        f["tenure_days"] = (pd.Timestamp(order["order_date"]) - pd.Timestamp(order["signup_date"])).days
+    row = [order[c] for c in ORDER_COLS] + [f[c] for c in FEAT_COLS]
+    for col, values in DUMMIES.items():
+        row += [int(order[col] == v) for v in values]
+    return row
+</script>
+
+<script type="text/plain" id="c-predict">
+"""The live path for one order: the customer's features from the online store, the row laid out as in
+training, and the endpoint's answer."""
+import boto3
+
+from config import REGION, ENDPOINT
+from rows import model_row
+from store import get
+
+runtime = boto3.client("sagemaker-runtime", region_name=REGION)
+
+
+def predict(order):
+    features = get(order["customer_id"])
+    row = ",".join(str(v) for v in model_row(order, features))
+    response = runtime.invoke_endpoint(EndpointName=ENDPOINT, ContentType="text/csv", Body=row)
+    return float(response["Body"].read()), features
+</script>
+
+<script type="text/plain" id="c-score1">
+from predict import predict
+from rows import model_row
+
+order = orders[orders["order_id"] == "ORD-210337"].iloc[0].to_dict()
+start = time.time()
+p, features = predict(order)
+print("features from the online store:", features)
+print("row sent to the endpoint:", model_row(order, features))
+print(f"p(return) = {p:.3f} in {(time.time() - start) * 1000:.0f} ms. Actual: {order['returned']}")
+</script>
+
+<script type="text/plain" id="o-score1">
+features from the online store: {'orders_so_far': 11.0, 'returns_so_far': 9.0, 'return_rate': 0.625, 'tenure_days': 1047.0}
+row sent to the endpoint: [1723.0, 28, 9, 0, 3.5, 11.0, 9.0, 0.625, 1047.0, 0, 0, 0, 0, 1, 0, 0, 1, 0]
+p(return) = 0.570 in 638 ms. Actual: 1
+</script>
+
+<script type="text/plain" id="c-two">
+from config import ENDPOINT
+from predict import runtime
+
+c1 = rows[rows["customer_id"] == "C-00001"].set_index("event_time")
+for day in ["2026-06-27T00:00:00Z", "2026-08-10T00:00:00Z"]:
+    features = c1.loc[day, FEAT_COLS].to_dict()
+    body = ",".join(str(v) for v in model_row(order, features))
+    p = float(runtime.invoke_endpoint(EndpointName=ENDPOINT, ContentType="text/csv", Body=body)["Body"].read())
+    print(f"row from {day[:10]}  {features}  p(return) = {p:.3f}")
+</script>
+
+<script type="text/plain" id="o-two">
+row from 2026-06-27  {'orders_so_far': 11, 'returns_so_far': 9, 'return_rate': 0.625, 'tenure_days': 1047}  p(return) = 0.570
+row from 2026-08-10  {'orders_so_far': 12, 'returns_so_far': 9, 'return_rate': 0.5882, 'tenure_days': 1091}  p(return) = 0.531
+</script>
+
+<script type="text/plain" id="c-replay">
+live = []
+start = time.time()
+for day in pd.date_range(CUT, orders["order_date"].max()).strftime("%Y-%m-%d"):
+    todays_orders = orders[orders["order_date"] == day].to_dict("records")
+    score_first = [predict(o) for o in todays_orders]
+    for row in rows[rows["event_time"].str.startswith(day)].to_dict("records"):
+        put(row)
+    write_first = [predict(o) for o in todays_orders]
+    for o, (p1, f1), (p2, f2) in zip(todays_orders, score_first, write_first):
+        live.append({"order_id": o["order_id"], "returned": o["returned"],
+                     "p_score_first": p1, "p_write_first": p2, "f_score_first": f1, "f_write_first": f2})
+print(len(live), "orders, each scored twice, in", round(time.time() - start), "s")
+</script>
+
+<script type="text/plain" id="o-replay">
+2986 orders, each scored twice, in 139 s
+</script>
+
+<script type="text/plain" id="c-auc">
+from sklearn.metrics import roc_auc_score
+
+live = pd.DataFrame(live)
+for way in ["score_first", "write_first"]:
+    p = live["p_" + way]
+    flagged = live[p > 0.5]
+    print(f"{way:12s} AUC {roc_auc_score(live['returned'], p):.3f}, "
+          f"{len(flagged)} orders above 0.5, {flagged['returned'].sum()} of them came back")
+</script>
+
+<script type="text/plain" id="o-auc">
+score_first  AUC 0.721, 608 orders above 0.5, 371 of them came back
+write_first  AUC 0.719, 502 orders above 0.5, 314 of them came back
+</script>
+
+<script type="text/plain" id="c-inputs">
+o = orders.assign(ts=pd.to_datetime(orders["order_date"], utc=True)).sort_values("ts")
+f = rows.assign(ts=pd.to_datetime(rows["event_time"])).sort_values("ts")
+training = pd.merge_asof(o, f[["customer_id", "ts"] + FEAT_COLS], on="ts", by="customer_id",
+                         allow_exact_matches=False).set_index("order_id")   # strictly before the order
+for way in ["score_first", "write_first"]:
+    same = sum(features == training.loc[order_id, FEAT_COLS].dropna().to_dict()
+               for order_id, features in zip(live["order_id"], live["f_" + way]))
+    print(f"{way:12s} {same} of {len(live)} orders got the row training used")
+</script>
+
+<script type="text/plain" id="o-inputs">
+score_first  2986 of 2986 orders got the row training used
+write_first  0 of 2986 orders got the row training used
+</script>
+
+<script type="text/plain" id="c-unknown">
+print("get_record:", featurestore.get_record(FeatureGroupName=FEATURE_GROUP,
+                                             RecordIdentifierValueAsString="C-99999").get("Record"))
+print("get:", get("C-99999"))
+</script>
+
+<script type="text/plain" id="o-unknown">
+get_record: None
+get: {}
+</script>
+
+<script type="text/plain" id="c-older">
+test = {"customer_id": "C-TEST-1", "returns_so_far": 0, "return_rate": 0.2, "tenure_days": 100}
+put({**test, "event_time": "2026-09-01T00:00:00Z", "orders_so_far": 5})
+put({**test, "event_time": "2026-08-01T00:00:00Z", "orders_so_far": 3})
+print(get("C-TEST-1"))
+</script>
+
+<script type="text/plain" id="o-older">
+{'orders_so_far': 5.0, 'returns_so_far': 0.0, 'return_rate': 0.2, 'tenure_days': 100.0}
+</script>
+
+<script type="text/plain" id="c-ttl">
+now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+for customer_id, event_time, ttl in [("C-TEST-2", now, {"Unit": "Minutes", "Value": 1}),
+                                     ("C-TEST-3", "2026-09-01T00:00:00Z", {"Unit": "Days", "Value": 30})]:
+    row = {**test, "customer_id": customer_id, "event_time": event_time, "orders_so_far": 5}
+    featurestore.put_record(FeatureGroupName=FEATURE_GROUP, TtlDuration=ttl,
+                            Record=[{"FeatureName": k, "ValueAsString": str(v)} for k, v in row.items()])
+    print(customer_id, "read straight back:", get(customer_id))
+written = time.time()
+</script>
+
+<script type="text/plain" id="o-ttl">
+C-TEST-2 read straight back: {'orders_so_far': 5.0, 'returns_so_far': 0.0, 'return_rate': 0.2, 'tenure_days': 100.0}
+C-TEST-3 read straight back: {}
+</script>
+
+<script type="text/plain" id="c-ttlwait">
+while get("C-TEST-2"):
+    time.sleep(5)
+print("C-TEST-2 stopped coming back", round(time.time() - written), "s after it was written")
+</script>
+
+<script type="text/plain" id="o-ttlwait">
+C-TEST-2 stopped coming back 60 s after it was written
+</script>
+
+<script type="text/plain" id="c-delep">
+sm.delete_endpoint(EndpointName=ENDPOINT)
+sm.delete_endpoint_config(EndpointConfigName=f"{ENDPOINT}-config")
+sm.delete_model(ModelName=f"{ENDPOINT}-model")
+print("deleted the endpoint, its configuration and the model")
+</script>
+
+<script type="text/plain" id="o-delep">
+deleted the endpoint, its configuration and the model
+</script>
+
+<script type="text/plain" id="c-delfg">
+sm.delete_feature_group(FeatureGroupName=FEATURE_GROUP)
+start = time.time()
+while sm.list_feature_groups(NameContains=FEATURE_GROUP)["FeatureGroupSummaries"]:
+    time.sleep(5)
+print("deleted", FEATURE_GROUP, "in", round(time.time() - start), "s")
+</script>
+
+<script type="text/plain" id="o-delfg">
+deleted returns-customers in 5 s
+</script>
+
+<script type="text/plain" id="c-rm">
+def remove_offline_files():
+    keys = [o["Key"] for page in s3.get_paginator("list_objects_v2").paginate(Bucket=BUCKET, Prefix="feature-store/")
+            for o in page.get("Contents", [])]
+    for i in range(0, len(keys), 1000):
+        s3.delete_objects(Bucket=BUCKET, Delete={"Objects": [{"Key": k} for k in keys[i:i + 1000]]})
+    print("removed", len(keys), "files under feature-store/")
+
+
+remove_offline_files()
+glue = boto3.client("glue", region_name=REGION)
+for table in glue.get_tables(DatabaseName="sagemaker_featurestore")["TableList"]:
+    if table["Name"].startswith("returns_customers_"):
+        glue.delete_table(DatabaseName="sagemaker_featurestore", Name=table["Name"])
+        print("removed glue table", table["Name"])
+</script>
+
+<script type="text/plain" id="o-rm">
+removed 10754 files under feature-store/
+removed glue table returns_customers_1792677279
+</script>
+
+<script type="text/plain" id="c-rm2">
+remove_offline_files()
+</script>
+
+<script type="text/plain" id="o-rm2">
+removed 0 files under feature-store/
+</script>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var fmt=function(n){return Number(n).toLocaleString('en-US')};
+
+/* ---------- progress bar, nav, scroll spy ---------- */
+var bar=$('#bar'), toc=$('#toc'), menuBtn=$('#menuBtn');
+function onScroll(){
+  var h=document.documentElement; var max=h.scrollHeight-h.clientHeight;
+  bar.style.width=(max>0?Math.min(100,h.scrollTop/max*100):0)+'%';
+}
+window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+menuBtn.addEventListener('click',function(){var o=toc.classList.toggle('open');menuBtn.setAttribute('aria-expanded',o);});
+$$('#toc a').forEach(function(a){a.addEventListener('click',function(){toc.classList.remove('open');menuBtn.setAttribute('aria-expanded','false');});});
+var links={};$$('#toc a').forEach(function(a){links[a.getAttribute('href').slice(1)]=a;});
+if('IntersectionObserver' in window){
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){
+    if(e.isIntersecting){$$('#toc a.on').forEach(function(x){x.classList.remove('on')});var l=links[e.target.id];if(l)l.classList.add('on');}
+  });},{rootMargin:'-20% 0px -70% 0px'});
+  ['top'].concat($$('section[id^=s]').map(function(s){return s.id})).forEach(function(id){var el=document.getElementById(id);if(el)io.observe(el);});
+}
+
+/* ---------- code rendering ---------- */
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+var RE=/("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|#[^\n]*|\b(?:import|from|def|return|if|else|elif|while|for|in|not|and|or|is|None|True|False|try|except|with|as|class|lambda|pass|break|continue|raise)\b|\b\d+(?:\.\d+)?\b)/g;
+function highlight(src){
+  return esc(src).replace(RE,function(m){
+    var c;
+    if(m[0]==='#')c='tc';else if(m[0]==='"'||m[0]==="'")c='ts';else if(/^\d/.test(m))c='tn';else c='tk';
+    return '<span class="'+c+'">'+m+'</span>';
+  });
+}
+$$('code[data-src]').forEach(function(c){
+  var raw=document.getElementById(c.getAttribute('data-src')).textContent.replace(/^\n/,'').replace(/\s+$/,'');
+  c.innerHTML=c.getAttribute('data-lang')==='py'?highlight(raw):esc(raw);
+  c._raw=raw;
+});
+$$('.cp').forEach(function(b){b.addEventListener('click',function(){
+  var code=b.parentNode.querySelector('code');var t=code._raw||code.textContent;
+  function done(){var o=b.textContent;b.textContent='Copied';setTimeout(function(){b.textContent=o},1400);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,function(){fallback(t);done();});}else{fallback(t);done();}
+});});
+function fallback(t){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(a);}
+
+/* ---------- helpers ---------- */
+function seg(id,cb){
+  var g=$(id);var bs=$$('button',g);
+  bs.forEach(function(b){b.addEventListener('click',function(){bs.forEach(function(x){x.setAttribute('aria-pressed',x===b)});cb(b);});});
+}
+var tip=$('#tip');
+function showTip(el){
+  var t=el.getAttribute('data-tip');if(!t)return;tip.innerHTML=t;tip.hidden=false;
+  var r=el.getBoundingClientRect();var tw=tip.offsetWidth,th=tip.offsetHeight;
+  var x=r.left+r.width/2-tw/2;x=Math.max(8,Math.min(window.innerWidth-tw-8,x));
+  var y=r.top-th-10;if(y<8)y=r.bottom+10;
+  tip.style.left=x+'px';tip.style.top=y+'px';
+}
+function hideTip(){tip.hidden=true;}
+document.addEventListener('mouseover',function(e){var el=e.target.closest&&e.target.closest('[data-tip]');if(el)showTip(el);});
+document.addEventListener('mouseout',function(e){var el=e.target.closest&&e.target.closest('[data-tip]');if(el)hideTip();});
+document.addEventListener('focusin',function(e){var el=e.target.closest&&e.target.closest('[data-tip]');if(el)showTip(el);});
+document.addEventListener('focusout',function(e){var el=e.target.closest&&e.target.closest('[data-tip]');if(el)hideTip();});
+window.addEventListener('scroll',hideTip,{passive:true});
+
+function infoGroup(root,infoEl,items){
+  var fig=root.parentNode;
+  function pick(i){
+    $$('button.st[data-i]',fig).forEach(function(x){x.setAttribute('aria-pressed',x.getAttribute('data-i')==i);});
+    infoEl.innerHTML=items[i];
+  }
+  $$('button.st[data-i]',fig).forEach(function(b){b.addEventListener('click',function(){pick(b.getAttribute('data-i'))});});
+  pick(0);
+}
+
+/* ---------- 1.1 the 18 numbers ---------- */
+infoGroup($('#p18'),$('#p18info'),[
+  '<b class="t">The order · 5 numbers</b> · <code>price</code>, <code>discount_pct</code>, <code>delivery_days</code>, <code>is_gift</code> and <code>seller_rating</code>. The checkout already has them, because they are the order.',
+  '<b class="t">Category and payment · 9 numbers</b> · One-hot columns: 5 for the categories (apparel, beauty, books, electronics, home) and 4 for the payment methods (card, cod, upi, wallet). They also come from the order itself.',
+  '<b class="t">The customer · 4 numbers</b> · <code>orders_so_far</code>, <code>returns_so_far</code>, <code>return_rate</code> and <code>tenure_days</code>. They come from the customer\'s whole history, which the order does not carry. This is the part the online store supplies.'
+]);
+
+/* ---------- 1.2 one write, two stores ---------- */
+(function(){
+  var R=[['2025-10-13',1,0,0.1667,790],['2025-10-17',2,0,0.1429,794],['2025-10-27',2,1,0.2857,804],['2025-12-07',3,1,0.2500,845],['2025-12-21',3,2,0.3750,859]];
+  var n=0;
+  function rowHtml(r,cls){return '<div class="lrow '+(cls||'')+'"><span class="d">'+r[0]+'</span><span class="k">orders '+r[1]+' · returns '+r[2]+' · rate '+r[3].toFixed(4)+' · tenure '+r[4]+'</span></div>';}
+  function render(){
+    var on=$('#onl'),off=$('#offl');
+    if(!n){on.innerHTML='<p class="empty">Empty. Nothing written yet.</p>';off.innerHTML='<p class="empty">Empty. Nothing written yet.</p>';}
+    else{
+      on.innerHTML=rowHtml(R[n-1],'new')+'<p class="note" style="margin-top:4px">Exactly 1 row for <code>C-00001</code>: the one with the newest event time.</p>';
+      var h='';for(var i=n-1;i>=0;i--)h+=rowHtml(R[i],i===n-1?'new':'');
+      off.innerHTML=h+'<p class="note" style="margin-top:4px">'+n+' row'+(n>1?'s':'')+' for <code>C-00001</code>: every version is kept (the files themselves arrive minutes later).</p>';
+    }
+    $('#wrCount').textContent=n+' of '+R.length+' written';
+    $('#wrBtn').disabled=n>=R.length;
+  }
+  $('#wrBtn').addEventListener('click',function(){if(n<R.length){n++;render();}});
+  $('#wrReset').addEventListener('click',function(){n=0;render();});
+  render();
+})();
+
+/* ---------- 1.3 pipeline ---------- */
+infoGroup($('#pipe'),$('#pipeinfo'),[
+  '<b class="t">returns_events.csv</b> · The raw orders, in S3 under <code>raw/events/</code>. Each order only says which customer placed it; the history is not in the file.',
+  '<b class="t">features.py</b> · Unchanged from Part 1. Turns the orders into customer rows, one row each time a customer\'s history changes, each with the time it became true.',
+  '<b class="t">put_record</b> · Writes each row into a feature group that has an online store and an offline store. The online store keeps the newest row per customer; the offline store (Part 1) adds every row to its files.',
+  '<b class="t">predict.py</b> · At checkout: <code>get_record</code> fetches the customer\'s four features from the online store, and <code>model_row</code> lays out the 18 numbers in the order the model learned them.',
+  '<b class="t">invoke_endpoint</b> · Sends the 18 numbers to the endpoint, where the previous part\'s honest model answers with the probability of a return.'
+]);
+
+/* ---------- 2 platform check ---------- */
+var CHK=['VPC returns-ml-vpc','Internet gateway','NAT gateway','Internet routes (2 subnets)','Endpoint s3','Endpoint sagemaker.api','Endpoint sagemaker.runtime','Endpoint sts','Endpoint logs','Endpoint ssm','Endpoint ssmmessages','Security group returns-studio-sg','Security group returns-endpoints-sg','Role returns-ml-sagemaker-role','Policy: remote access (StartSession)','Policy: bucket access (GetBucketAcl)','Policy: feature store (DeleteTable)','Bucket','File raw/events/returns_events.csv','File model/pit/model.tar.gz','Domain returns-ml-domain','User profile instructor','Space returns-lab','Space owner tag (remote access)'];
+function chk(s){
+  $('#chkgrid').innerHTML=CHK.map(function(n){return '<div><span>'+n+'</span><span class="badge '+(s?'ok':'miss')+'">'+(s?'✓ OK':'MISSING')+'</span></div>';}).join('');
+}
+chk(0);seg('#chkseg',function(b){chk(+b.getAttribute('data-s'))});
+
+/* ---------- 3 deploy steps ---------- */
+infoGroup($('#dep'),$('#depinfo'),[
+  '<b class="t">Model.create</b> · Names the model and says what it is made of: the XGBoost container image (version 1.7-1) and the model file at <code>model/pit/model.tar.gz</code> in your bucket, plus the role the endpoint runs as.',
+  '<b class="t">EndpointConfig.create</b> · Says what machine will serve it: one <code>ml.m5.large</code> instance behind a single variant named <code>AllTraffic</code>.',
+  '<b class="t">Endpoint.create</b> · Starts the machine and waits until the status is <code>InService</code>. Here that took 194 seconds. From then on the endpoint bills by the hour until it is deleted.'
+]);
+
+/* ---------- 6 latency bars ---------- */
+(function(){
+  var rows=[['Single read · median',9,'Half of 200 single reads were faster than this.'],['Single read · slowest',24,'The slowest of 200 single reads.'],['One batch call · 100 customers',86,'One batch_get_record call; 94 records came back.']];
+  var max=100;
+  var s='<svg viewBox="0 0 900 190" role="img" aria-label="Bar chart in milliseconds. Single read, median 9. Single read, slowest 24. One batch call for 100 customers, 86.">';
+  for(var t=0;t<=100;t+=25){var x=250+600*t/max;s+='<line class="grid" x1="'+x+'" x2="'+x+'" y1="14" y2="144"/><text class="svgd" x="'+x+'" y="166" font-size="12" text-anchor="middle">'+t+'</text>';}
+  s+='<text class="svgm" x="550" y="184" font-size="12.5" text-anchor="middle">milliseconds</text>';
+  rows.forEach(function(r,i){
+    var y=26+i*40,w=600*r[1]/max;
+    s+='<text class="svgt" x="236" y="'+(y+17)+'" font-size="13.5" text-anchor="end">'+r[0]+'</text>';
+    s+='<rect class="pt" tabindex="0" x="250" y="'+y+'" width="'+w+'" height="26" rx="4" fill="'+(i===2?'#8b8b92':'#d4af37')+'" data-tip="<b>'+r[0]+'</b><br>'+r[1]+' ms<br>'+r[2]+'" aria-label="'+r[0]+': '+r[1]+' milliseconds"/>';
+    s+='<text class="svgg" x="'+(250+w+8)+'" y="'+(y+18)+'" font-size="13.5" font-weight="700">'+r[1]+' ms</text>';
+  });
+  s+='</svg>';
+  $('#lat').innerHTML=s;
+})();
+
+/* ---------- 6.2 which customers were not returned ---------- */
+(function(){
+  var M={10:'Not in the orders file at all, so no customer row was ever made. The customer numbers have gaps.',
+         49:'Not in the orders file at all, so no customer row was ever made. The customer numbers have gaps.',
+         59:'First order on 22 August 2026, after 1 July, so section 5 loaded nothing for this customer.',
+         64:'First order on 3 July 2026, after 1 July, so section 5 loaded nothing for this customer.',
+         71:'Not in the orders file at all, so no customer row was ever made. The customer numbers have gaps.',
+         87:'First order on 23 July 2026, after 1 July, so section 5 loaded nothing for this customer.'};
+  var g=$('#cgrid'),h='';
+  for(var i=1;i<=100;i++){
+    var id='C-'+('00000'+i).slice(-5);
+    if(M[i])h+='<button class="c m" aria-pressed="false" data-n="'+i+'" aria-label="'+id+', not returned. Select for the reason." data-tip="<b>'+id+'</b><br>Not returned">'+i+'</button>';
+    else h+='<div class="c" role="presentation" title="'+id+' returned">'+i+'</div>';
+  }
+  g.innerHTML=h;
+  g.removeAttribute('role');g.setAttribute('aria-label','Grid of 100 customer IDs. 94 were returned. Six were not: C-00010, C-00049, C-00059, C-00064, C-00071 and C-00087.');
+  $$('button.m',g).forEach(function(b){b.addEventListener('click',function(){
+    $$('button.m',g).forEach(function(x){x.setAttribute('aria-pressed',x===b)});
+    var n=+b.getAttribute('data-n');
+    $('#cginfo').innerHTML='<b class="t">C-'+('00000'+n).slice(-5)+'</b> · '+M[n];
+  });});
+})();
+
+/* ---------- 7.3 live path stepper ---------- */
+(function(){
+  var L=['price','discount_pct','delivery_days','is_gift','seller_rating','orders_so_far','returns_so_far','return_rate','tenure_days','apparel','beauty','books','electronics','home','card','cod','upi','wallet'];
+  var V=['1723.0','28','9','0','3.5','11.0','9.0','0.625','1047.0','0','0','0','0','1','0','0','1','0'];
+  var i=0;
+  var S=[
+    function(){return '<h4 style="margin-top:6px">Step 1 · get(customer_id)</h4><p>The checkout has the order <code>ORD-210337</code>, placed on 10 August 2026 by <code>C-00001</code>. <code>get_record</code> asks the online store for that customer\'s four features.</p><div class="read"><div><small>orders_so_far</small><b>11.0</b></div><div><small>returns_so_far</small><b>9.0</b></div><div><small>return_rate</small><b>0.625</b></div><div><small>tenure_days</small><b>1047.0</b></div></div><p class="note">This is the row from 27 June, the latest row the store holds.</p>';},
+    function(){var h='<h4 style="margin-top:6px">Step 2 · model_row(order, features)</h4><p>The 18 numbers, in the order the model learned them. Dashed boxes come from the order; gold boxes are the four customer features from step 1; plain boxes are the one-hot columns.</p><div class="nums" role="list">';
+      L.forEach(function(l,k){var c=k<5?'ord':(k<9?'store':'');h+='<div role="listitem" class="'+c+'"><small>'+l+'</small>'+V[k]+'</div>';});
+      return h+'</div>';},
+    function(){return '<h4 style="margin-top:6px">Step 3 · invoke_endpoint</h4><p>The 18 numbers are joined with commas and sent to the endpoint as <code>text/csv</code>. The model answers with one number.</p><div class="read"><div><small>p(return)</small><b>0.570</b></div><div><small>Actual</small><b>1 · returned</b></div><div><small>First call took</small><b>638 ms</b></div></div><p class="note">The first call to a new endpoint is the slowest.</p>';}
+  ];
+  function render(){
+    $('#lvBody').innerHTML=S[i]();$('#lvN').textContent='Step '+(i+1)+' of '+S.length;
+    $('#lvPrev').disabled=i===0;$('#lvNext').disabled=i===S.length-1;
+  }
+  $('#lvPrev').addEventListener('click',function(){if(i>0){i--;render();}});
+  $('#lvNext').addEventListener('click',function(){if(i<S.length-1){i++;render();}});
+  render();
+})();
+
+/* ---------- 8.1 gauge ---------- */
+(function(){
+  var D=[
+    {day:'27 June 2026',p:0.570,f:[11,9,0.625,1047],note:'The latest row before the order. This is the row training would have used.'},
+    {day:'10 August 2026',p:0.531,f:[12,9,0.5882,1091],note:'Already counts the order being scored, so orders_so_far is one higher and return_rate has dropped.'}
+  ];
+  var N=['orders_so_far','returns_so_far','return_rate','tenure_days'];
+  function render(k){
+    var d=D[k];
+    $('#gauge').innerHTML='<div class="gval">p(return) = '+d.p.toFixed(3)+'</div><div class="gline" role="img" aria-label="Probability '+d.p.toFixed(3)+' on a scale from 0 to 1, with a line at 0.5"><div class="track"></div><div class="fill" style="width:'+(d.p*100)+'%"></div><div class="mid"><span>0.5</span></div><div class="dot" style="left:'+(d.p*100)+'%"></div></div><p class="note">Row from '+d.day+'. '+d.note+'</p>';
+    var h='<thead><tr><th>Row from</th>';N.forEach(function(n){h+='<th class="num">'+n+'</th>';});h+='</tr></thead><tbody>';
+    D.forEach(function(r,j){h+='<tr'+(j===k?' style="background:var(--goldbg)"':'')+'><td>'+r.day+'</td>';r.f.forEach(function(v,m){h+='<td class="num">'+(m===2?v.toFixed(j?4:3):v)+'</td>';});h+='</tr>';});
+    $('#gtbl').innerHTML=h+'</tbody>';
+  }
+  render(0);
+  seg('#gsel',function(b){render(+b.getAttribute('data-r'))});
+})();
+
+/* ---------- 8.2 one day of the replay ---------- */
+(function(){
+  var rowA='<div class="lrow new"><span class="d">2026-06-27</span><span class="k">orders 11 · returns 9 · rate 0.6250 · tenure 1047</span></div>';
+  var rowB='<div class="lrow new"><span class="d">2026-08-10</span><span class="k">orders 12 · returns 9 · rate 0.5882 · tenure 1091</span></div>';
+  var M=[
+    [rowA,'<b class="t">Start of 10 August.</b> The store holds <code>C-00001</code>\'s row from 27 June, the last one written. Order <code>ORD-210337</code> has just arrived.'],
+    [rowA,'<b class="t">Score first.</b> <code>predict</code> reads the 27 June row: exactly the row training would have used. The probability of a return is <strong>0.570</strong>.'],
+    [rowB,'<b class="t">The day\'s rows are written.</b> <code>put</code> writes the row dated 10 August, which counts the order. The store now holds it in place of the 27 June row.'],
+    [rowB,'<b class="t">Write first.</b> The same order is scored again, now with the 10 August row. The probability falls to <strong>0.531</strong>, and the row is not the one training used.']
+  ];
+  var i=0,r=$('#dyRange');
+  function render(){
+    $('#dyN').textContent=i+1;r.value=i+1;
+    $('#dyStore').innerHTML=M[i][0];$('#dyWhat').innerHTML=M[i][1];
+    $('#dyPrev').disabled=i===0;$('#dyNext').disabled=i===M.length-1;
+  }
+  $('#dyPrev').addEventListener('click',function(){if(i>0){i--;render();}});
+  $('#dyNext').addEventListener('click',function(){if(i<M.length-1){i++;render();}});
+  r.addEventListener('input',function(){i=+r.value-1;render();});
+  render();
+})();
+
+/* ---------- 8.3 AUC and flagged bars ---------- */
+(function(){
+  $('#auc').innerHTML='<div class="bars">'+
+   '<div class="b"><span>Score first</span><div class="tr"><div class="f g1" style="width:'+(0.721*100)+'%" tabindex="0" data-tip="<b>Score first</b><br>AUC 0.721" aria-label="Score first, AUC 0.721"></div></div><span class="v">0.721</span></div>'+
+   '<div class="b"><span>Write first</span><div class="tr"><div class="f g2" style="width:'+(0.719*100)+'%" tabindex="0" data-tip="<b>Write first</b><br>AUC 0.719" aria-label="Write first, AUC 0.719"></div></div><span class="v">0.719</span></div></div>'+
+   '<p class="note">Scale from 0 to 1.</p>';
+  var max=650;
+  function fl(name,tot,ret,cls,hcls,key){
+    return '<div class="b"><span>'+name+'</span><div class="tr" style="width:100%"><div class="f '+cls+'" style="width:'+(ret/max*100)+'%" tabindex="0" data-tip="<b>'+name+'</b><br>'+ret+' flagged orders came back" aria-label="'+name+': '+ret+' flagged orders came back"></div><div class="f '+hcls+'" style="width:'+((tot-ret)/max*100)+'%" tabindex="0" data-tip="<b>'+name+'</b><br>'+(tot-ret)+' flagged orders did not come back" aria-label="'+name+': '+(tot-ret)+' flagged orders did not come back"></div></div><span class="v">'+tot+'</span></div>';
+  }
+  $('#flag').innerHTML='<div class="bars">'+fl('Score first',608,371,'g1','g1h')+fl('Write first',502,314,'g2','g2h')+'</div><p class="note">Solid part: flagged orders that came back (371 and 314). Hatched part: flagged orders that did not.</p>';
+  $('#aucleg').innerHTML='<span><svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="#d4af37"/></svg>Score first</span><span><svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="#8b8b92"/></svg>Write first</span>';
+})();
+
+/* ---------- 9.2 arrival order ---------- */
+(function(){
+  var W=[{d:'2026-09-01',o:5,n:'September write'},{d:'2026-08-01',o:3,n:'August write'}];
+  function render(k){
+    var seq=k?[W[1],W[0]]:[W[0],W[1]];
+    var held=null,h='';
+    seq.forEach(function(w,i){
+      var acc=!held||w.d>held.d;
+      var out=acc?'Accepted. The store now holds this row.':'Accepted without an error, then ignored: its event time is older than the stored one.';
+      h+='<div class="lrow'+(acc?' new':'')+'"><span class="d">'+(i+1)+'. '+w.d+'</span><span class="k">orders_so_far '+w.o+'</span><span class="tag">'+(acc?'kept':'ignored')+'</span></div><p class="note" style="margin:-2px 0 10px">'+out+'</p>';
+      if(acc)held=w;
+    });
+    $('#ordList').innerHTML=h;
+    $('#ordEnd').innerHTML='<div class="lrow new"><span class="d">'+held.d+'</span><span class="k">orders_so_far '+held.o+'</span></div><p class="note">Whichever arrives first, the row with the newest event time is the one the store keeps.</p>';
+  }
+  render(0);seg('#ordseg',function(b){render(+b.getAttribute('data-o'))});
+})();
+
+/* ---------- 9.3 time to live ---------- */
+(function(){
+  var T=[
+    {n:'C-TEST-2',html:function(){
+      return '<div class="tl" role="img" aria-label="Timeline: event time and write at the same moment, expires 60 seconds later"><div class="ln"></div>'+
+      '<div class="span" style="left:4%;width:60%" data-tip="<b>Alive for 1 minute</b><br>Counted from the event time" tabindex="0"></div>'+
+      '<div class="mk" style="left:4%"></div><div class="mk" style="left:64%"></div>'+
+      '<div class="lb2" style="left:4%;top:6px">event time = write time</div><div class="lb2" style="left:64%;top:6px">expires, 60 s later</div>'+
+      '<div class="lb2" style="left:4%;top:68px">read straight back: found</div></div>';},
+     info:'<b class="t">Event time now, 1 minute.</b> The clock starts at the event time, which here is the moment of the write, so the record lived a full minute. It stopped coming back 60 seconds after it was written.'},
+    {n:'C-TEST-3',html:function(){
+      return '<div class="tl" role="img" aria-label="Timeline: event time 1 September, expires 1 October 2026, write happens after the expiry"><div class="ln"></div>'+
+      '<div class="span h" style="left:6%;width:38%" data-tip="<b>Lifetime: 30 days</b><br>1 Sep to 1 Oct 2026" tabindex="0"></div>'+
+      '<div class="mk" style="left:6%"></div><div class="mk" style="left:44%"></div><div class="mk" style="left:80%;border-left-style:dashed"></div>'+
+      '<div class="lb2" style="left:2%;top:6px">event time 1 Sep 2026</div><div class="lb2" style="left:38%;top:6px">expires 1 Oct 2026</div>'+
+      '<div class="lb2" style="left:68%;top:68px">written here: already expired</div></div>';},
+     info:'<b class="t">Event time 1 September 2026, 30 days.</b> The clock still starts at the event time, not at the write. 1 September plus 30 days is 1 October 2026, which had already passed when the row was written, so it was dead on arrival and the read straight back found nothing.'}
+  ];
+  function render(k){$('#ttl').innerHTML=T[k].html();$('#ttlinfo').innerHTML=T[k].info;}
+  render(0);seg('#ttlseg',function(b){render(+b.getAttribute('data-t'))});
+})();
+
+/* ---------- 11 teardown inventory ---------- */
+(function(){
+  var R=[
+    ['SageMaker endpoint returns-fs-rt','Bills by the hour'],
+    ['Endpoint configuration and model','Made by deploy.py with the endpoint'],
+    ['Feature group returns-customers, with its online store','Deleting the group deletes its online store'],
+    ['Offline files under feature-store/ (10,754 files)','Left behind by the group delete'],
+    ['Glue table returns_customers_1792677279','Left behind by the group delete'],
+    ['Studio space, NAT gateway, interface endpoints','Platform from Part 1, still billing (11.4)']
+  ];
+  // state[stage][row]: 1 exists, 0 gone, 2 gone-but-still-billing-elsewhere
+  var S=[[1,1,1,1,1,1],[0,0,1,1,1,1],[0,0,0,1,1,1],[0,0,0,0,0,1]];
+  var I=['Everything from this part exists.','The endpoint, its configuration and the model are deleted, which stops the endpoint\'s hourly charge.','The feature group is deleted, and its online store goes with it. The offline files and the Glue table stay behind.','The offline files and the Glue table are removed. What still bills is the platform from Part 1: stop the space, then delete the interface endpoints and the NAT gateway.'];
+  function render(k){
+    var h='<thead><tr><th>Item</th><th>Note</th><th>State</th></tr></thead><tbody>';
+    R.forEach(function(r,i){var e=S[k][i];h+='<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td class="'+(e?'st-bill':'st-off')+'">'+(e?'● Still there':'○ Deleted')+'</td></tr>';});
+    var t=$('#invTbl');t.className='invt';t.innerHTML=h+'</tbody>';
+    $('#invInfo').textContent=I[k];
+  }
+  render(0);seg('#invseg',function(b){render(+b.getAttribute('data-s'))});
+})();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/MLOPS-14" target="_blank" rel="noopener">github.com/scaler-content/MLOPS-14</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

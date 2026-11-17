@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regularization & Sklearn Pipelines — Lecture Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue-deep:    #0A1E3D;
+    --blue-mid:     #1A4A8A;
+    --blue-soft:    #2E6FBF;
+    --blue-pale:    #7AAED9;
+    --blue-mist:    #C8DEF5;
+    --sky:          #F0F7FF;
+    --sky-mid:      #DFF0FF;
+    --azure:        #1565C0;
+    --azure-light:  #5B9FD6;
+    --charcoal:     #080E1A;
+    --text-body:    #0D1E35;
+    --text-muted:   #4A6A8A;
+    --white:        #FFFFFF;
+    --sidebar-w:    280px;
+    --green-pos:    #1B5E20;
+    --red-neg:      #B71C1C;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--sky);
+    color: var(--text-body);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--blue-deep);
+    position: fixed;
+    top: 0; left: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transition: transform .3s ease;
+  }
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--blue-soft); border-radius: 4px; }
+
+  .sidebar-header {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    position: sticky; top: 0;
+    background: var(--blue-deep);
+    z-index: 1;
+  }
+  .sidebar-header .course-label {
+    font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--blue-pale); font-weight: 600; margin-bottom: 6px;
+  }
+  .sidebar-header h1 {
+    font-family: 'Lora', serif; font-size: 15px;
+    color: var(--white); font-weight: 600; line-height: 1.4;
+  }
+
+  .progress-bar-wrap { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .progress-label { font-size: 11px; color: var(--blue-pale); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .progress-track { height: 4px; background: rgba(255,255,255,.1); border-radius: 2px; overflow: hidden; }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue-pale), var(--azure-light));
+    border-radius: 2px; transition: width .4s ease; width: 0%;
+  }
+
+  .nav-list { list-style: none; padding: 12px 0 80px; }
+  .nav-item a {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 20px; text-decoration: none;
+    color: rgba(255,255,255,.6); font-size: 12.5px; line-height: 1.4;
+    transition: all .2s; border-left: 2px solid transparent;
+  }
+  .nav-item a:hover { color: var(--white); background: rgba(255,255,255,.05); }
+  .nav-item.active a {
+    color: var(--azure-light); border-left-color: var(--azure);
+    background: rgba(255,255,255,.07); font-weight: 500;
+  }
+  .nav-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    border: 1.5px solid currentColor; flex-shrink: 0;
+    margin-top: 5px; transition: background .3s;
+  }
+  .nav-item.visited .nav-dot { background: var(--azure-light); border-color: var(--azure-light); }
+  .nav-item .nav-type {
+    font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--blue-pale); margin-top: 2px; opacity: .7;
+  }
+
+  /* ── MAIN ────────────────────────────────────────── */
+  #main { margin-left: var(--sidebar-w); flex: 1; max-width: 860px; padding: 48px 52px 120px; }
+
+  /* ── SECTION CARDS ───────────────────────────────── */
+  .section-card {
+    background: var(--white); border-radius: 12px;
+    border: 1px solid var(--blue-mist); margin-bottom: 36px;
+    overflow: hidden; scroll-margin-top: 32px;
+    box-shadow: 0 2px 8px rgba(10,30,61,.05); transition: box-shadow .2s;
+  }
+  .section-card:hover { box-shadow: 0 4px 20px rgba(10,30,61,.1); }
+
+  .card-header {
+    padding: 22px 28px 18px; border-bottom: 1px solid var(--sky-mid);
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .card-icon {
+    width: 36px; height: 36px; border-radius: 8px; background: var(--blue-mist);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 16px;
+  }
+  .card-meta { flex: 1; }
+  .card-type { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--blue-soft); font-weight: 600; margin-bottom: 4px; }
+  .card-title { font-family: 'Lora', serif; font-size: 20px; font-weight: 700; color: var(--blue-deep); line-height: 1.3; }
+  .card-duration { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+  .card-body { padding: 24px 28px 28px; }
+
+  /* ── TYPOGRAPHY ──────────────────────────────────── */
+  .card-body h2 { font-family: 'Lora', serif; font-size: 18px; color: var(--blue-mid); margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1.5px solid var(--blue-mist); }
+  .card-body h3 { font-family: 'Lora', serif; font-size: 15.5px; color: var(--blue-deep); margin: 22px 0 10px; font-style: italic; }
+  .card-body h4 { font-family: 'Lora', serif; font-size: 14px; color: var(--blue-mid); margin: 16px 0 8px; font-weight: 700; }
+  .card-body p { margin-bottom: 12px; font-size: 14.5px; }
+  .card-body ul, .card-body ol { margin: 8px 0 14px 20px; font-size: 14.5px; }
+  .card-body li { margin-bottom: 5px; }
+  .card-body strong { color: var(--blue-deep); font-weight: 600; }
+  .card-body em { color: var(--blue-soft); }
+
+  /* ── CALLOUTS ────────────────────────────────────── */
+  .callout-ask {
+    background: #EEF5FF; border-left: 3px solid var(--azure);
+    border-radius: 0 8px 8px 0; padding: 12px 16px;
+    margin: 16px 0; font-size: 13.5px; color: #0A2244;
+  }
+  .callout-ask .callout-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--azure); margin-bottom: 4px; }
+  .callout-note {
+    background: #F0F6FF; border-left: 3px solid var(--blue-soft);
+    border-radius: 0 8px 8px 0; padding: 12px 16px;
+    margin: 16px 0; font-size: 13.5px; color: var(--blue-deep);
+  }
+  .callout-note .callout-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--blue-soft); margin-bottom: 4px; }
+  .callout-viz {
+    background: #F5F9FF; border: 1.5px dashed var(--blue-pale);
+    border-radius: 10px; padding: 14px 18px; margin: 16px 0;
+    font-size: 13.5px; color: var(--blue-deep);
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .callout-viz .viz-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .callout-viz .viz-body { flex: 1; }
+  .callout-viz .viz-label { font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--blue-soft); margin-bottom: 5px; }
+  .callout-viz a { color: var(--blue-mid); font-weight: 600; word-break: break-all; }
+
+  /* ── TABLE ───────────────────────────────────────── */
+  .card-body table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 16px 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--blue-mist); }
+  .card-body th { background: var(--blue-mid); color: var(--white); padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12px; letter-spacing: .04em; }
+  .card-body td { padding: 9px 14px; border-top: 1px solid var(--sky-mid); font-size: 13px; }
+  .card-body tr:nth-child(even) td { background: var(--sky); }
+
+  /* ── CODE ────────────────────────────────────────── */
+  .card-body pre {
+    background: var(--charcoal); color: #A8D0F5;
+    border-radius: 8px; padding: 16px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px; overflow-x: auto; margin: 14px 0; line-height: 1.6;
+  }
+  .card-body code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--sky-mid); color: var(--blue-mid);
+    padding: 2px 6px; border-radius: 4px; font-size: 12.5px;
+  }
+  .card-body pre code { background: none; color: inherit; padding: 0; }
+
+  .output-wrap { margin: -6px 0 14px; }
+  .output-label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--blue-pale); font-weight: 600; margin-bottom: 5px; }
+  .output-block {
+    background: #F5F9FF; border: 1px solid var(--blue-mist);
+    border-radius: 8px; padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--text-body);
+    line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+  }
+
+  /* ── EQUATION ────────────────────────────────────── */
+  .equation {
+    background: var(--sky-mid); border: 1.5px solid var(--blue-mist);
+    border-radius: 8px; padding: 14px 20px; margin: 14px 0;
+    text-align: center; font-family: 'Lora', serif;
+    font-size: 16px; font-style: italic; color: var(--blue-deep); letter-spacing: .03em;
+  }
+
+  /* ── QUIZ ────────────────────────────────────────── */
+  .quiz-card .card-icon { background: #D6E9FF; }
+  .quiz-question { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; color: var(--blue-deep); margin-bottom: 20px; line-height: 1.5; }
+  .quiz-options { list-style: none; margin: 0; }
+  .quiz-option {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border: 1.5px solid var(--blue-mist);
+    border-radius: 8px; margin-bottom: 10px;
+    cursor: pointer; font-size: 14px;
+    transition: all .2s; user-select: none; background: var(--white);
+  }
+  .quiz-option:hover { border-color: var(--blue-soft); background: var(--sky); }
+  .quiz-option.selected-correct { border-color: var(--blue-soft); background: #E8F2FF; color: var(--blue-deep); }
+  .quiz-option.selected-wrong { border-color: #C62828; background: #FDECEA; color: #922B21; }
+  .quiz-option.reveal-correct { border-color: var(--blue-soft); background: #E8F2FF; }
+  .quiz-circle {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid var(--blue-mist); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; transition: all .2s; font-weight: 700;
+  }
+  .selected-correct .quiz-circle { border-color: var(--blue-soft); background: var(--blue-soft); color: #fff; }
+  .selected-wrong .quiz-circle { border-color: #C62828; background: #C62828; color: #fff; }
+  .reveal-correct .quiz-circle { border-color: var(--blue-soft); background: var(--blue-mist); }
+  .quiz-feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: 13.5px; font-weight: 500; display: none; }
+  .quiz-feedback.correct { background: #E8F2FF; color: var(--blue-deep); display: block; }
+  .quiz-feedback.wrong { background: #FDECEA; color: #922B21; display: block; }
+
+  /* ── REGULARIZATION COMPARISON ───────────────────── */
+  .reg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0; }
+  .reg-card {
+    border-radius: 10px; padding: 18px 16px;
+    border: 1.5px solid var(--blue-mist);
+    background: var(--sky); transition: all .2s;
+  }
+  .reg-card:hover { border-color: var(--blue-soft); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(10,30,61,.08); }
+  .reg-card .reg-icon { font-size: 24px; margin-bottom: 10px; }
+  .reg-card .reg-name { font-family: 'Lora', serif; font-size: 15px; font-weight: 700; color: var(--blue-deep); margin-bottom: 4px; }
+  .reg-card .reg-formula { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--blue-soft); background: var(--sky-mid); padding: 4px 8px; border-radius: 4px; margin-bottom: 8px; display: inline-block; }
+  .reg-card .reg-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+  .reg-card.ridge { border-color: #1565C0; }
+  .reg-card.lasso { border-color: #0277BD; }
+  .reg-card.elastic { border-color: #01579B; }
+
+  /* ── LAMBDA EFFECT TABLE ─────────────────────────── */
+  .lambda-row-overfit td { background: #FFF3F2 !important; }
+  .lambda-row-underfit td { background: #FFF8E1 !important; }
+  .lambda-row-good td { background: #E8F5E9 !important; }
+
+  /* ── PIPELINE FLOW ───────────────────────────────── */
+  .pipeline-flow {
+    display: flex; align-items: center; gap: 0;
+    margin: 20px 0; overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .pipe-step {
+    display: flex; flex-direction: column; align-items: center;
+    min-width: 110px; flex-shrink: 0;
+  }
+  .pipe-box {
+    background: var(--blue-mid); color: #fff;
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 12px; font-weight: 600; text-align: center;
+    width: 100%; line-height: 1.4;
+    box-shadow: 0 2px 6px rgba(10,30,61,.18);
+  }
+  .pipe-box.alt { background: var(--blue-soft); }
+  .pipe-box.model { background: var(--azure); }
+  .pipe-box.output { background: var(--green-pos); }
+  .pipe-arrow {
+    width: 32px; height: 2px; background: var(--blue-mist);
+    flex-shrink: 0; position: relative;
+  }
+  .pipe-arrow::after {
+    content: '▶'; position: absolute; right: -6px; top: -7px;
+    color: var(--blue-pale); font-size: 12px;
+  }
+  .pipe-label { font-size: 10px; color: var(--text-muted); margin-top: 6px; text-align: center; letter-spacing: .04em; }
+
+  /* ── COLUMN TRANSFORMER VIZ ──────────────────────── */
+  .ct-diagram { margin: 16px 0; }
+  .ct-input {
+    background: var(--blue-mid); color: #fff;
+    border-radius: 8px; padding: 10px 16px;
+    font-size: 13px; font-weight: 600; text-align: center;
+    margin-bottom: 12px;
+  }
+  .ct-branches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+  .ct-branch {
+    background: var(--sky); border: 1.5px solid var(--blue-mist);
+    border-radius: 8px; padding: 12px;
+  }
+  .ct-branch .branch-header {
+    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--blue-soft); margin-bottom: 8px;
+  }
+  .ct-branch .branch-tag {
+    background: var(--blue-mist); color: var(--blue-deep);
+    border-radius: 4px; padding: 3px 7px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    display: inline-block; margin: 2px 2px 2px 0;
+  }
+  .ct-output {
+    background: #1B5E20; color: #fff;
+    border-radius: 8px; padding: 10px 16px;
+    font-size: 13px; font-weight: 600; text-align: center;
+  }
+
+  /* ── SUMMARY GRID ────────────────────────────────── */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .summary-item {
+    background: var(--sky); border: 1px solid var(--blue-mist);
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 13px; color: var(--blue-deep);
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .summary-item::before { content: '▸'; color: var(--blue-soft); font-size: 11px; margin-top: 2px; flex-shrink: 0; }
+
+  /* ── SCORE TABLE ─────────────────────────────────── */
+  .score-good td:last-child { color: var(--green-pos); font-weight: 700; }
+  .score-ok td:last-child { color: var(--blue-mid); font-weight: 600; }
+
+  /* ── HAMBURGER ───────────────────────────────────── */
+  #hamburger {
+    display: none; position: fixed; top: 16px; left: 16px;
+    z-index: 200; background: var(--blue-deep); border: none;
+    border-radius: 8px; padding: 8px 10px; cursor: pointer;
+    flex-direction: column; gap: 5px;
+  }
+  #hamburger span { display: block; width: 20px; height: 2px; background: #fff; border-radius: 1px; }
+  #overlay { display: none; }
+
+  @media (max-width: 768px) {
+    #hamburger { display: flex; }
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; padding: 24px 18px 80px; max-width: 100%; }
+    #overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 99; opacity: 0; pointer-events: none; transition: opacity .3s; }
+    #overlay.active { opacity: 1; pointer-events: all; }
+    .reg-grid, .ct-branches, .summary-grid { grid-template-columns: 1fr; }
+    .card-body { padding: 18px 18px 22px; }
+    .card-header { padding: 18px 18px 14px; }
+  }
+
+  /* ── BACK TO TOP ─────────────────────────────────── */
+  #back-top {
+    position: fixed; bottom: 32px; right: 32px;
+    background: var(--blue-mid); color: #fff;
+    border: none; border-radius: 50%;
+    width: 44px; height: 44px; font-size: 18px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(10,30,61,.3);
+    opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 50;
+  }
+  #back-top.visible { opacity: 1; pointer-events: all; }
+  #back-top:hover { background: var(--blue-deep); }
+
+  .card-body a { color: var(--blue-soft); text-decoration: underline; text-underline-offset: 3px; }
+  .card-body a:hover { color: var(--blue-deep); }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations 5 · Regularisation and sklearn pipelines</span><span class="pn"><a href="../ML-with-AI-workflows-7/" title="ML with AI 7 · Regularisation and cross-validation">← Prev</a><a href="../cross-validation-in-ML/" title="ML Foundations · Cross-validation and tuning">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><button id="hamburger" aria-label="Open menu" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</button>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="course-label">ML Foundations · Lecture 5</div>
+    <h1>Regularization & Sklearn Pipelines</h1>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-label"><span>Progress</span><span id="progress-pct">0%</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item" data-target="s-recap"><a href="#s-recap"><span class="nav-dot"></span><span><div>Recap</div><div class="nav-type">Review</div></span></a></li>
+    <li class="nav-item" data-target="s-regularization"><a href="#s-regularization"><span class="nav-dot"></span><span><div>Introduction to Regularization</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-lambda"><a href="#s-lambda"><span class="nav-dot"></span><span><div>The λ Hyperparameter</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-types"><a href="#s-types"><span class="nav-dot"></span><span><div>Ridge, Lasso & Elastic Net</div><div class="nav-type">Techniques</div></span></a></li>
+    <li class="nav-item" data-target="q1"><a href="#q1"><span class="nav-dot"></span><span><div>Quiz 1 — L1 vs L2</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-eda"><a href="#s-eda"><span class="nav-dot"></span><span><div>Car Price Dataset — EDA</div><div class="nav-type">Case Study</div></span></a></li>
+    <li class="nav-item" data-target="q2"><a href="#q2"><span class="nav-dot"></span><span><div>Quiz 2 — Data Cleaning Order</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-col-transformer"><a href="#s-col-transformer"><span class="nav-dot"></span><span><div>Column Transformers</div><div class="nav-type">Tool</div></span></a></li>
+    <li class="nav-item" data-target="q3"><a href="#q3"><span class="nav-dot"></span><span><div>Quiz 3 — ColumnTransformer</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-pipelines"><a href="#s-pipelines"><span class="nav-dot"></span><span><div>Pipelines in Sklearn</div><div class="nav-type">Tool</div></span></a></li>
+    <li class="nav-item" data-target="q4"><a href="#q4"><span class="nav-dot"></span><span><div>Quiz 4 — Pipeline Purpose</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-ridge-model"><a href="#s-ridge-model"><span class="nav-dot"></span><span><div>Ridge Regression Model</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="q5"><a href="#q5"><span class="nav-dot"></span><span><div>Quiz 5 — Pipeline Advantage</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-wrap"><a href="#s-wrap"><span class="nav-dot"></span><span><div>Wrap Up</div><div class="nav-type">Summary</div></span></a></li>
+  </ul>
+</nav>
+
+<main id="main">
+
+  <!-- RECAP -->
+  <section class="section-card" id="s-recap">
+    <div class="card-header">
+      <div class="card-icon">🔁</div>
+      <div class="card-meta">
+        <div class="card-type">Review</div>
+        <div class="card-title">Recap from Lecture 4</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Last session we shifted focus from building models to <em>validating</em> them:</p>
+      <ul>
+        <li>The 5 assumptions of Linear Regression (linearity, no multicollinearity, normality, independence, homoscedasticity)</li>
+        <li>VIF for detecting and iteratively removing multicollinear features</li>
+        <li>Shapiro-Wilk, Durbin-Watson, and Goldfeld-Quandt diagnostic tests</li>
+        <li>Polynomial Regression for non-linear data</li>
+        <li>The Bias-Variance Tradeoff — underfitting vs overfitting</li>
+      </ul>
+      <div class="callout-note">
+        <div class="callout-label">📌 Key Takeaway</div>
+        A model that performs well on training data is not necessarily good. Generalization to unseen data is the true measure of model quality.
+      </div>
+      <h3>Today's Central Question</h3>
+      <blockquote style="border-left:3px solid var(--azure); padding:10px 16px; margin:14px 0; background:#EEF5FF; border-radius:0 8px 8px 0; font-family:'Lora',serif; font-style:italic; color:var(--blue-deep); font-size:15px;">
+        How can we build machine learning workflows that are not only accurate, but also scalable, reproducible, and easier to maintain?
+      </blockquote>
+      <p>We'll answer this with two tools: <strong>Regularization</strong> to control model complexity, and <strong>Scikit-learn Pipelines</strong> to automate the full preprocessing + training workflow.</p>
+    </div>
+  </section>
+
+  <!-- REGULARIZATION INTRO -->
+  <section class="section-card" id="s-regularization">
+    <div class="card-header">
+      <div class="card-icon">🎚️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Introduction to Regularization</div>
+        <div class="card-duration">⏱ 10 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>The Problem with Large Weights</h3>
+      <p>Recall the Linear Regression loss function (MSE):</p>
+      <div class="equation">Loss = Σ (yᵢ − ŷᵢ)² = Σ (yᵢ − (w₁x₁ + w₂x₂ + w₀))²</div>
+      <p>To minimize this loss, the optimizer tries to make <code>ŷᵢ</code> as close as possible to <code>yᵢ</code>. One way it can do this is by inflating the weights <code>w₀, w₁, w₂</code> to very large values. This causes overfitting — the model fits training data perfectly but fails on new data.</p>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 The Analogy: Roof Leakage</div>
+        <p style="margin-bottom:8px">Imagine a leaking roof. You have three fix options:</p>
+        <table>
+          <tr><th>Solution</th><th>Leakage Stopped</th><th>Cost</th></tr>
+          <tr><td>Bandage</td><td>1000 mL remains</td><td>₹1</td></tr>
+          <tr><td>Shingles</td><td>10 mL remains</td><td>₹1,000</td></tr>
+          <tr><td>Titanium</td><td>0 mL remains</td><td>₹1,00,000</td></tr>
+        </table>
+        <p style="margin-top:8px">You want <strong>minimize(Leakage + Budget)</strong> simultaneously. This tug-of-war is exactly what regularization does in ML — balancing prediction error against model complexity.</p>
+      </div>
+
+      <h3>Adding a Penalty Term</h3>
+      <p>We modify the objective from minimizing only the loss, to minimizing:</p>
+      <div class="equation">minimize ( Loss + Regularization Penalty )</div>
+      <p>The penalty term discourages large weights. When the optimizer tries to increase <code>wⱼ</code> to reduce loss, the penalty term grows too — pushing back against that increase. This keeps weights small and the model generalized.</p>
+    </div>
+  </section>
+
+  <!-- LAMBDA -->
+  <section class="section-card" id="s-lambda">
+    <div class="card-header">
+      <div class="card-icon">λ</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">The λ Hyperparameter — Controlling Regularization</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>If we penalize too aggressively, all weights get pushed to zero and the model underfits. We need a dial to control how much the penalty matters:</p>
+      <div class="equation">minimize ( Loss + λ × Regularization Term )</div>
+      <p><strong>λ (lambda)</strong> is a non-negative scalar that controls the strength of regularization. It's a <strong>hyperparameter</strong> — set by you before training, not learned from data.</p>
+
+      <table>
+        <tr><th>λ value</th><th>Effect</th><th>Risk</th></tr>
+        <tr class="lambda-row-overfit"><td>λ = 0</td><td>No regularization — standard linear regression</td><td>Overfitting</td></tr>
+        <tr class="lambda-row-good"><td>λ = moderate</td><td>Controlled penalty — weights shrink but stay non-zero</td><td>Balanced ✓</td></tr>
+        <tr class="lambda-row-underfit"><td>λ = ∞</td><td>Penalty dominates — all weights pushed to zero</td><td>Underfitting</td></tr>
+      </table>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Parameters vs Hyperparameters</div>
+        <strong>Parameters</strong> (weights wⱼ) are learned by the model during training. <strong>Hyperparameters</strong> (like λ) are chosen by you <em>before</em> training and control the learning process itself. Tuning hyperparameters is a key part of building good models.
+      </div>
+    </div>
+  </section>
+
+  <!-- TYPES OF REGULARIZATION -->
+  <section class="section-card" id="s-types">
+    <div class="card-header">
+      <div class="card-icon">🔧</div>
+      <div class="card-meta">
+        <div class="card-type">Techniques</div>
+        <div class="card-title">Ridge, Lasso & Elastic Net</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="reg-grid">
+        <div class="reg-card ridge">
+          <div class="reg-icon">🔵</div>
+          <div class="reg-name">Ridge (L2)</div>
+          <div class="reg-formula">λ · Σ wⱼ²</div>
+          <div class="reg-desc">Penalizes the <em>square</em> of each weight. Shrinks all coefficients toward zero but rarely to exactly zero. Best when all features are somewhat relevant.</div>
+        </div>
+        <div class="reg-card lasso">
+          <div class="reg-icon">⚡</div>
+          <div class="reg-name">Lasso (L1)</div>
+          <div class="reg-formula">λ · Σ |wⱼ|</div>
+          <div class="reg-desc">Penalizes the <em>absolute value</em> of each weight. Can force irrelevant feature weights to exactly zero — performing automatic <strong>feature selection</strong>. Produces sparse models.</div>
+        </div>
+        <div class="reg-card elastic">
+          <div class="reg-icon">🔀</div>
+          <div class="reg-name">Elastic Net</div>
+          <div class="reg-formula">λ₁·Σ|wⱼ| + λ₂·Σwⱼ²</div>
+          <div class="reg-desc">Combines L1 and L2. Gets the sparsity of Lasso plus the stability of Ridge. Useful when there are correlated features.</div>
+        </div>
+      </div>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          See how L1 and L2 shrink coefficients differently along the solution path:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-regression/l1-vs-l2-coefficient-shrinkage-solution-path-tracer/" target="_blank">L1 vs L2 Coefficient Shrinkage — Solution Path Tracer →</a>
+        </div>
+      </div>
+
+      <table>
+        <tr><th>Property</th><th>Ridge (L2)</th><th>Lasso (L1)</th><th>Elastic Net</th></tr>
+        <tr><td>Penalty term</td><td>Σ wⱼ²</td><td>Σ |wⱼ|</td><td>Both</td></tr>
+        <tr><td>Zero out weights?</td><td>Rarely</td><td>Yes — exactly zero</td><td>Yes</td></tr>
+        <tr><td>Feature selection</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td>Best for</td><td>All features matter</td><td>Sparse — few features matter</td><td>Correlated features</td></tr>
+        <tr><td>Sklearn class</td><td><code>Ridge(alpha=λ)</code></td><td><code>Lasso(alpha=λ)</code></td><td><code>ElasticNet()</code></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- QUIZ 1 -->
+  <section class="section-card quiz-card" id="q1">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 1</div>
+        <div class="card-title">L1 vs L2 Regularization</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Which statement best describes the difference between L1 and L2 regularization?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>L1 sets all coefficients to zero equally.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>L2 completely removes unimportant features.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>L1 can make some coefficients exactly zero, while L2 usually only shrinks them.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Both always produce identical models.</li>
+      </ul>
+      <div class="quiz-feedback" id="q1-feedback"></div>
+      <div class="callout-note" style="margin-top:16px">
+        <div class="callout-label">💡 Explanation</div>
+        L1 (Lasso) performs <strong>feature selection</strong> by driving irrelevant coefficients to exactly zero. L2 (Ridge) reduces the magnitude of all coefficients but typically keeps them non-zero — it reduces overfitting without discarding features.
+      </div>
+    </div>
+  </section>
+
+  <!-- EDA -->
+  <section class="section-card" id="s-eda">
+    <div class="card-header">
+      <div class="card-icon">🔍</div>
+      <div class="card-meta">
+        <div class="card-type">Case Study</div>
+        <div class="card-title">Car Price Dataset — EDA & Data Cleaning</div>
+        <div class="card-duration">⏱ 15 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>We use the <strong>CarPrice Assignment</strong> dataset: 205 rows, 26 columns, no missing values. The target is <code>price</code> (float). We'll predict car price using all available features.</p>
+
+      <h3>Dataset at a Glance</h3>
+      <table>
+        <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+        <tr><td>symboling</td><td>int</td><td>Risk rating −2 (safest) to +3 (riskiest) — treat as categorical</td></tr>
+        <tr><td>aspiration</td><td>object</td><td>std = normal air intake; turbo = pressurised</td></tr>
+        <tr><td>drivewheel</td><td>object</td><td>fwd, rwd, 4wd</td></tr>
+        <tr><td>curbweight</td><td>int</td><td>Weight without passengers or luggage</td></tr>
+        <tr><td>compressionratio</td><td>float</td><td>Ratio of max to min cylinder volume</td></tr>
+        <tr><td><strong>price</strong></td><td>float</td><td>🎯 Target variable</td></tr>
+      </table>
+
+      <h3>Extract Company Name from CarName</h3>
+      <p>The <code>CarName</code> column contains the full model name (e.g., "alfa-romero giulia"). We only need the company name — the part before the first space:</p>
+      <pre><code>import re
+p = re.compile(r'\w+-?\w+')
+cars['car_company'] = cars['CarName'].apply(lambda x: re.findall(p, x)[0])
+cars = cars.drop('CarName', axis=1)</code></pre>
+
+      <h3>Fix Misspelled Company Names</h3>
+      <p>Several car companies have data entry errors (e.g., "vw" and "vokswagen" should both be "volkswagen"). Fix before any encoding:</p>
+      <pre><code>cars.loc[cars['car_company'].isin(["vw","vokswagen"]), 'car_company'] = 'volkswagen'
+cars.loc[cars['car_company'] == "porcshce",  'car_company'] = 'porsche'
+cars.loc[cars['car_company'] == "toyouta",   'car_company'] = 'toyota'
+cars.loc[cars['car_company'] == "Nissan",    'car_company'] = 'nissan'
+cars.loc[cars['car_company'] == "maxda",     'car_company'] = 'mazda'</code></pre>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Why Fix This First?</div>
+        If "vw" and "volkswagen" are treated as different companies, one-hot encoding creates two separate dummy columns for the same manufacturer. This introduces noise and inflates the feature space unnecessarily. Clean first, encode after.
+      </div>
+
+      <h3>Separate Numeric and Categorical Columns</h3>
+      <pre><code># Treat symboling as categorical (only 6 discrete values)
+cars['symboling'] = cars['symboling'].astype('object')
+
+num_cols = cars.select_dtypes(include='number').columns
+cat_cols = cars.select_dtypes(include='object').columns</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Categorical columns (11)</div>
+        <div class="output-block">symboling, fueltype, aspiration, doornumber, carbody,
+drivewheel, enginelocation, enginetype, cylindernumber,
+fuelsystem, car_company</div>
+      </div>
+
+      <h3>One-Hot Encode, Scale, Train-Test Split</h3>
+      <pre><code>cars_categorical = X.select_dtypes(include=['object'])
+cars_dummies = pd.get_dummies(cars_categorical, drop_first=True)
+
+X = X.drop(list(cars_categorical.columns), axis=1)
+X = pd.concat([X, cars_dummies], axis=1)
+
+from sklearn.preprocessing import scale
+cols = X.columns
+X = pd.DataFrame(scale(X))
+X.columns = cols
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, train_size=0.7, test_size=0.3, random_state=100
+)</code></pre>
+    </div>
+  </section>
+
+  <!-- QUIZ 2 -->
+  <section class="section-card quiz-card" id="q2">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 2</div>
+        <div class="card-title">Data Cleaning Before Preprocessing</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Why is it good practice to complete data cleaning <em>before</em> applying preprocessing techniques like scaling or encoding?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Scaling automatically fixes incorrect values.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>Cleaning ensures transformations are applied on consistent and reliable data.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Encoding removes duplicate rows.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Pipelines only work after scaling.</li>
+      </ul>
+      <div class="quiz-feedback" id="q2-feedback"></div>
+      <div class="callout-note" style="margin-top:16px">
+        <div class="callout-label">💡 Explanation</div>
+        Preprocessing techniques assume the input data is already clean. Missing values, inconsistent labels, and typos should be resolved first — otherwise scaling and encoding produce meaningless or misleading results.
+      </div>
+    </div>
+  </section>
+
+  <!-- COLUMN TRANSFORMERS -->
+  <section class="section-card" id="s-col-transformer">
+    <div class="card-header">
+      <div class="card-icon">⚙️</div>
+      <div class="card-meta">
+        <div class="card-type">Tool</div>
+        <div class="card-title">Column Transformers</div>
+        <div class="card-duration">⏱ 10 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>A <strong>ColumnTransformer</strong> applies different preprocessing operations to different subsets of columns — all in parallel, in a single step. Instead of writing separate loops for each transformation, you define them once and let Sklearn handle the rest.</p>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          See the parallel workflow of a Column Transformer in action:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-regression/parallel-column-transformation-flow/" target="_blank">Parallel Column Transformation Flow →</a>
+        </div>
+      </div>
+
+      <h3>How It Works</h3>
+      <div class="ct-diagram">
+        <div class="ct-input">📥 Raw Cars Dataset (all columns)</div>
+        <div style="text-align:center; margin:6px 0; color:var(--blue-pale); font-size:18px">↓ split &amp; process in parallel ↓</div>
+        <div class="ct-branches">
+          <div class="ct-branch">
+            <div class="branch-header">📊 Standard Scaler</div>
+            <span class="branch-tag">car_ID</span>
+            <span class="branch-tag">carwidth</span>
+            <span class="branch-tag">enginesize</span>
+            <span class="branch-tag">compressionratio</span>
+            <span class="branch-tag">citympg</span>
+          </div>
+          <div class="ct-branch">
+            <div class="branch-header">📐 Min-Max Scaler</div>
+            <span class="branch-tag">wheelbase</span>
+            <span class="branch-tag">carheight</span>
+            <span class="branch-tag">boreratio</span>
+            <span class="branch-tag">horsepower</span>
+            <span class="branch-tag">highwaympg</span>
+          </div>
+          <div class="ct-branch">
+            <div class="branch-header">🔢 Max Abs Scaler</div>
+            <span class="branch-tag">carlength</span>
+            <span class="branch-tag">curbweight</span>
+            <span class="branch-tag">stroke</span>
+            <span class="branch-tag">peakrpm</span>
+            <span class="branch-tag">price</span>
+          </div>
+        </div>
+        <div style="text-align:center; margin:6px 0; color:var(--blue-pale); font-size:18px">↓ merge outputs ↓</div>
+        <div class="ct-output">✅ Scaled numeric DataFrame</div>
+      </div>
+
+      <h3>Code</h3>
+      <pre><code>from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
+
+scaling_transformer = ColumnTransformer(
+    transformers=[
+        ('Standard Scaler',   StandardScaler(), ['car_ID','carwidth','enginesize','compressionratio','citympg']),
+        ('Min-Max Scaler',    MinMaxScaler(),   ['wheelbase','carheight','boreratio','horsepower','highwaympg']),
+        ('Max Absolute Scaling', MaxAbsScaler(),['carlength','curbweight','stroke','peakrpm','price'])
+    ],
+    remainder='drop'
+).set_output(transform='pandas')
+
+scaled_num_cols = scaling_transformer.fit_transform(cars)</code></pre>
+
+      <h3>Key Parameters</h3>
+      <table>
+        <tr><th>Parameter</th><th>Value</th><th>Meaning</th></tr>
+        <tr><td><code>remainder</code></td><td><code>'drop'</code></td><td>Columns not listed in any transformer are discarded</td></tr>
+        <tr><td><code>remainder</code></td><td><code>'passthrough'</code></td><td>Unlisted columns are kept as-is</td></tr>
+        <tr><td><code>verbose_feature_names_out</code></td><td><code>False</code></td><td>Strips transformer prefix from output column names</td></tr>
+        <tr><td><code>set_output(transform='pandas')</code></td><td>—</td><td>Returns a DataFrame instead of a NumPy array</td></tr>
+      </table>
+
+      <h3>Encoding Transformer (for Categorical Columns)</h3>
+      <pre><code>from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
+
+OE_categories = [
+    [-2,-1,3,2,1,0],                           # symboling order
+    ['two','three','four','five','six','eight','twelve']  # cylinder order
+]
+
+encoding_tf = ColumnTransformer(
+    transformers=[
+        ('Ordinal encoder', OrdinalEncoder(categories=OE_categories),
+         ['symboling','cylindernumber']),
+        ('One Hot Encoder', OneHotEncoder(sparse_output=False),
+         ['symboling','fueltype','aspiration','doornumber','carbody',
+          'drivewheel','enginelocation','enginetype','cylindernumber',
+          'fuelsystem','car_company'])
+    ],
+    remainder='passthrough', verbose_feature_names_out=False
+).set_output(transform='pandas')</code></pre>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Ordinal vs One-Hot</div>
+        <strong>Ordinal encoding</strong> preserves order (e.g., two &lt; three &lt; four cylinders). Use it when the category has a natural ranking. <strong>One-hot encoding</strong> treats categories as independent — no implied order. Use it for nominal categories like fuel type or car company.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 3 -->
+  <section class="section-card quiz-card" id="q3">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 3</div>
+        <div class="card-title">Advantage of ColumnTransformer</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">What is the biggest advantage of using a <code>ColumnTransformer</code>?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>It trains multiple machine learning models simultaneously.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>It allows different preprocessing steps to be applied to different columns in one workflow.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>It automatically selects the best algorithm.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>It reduces the dataset size.</li>
+      </ul>
+      <div class="quiz-feedback" id="q3-feedback"></div>
+      <div class="callout-note" style="margin-top:16px">
+        <div class="callout-label">💡 Explanation</div>
+        Different features need different preprocessing — numerical columns need scaling, categorical ones need encoding. A <code>ColumnTransformer</code> bundles these into one organized, reusable step instead of separate manual transformations.
+      </div>
+    </div>
+  </section>
+
+  <!-- PIPELINES -->
+  <section class="section-card" id="s-pipelines">
+    <div class="card-header">
+      <div class="card-icon">🔗</div>
+      <div class="card-meta">
+        <div class="card-type">Tool</div>
+        <div class="card-title">Pipelines in Sklearn</div>
+        <div class="card-duration">⏱ 10 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>A <strong>Pipeline</strong> chains multiple steps — each one takes output from the previous step as input. The final step is usually the model. Everything runs in a fixed sequence with a single <code>fit()</code> call.</p>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          Watch data flow sequentially through a pipeline's nested steps:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-regression/sequential-pipeline-data-flow-nested-wrapper-reveal/" target="_blank">Sequential Pipeline Data Flow — Nested Wrapper Reveal →</a>
+        </div>
+      </div>
+
+      <h3>Preprocessing Pipeline (Encoding → Scaling)</h3>
+      <div class="pipeline-flow">
+        <div class="pipe-step">
+          <div class="pipe-box">Raw Dataset</div>
+          <div class="pipe-label">Input</div>
+        </div>
+        <div class="pipe-arrow"></div>
+        <div class="pipe-step">
+          <div class="pipe-box alt">Encoding Step<br><small>OrdinalEncoder + OHE</small></div>
+          <div class="pipe-label">Step 1</div>
+        </div>
+        <div class="pipe-arrow"></div>
+        <div class="pipe-step">
+          <div class="pipe-box alt">Scaling Step<br><small>Std + MinMax + MaxAbs</small></div>
+          <div class="pipe-label">Step 2</div>
+        </div>
+        <div class="pipe-arrow"></div>
+        <div class="pipe-step">
+          <div class="pipe-box output">Preprocessed Data</div>
+          <div class="pipe-label">Output</div>
+        </div>
+      </div>
+
+      <pre><code>from sklearn.pipeline import Pipeline
+
+pipeline = Pipeline(steps=[
+    ('Encoding', encoding_tf),
+    ('Scaling',  scaling_tf)
+]).set_output(transform='pandas')
+
+preprocessed_data = pipeline.fit_transform(cars)</code></pre>
+
+      <h3>FeatureUnion — Parallel Merging</h3>
+      <p>When two people work on different column subsets independently, <strong>FeatureUnion</strong> merges their results horizontally (like a column-wise concat), unlike Pipeline which chains sequentially:</p>
+      <pre><code>from sklearn.pipeline import FeatureUnion
+
+# encoder pipeline: categorical columns → encode
+encoder_pipeline = Pipeline(steps=[('Encoding', encoding_tf)])
+
+# scaler pipeline: numerical columns → scale
+scaler_pipeline  = Pipeline(steps=[('Scaling', scaling_tf)])
+
+feature_union = FeatureUnion(transformer_list=[
+    ('encoder', encoder_pipeline),
+    ('scaling', scaler_pipeline)
+]).set_output(transform='pandas')
+
+transformed_data = feature_union.fit_transform(cars)</code></pre>
+
+      <table>
+        <tr><th></th><th>Pipeline</th><th>FeatureUnion</th></tr>
+        <tr><td>Direction</td><td>Sequential (chain)</td><td>Parallel (merge)</td></tr>
+        <tr><td>Output</td><td>Result of last step</td><td>Horizontally concatenated outputs</td></tr>
+        <tr><td>Use case</td><td>Encode → Scale → Model</td><td>Numeric pipeline + Categorical pipeline</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- QUIZ 4 -->
+  <section class="section-card quiz-card" id="q4">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 4</div>
+        <div class="card-title">Primary Purpose of a Sklearn Pipeline</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">What is the primary purpose of using a Scikit-learn <code>Pipeline</code>?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>To increase the amount of training data.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>To execute preprocessing and model training in a fixed sequence using one object.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>To improve internet speed while training.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>To automatically tune hyperparameters.</li>
+      </ul>
+      <div class="quiz-feedback" id="q4-feedback"></div>
+      <div class="callout-note" style="margin-top:16px">
+        <div class="callout-label">💡 Explanation</div>
+        A Pipeline combines imputation, encoding, scaling, and model training into a single reusable object. This keeps code organized, ensures transformations are applied consistently, and reduces bugs during training and prediction.
+      </div>
+    </div>
+  </section>
+
+  <!-- RIDGE MODEL -->
+  <section class="section-card" id="s-ridge-model">
+    <div class="card-header">
+      <div class="card-icon">📈</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Ridge Regression — Model Building & Evaluation</div>
+        <div class="card-duration">⏱ 12 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>With the data cleaned, encoded, scaled, and split, we now build a Ridge Regression model. Ridge's <code>alpha</code> parameter is equivalent to λ — controlling regularization strength.</p>
+
+      <h3>Fit Ridge with alpha = 10</h3>
+      <pre><code>from sklearn.linear_model import Ridge
+
+ridgeReg = Ridge(alpha=10)
+ridgeReg.fit(X_train, y_train)
+
+train_score = ridgeReg.score(X_train, y_train)
+test_score  = ridgeReg.score(X_test, y_test)
+
+print(f"Train R²: {train_score:.4f}")
+print(f"Test R²:  {test_score:.4f}")</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Train R²: 0.9589
+Test R²:  0.9224</div>
+      </div>
+
+      <table>
+        <tr><th>Metric</th><th>Value</th><th>Assessment</th></tr>
+        <tr class="score-good"><td>Train R²</td><td>0.959</td><td>Excellent fit on training data</td></tr>
+        <tr class="score-good"><td>Test R²</td><td>0.922</td><td>Strong generalization — model works well on new data</td></tr>
+        <tr class="score-ok"><td>Gap (Train − Test)</td><td>0.037</td><td>Small gap — minimal overfitting, regularization working</td></tr>
+      </table>
+
+      <div class="callout-note">
+        <div class="callout-label">✅ Interpreting This Result</div>
+        A train-test gap of only 3.7 percentage points tells us the regularization is doing its job — it's preventing the model from memorizing training data at the cost of generalization. Without regularization (Ridge with alpha=0), the test R² would likely be lower.
+      </div>
+
+      <h3>Export Features for Later Use</h3>
+      <pre><code># Save the processed X and y for downstream use
+X.to_csv('X.csv', index=False)
+y.to_csv('y.csv', index=False)</code></pre>
+
+      <h3>Full End-to-End Pipeline (Preprocessing + Model)</h3>
+      <p>The cleanest approach is to include the model itself as the final Pipeline step, so that <code>fit()</code> does everything at once:</p>
+      <div class="pipeline-flow">
+        <div class="pipe-step">
+          <div class="pipe-box">Raw Cars Data</div>
+          <div class="pipe-label">Input</div>
+        </div>
+        <div class="pipe-arrow"></div>
+        <div class="pipe-step">
+          <div class="pipe-box alt">Encoding<br><small>OHE + Ordinal</small></div>
+          <div class="pipe-label">Step 1</div>
+        </div>
+        <div class="pipe-arrow"></div>
+        <div class="pipe-step">
+          <div class="pipe-box alt">Scaling<br><small>Std / MinMax / MaxAbs</small></div>
+          <div class="pipe-label">Step 2</div>
+        </div>
+        <div class="pipe-arrow"></div>
+        <div class="pipe-step">
+          <div class="pipe-box model">Ridge(α=10)</div>
+          <div class="pipe-label">Model</div>
+        </div>
+        <div class="pipe-arrow"></div>
+        <div class="pipe-step">
+          <div class="pipe-box output">Predicted Price</div>
+          <div class="pipe-label">Output</div>
+        </div>
+      </div>
+      <pre><code>full_pipeline = Pipeline(steps=[
+    ('Encoding',  encoding_tf),
+    ('Scaling',   scaling_tf),
+    ('Model',     Ridge(alpha=10))
+])
+
+full_pipeline.fit(X_train, y_train)
+print("Test R²:", full_pipeline.score(X_test, y_test))</code></pre>
+    </div>
+  </section>
+
+  <!-- QUIZ 5 -->
+  <section class="section-card quiz-card" id="q5">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 5</div>
+        <div class="card-title">Pipeline Advantage over Manual Preprocessing</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Why is training a model using a <code>Pipeline</code> generally preferred over manually performing preprocessing before training?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Pipelines always produce higher accuracy.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Pipelines eliminate the need for feature engineering.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>Pipelines ensure the exact same preprocessing is consistently applied during both training and prediction.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Pipelines only work with linear regression.</li>
+      </ul>
+      <div class="quiz-feedback" id="q5-feedback"></div>
+      <div class="callout-note" style="margin-top:16px">
+        <div class="callout-label">💡 Explanation</div>
+        The key benefit is <strong>consistency</strong>. When you call <code>pipeline.predict()</code>, it applies the exact same scaling parameters and encoding scheme learned during training. Without a pipeline, it's easy to accidentally apply different (or no) preprocessing at inference time — a common and dangerous source of bugs.
+      </div>
+    </div>
+  </section>
+
+  <!-- WRAP UP -->
+  <section class="section-card" id="s-wrap">
+    <div class="card-header">
+      <div class="card-icon">✅</div>
+      <div class="card-meta">
+        <div class="card-type">Summary</div>
+        <div class="card-title">Wrapping Up</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Today we made our ML workflow both more reliable and more production-ready:</p>
+      <div class="summary-grid">
+        <div class="summary-item">Regularization — penalizing large weights</div>
+        <div class="summary-item">λ as a hyperparameter controlling the tradeoff</div>
+        <div class="summary-item">Ridge (L2) — shrinks all weights</div>
+        <div class="summary-item">Lasso (L1) — zeroes out irrelevant weights</div>
+        <div class="summary-item">Elastic Net — combines L1 + L2</div>
+        <div class="summary-item">Car Price EDA + company name extraction</div>
+        <div class="summary-item">ColumnTransformer — parallel preprocessing</div>
+        <div class="summary-item">Ordinal vs One-Hot Encoding</div>
+        <div class="summary-item">Pipeline — sequential chaining of steps</div>
+        <div class="summary-item">FeatureUnion — parallel branch merging</div>
+        <div class="summary-item">Ridge model (α=10): Train R² 0.96, Test R² 0.92</div>
+        <div class="summary-item">End-to-end pipeline: Encode → Scale → Model</div>
+      </div>
+      <div class="callout-ask" style="margin-top:20px">
+        <div class="callout-label">🔮 Coming Up Next</div>
+        So far, we've evaluated our models on a single train-test split. <strong>But is one split enough to judge a model's true performance?</strong> Next session: Cross-Validation — more reliable performance estimates, better model comparison, and smarter model selection.
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script>
+  // ── QUIZ ───────────────────────────────────────────
+  document.querySelectorAll('.quiz-options').forEach(list => {
+    list.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const card = list.closest('.section-card');
+        if (card.dataset.answered) return;
+        card.dataset.answered = '1';
+        const isCorrect = opt.dataset.correct === 'true';
+        const feedback = list.closest('.card-body').querySelector('.quiz-feedback');
+        list.querySelectorAll('.quiz-option').forEach(o => { o.style.cursor = 'default'; });
+        if (isCorrect) {
+          opt.classList.add('selected-correct');
+          opt.querySelector('.quiz-circle').textContent = '✓';
+          feedback.textContent = '✅ Correct!';
+          feedback.className = 'quiz-feedback correct';
+        } else {
+          opt.classList.add('selected-wrong');
+          opt.querySelector('.quiz-circle').textContent = '✗';
+          feedback.textContent = '❌ Not quite — check the explanation below.';
+          feedback.className = 'quiz-feedback wrong';
+          list.querySelectorAll('.quiz-option[data-correct="true"]').forEach(o => {
+            o.classList.add('reveal-correct');
+            o.querySelector('.quiz-circle').textContent = '✓';
+          });
+        }
+      });
+    });
+  });
+
+  // ── SCROLL / PROGRESS ─────────────────────────────
+  const sections    = document.querySelectorAll('.section-card');
+  const navItems    = document.querySelectorAll('.nav-item');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct  = document.getElementById('progress-pct');
+  const visited = new Set();
+
+  function onScroll() {
+    let current = '';
+    sections.forEach(sec => {
+      if (sec.getBoundingClientRect().top <= 120) { current = sec.id; visited.add(sec.id); }
+    });
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.target === current);
+      if (visited.has(item.dataset.target)) item.classList.add('visited');
+    });
+    const pct = Math.round((visited.size / sections.length) * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent  = pct + '%';
+    document.getElementById('back-top').classList.toggle('visible', window.scrollY > 400);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // ── MOBILE SIDEBAR ─────────────────────────────────
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('active');
+  }
+  document.querySelectorAll('.nav-item a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth <= 768) toggleSidebar(); });
+  });
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/sklearn-pipelines" target="_blank" rel="noopener">github.com/scaler-content/sklearn-pipelines</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

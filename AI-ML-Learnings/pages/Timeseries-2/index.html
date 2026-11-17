@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Series 2 Post Read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black: #0a0908;
+    --black-2: #121009;
+    --panel: #17140d;
+    --panel-2: #1d190f;
+    --ivory: #f2ecdc;
+    --white: #f7f4ea;
+    --white-dim: #c3bcac;
+    --white-faint: #86806f;
+    --gold: #e3b323;
+    --gold-bright: #ffd75f;
+    --gold-dim: #8a6a22;
+    --gold-line: rgba(227,179,35,0.28);
+    --red: #d9694f;
+    --green: #7fae6b;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+    --maxw: 720px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--black);
+    color:var(--white-dim);
+    font-family:var(--sans);
+    font-size:17px;
+    line-height:1.75;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--gold); color:var(--black);}
+
+  a{color:var(--gold-bright);}
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-visible{
+    outline:2px solid var(--gold-bright);
+    outline-offset:3px;
+  }
+
+  h1,h2,h3,h4{
+    font-family:var(--serif);
+    color:var(--white);
+    font-weight:600;
+    line-height:1.15;
+    margin:0 0 0.5em;
+  }
+  p{margin:0 0 1.1em;}
+  em.tape{
+    font-style:italic;
+    color:var(--gold-bright);
+  }
+
+  /* ---------- scroll progress ---------- */
+  #progress{
+    position:fixed; top:0; left:0; height:3px; width:0%;
+    background:linear-gradient(90deg,var(--gold-dim),var(--gold-bright));
+    z-index:500; transition:width .08s linear;
+  }
+
+  /* ---------- side measuring-tape nav ---------- */
+  #rail{
+    position:fixed;
+    right:22px; top:50%; transform:translateY(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    z-index:400;
+  }
+  #rail .tick{
+    position:relative;
+    width:9px; height:9px; border-radius:50%;
+    border:1.5px solid var(--gold-dim);
+    background:transparent;
+    cursor:pointer; padding:0;
+    transition:all .25s ease;
+  }
+  #rail .tick.active{
+    background:var(--gold-bright);
+    border-color:var(--gold-bright);
+    box-shadow:0 0 0 4px rgba(255,215,95,0.15);
+  }
+  #rail .tick .num{
+    position:absolute; right:20px; top:50%; transform:translateY(-50%);
+    font-family:var(--mono); font-size:11px; color:var(--white-dim);
+    white-space:nowrap; opacity:0; pointer-events:none;
+    transition:opacity .15s ease;
+    background:var(--panel); padding:3px 8px; border:1px solid var(--gold-line); border-radius:3px;
+  }
+  #rail .tick:hover .num, #rail .tick:focus-visible .num{opacity:1;}
+  @media (max-width: 1100px){ #rail{display:none;} }
+
+  /* ---------- layout shell ---------- */
+  main{max-width:var(--maxw); margin:0 auto; padding:0 24px 40px;}
+  section{padding-top:78px; scroll-margin-top:20px;}
+  section:first-of-type{padding-top:0;}
+
+  /* ---------- hero ---------- */
+  header.hero{
+    max-width:var(--maxw); margin:0 auto; padding:64px 24px 56px;
+    border-bottom:1px solid var(--gold-line);
+  }
+  .label-tag{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--gold); border:1px solid var(--gold-dim); padding:6px 12px; border-radius:2px;
+    margin-bottom:26px;
+  }
+  .label-tag svg{width:12px; height:12px;}
+  h1.title{
+    font-size:clamp(2.2rem, 6vw, 3.4rem);
+    letter-spacing:-.01em;
+  }
+  h1.title .amp{ color:var(--gold-bright); font-style:italic; font-weight:500;}
+  p.subtitle{
+    font-family:var(--serif); font-style:italic; font-weight:500;
+    color:var(--gold-bright); font-size:1.25rem; margin:10px 0 26px;
+  }
+  p.deck{ color:var(--white-dim); font-size:1.04rem; max-width:60ch;}
+  .rule-stitch{
+    border:none; height:1px;
+    background-image:repeating-linear-gradient(90deg, var(--gold-dim) 0 8px, transparent 8px 16px);
+    margin:44px 0;
+  }
+  .quote-block{
+    font-family:var(--serif); font-style:italic; color:var(--white);
+    font-size:1.15rem; line-height:1.5; margin:22px 0; padding-left:20px;
+    border-left:2px solid var(--gold);
+  }
+  .quote-block cite{
+    display:block; font-family:var(--sans); font-style:normal; font-size:.78rem;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--gold-dim); margin-top:8px;
+  }
+
+  /* ---------- chapter heading ---------- */
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--gold-dim); margin-bottom:10px; display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow .n{ color:var(--gold-bright); }
+  .eyebrow::after{ content:""; flex:1; height:1px; background:var(--gold-line); }
+  h2.chapter{ font-size:clamp(1.5rem, 4vw, 2.05rem); margin-bottom:.7em;}
+
+  /* ---------- analogy / callout boxes ---------- */
+  .box{
+    border:1px solid var(--gold-line); background:var(--panel);
+    border-radius:6px; padding:22px 24px; margin:24px 0;
+  }
+  .box-head{
+    display:flex; align-items:center; gap:9px; margin-bottom:10px;
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold);
+  }
+  .box-head svg{width:15px; height:15px; flex:none;}
+  .box.analogy{ border-left:3px solid var(--gold); }
+  .box.explore{ background:transparent; border-style:dashed; }
+  .box p:last-child{margin-bottom:0;}
+
+  /* ---------- code block ---------- */
+  details.code{
+    margin:20px 0; border:1px solid var(--gold-line); border-radius:6px; overflow:hidden;
+    background:#0d0c08;
+  }
+  details.code summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-family:var(--mono); font-size:12.5px; letter-spacing:.05em; color:var(--gold-bright);
+    display:flex; align-items:center; gap:9px; user-select:none;
+    background:var(--panel-2);
+  }
+  details.code summary::-webkit-details-marker{display:none;}
+  details.code summary .chev{ transition:transform .2s ease; font-size:11px; color:var(--gold-dim);}
+  details.code[open] summary .chev{ transform:rotate(90deg); }
+  details.code pre{
+    margin:0; padding:16px 18px; overflow-x:auto;
+    font-family:var(--mono); font-size:12.6px; line-height:1.6; color:#d8d0b8;
+  }
+  details.code .out-label{
+    padding:8px 16px 0; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em;
+    color:var(--gold-dim); text-transform:uppercase;
+  }
+  code.inline{
+    font-family:var(--mono); font-size:.87em; background:rgba(227,179,35,0.12);
+    color:var(--gold-bright); padding:1px 6px; border-radius:3px;
+  }
+
+  /* ---------- swatch (image) card ---------- */
+  figure.swatch{
+    margin:24px 0; background:var(--ivory); border-radius:4px; padding:10px;
+    border:1px solid var(--gold-dim);
+    box-shadow:0 14px 30px -18px rgba(0,0,0,0.7);
+  }
+  figure.swatch img{ display:block; width:100%; height:auto; border-radius:2px;}
+  figure.swatch figcaption{
+    display:flex; align-items:center; gap:7px;
+    font-family:var(--mono); font-size:10.8px; letter-spacing:.1em; text-transform:uppercase;
+    color:#6b5a1e; padding:9px 4px 3px;
+  }
+  figure.swatch figcaption svg{width:11px;height:11px;flex:none;}
+
+  /* ---------- formula card ---------- */
+  .formula{
+    display:flex; align-items:center; justify-content:center; gap:14px;
+    background:var(--panel); border:1px solid var(--gold-line); border-radius:6px;
+    padding:26px 18px; margin:22px 0; font-family:var(--mono); color:var(--white);
+    flex-wrap:wrap; text-align:center;
+  }
+  .formula .frac{ display:inline-flex; flex-direction:column; align-items:center; font-size:.95em;}
+  .formula .frac .num, .formula .frac .den{ padding:2px 6px; }
+  .formula .frac .num{ border-bottom:1.5px solid var(--gold-bright); }
+  .formula .big{ color:var(--gold-bright); font-size:1.3em; }
+
+  /* ---------- tables ---------- */
+  ul.plain{ padding-left:1.2em; margin:0 0 1.1em;}
+  ul.plain li{ margin-bottom:.4em; }
+  ul.plain li::marker{ color:var(--gold); }
+
+  /* ---------- quiz ---------- */
+  .quiz{
+    margin:30px 0; border:1px solid var(--gold-line); border-radius:8px;
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    padding:24px 24px 22px;
+  }
+  .quiz .qtag{
+    font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--gold); margin-bottom:12px;
+  }
+  .quiz .qtext{ font-family:var(--serif); color:var(--white); font-size:1.15rem; margin-bottom:16px;}
+  .quiz .opts{ display:flex; flex-direction:column; gap:9px; }
+  .quiz button.opt{
+    text-align:left; background:rgba(255,255,255,0.02); color:var(--white-dim);
+    border:1px solid var(--gold-line); border-radius:5px; padding:12px 14px;
+    font-family:var(--sans); font-size:.96rem; cursor:pointer; transition:all .15s ease;
+  }
+  .quiz button.opt:hover:not(:disabled){ border-color:var(--gold); background:rgba(227,179,35,0.06); }
+  .quiz button.opt:disabled{ cursor:default; }
+  .quiz button.opt.correct{ border-color:var(--green); background:rgba(127,174,107,0.14); color:var(--white); }
+  .quiz button.opt.incorrect{ border-color:var(--red); background:rgba(217,105,79,0.13); color:var(--white); }
+  .quiz .explain{
+    margin-top:16px; padding-top:16px; border-top:1px dashed var(--gold-line);
+    font-size:.95rem; display:none;
+  }
+  .quiz .explain.show{ display:block; }
+  .quiz .verdict{ font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px; }
+  .quiz .verdict.right{ color:var(--green); }
+  .quiz .verdict.wrong{ color:var(--red); }
+
+  /* ---------- interactive playground ---------- */
+  .lab{
+    margin:26px 0; border:1px solid var(--gold-line); border-radius:8px; background:var(--panel);
+    padding:22px 22px 24px;
+  }
+  .lab-head{ display:flex; align-items:center; gap:9px; margin-bottom:4px; }
+  .lab-head svg{ width:16px; height:16px; }
+  .lab-head span{ font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold);}
+  .lab-note{ font-size:.85rem; color:var(--white-faint); margin-bottom:16px; }
+  .lab svg.chart{ width:100%; height:auto; display:block; background:#0d0c08; border-radius:5px; border:1px solid var(--gold-line);}
+  .sliders{ display:grid; gap:14px; margin-top:18px; }
+  .slider-row{ display:grid; grid-template-columns:88px 1fr 52px; align-items:center; gap:12px; }
+  .slider-row label{ font-family:var(--mono); font-size:12.5px; color:var(--white); }
+  .slider-row output{ font-family:var(--mono); font-size:12.5px; color:var(--gold-bright); text-align:right;}
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:100%; height:3px; background:var(--gold-dim);
+    border-radius:2px; outline-offset:6px;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:15px; height:15px; border-radius:50%;
+    background:var(--gold-bright); cursor:pointer; border:2px solid var(--black);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:13px; height:13px; border-radius:50%; background:var(--gold-bright); border:2px solid var(--black); cursor:pointer;
+  }
+  .lab-stat{
+    margin-top:14px; font-family:var(--mono); font-size:12.5px; color:var(--white-dim);
+    display:flex; gap:18px; flex-wrap:wrap;
+  }
+  .lab-stat b{ color:var(--gold-bright); }
+  .legend{ display:flex; gap:16px; margin-top:10px; flex-wrap:wrap; font-family:var(--mono); font-size:11px; color:var(--white-dim);}
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend i{ width:14px; height:2px; display:inline-block; }
+
+  /* ---------- external tool link card ---------- */
+  .toolcard{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    border:1px solid var(--gold); border-radius:7px; padding:16px 20px; margin:20px 0;
+    background:rgba(227,179,35,0.06); flex-wrap:wrap;
+  }
+  .toolcard .t{ font-family:var(--serif); color:var(--white); font-size:1.02rem; }
+  .toolcard .d{ font-size:.85rem; color:var(--white-faint); margin-top:2px; }
+  .toolcard a.go{
+    font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--black); background:var(--gold-bright); padding:9px 16px; border-radius:4px;
+    text-decoration:none; white-space:nowrap; font-weight:600;
+  }
+
+  /* ---------- wrap up timeline ---------- */
+  .timeline{ margin:26px 0; display:flex; flex-direction:column; }
+  .tl-item{
+    position:relative; padding:0 0 26px 30px; border-left:1px solid var(--gold-line);
+  }
+  .tl-item:last-child{ border-color:transparent; padding-bottom:0; }
+  .tl-item::before{
+    content:""; position:absolute; left:-5px; top:3px; width:9px; height:9px; border-radius:50%;
+    background:var(--gold-bright); box-shadow:0 0 0 3px var(--black);
+  }
+  .tl-item h4{ font-size:1.02rem; margin-bottom:4px; color:var(--white); }
+  .tl-item p{ margin:0; font-size:.94rem; }
+  .tl-item .metric{ font-family:var(--mono); color:var(--gold-bright); font-size:.83rem; }
+
+  /* ---------- footer ---------- */
+  footer{
+    max-width:var(--maxw); margin:60px auto 0; padding:30px 24px 60px;
+    border-top:1px solid var(--gold-line);
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  }
+  footer .stamp{
+    font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold-dim);
+  }
+  footer .stamp b{ color:var(--gold); }
+
+  @media (max-width: 560px){
+    body{font-size:16px;}
+    header.hero{padding:44px 20px 40px;}
+    .box, .lab, .quiz{ padding:18px 16px; }
+    .slider-row{ grid-template-columns:70px 1fr 46px; }
+  }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Time Series 2 · Forecast baselines and MAPE</span><span class="pn"><a href="../Timeseries-1/" title="Time Series 1 · Missing values, anomalies and trend">← Prev</a><a href="../Timeseries-3/" title="Time Series 3 · ARIMA, SARIMA and ACF/PACF">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progress"></div>
+<nav id="rail" aria-label="Chapter navigation"></nav>
+
+<header class="hero">
+  <span class="label-tag">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    Vastra Loop Data Diary &middot; Part 02
+  </span>
+  <h1 class="title">Teaching the Data to <span class="amp">Predict Tomorrow</span></h1>
+  <p class="subtitle">How Aisha Verma turned a clean sales chart into a forecast Rohan could trust</p>
+  <p class="deck">Vastra Loop is a fashion e‑commerce label. Its data analyst, Aisha, had just spent Part 1 cleaning eighteen years of messy monthly sales into a tidy trend‑seasonality‑residual picture. Her manager Rohan's reply was one line: <em class="tape">"Great. Now tell me what December looks like."</em> This is the walk from a clean chart to a forecast that clears Vastra Loop's own bar &mdash; error under 5%.</p>
+  <hr class="rule-stitch">
+  <p class="deck" style="font-size:.92rem;">Eleven short chapters, each building the next tool on top of the last. Code panels are collapsed by default &mdash; open any of them to see exactly what Aisha ran.</p>
+</header>
+
+<main>
+
+<!-- ===================== 01 ===================== -->
+<section id="c1" data-title="Picking up the thread">
+  <p class="eyebrow"><span class="n">01</span> Where Aisha Left Off</p>
+  <h2 class="chapter">Picking Up the Thread</h2>
+  <p>Before Aisha can forecast anything, she needs the exact same clean series she ended Part 1 with &mdash; so the first move is simply re‑running the cleaning pipeline. Nothing new here, just bringing the story forward.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Load the libraries</summary>
+    <pre>import numpy as np
+import pandas as pd
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+import warnings
+
+warnings.filterwarnings('ignore')
+plt.rcParams['figure.figsize'] = (20, 6)</pre>
+  </details>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Load the Vastra Loop sales file</summary>
+    <pre>vastra_sales = pd.read_excel('/content/myntrasales.xlsx')
+vastra_sales.set_index('DATE', inplace=True)
+vastra_sales.head()</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/103/original/Screenshot_2026-08-24_195658.png?1787581630" alt="First rows of the Vastra Loop sales table, indexed by date">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>Raw table, indexed by date</figcaption>
+  </figure>
+
+  <p>Quick recap of the cleaning steps from Part 1:</p>
+  <ul class="plain">
+    <li>Filled missing months using linear interpolation &mdash; a straight line between the two neighbours she trusts</li>
+    <li>Tamed extreme spikes by clipping anything beyond the 2nd&ndash;98th percentile</li>
+    <li>Confirmed the series had a clear trend and a repeating yearly seasonality</li>
+  </ul>
+  <p>The same cleaning is repeated here, so this chapter can stand on its own.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Interpolate and clip</summary>
+    <pre>vastra_sales.Sales = vastra_sales.Sales.interpolate(method='linear')
+
+vastra_sales.Sales = vastra_sales.Sales.clip(
+    upper=vastra_sales.Sales.quantile(0.98),
+    lower=vastra_sales.Sales.quantile(0.02)
+)
+
+vastra_sales.Sales.plot(style='-o', figsize=(20, 6), title='Vastra Loop Monthly Sales (cleaned)')</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/102/original/Screenshot_2026-08-24_195627.png?1787581596" alt="Cleaned Vastra Loop monthly sales, showing steady upward trend with yearly seasonal spikes">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>Cleaned monthly sales &mdash; trend + seasonality intact</figcaption>
+  </figure>
+</section>
+
+<hr class="rule-stitch">
+
+<!-- ===================== 02 ===================== -->
+<section id="c2" data-title="Scoring a guess">
+  <p class="eyebrow"><span class="n">02</span> The Scorecard</p>
+  <h2 class="chapter">First, How Will She Even Know If a Forecast Is Good?</h2>
+  <p>Rohan's ask wasn't just "forecast the sales" &mdash; it came with a number attached: keep the error under 5%. Before Aisha builds a single model, she needs a way to turn <em>"how wrong was I"</em> into a number Rohan can hold her to.</p>
+
+  <div class="box analogy">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>Analogy</div>
+    <p>Imagine guessing two people's ages. You guess 30 for someone who's actually 25 &mdash; off by 5 years. You guess 8 for a toddler who's actually 3 &mdash; also off by 5 years. Same raw error, but the second guess is far more embarrassing, because 5 years is a much bigger fraction of a 3‑year‑old's age. A percentage error captures that "relative to what?" feeling a raw error misses.</p>
+  </div>
+
+  <p>That's exactly what <strong>Mean Absolute Percentage Error (MAPE)</strong> does: for every point, it looks at how far off the forecast was as a percentage of the actual value, then averages that across all points.</p>
+
+  <div class="formula">
+    <span class="big">MAPE</span> <span>=</span> <span>average of</span>
+    <span class="frac"><span class="num">|actual &minus; forecast|</span><span class="den">actual</span></span>
+  </div>
+
+  <p>Absolute error, divided by the actual value, averaged over every point &mdash; "on average, how many percent off were we."</p>
+
+  <h3 style="font-size:1.05rem; color:var(--white); font-family:var(--sans); font-weight:600; margin-top:26px;">Why Rohan likes MAPE as a business metric</h3>
+  <ul class="plain">
+    <li>It's a percentage, so it's instantly comparable across products, months, or even different businesses &mdash; a MAPE of 5% means the same thing whether sales are in the hundreds or the millions</li>
+    <li>Other metrics, like plain average error, need a baseline to compare against; MAPE tells its own story</li>
+  </ul>
+  <div class="box">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>One catch</div>
+    <p>If the actual value is ever exactly zero, MAPE breaks &mdash; you'd be dividing by zero. Aisha keeps this in the back of her mind, though monthly fashion sales are never actually zero.</p>
+  </div>
+</section>
+
+<hr class="rule-stitch">
+
+<!-- ===================== 03 ===================== -->
+<section id="c3" data-title="Splitting time honestly">
+  <p class="eyebrow"><span class="n">03</span> An Honest Test</p>
+  <h2 class="chapter">Splitting the Data &mdash; But Not the Way You'd Think</h2>
+  <p>With a scorecard in hand, Aisha's instinct is to do what she'd do for any other ML problem: shuffle the rows and split. She stops herself. <strong style="color:var(--white)">You cannot shuffle a calendar.</strong></p>
+
+  <div class="box analogy">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>Analogy</div>
+    <p>Imagine studying for an exam by peeking at next month's chapter to help answer this month's question. That's what a random shuffle would do here &mdash; it lets the model "see" July while trying to predict May. In real life, Aisha will never have July's numbers when she's asked to forecast May. The test has to mimic that honestly.</p>
+  </div>
+
+  <p>So instead of a random split, time series uses a <strong style="color:var(--white)">time‑based split</strong>: everything before a cutoff date is training data, everything after is testing data. Nothing from the future leaks backward. For Vastra Loop's 18 years of monthly data, Aisha holds out the <strong style="color:var(--white)">last 12 months as her test set</strong> &mdash; a full year, so she can check performance across every season.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Time‑based train / test split</summary>
+    <pre>train_x = vastra_sales.iloc[:-12]
+test_x = vastra_sales.iloc[-12:]</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/101/original/Screenshot_2026-08-24_195557.png?1787581566" alt="Sales series split into a long training period and a 12-month held-out test period">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M4 12l4-4M4 12l4 4"/></svg>Everything before the cut trains; the last 12 months test</figcaption>
+  </figure>
+
+  <p>There's no separate <code class="inline">train_y</code> / <code class="inline">test_y</code> here, because this dataset has only one column &mdash; <code class="inline">Sales</code> &mdash; indexed by date. The "y" being forecast and the "x" being used both come from that same single column, just sliced by time.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> A reusable performance helper</summary>
+    <pre>from sklearn.metrics import (
+    mean_squared_error as mse,
+    mean_absolute_error as mae,
+    mean_absolute_percentage_error as mape
+)
+
+def performance(actual, predicted):
+    print('MAE :', round(mae(actual, predicted), 3))
+    print('RMSE:', round(mse(actual, predicted) ** 0.5, 3))
+    print('MAPE:', round(mape(actual, predicted), 3))</pre>
+  </details>
+
+  <div class="quiz" data-quiz>
+    <div class="qtag">Check yourself &middot; 01</div>
+    <div class="qtext">Why can't Aisha use a regular random <code class="inline">train_test_split()</code> on Vastra Loop's monthly sales data?</div>
+    <div class="opts">
+      <button class="opt">Because the dataset is too small for a random split.</button>
+      <button class="opt" data-correct>Because a random split would let the model train on future months before predicting past ones, which is unrealistic.</button>
+      <button class="opt">Because <code class="inline">train_test_split()</code> only works on datasets with more than one column.</button>
+      <button class="opt">Because MAPE cannot be calculated on randomly split data.</button>
+    </div>
+    <div class="explain">
+      <div class="verdict"></div>
+      <p>A random shuffle mixes future and past freely, so the model could "learn" from information it would never actually have at prediction time. Time series always needs a time‑based split, where training data comes strictly before testing data.</p>
+      <p style="margin-top:8px;"><strong style="color:var(--white)">Note:</strong> <code class="inline">train_test_split()</code> itself isn't the problem &mdash; you can disable shuffling with <code class="inline">shuffle=False</code> and preserve the time order. The important point is that the training period must come strictly before the testing period.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule-stitch">
+
+<!-- ===================== 04 ===================== -->
+<section id="c4" data-title="The dumb baselines">
+  <p class="eyebrow"><span class="n">04</span> Setting a Floor</p>
+  <h2 class="chapter">Before Anything Clever &mdash; Try the Dumbest Thing First</h2>
+  <p>With her scorecard ready and her split honest, Aisha is tempted to jump straight to something sophisticated. But she remembers advice from a senior analyst: <strong style="color:var(--white)">always build a "dumb" baseline first.</strong> If a fancy model can't beat a stupidly simple guess, it isn't worth using. So before touching anything statistical, she tries three deliberately simple approaches.</p>
+
+  <h3 style="font-family:var(--serif); font-size:1.25rem; color:var(--white); margin-top:30px;">1 &middot; Forecast the Mean</h3>
+  <p>The guess: predict the average of all past sales, for every future month.</p>
+  <div class="box analogy">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>Analogy</div>
+    <p>It's like being asked what a stranger weighs, and always answering "the average adult weight" &mdash; regardless of whether they described a toddler or a bodybuilder. Sometimes it's close. Usually it isn't, and it never adapts.</p>
+  </div>
+  <p>With 17 years of history, one new month barely moves the average at all &mdash; so this method's forecast is basically a flat, unchanging line. It can never predict a rise for the festive season or a dip afterward, because it isn't looking at the shape of the data at all, just its overall centre. (The same argument rules out the median, for the same reason.)</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Forecast: mean</summary>
+    <pre>test_x['pred'] = train_x['Sales'].mean()
+
+test_x.plot(style='-o', title='Forecast: Mean')
+performance(test_x['Sales'], test_x['pred'])</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/100/original/Screenshot_2026-08-24_195520.png?1787581529" alt="Mean forecast: a flat line that misses the seasonal test period entirely">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/></svg>Flat line &mdash; MAPE around 25%</figcaption>
+  </figure>
+  <p>Pretty bad, as expected. A MAPE around 25% is nowhere near Rohan's 5% target &mdash; but now Aisha has a number to beat, which is the whole point of a baseline.</p>
+
+  <h3 style="font-family:var(--serif); font-size:1.25rem; color:var(--white); margin-top:30px;">2 &middot; The Naive Approach</h3>
+  <p>The guess: forecast next month to be exactly the same as the most recent known month.</p>
+  <div class="box analogy">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>Analogy</div>
+    <p>It's like assuming tomorrow's weather will be identical to today's. Sometimes true, often not &mdash; and it gets shakier the further out you forecast, since every future month just repeats one single data point.</p>
+  </div>
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Forecast: naive</summary>
+    <pre>test_x['pred'] = train_x['Sales'][-1]
+
+test_x.plot(style='-o', title='Forecast: Naive')
+performance(test_x['Sales'], test_x['pred'])</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/099/original/Screenshot_2026-08-24_195444.png?1787581499" alt="Naive forecast: repeats the last known month flat across the whole test period">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/></svg>Repeats the last value forward</figcaption>
+  </figure>
+  <p>A little better than the flat mean, but still far from usable &mdash; it completely ignores that Vastra Loop's sales rise and fall with the seasons.</p>
+
+  <h3 style="font-family:var(--serif); font-size:1.25rem; color:var(--white); margin-top:30px;">3 &middot; Seasonal Naive Forecast</h3>
+  <p>Aisha's next thought: fashion sales are seasonal &mdash; festive months spike every single year. What if she just repeats last year's same month? Forecast this March to equal last March, this December to equal last December, and so on.</p>
+  <div class="box analogy">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>Analogy</div>
+    <p>Instead of assuming tomorrow repeats today, this assumes this Diwali repeats last Diwali &mdash; a far more sensible assumption for a business with a strong yearly rhythm.</p>
+  </div>
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Forecast: seasonal naive</summary>
+    <pre>for i in test_x.index:
+    test_x.loc[i, 'pred'] = train_x.loc[i - pd.DateOffset(years=1), 'Sales']
+
+test_x.plot(style='-o', title='Forecast: Seasonal Naive')
+performance(test_x['Sales'], test_x['pred'])</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/098/original/Screenshot_2026-08-24_195403.png?1787581452" alt="Seasonal naive forecast: repeats last year's same month, tracking the shape better than mean or naive">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17c3-8 5-8 8 0s5 8 8 0"/></svg>Repeats the same month, one year back</figcaption>
+  </figure>
+
+  <div class="box explore">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Go further</div>
+    <p>Look up the difference between a <em>naive forecast</em> and a <em>random walk</em> model &mdash; they sound related, but are they the same thing? Also try to find one real business scenario where a seasonal naive forecast would badly fail.</p>
+  </div>
+
+  <p><strong style="color:var(--white)">So why bother with these "dumb" methods at all</strong>, if none of them get close to 5% MAPE? Because they set the floor. Any model Aisha builds from here on has to beat these numbers to justify its own existence. If a complicated model can't outperform "just repeat last year," it isn't worth the added complexity.</p>
+
+  <div class="quiz" data-quiz>
+    <div class="qtag">Check yourself &middot; 02</div>
+    <div class="qtext">Which of the following statements is true?</div>
+    <div class="opts">
+      <button class="opt">The naive method is capable of capturing seasonality.</button>
+      <button class="opt" data-correct>Forecasting with the mean/median gives a flat forecast around that mean/median value.</button>
+      <button class="opt">The seasonal naive method captures both trend and seasonality.</button>
+      <button class="opt">All of the above are true.</button>
+    </div>
+    <div class="explain">
+      <div class="verdict"></div>
+      <p>Forecasting the mean or median always produces a flat line, since it ignores the shape of the series entirely. The plain naive method only repeats the last value &mdash; no seasonality &mdash; and seasonal naive repeats last year's pattern (seasonality, but no trend adjustment).</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule-stitch">
+
+<!-- ===================== 05 ===================== -->
+<section id="c5" data-title="An old trick, borrowed">
+  <p class="eyebrow"><span class="n">05</span> Reaching for a Familiar Tool</p>
+  <h2 class="chapter">Borrowing an Old Trick for a New Job</h2>
+  <p>None of the baselines got close to Rohan's target. Aisha remembers she already has a tool that's sort of about "predicting" a value &mdash; the <strong style="color:var(--white)">moving average</strong>, which she used in Part 1 to smooth out noise and fill gaps.</p>
+  <p>The idea: if the average of the last few points was a good estimate of a missing point in the middle of the series, why not use that same average to estimate the next point at the end of the series? Forecast one step, add it to the series, average again for the step after that, and repeat.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Extend the index 12 months into the future</summary>
+    <pre>df = vastra_sales.copy()
+
+df = pd.concat([df, pd.DataFrame(
+    index=pd.date_range(start=df.index[-1], periods=13, freq='MS')[1:]
+)])
+df.tail(15)</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/097/original/Screenshot_2026-08-24_195333.png?1787581421" alt="Table with the index extended 12 months forward, ready to receive forecasted values">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>Twelve empty rows, waiting to be filled</figcaption>
+  </figure>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Roll a 3‑month average forward, 12 times</summary>
+    <pre>pred = df.Sales.dropna().values
+
+for i in range(12):
+    pred = np.append(pred, pred[-3:].mean())  # average of the last 3 points
+
+pred[-15:]</pre>
+    <div class="out-label">Output</div>
+    <pre>array([15615.        , 15809.4       , 12160.        , 14528.13333333,
+       14165.84444444, 13617.99259259, 14103.99012346, 13962.6090535 ,
+       13894.86392318, 13987.15436671, 13948.20911446, 13943.40913479,
+       13959.59087199, 13950.40304041, 13951.13434906])</pre>
+  </details>
+
+  <div class="lab">
+    <div class="lab-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l3-4 3 3 5-7"/></svg><span>Recreated from the real output above</span></div>
+    <p class="lab-note">The exact 15 values Aisha printed &mdash; the last 3 known actual months, then the 12 forecasted months that follow. Watch how quickly the line stops moving.</p>
+    <svg class="chart" id="ma-chart" viewBox="0 0 640 220" preserveAspectRatio="none"></svg>
+    <div class="legend">
+      <span><i style="background:var(--white-dim)"></i>Last known actual months</span>
+      <span><i style="background:var(--gold-bright)"></i>3‑month moving‑average forecast</span>
+    </div>
+  </div>
+
+  <p><strong style="color:var(--white)">Does this look like a good forecast?</strong> It's already a step up from the flat baselines &mdash; the level looks roughly right at first. But look closely: the line flattens out and barely moves after a few months.</p>
+  <p><strong style="color:var(--white)">Why?</strong> Every new forecasted point gets folded into the next average. Since the window only looks at the last 3 points, and those 3 points quickly become mostly forecasted values themselves, the variation gets averaged away &mdash; like an echo fading into silence. After a while, it's just repeating a nearly constant number.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Score it against the real test set</summary>
+    <pre>df = train_x.copy()
+df = pd.concat([df, pd.DataFrame(
+    index=pd.date_range(start=df.index[-1], periods=13, freq='MS')[1:]
+)])
+
+pred = df.Sales.dropna().values
+for i in range(12):
+    pred = np.append(pred, pred[-3:].mean())
+
+test_x['pred'] = pred[-12:]
+test_x.plot(style='-o', title='Moving Average Forecast — Performance Check')
+performance(test_x['Sales'], test_x['pred'])</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/095/original/Screenshot_2026-08-24_195225.png?1787581356" alt="Moving average forecast plotted against the actual held-out test months">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17c3-8 5-8 8 0s5 8 8 0"/></svg>Moving‑average forecast vs. actual test months</figcaption>
+  </figure>
+
+  <div class="box">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>Drawbacks Aisha notices</div>
+    <ul class="plain">
+      <li>The forecast levels out after a few points, because it stops "listening" to anything beyond the last 3 values</li>
+      <li>With 18 years of data available, it feels wasteful to look only at the most recent 3 points and throw the rest away</li>
+    </ul>
+  </div>
+  <p>She needs a method that still leans on recent data most heavily, but doesn't completely ignore everything older than 3 months.</p>
+</section>
+
+<hr class="rule-stitch">
+
+<!-- ===================== 06 ===================== -->
+<section id="c6" data-title="A memory that fades">
+  <p class="eyebrow"><span class="n">06</span> A Fading Memory</p>
+  <h2 class="chapter">A Memory That Fades, Instead of a Memory That Cuts Off</h2>
+  <p>The moving average's flaw was sharp and sudden: the last 3 points matter, everything before that is worth nothing. Aisha wants something gentler &mdash; recent points matter more, but older points still matter a little, fading gradually instead of dropping off a cliff.</p>
+
+  <div class="box analogy">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>Analogy</div>
+    <p>Think of an echo in a canyon. The most recent shout is loudest, the one before it a little softer, the one before that softer still &mdash; but you can still faintly hear shouts from a while ago, just barely. Nothing is completely silenced; it just fades exponentially.</p>
+  </div>
+
+  <p>This is exactly what <strong style="color:var(--white)">Simple Exponential Smoothing (SES)</strong> does: it weights every past observation, with weights that shrink exponentially the further back you go.</p>
+
+  <div class="formula">
+    <span>y&#770;<sub>t+1</sub></span><span>=</span><span class="big">&alpha;</span><span>&middot; y<sub>t</sub> +</span><span class="big">(1&minus;&alpha;)</span><span>&middot; y&#770;<sub>t</sub></span>
+  </div>
+  <p>In words: the next forecast is a blend of what actually happened most recently, and what was already expected.</p>
+
+  <p>The one knob to control is <strong style="color:var(--white)">alpha (&alpha;)</strong>, between 0 and 1:</p>
+  <ul class="plain">
+    <li>A low alpha leans on the past &mdash; smoother, slower to react, like someone who takes a long time to update their opinion</li>
+    <li>A high alpha leans almost entirely on the latest value &mdash; jumpier, quick to react</li>
+    <li>At &alpha; = 1, SES quietly turns back into the naive method &mdash; the most recent value is the forecast</li>
+  </ul>
+  <p><code class="inline">statsmodels</code> has a built‑in <code class="inline">SimpleExpSmoothing</code> model &mdash; the <code class="inline">smoothing_level</code> parameter is exactly the alpha described above.</p>
+
+  <div class="lab">
+    <div class="lab-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l3-4 3 3 5-7"/></svg><span>Try it &mdash; alpha, live</span></div>
+    <p class="lab-note">An illustrative sample series (not Vastra Loop's real figures) so you can drag alpha and watch the fitted line react &mdash; the same intuition Aisha was chasing.</p>
+    <svg class="chart" id="ses-chart" viewBox="0 0 640 220" preserveAspectRatio="none"></svg>
+    <div class="legend">
+      <span><i style="background:var(--white-dim)"></i>Illustrative series</span>
+      <span><i style="background:var(--gold-bright)"></i>SES fit</span>
+    </div>
+    <div class="sliders">
+      <div class="slider-row">
+        <label for="ses-alpha">&alpha; alpha</label>
+        <input type="range" id="ses-alpha" min="0.02" max="1" step="0.01" value="0.8">
+        <output id="ses-alpha-out">0.80</output>
+      </div>
+    </div>
+    <div class="lab-stat">Reacts almost instantly at high &alpha;; try dropping it toward <b>1/24 &asymp; 0.04</b>, the rule of thumb Aisha used for a 12‑month season.</div>
+  </div>
+
+  <p>Aisha first tries a high alpha:</p>
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> SES with alpha = 0.8</summary>
+    <pre>model = pd.Series(sm.tsa.SimpleExpSmoothing(vastra_sales.Sales).fit(smoothing_level=0.8).fittedvalues)
+
+model.plot(label='SES fit (alpha=0.8)')
+vastra_sales.Sales.plot(label='original')
+plt.legend()</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/094/original/Screenshot_2026-08-24_195150.png?1787581320" alt="SES fit with a high alpha of 0.8, closely tracking every wiggle in the original series">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17c3-8 5-8 8 0s5 8 8 0"/></svg>&alpha; = 0.8 &mdash; barely any smoothing</figcaption>
+  </figure>
+  <p>With alpha this high, the fit reacts almost instantly to every wiggle &mdash; barely any smoothing at all. Aisha tries a much smaller alpha, using a common rule of thumb: <strong style="color:var(--white)">1 / (2 &times; seasonality length)</strong>. Since Vastra Loop's seasonality repeats every 12 months, that gives alpha = 1/24.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> SES with alpha = 1/24</summary>
+    <pre>model = pd.Series(sm.tsa.SimpleExpSmoothing(vastra_sales.Sales).fit(smoothing_level=1/(2*12)).fittedvalues)
+
+model.plot(label='SES fit (alpha=1/24)')
+vastra_sales.Sales.plot(label='original')
+plt.legend()</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/093/original/Screenshot_2026-08-24_195118.png?1787581288" alt="SES fit with a much smaller alpha of 1/24, producing a smooth line that follows the general level">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17c3-8 5-8 8 0s5 8 8 0"/></svg>&alpha; = 1/24 &mdash; a much smoother fit</figcaption>
+  </figure>
+  <p>That's a much smoother fit, and it catches the general level of the series nicely &mdash; a real improvement over the moving average, since it isn't limited to the last 3 points.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Forecast 12 months out</summary>
+    <pre>model = sm.tsa.SimpleExpSmoothing(vastra_sales.Sales).fit(smoothing_level=1/(2*12))
+pred = model.forecast(steps=12)
+
+vastra_sales.Sales.tail(100).plot(label='original', style='-o')
+pred.plot(label='SES forecast', style='-o')
+plt.legend()</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/092/original/Screenshot_2026-08-24_195047.png?1787581257" alt="SES 12-month forecast, appearing as a flat line extending from the last smoothed level">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/></svg>The forecast itself still flattens out</figcaption>
+  </figure>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Score it against the real test set</summary>
+    <pre>model = sm.tsa.SimpleExpSmoothing(train_x.Sales).fit(smoothing_level=1/(2*12))
+test_x['pred'] = model.forecast(steps=12)
+test_x.plot(style='-o', title='SES — Performance Check')
+performance(test_x['Sales'], test_x['pred'])</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/091/original/Screenshot_2026-08-24_195016.png?1787581225" alt="SES forecast checked against the actual held-out test months">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17c3-8 5-8 8 0s5 8 8 0"/></svg>SES vs. the real test months</figcaption>
+  </figure>
+
+  <div class="box">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>Drawback</div>
+    <p>SES is smarter than the moving average &mdash; it weighs the whole history sensibly instead of a hard 3‑month cutoff. But the forecast plot flattens into a near‑straight line for the future. SES only ever tracks the current level of the series &mdash; it has no concept of "the series is generally climbing" (trend) or "December is always bigger" (seasonality). It's still missing pieces.</p>
+  </div>
+
+  <div class="quiz" data-quiz>
+    <div class="qtag">Check yourself &middot; 03</div>
+    <div class="qtext">In Simple Exponential Smoothing, what happens to the forecast as alpha (&alpha;) approaches 1?</div>
+    <div class="opts">
+      <button class="opt">The forecast becomes a flat line equal to the historical mean.</button>
+      <button class="opt">The model gives equal weight to every past observation.</button>
+      <button class="opt" data-correct>The forecast becomes almost identical to the naive method &mdash; mostly following the very latest value.</button>
+      <button class="opt">The model automatically starts capturing seasonality.</button>
+    </div>
+    <div class="explain">
+      <div class="verdict"></div>
+      <p>At &alpha; = 1, all the weight sits on the most recent observation, and nothing on the past. That's exactly the naive method Aisha tried earlier &mdash; SES contains the naive method as a special case.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule-stitch">
+
+<!-- ===================== 07 ===================== -->
+<section id="c7" data-title="Adding a slope">
+  <p class="eyebrow"><span class="n">07</span> Holt's Method</p>
+  <h2 class="chapter">Adding a Slope &mdash; Double Exponential Smoothing</h2>
+  <p>SES's forecast flattening out bothers Aisha, because she knows Vastra Loop's sales aren't flat &mdash; they've been climbing for years. SES tracks the level, roughly "where is the series right now," but has no idea the series is also drifting upward.</p>
+
+  <div class="box analogy">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>Analogy</div>
+    <p>SES is like tracking a hiker's current altitude &mdash; useful, but it tells you nothing about whether they're walking uphill or downhill. To predict where they'll be next, you also need their rate of climb.</p>
+  </div>
+
+  <p><strong style="color:var(--white)">Double Exponential Smoothing</strong>, also called <strong style="color:var(--white)">Holt's method</strong>, does exactly this: it keeps two fading memories instead of one &mdash; one for the level, and a second one (with its own smoothing knob, beta) for the trend, i.e. how much the level itself changes each month. Holt's method suits series with a clear trend but <strong style="color:var(--white)">no strong seasonality</strong> of their own &mdash; it still has nothing built in for a repeating seasonal shape.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Fit Holt's method (trend='add')</summary>
+    <pre>model = sm.tsa.ExponentialSmoothing(vastra_sales.Sales, trend='add').fit(smoothing_level=0.4)
+
+model.fittedvalues.plot(label='fitted')
+vastra_sales.Sales.plot(label='original')
+plt.legend()</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/090/original/Screenshot_2026-08-24_194947.png?1787581196" alt="Holt's method fit tracking the level and the upward slope of Vastra Loop's sales">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19l6-8 4 4 6-10"/></svg>Level and trend, tracked together</figcaption>
+  </figure>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Forecast 12 months out</summary>
+    <pre>pred = model.forecast(steps=12)
+
+vastra_sales.Sales.tail(100).plot(style='-o', label='actual')
+pred.plot(style='-o', label='predicted')
+plt.legend()</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/089/original/Screenshot_2026-08-24_194905.png?1787581154" alt="Holt's method forecast sloping upward instead of flattening">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19l16-14"/></svg>The forecast now slopes upward</figcaption>
+  </figure>
+  <p>Notice the forecast now slopes upward instead of flattening &mdash; Holt's method carries the trend forward. Time to check whether that actually improves the MAPE score.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Score it against the real test set</summary>
+    <pre>model = sm.tsa.ExponentialSmoothing(train_x.Sales, trend='add').fit(smoothing_level=1/(2*12))
+test_x['pred'] = model.forecast(steps=12)
+test_x.plot(style='-o', title="Holt's Method — Performance Check")
+performance(test_x['Sales'], test_x['pred'])</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/088/original/Screenshot_2026-08-24_194833.png?1787581123" alt="Holt's method forecast checked against the real held-out test months">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17c3-8 5-8 8 0s5 8 8 0"/></svg>Holt's method vs. the real test months</figcaption>
+  </figure>
+
+  <div class="box explore">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Go further</div>
+    <p>Look up "Holt's linear trend method damped trend" &mdash; find out what a damped trend does differently from a regular additive trend, and why a business might prefer a damped forecast for long‑range predictions.</p>
+  </div>
+
+  <p>Progress &mdash; but Aisha notices something: the forecast still slides through the festive‑season spikes and post‑festive dips as if they weren't there. Holt's method fixed the slope problem, but Vastra Loop is a fashion business with a real, repeating seasonal rhythm. One more ingredient is still missing.</p>
+</section>
+
+<hr class="rule-stitch">
+
+<!-- ===================== 08 ===================== -->
+<section id="c8" data-title="Adding a season">
+  <p class="eyebrow"><span class="n">08</span> Holt-Winters</p>
+  <h2 class="chapter">Adding a Season &mdash; Triple Exponential Smoothing</h2>
+  <p>If SES tracks level, and Holt's method adds trend, the next step writes itself: add a third fading memory for <strong style="color:var(--white)">seasonality</strong> &mdash; how much higher or lower a given month tends to run compared to the overall level, repeating every 12 months.</p>
+
+  <div class="box analogy">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>Analogy</div>
+    <p>Think of a shop that's slow every Monday and busy every Saturday &mdash; a real, repeating weekly rhythm, not the general upward trend of a growing shop. <strong style="color:var(--white)">Triple Exponential Smoothing</strong>, or <strong style="color:var(--white)">Holt‑Winters</strong>, tracks all three things at once &mdash; level, trend, and this repeating seasonal rhythm &mdash; each with its own smoothing knob: alpha for level, beta for trend, and a new one, gamma, for seasonality.</p>
+  </div>
+
+  <p>This method can:</p>
+  <ul class="plain">
+    <li>Handle level, trend, and seasonality together</li>
+    <li>Adapt dynamically as new data comes in</li>
+    <li>Be used whenever a series has both a trend and/or seasonality &mdash; which describes Vastra Loop's sales almost exactly</li>
+  </ul>
+
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/087/original/Screenshot_2026-08-24_194754.png?1787581085" alt="Diagram of Holt-Winters combining level, trend, and seasonal components">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Level + trend + seasonality, combined</figcaption>
+  </figure>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Fit Holt‑Winters (trend='add', seasonal='add')</summary>
+    <pre>model = sm.tsa.ExponentialSmoothing(vastra_sales.Sales, trend='add', seasonal='add').fit(smoothing_level=0.4)
+
+model.fittedvalues.plot(label='fitted')
+vastra_sales.Sales.plot(label='original')
+plt.legend()</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/086/original/Screenshot_2026-08-24_194723.png?1787581054" alt="Holt-Winters fit closely tracking both the trend and the seasonal spikes of the sales series">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17c3-8 5-8 8 0s5 8 8 0"/></svg>Fit now bends with the seasonal rhythm too</figcaption>
+  </figure>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Forecast 12 months out</summary>
+    <pre>pred = model.forecast(steps=12)
+
+vastra_sales.Sales.tail(100).plot(style='-o', label='actual')
+pred.plot(style='-o', label='predicted')
+plt.legend()</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/085/original/Screenshot_2026-08-24_194653.png?1787581022" alt="Holt-Winters forecast rising and falling with the festive-season pattern">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17c3-8 5-8 8 0s5 8 8 0"/></svg>Rises and falls in step with the festive season</figcaption>
+  </figure>
+  <p>Now the forecast actually rises and falls with the festive‑season pattern, instead of a flat or purely diagonal line. Time for the real test.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Score it against the real test set</summary>
+    <pre>model = sm.tsa.ExponentialSmoothing(train_x.Sales, trend='add', seasonal='add').fit(smoothing_level=1/(2*12))
+test_x['pred'] = model.forecast(steps=12)
+test_x.plot(style='-o', title='Holt-Winters — Performance Check')
+performance(test_x['Sales'], test_x['pred'])</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/084/original/Screenshot_2026-08-24_194621.png?1787580991" alt="Holt-Winters forecast checked against the actual held-out test months, closely matching the real shape">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17c3-8 5-8 8 0s5 8 8 0"/></svg>Best result yet &mdash; MAPE around 4%</figcaption>
+  </figure>
+  <p>This is the best result Aisha has seen yet &mdash; <strong style="color:var(--gold-bright)">MAPE drops to roughly 4%</strong>, comfortably under Rohan's 5% target. Level, trend, and seasonality, all tracked together, finally get her there.</p>
+
+  <div class="lab">
+    <div class="lab-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="19" cy="6" r="1.6" fill="currentColor" stroke="none"/><circle cx="13" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="16" cy="18" r="1.6" fill="currentColor" stroke="none"/></svg><span>Interactive playground &mdash; feel what alpha, beta, gamma do</span></div>
+    <p class="lab-note">Reading formulas only goes so far. This recreates Aisha's ipywidgets slider experiment on an illustrative sample series (not Vastra Loop's actual sales) &mdash; move alpha (level), beta (trend), and gamma (seasonality) and watch the fitted line react.</p>
+    <svg class="chart" id="hw-chart" viewBox="0 0 640 220" preserveAspectRatio="none"></svg>
+    <div class="legend">
+      <span><i style="background:var(--white-dim)"></i>Illustrative series</span>
+      <span><i style="background:var(--gold-bright)"></i>Holt-Winters fit</span>
+    </div>
+    <div class="sliders">
+      <div class="slider-row"><label for="hw-alpha">&alpha; level</label><input type="range" id="hw-alpha" min="0.01" max="1" step="0.01" value="0.4"><output id="hw-alpha-out">0.40</output></div>
+      <div class="slider-row"><label for="hw-beta">&beta; trend</label><input type="range" id="hw-beta" min="0.01" max="1" step="0.01" value="0.1"><output id="hw-beta-out">0.10</output></div>
+      <div class="slider-row"><label for="hw-gamma">&gamma; season</label><input type="range" id="hw-gamma" min="0.01" max="1" step="0.01" value="0.1"><output id="hw-gamma-out">0.10</output></div>
+    </div>
+    <div class="lab-stat">In‑sample MAPE on the illustrative series: <b id="hw-mape">&mdash;</b></div>
+  </div>
+
+  <div class="toolcard">
+    <div>
+      <div class="t">Original alpha‑effect visualizer</div>
+      <div class="d">The interactive tool Aisha's notebook links to, for exploring alpha on exponential smoothing in isolation.</div>
+    </div>
+    <a class="go" href="https://aiml-vizs-new.vercel.app/time-series/alpha-effect-on-exponential-smoothing/" target="_blank" rel="noopener noreferrer">Open tool &#8599;</a>
+  </div>
+
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/082/original/Screenshot_2026-08-24_194548.png?1787580959" alt="Screenshot of the original ipywidgets slider experiment for alpha, beta, and gamma">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>Aisha's original slider experiment, for reference</figcaption>
+  </figure>
+
+  <ul class="plain">
+    <li><strong style="color:var(--white)">&alpha; (alpha)</strong> &mdash; controls how quickly the fitted line reacts to recent level changes</li>
+    <li><strong style="color:var(--white)">&beta; (beta)</strong> &mdash; controls how quickly the model reacts to changes in the trend/slope</li>
+    <li><strong style="color:var(--white)">&gamma; (gamma)</strong> &mdash; controls how quickly the model adapts to changes in the seasonal pattern</li>
+  </ul>
+  <p>Push alpha close to 1 and the line gets jumpy &mdash; it's almost ignoring its own memory. Push gamma very low and the seasonal bumps get smoothed away entirely. It's a good way to build intuition for what each knob does before trusting <code class="inline">statsmodels</code> to auto‑tune them.</p>
+
+  <div class="quiz" data-quiz>
+    <div class="qtag">Check yourself &middot; 04</div>
+    <div class="qtext">What does the gamma parameter control in Holt‑Winters (Triple Exponential Smoothing)?</div>
+    <div class="opts">
+      <button class="opt">How quickly the trend estimate updates.</button>
+      <button class="opt" data-correct>How quickly the seasonal pattern estimate updates.</button>
+      <button class="opt">The overall level of the series.</button>
+      <button class="opt">The length of the forecast horizon.</button>
+    </div>
+    <div class="explain">
+      <div class="verdict"></div>
+      <p>Gamma is the smoothing parameter for the seasonal component, just as alpha controls the level and beta controls the trend. Together, the three let Holt‑Winters track level, trend, and seasonality independently.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule-stitch">
+
+<!-- ===================== 09 ===================== -->
+<section id="c9" data-title="A steady racetrack">
+  <p class="eyebrow"><span class="n">09</span> A New Question From Rohan</p>
+  <h2 class="chapter">A Steady Racetrack: Stationarity and the Dickey&ndash;Fuller Test</h2>
+  <p>Holt‑Winters gets Aisha under her 5% MAPE target, and she's ready to celebrate &mdash; until Rohan mentions the team is also planning to try more advanced forecasting models down the line, like <strong style="color:var(--white)">ARIMA</strong>. There's a catch: those models don't work directly on any time series. They expect the series to be <strong style="color:var(--white)">stationary</strong> first &mdash; meaning its statistical properties don't change over time.</p>
+
+  <div class="box analogy">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>Analogy</div>
+    <p>Think of a running track. A stationary series is like a flat, perfectly circular track &mdash; no matter which lap you're on, running it feels the same. A series with trend and seasonality is like a track that keeps changing shape and elevation lap after lap. Before Aisha can hand her data to those models, she needs to "flatten the track."</p>
+  </div>
+
+  <p>A stationary series has:</p>
+  <ul class="plain">
+    <li>No long‑term upward or downward drift (no trend)</li>
+    <li>No repeating calendar‑based pattern (no seasonality)</li>
+    <li>Roughly the same spread of ups and downs throughout, instead of growing wilder or calmer over time</li>
+  </ul>
+
+  <h3 style="font-family:var(--serif); font-size:1.2rem; color:var(--white); margin-top:26px;">Checking stationarity &mdash; the Dickey&ndash;Fuller test</h3>
+  <p>Eyeballing a plot only gets you so far. Aisha wants a proper statistical check, so she reaches for the <strong style="color:var(--white)">(Augmented) Dickey&ndash;Fuller test</strong>.</p>
+
+  <div class="box analogy">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>Analogy</div>
+    <p>Think of it like a lie‑detector test for "does this series have a memory of trend." It gives back a p‑value &mdash; small (typically under 0.05) means "no, this series looks stationary"; large means "there's still a lingering trend or drift here."</p>
+  </div>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Run the ADF test</summary>
+    <pre>sm.tsa.stattools.adfuller(vastra_sales.Sales)[1]</pre>
+    <div class="out-label">Output</div>
+    <pre>np.float64(0.9789233920172065)</pre>
+  </details>
+  <p>The p‑value comes back around <strong style="color:var(--gold-bright)">0.98</strong> &mdash; about as far from "stationary" as it gets. Unsurprising, since the series already has both trend and seasonality baked in. Aisha wraps the test in a small helper she can reuse.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> A reusable stationarity helper</summary>
+    <pre>def adf_test(dataset):
+    pvalue = sm.tsa.stattools.adfuller(dataset)[1]
+    if pvalue <= 0.05:
+        print(f'p-value = {round(pvalue, 4)} -> Series looks STATIONARY')
+    else:
+        print(f'p-value = {round(pvalue, 4)} -> Series looks NON-STATIONARY')
+
+adf_test(vastra_sales.Sales)</pre>
+    <div class="out-label">Output</div>
+    <pre>p-value = 0.9789 -> Series looks NON-STATIONARY</pre>
+  </details>
+
+  <div class="box explore">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Go further</div>
+    <p>Look up what assumptions the Augmented Dickey&ndash;Fuller test makes about the data, and find one alternative stationarity test &mdash; search "KPSS test" &mdash; and note how it differs from the ADF test.</p>
+  </div>
+</section>
+
+<hr class="rule-stitch">
+
+<!-- ===================== 10 ===================== -->
+<section id="c10" data-title="Flattening the track">
+  <p class="eyebrow"><span class="n">10</span> Fixing It</p>
+  <h2 class="chapter">Flattening the Track: De‑trending and De‑seasonalising</h2>
+  <p>Now that Aisha has a way to check stationarity, she needs a way to fix it &mdash; to strip out the trend and seasonality and see what's left underneath.</p>
+
+  <h3 style="font-family:var(--serif); font-size:1.2rem; color:var(--white); margin-top:22px;">De‑trending</h3>
+  <div class="box analogy">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>Analogy</div>
+    <p>If you're walking up a hill and want to know your "true" step‑to‑step effort ignoring the slope, you'd look at the change in altitude each step, not the altitude itself. That's exactly what <strong style="color:var(--white)">differencing</strong> does &mdash; instead of looking at the raw value, look at how much it changed from the previous point.</p>
+  </div>
+
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/080/original/Screenshot_2026-08-24_194459.png?1787580910" alt="Original Vastra Loop sales series with visible trend and seasonality">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17c3-8 5-8 8 0s5 8 8 0"/></svg>Original series</figcaption>
+  </figure>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> First difference</summary>
+    <pre>detrend = vastra_sales.Sales.diff()
+detrend.plot(title='De-trended (1st difference)')</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/079/original/Screenshot_2026-08-24_194428.png?1787580877" alt="De-trended series after first differencing, flatter but with a faint repeating wave still visible">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/></svg>Flatter, but a faint wave remains</figcaption>
+  </figure>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Check stationarity after de‑trending</summary>
+    <pre>adf_test(detrend.dropna())</pre>
+    <div class="out-label">Output</div>
+    <pre>p-value = 0.0 -> Series looks STATIONARY</pre>
+  </details>
+  <p>The series looks flatter now, and the ADF test agrees the trend is mostly gone. But look closely at the plot &mdash; there's still a faint repeating wave. That's the seasonality, still sitting in there untouched.</p>
+
+  <h3 style="font-family:var(--serif); font-size:1.2rem; color:var(--white); margin-top:26px;">De‑seasonalising</h3>
+  <p>To remove a repeating yearly pattern, Aisha does the same trick, but compares each point to the same point one full cycle (12 months) ago instead of the point right before it &mdash; this is called <strong style="color:var(--white)">seasonal differencing</strong>, or "m‑differencing," where m is the season length.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Seasonal (12‑month) difference</summary>
+    <pre>deseas = vastra_sales.Sales.diff(12)
+deseas.plot(title='De-seasonalised (12-month difference)')</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/078/original/Screenshot_2026-08-24_194348.png?1787580839" alt="De-seasonalised series after 12-month differencing">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/></svg>12‑month difference removes the yearly wave</figcaption>
+  </figure>
+
+  <p>Removing trend or seasonality alone still leaves a faint trace of the other behind. So Aisha combines both &mdash; first differencing to strip the trend, then a 12‑month difference on top of that to strip the seasonality.</p>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Combine both: diff(1) then diff(12)</summary>
+    <pre>stationary = vastra_sales.Sales.diff(1).diff(12)
+stationary.plot(title='Fully differenced series (trend + seasonality removed)')</pre>
+  </details>
+  <figure class="swatch">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/220/076/original/Screenshot_2026-08-24_194259.png?1787580791" alt="Fully differenced series with trend and seasonality both removed, oscillating around zero">
+    <figcaption><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/></svg>Fully differenced &mdash; oscillates around zero</figcaption>
+  </figure>
+
+  <details class="code">
+    <summary><span class="chev">&#9656;</span> Check stationarity on the fully differenced series</summary>
+    <pre>adf_test(vastra_sales.Sales.diff(1).diff(12).dropna())</pre>
+    <div class="out-label">Output</div>
+    <pre>p-value = 0.0 -> Series looks STATIONARY</pre>
+  </details>
+  <p>Now the p‑value is tiny &mdash; the series is genuinely stationary. Aisha has removed both the trend and the seasonality.</p>
+
+  <div class="box">
+    <div class="box-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>Worth flagging</div>
+    <p>Here, it was visually obvious the seasonal cycle length (m) was 12, since Vastra Loop's calendar pattern repeats yearly. In other datasets it won't always be this obvious &mdash; finding the right value of m becomes its own small investigation.</p>
+  </div>
+
+  <div class="quiz" data-quiz>
+    <div class="qtag">Check yourself &middot; 05</div>
+    <div class="qtext">Why does Aisha apply both <code class="inline">diff(1)</code> and <code class="inline">diff(12)</code> to the series, instead of just one of them?</div>
+    <div class="opts">
+      <button class="opt" data-correct><code class="inline">diff(1)</code> removes trend, <code class="inline">diff(12)</code> removes seasonality &mdash; one alone leaves the other behind.</button>
+      <button class="opt">Applying <code class="inline">diff()</code> twice is required by statsmodels for the Dickey&ndash;Fuller test to run at all.</button>
+      <button class="opt"><code class="inline">diff(12)</code> is only used to fill missing values, not to change stationarity.</button>
+      <button class="opt">Using both makes the series longer, which improves forecast accuracy.</button>
+    </div>
+    <div class="explain">
+      <div class="verdict"></div>
+      <p>A single first difference removes trend but can leave a seasonal wave behind, and a 12‑month difference removes the yearly pattern but can leave drift behind. Combining both strips out trend and seasonality together, confirmed by the much smaller Dickey&ndash;Fuller p‑value afterward.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule-stitch">
+
+<!-- ===================== 11 ===================== -->
+<section id="c11" data-title="Where Aisha stands now">
+  <p class="eyebrow"><span class="n">11</span> Wrap‑up</p>
+  <h2 class="chapter">Where Aisha Stands Now</h2>
+  <p>Rohan's original ask was simple to say and hard to do: forecast next month, and keep the error under 5%. Here's the path it took to get there.</p>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <h4>MAPE</h4>
+      <p>A business‑friendly way to score any forecast as a percentage error.</p>
+    </div>
+    <div class="tl-item">
+      <h4>Time‑based train / test split</h4>
+      <p>Kept the evaluation honest &mdash; no peeking into the future.</p>
+    </div>
+    <div class="tl-item">
+      <h4>The "dumb" baselines</h4>
+      <p>Mean, naive, and seasonal naive set a floor every real model had to beat. <span class="metric">MAPE &asymp; 25% for the mean baseline</span></p>
+    </div>
+    <div class="tl-item">
+      <h4>Moving average forecasting</h4>
+      <p>Reused an old trick, but flattened out because it only remembered the last few points.</p>
+    </div>
+    <div class="tl-item">
+      <h4>Simple Exponential Smoothing</h4>
+      <p>Fixed that with a fading memory across the whole history, but still had no concept of trend or seasonality.</p>
+    </div>
+    <div class="tl-item">
+      <h4>Holt's method (Double Exponential Smoothing)</h4>
+      <p>Added a trend component &mdash; the forecast could finally slope.</p>
+    </div>
+    <div class="tl-item">
+      <h4>Holt‑Winters (Triple Exponential Smoothing)</h4>
+      <p>Added seasonality on top. <span class="metric">MAPE &asymp; 4% &mdash; under Rohan's 5% target</span></p>
+    </div>
+    <div class="tl-item">
+      <h4>Stationarity &amp; differencing</h4>
+      <p>Checked and enforced via the Dickey&ndash;Fuller test and differencing &mdash; groundwork for the more advanced models still to come.</p>
+    </div>
+  </div>
+
+  <div class="quote-block">
+    "Great. Now tell me what December looks like."
+    <cite>Rohan &mdash; the line that started all of this</cite>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span class="stamp"><b>Time series 2 post read</b> &middot; Vastra Loop Data Diary</span>
+  <span class="stamp">Part 02 of the forecasting series</span>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- scroll progress + side rail ---------------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+  var rail = document.getElementById('rail');
+  sections.forEach(function(sec, i){
+    var btn = document.createElement('button');
+    btn.className = 'tick';
+    btn.setAttribute('aria-label', 'Go to: ' + sec.getAttribute('data-title'));
+    var num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = (i+1) + '. ' + sec.getAttribute('data-title');
+    btn.appendChild(num);
+    btn.addEventListener('click', function(){ sec.scrollIntoView({behavior:'smooth'}); });
+    rail.appendChild(btn);
+  });
+  var ticks = rail.querySelectorAll('.tick');
+
+  function onScroll(){
+    var doc = document.documentElement;
+    var scrollTop = window.scrollY || doc.scrollTop;
+    var height = doc.scrollHeight - doc.clientHeight;
+    var pct = height > 0 ? (scrollTop / height) * 100 : 0;
+    document.getElementById('progress').style.width = pct + '%';
+
+    var mid = scrollTop + window.innerHeight * 0.35;
+    var activeIdx = 0;
+    sections.forEach(function(sec, i){
+      if(sec.offsetTop <= mid) activeIdx = i;
+    });
+    ticks.forEach(function(t, i){ t.classList.toggle('active', i === activeIdx); });
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  /* ---------------- quiz interactivity ---------------- */
+  document.querySelectorAll('[data-quiz]').forEach(function(quiz){
+    var buttons = quiz.querySelectorAll('.opt');
+    var explain = quiz.querySelector('.explain');
+    var verdict = quiz.querySelector('.verdict');
+    var answered = false;
+    buttons.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(answered) return;
+        answered = true;
+        var isCorrect = btn.hasAttribute('data-correct');
+        buttons.forEach(function(b){
+          b.disabled = true;
+          if(b.hasAttribute('data-correct')) b.classList.add('correct');
+        });
+        if(!isCorrect) btn.classList.add('incorrect');
+        verdict.textContent = isCorrect ? 'Correct.' : 'Not quite — here is why:';
+        verdict.className = 'verdict ' + (isCorrect ? 'right' : 'wrong');
+        explain.classList.add('show');
+      });
+    });
+  });
+
+  /* ---------------- tiny SVG line-chart helper ---------------- */
+  function drawSeries(svg, series, opts){
+    // series: array of {points:[y,...], color, dash?}
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    var W = 640, H = 220, padL = 34, padR = 14, padT = 16, padB = 26;
+    var all = [];
+    series.forEach(function(s){ all = all.concat(s.points); });
+    all = all.filter(function(v){ return v !== null && v !== undefined && !isNaN(v); });
+    var min = Math.min.apply(null, all), max = Math.max.apply(null, all);
+    if(min === max){ min -= 1; max += 1; }
+    var pad = (max - min) * 0.08;
+    min -= pad; max += pad;
+    var n = series[0].points.length;
+    function x(i){ return padL + (i/(n-1)) * (W - padL - padR); }
+    function y(v){ return H - padB - ((v - min)/(max-min)) * (H - padT - padB); }
+
+    var ns = 'http://www.w3.org/2000/svg';
+    // gridlines
+    for(var g=0; g<=3; g++){
+      var gy = padT + g*(H-padT-padB)/3;
+      var line = document.createElementNS(ns,'line');
+      line.setAttribute('x1', padL); line.setAttribute('x2', W-padR);
+      line.setAttribute('y1', gy); line.setAttribute('y2', gy);
+      line.setAttribute('stroke', 'rgba(227,179,35,0.10)');
+      line.setAttribute('stroke-width', '1');
+      svg.appendChild(line);
+    }
+    if(opts && opts.splitIndex !== undefined){
+      var sx = x(opts.splitIndex);
+      var vline = document.createElementNS(ns,'line');
+      vline.setAttribute('x1', sx); vline.setAttribute('x2', sx);
+      vline.setAttribute('y1', padT); vline.setAttribute('y2', H-padB);
+      vline.setAttribute('stroke', 'rgba(227,179,35,0.35)');
+      vline.setAttribute('stroke-dasharray', '3,4');
+      svg.appendChild(vline);
+    }
+    series.forEach(function(s){
+      // draw only contiguous runs of non-null points, so gaps don't produce broken/NaN segments
+      var run = [];
+      function flush(){
+        if(run.length > 1){
+          var pts = run.map(function(p){ return x(p.i)+','+y(p.v); }).join(' ');
+          var poly = document.createElementNS(ns,'polyline');
+          poly.setAttribute('points', pts);
+          poly.setAttribute('fill', 'none');
+          poly.setAttribute('stroke', s.color);
+          poly.setAttribute('stroke-width', s.width || 2.2);
+          poly.setAttribute('stroke-linejoin','round');
+          poly.setAttribute('stroke-linecap','round');
+          if(s.dash) poly.setAttribute('stroke-dasharray', s.dash);
+          svg.appendChild(poly);
+        }
+        run = [];
+      }
+      s.points.forEach(function(v,i){
+        if(v === null || v === undefined || isNaN(v)){ flush(); return; }
+        run.push({i:i, v:v});
+      });
+      flush();
+      if(s.dots){
+        s.points.forEach(function(v,i){
+          if(v === null || v === undefined || isNaN(v)) return;
+          var c = document.createElementNS(ns,'circle');
+          c.setAttribute('cx', x(i)); c.setAttribute('cy', y(v)); c.setAttribute('r', 2.6);
+          c.setAttribute('fill', s.color);
+          svg.appendChild(c);
+        });
+      }
+    });
+  }
+
+  /* ---------------- chapter 5: real moving-average output ---------------- */
+  var maAll = [15615, 15809.4, 12160, 14528.13333333, 14165.84444444, 13617.99259259,
+               14103.99012346, 13962.6090535, 13894.86392318, 13987.15436671,
+               13948.20911446, 13943.40913479, 13959.59087199, 13950.40304041, 13951.13434906];
+  (function(){
+    var svg = document.getElementById('ma-chart');
+    if(!svg) return;
+    var full = maAll; // 15 real values: [0..2] actual, [2..14] forecast (index 2 shared as the join point)
+    var actualSeg = full.map(function(v,i){ return i<=2 ? v : null; });
+    var forecastSeg = full.map(function(v,i){ return i>=2 ? v : null; });
+    drawSeries(svg, [
+      {points: actualSeg, color:'#c3bcac', width:2.4, dots:true},
+      {points: forecastSeg, color:'#ffd75f', width:2.6, dots:true}
+    ], {splitIndex:2});
+  })();
+
+  /* ---------------- illustrative synthetic dataset (clearly not real Vastra Loop data) ---------------- */
+  function illustrativeSeries(nMonths){
+    var arr = [];
+    for(var t=0;t<nMonths;t++){
+      var trend = 100 + 1.6*t;
+      var season = 16*Math.sin(2*Math.PI*(t%12)/12 - Math.PI/2);
+      var festive = (t%12===10) ? 14 : ((t%12===11) ? 8 : 0);
+      arr.push(trend+season+festive);
+    }
+    return arr;
+  }
+  var illus = illustrativeSeries(42);
+
+  function simpleSES(data, alpha){
+    var fitted = [data[0]];
+    var level = data[0];
+    for(var t=1;t<data.length;t++){
+      var yhat = level;
+      fitted.push(yhat);
+      level = alpha*data[t] + (1-alpha)*level;
+    }
+    return fitted;
+  }
+
+  function holtWinters(data, alpha, beta, gamma, season){
+    season = season || 12;
+    var L = data.length;
+    function avg(a){ return a.reduce(function(s,v){return s+v;},0)/a.length; }
+    var s1 = data.slice(0,season), s2 = data.slice(season, 2*season);
+    var level = avg(s1);
+    var trend = s2.length===season ? (avg(s2)-avg(s1))/season : 0;
+    var seasonals = s1.map(function(v){ return v - level; });
+    var fitted = [];
+    for(var t=0;t<L;t++){
+      var si = t % season;
+      var seasonal = seasonals[si];
+      var yhat = level + trend + seasonal;
+      fitted.push(yhat);
+      var y = data[t];
+      var lastLevel = level;
+      level = alpha*(y-seasonal) + (1-alpha)*(level+trend);
+      trend = beta*(level-lastLevel) + (1-beta)*trend;
+      seasonals[si] = gamma*(y-level) + (1-gamma)*seasonal;
+    }
+    return fitted;
+  }
+
+  function mape(actual, fitted){
+    var sum=0, n=0;
+    for(var i=0;i<actual.length;i++){
+      if(fitted[i]==null) continue;
+      sum += Math.abs((actual[i]-fitted[i])/actual[i]);
+      n++;
+    }
+    return n? (sum/n*100) : 0;
+  }
+
+  /* SES lab (chapter 6) */
+  (function(){
+    var svg = document.getElementById('ses-chart');
+    var alphaEl = document.getElementById('ses-alpha');
+    var out = document.getElementById('ses-alpha-out');
+    if(!svg) return;
+    function render(){
+      var a = parseFloat(alphaEl.value);
+      out.textContent = a.toFixed(2);
+      var fitted = simpleSES(illus, a);
+      drawSeries(svg, [
+        {points: illus, color:'#c3bcac', width:2},
+        {points: fitted, color:'#ffd75f', width:2.6}
+      ]);
+    }
+    alphaEl.addEventListener('input', render);
+    render();
+  })();
+
+  /* Holt-Winters lab (chapter 8) */
+  (function(){
+    var svg = document.getElementById('hw-chart');
+    var a = document.getElementById('hw-alpha'), b = document.getElementById('hw-beta'), g = document.getElementById('hw-gamma');
+    var ao = document.getElementById('hw-alpha-out'), bo = document.getElementById('hw-beta-out'), go = document.getElementById('hw-gamma-out');
+    var mapeOut = document.getElementById('hw-mape');
+    if(!svg) return;
+    function render(){
+      var av=parseFloat(a.value), bv=parseFloat(b.value), gv=parseFloat(g.value);
+      ao.textContent=av.toFixed(2); bo.textContent=bv.toFixed(2); go.textContent=gv.toFixed(2);
+      var fitted = holtWinters(illus, av, bv, gv, 12);
+      drawSeries(svg, [
+        {points: illus, color:'#c3bcac', width:2},
+        {points: fitted, color:'#ffd75f', width:2.6}
+      ]);
+      mapeOut.textContent = mape(illus, fitted).toFixed(2) + '%';
+    }
+    [a,b,g].forEach(function(el){ el.addEventListener('input', render); });
+    render();
+  })();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Timeseries-2" target="_blank" rel="noopener">github.com/scaler-content/Timeseries-2</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

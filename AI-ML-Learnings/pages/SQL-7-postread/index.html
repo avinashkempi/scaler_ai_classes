@@ -1,0 +1,990 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CASE, IF() & Conditional Aggregation — Post-Read</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#E23744; --red-dark:#B71C2B; --cream:#FFF8EE; --paper:#FFFFFF;
+  --ink:#2B2024; --teal:#0E9594; --teal-soft:#E0F5F4; --yellow:#FFC53D;
+  --yellow-soft:#FFF3D6; --purple:#7C5CBF; --purple-soft:#F0EAFB;
+  --green:#3BA55C; --green-soft:#E4F6EA; --orange:#F4793B; --orange-soft:#FDEBDD;
+  --blue:#2D7DD2; --blue-soft:#E3EFFB; --pink:#E84393; --pink-soft:#FDE7F1;
+  --shadow:0 6px 0 rgba(43,32,36,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:var(--cream);color:var(--ink);font-size:17px;line-height:1.65;
+  background-image:radial-gradient(rgba(226,55,68,.06) 2px, transparent 2px);background-size:28px 28px;}
+.wrap{max-width:960px;margin:0 auto;padding:24px 20px 80px}
+h1,h2,h3,h4{font-family:'Baloo 2',cursive;line-height:1.2}
+.hero{background:linear-gradient(135deg,var(--red) 0%,var(--red-dark) 100%);color:#fff;border-radius:28px;
+  padding:44px 36px;position:relative;overflow:hidden;box-shadow:0 10px 0 rgba(183,28,43,.35);margin-bottom:34px}
+.hero::after{content:"🏨🗂️🔀";position:absolute;font-size:90px;opacity:.14;right:-10px;top:10px;transform:rotate(12deg)}
+.hero .kicker{display:inline-block;background:var(--yellow);color:var(--ink);font-family:'Baloo 2';font-weight:700;
+  padding:5px 16px;border-radius:999px;font-size:14px;letter-spacing:.5px;margin-bottom:14px}
+.hero h1{font-size:clamp(30px,5vw,46px);font-weight:800;margin-bottom:8px}
+.hero p{font-size:18px;opacity:.95;max-width:640px}
+.section{background:var(--paper);border-radius:24px;padding:30px 28px;margin:26px 0;border:3px solid var(--ink);
+  box-shadow:var(--shadow);position:relative}
+.secnum{position:absolute;top:-20px;left:24px;background:var(--red);color:#fff;font-family:'Baloo 2';font-weight:800;
+  font-size:18px;padding:6px 18px;border-radius:999px;border:3px solid var(--ink);box-shadow:0 4px 0 rgba(43,32,36,.2)}
+.secnum.teal{background:var(--teal)} .secnum.purple{background:var(--purple)} .secnum.orange{background:var(--orange)}
+.secnum.blue{background:var(--blue)} .secnum.pink{background:var(--pink)} .secnum.green{background:var(--green)}
+.section h2{font-size:28px;margin:10px 0 4px;color:var(--red-dark)}
+.section h3{font-size:21px;margin:22px 0 8px;color:var(--ink)}
+.timebadge{display:inline-block;background:var(--yellow-soft);border:2px dashed var(--yellow);border-radius:999px;
+  padding:2px 14px;font-size:13px;font-weight:800;color:#8a6400;margin-bottom:10px}
+.analogy{background:var(--teal-soft);border:3px solid var(--teal);border-radius:18px;padding:18px 20px;margin:18px 0;
+  display:flex;gap:14px;align-items:flex-start}
+.analogy .emoji{font-size:36px;line-height:1;flex-shrink:0}
+.analogy b{color:#066968}
+.talk{margin:14px 0;display:flex;gap:10px;align-items:flex-start}
+.talk .who{flex-shrink:0;width:84px;text-align:center;font-family:'Baloo 2';font-weight:700;font-size:13px;
+  background:var(--ink);color:#fff;border-radius:10px;padding:5px 4px;margin-top:4px}
+.talk.learner .who{background:var(--blue)}
+.talk .bubble{background:var(--cream);border:2px solid var(--ink);border-radius:4px 16px 16px 16px;padding:10px 16px;flex:1}
+.talk.learner .bubble{background:var(--blue-soft);font-style:italic}
+.query{margin:18px 0;border:3px solid var(--ink);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.query .qtitle{background:var(--ink);color:var(--yellow);font-family:'Baloo 2';font-weight:700;font-size:15px;padding:8px 16px;display:flex;align-items:center;gap:8px}
+.query pre{background:#241B1E;color:#FDEBDD;padding:18px 20px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:14.5px;line-height:1.7;margin:0}
+.kw{color:#FF8A95;font-weight:600}.str{color:#FFD66B}.num{color:#7FE3C1}.fn{color:#9CCBFF}.cm{color:#9b8a8f;font-style:italic}
+.reads{background:var(--green-soft);border-top:3px solid var(--ink);padding:10px 16px;font-size:15px}
+.reads b{color:var(--green)}
+.warn{background:var(--pink-soft);border:3px solid var(--pink);border-radius:18px;padding:16px 20px;margin:18px 0}
+.warn .t{font-family:'Baloo 2';font-weight:800;color:#b62a6e;font-size:17px;margin-bottom:6px}
+.golden{background:linear-gradient(135deg,var(--yellow-soft),#fff);border:3px solid var(--yellow);border-radius:18px;
+  padding:18px 22px;margin:20px 0;font-family:'Baloo 2';font-weight:700;font-size:19px;text-align:center;color:#7a5800}
+.tip{background:var(--purple-soft);border:3px solid var(--purple);border-radius:18px;padding:16px 20px;margin:18px 0}
+.tip .t{font-family:'Baloo 2';font-weight:800;color:var(--purple);font-size:16px;margin-bottom:6px}
+.industry{background:var(--blue-soft);border:3px solid var(--blue);border-radius:18px;padding:16px 20px;margin:18px 0}
+.industry .t{font-family:'Baloo 2';font-weight:800;color:var(--blue);font-size:16px;margin-bottom:6px}
+table.nice{width:100%;border-collapse:separate;border-spacing:0;margin:16px 0;border:3px solid var(--ink);border-radius:14px;overflow:hidden;font-size:15px}
+table.nice th{background:var(--red);color:#fff;font-family:'Baloo 2';font-weight:700;padding:10px 12px;text-align:left}
+table.nice td{padding:9px 12px;border-top:2px solid #f0e4e6;background:#fff}
+table.nice tr:nth-child(even) td{background:var(--cream)}
+table.nice code{background:var(--ink);color:var(--yellow);padding:2px 8px;border-radius:6px;font-family:'JetBrains Mono';font-size:13px;white-space:nowrap}
+.diagram{margin:20px 0;text-align:center;background:#fff;border:3px dashed var(--teal);border-radius:18px;padding:18px 10px}
+.diagram svg{max-width:100%;height:auto}
+.diagram img{max-width:100%;height:auto;border-radius:14px;border:1px solid #eee}
+.diaglabel{font-size:13px;font-weight:700;color:var(--teal);margin-top:8px;font-family:'Baloo 2'}
+.hourbanner{background:var(--ink);color:#fff;border-radius:22px;padding:26px 30px;margin:40px 0 30px;text-align:center;box-shadow:0 8px 0 rgba(43,32,36,.3)}
+.hourbanner h2{font-size:30px;color:var(--yellow)}
+.hourbanner p{color:#e7d8db;font-size:16px}
+.breakbanner{background:repeating-linear-gradient(45deg,var(--yellow),var(--yellow) 20px,var(--yellow-soft) 20px,var(--yellow-soft) 40px);
+  border:3px solid var(--ink);border-radius:22px;padding:22px;margin:34px 0;text-align:center;font-family:'Baloo 2';font-weight:800;font-size:24px;box-shadow:var(--shadow)}
+.tier{border-radius:18px;padding:18px 22px;margin:14px 0;border:3px solid var(--ink)}
+.tier.b1{background:var(--green-soft)} .tier.b2{background:var(--yellow-soft)} .tier.b3{background:var(--pink-soft)}
+.tier h4{font-size:19px;margin-bottom:8px}
+.tier ol{margin-left:22px}
+.tier li{margin:6px 0}
+.note{background:#fff;border:2px dashed var(--orange);border-radius:14px;padding:12px 16px;margin:14px 0;font-size:15px}
+.note b{color:var(--orange)}
+ul.clean{margin:10px 0 10px 24px}
+ul.clean li{margin:6px 0}
+.qbox{background:#fff;border:3px solid var(--ink);border-radius:18px;padding:16px 20px;margin:14px 0}
+.qbox .qlabel{font-family:'Baloo 2';font-weight:800;color:var(--red-dark);font-size:16px;margin-bottom:6px}
+.qbox .ans{background:var(--green-soft);border-left:4px solid var(--green);padding:10px 14px;border-radius:8px;margin-top:8px;font-size:15px}
+/* SIMULATOR */
+.sim{background:#241B1E;border:3px solid var(--ink);border-radius:20px;padding:22px;margin:22px 0;color:#fff;box-shadow:0 8px 0 rgba(43,32,36,.25)}
+.sim .simtitle{font-family:'Baloo 2';font-weight:800;font-size:20px;color:var(--yellow);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.sim .simsub{font-size:14px;color:#cdbabf;margin-bottom:14px}
+.sim select,.sim input[type=text],.sim input[type=range]{font-family:'JetBrains Mono';font-size:14px;padding:8px 10px;border-radius:10px;border:2px solid var(--yellow);background:#3a2c30;color:#fff;margin:3px}
+.sim input[type=range]{padding:4px;width:180px;cursor:pointer}
+.sim button{font-family:'Baloo 2';font-weight:700;font-size:15px;padding:9px 20px;border-radius:999px;border:3px solid var(--ink);
+  background:var(--yellow);color:var(--ink);cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.4);margin:6px 4px;transition:transform .08s}
+.sim button:active{transform:translateY(3px);box-shadow:none}
+.sim button.alt{background:var(--teal);color:#fff}
+.sim button.purple{background:var(--purple);color:#fff}
+.sim table{width:100%;border-collapse:collapse;margin-top:14px;font-family:'JetBrains Mono';font-size:12.5px}
+.sim th{background:#3a2c30;color:var(--yellow);padding:7px 8px;text-align:left;border-bottom:2px solid var(--yellow)}
+.sim td{padding:6px 8px;border-bottom:1px solid #4a393e}
+.sim tr.highlight td{background:rgba(59,165,92,.35);color:#baf5cd}
+.sim tr.dimmed td{opacity:.3}
+.sim tr.band-entry td{background:rgba(59,165,92,.25)}
+.sim tr.band-mid td{background:rgba(255,197,61,.22)}
+.sim tr.band-uppermid td{background:rgba(244,121,59,.22)}
+.sim tr.band-senior td{background:rgba(232,67,147,.22)}
+.sim .result{margin-top:12px;font-family:'Baloo 2';font-weight:700;font-size:16px;color:var(--yellow)}
+.sim .nullcell{color:#ff9aa8;font-style:italic}
+.sim .rowline{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-bottom:10px}
+.sim .rowline .grp{display:flex;flex-direction:column;gap:2px}
+.sim .rowline label{font-family:'Baloo 2';font-weight:700;font-size:13px;color:#e0d0d4}
+@media(max-width:640px){.talk .who{width:64px;font-size:11px}.section{padding:24px 18px}}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· SQL 7 · CASE, IF() and conditional aggregation</span><span class="pn"><a href="../Class2_SQL_postRead/" title="SQL 2 · Keys, data types and first queries">← Prev</a><a href="../SQL-8-postread/" title="SQL 8 · JOINs 1: relationships and INNER JOIN">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="wrap">
+
+
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <span class="kicker">LECTURE 7 · POST-READ</span>
+  <h1>🏨 CASE, IF() &amp; Conditional Aggregation</h1>
+  <p><b>What this covers:</b> A reflective recap of how to turn raw column values into business-readable labels using <i>Simple CASE</i>, <i>Searched CASE</i>, and <i>IF()</i> — and how to combine those labels with <code>COUNT</code> and <code>SUM</code> to build full pivot-style reports in a single query. All examples use the leela_palace hotel dataset (staff, salary_grades, staff_salaries).</p>
+</div>
+
+
+<!-- ============ DATASET INTRO ============ -->
+<div class="section">
+  <span class="secnum" style="background:var(--ink)">🗄️</span>
+  <h2>The leela_palace Dataset — A Quick Refresher</h2>
+  <p>From Lecture 7 onwards, the course moves from the Zomato dataset to <b>The Leela Palace, New Delhi's</b> hotel operations data — an 11-table schema covering staffing, rooms, reservations, dining, and spa. Today's queries are <b>single-table only</b>; JOINs across these tables begin in Lecture 8.</p>
+
+
+  <p>Three tables were used in this lecture:</p>
+  <table class="nice">
+    <tr><th>Table</th><th>Key columns used today</th><th>What it holds</th></tr>
+    <tr><td><code>staff</code></td><td><code>employment_type</code>, <code>status</code>, <code>role</code>, <code>manager_id</code>, <code>hire_date</code></td><td>One row per hotel staff member</td></tr>
+    <tr><td><code>salary_grades</code></td><td><code>role_level</code>, <code>min_salary_inr</code>, <code>max_salary_inr</code></td><td>One row per salary grade band</td></tr>
+    <tr><td><code>staff_salaries</code></td><td><code>monthly_salary_inr</code>, <code>salary_type</code>, <code>effective_date</code></td><td>One row per salary record (tracks history)</td></tr>
+  </table>
+
+
+  <div class="note"><b>Note:</b> The full schema also includes <code>departments</code>, <code>guests</code>, <code>rooms</code>, <code>reservations</code>, <code>restaurants</code>, <code>dining_orders</code>, <code>spa_services</code>, and <code>spa_bookings</code>. These come into play once JOINs are introduced. For reference, the complete entity-relationship map is below.</div>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/213/625/original/leela_palace_ER.png?1784987086" alt="leela_palace Entity Relationship Diagram">
+    <div class="diaglabel">leela_palace ER Diagram — 11 tables, PK/FK relationships, and the self-referencing manager_id link on staff</div>
+  </div>
+</div>
+
+
+<!-- ============ 1. OPENING HOOK ============ -->
+<div class="section">
+  <span class="secnum">1</span>
+  <h2>Opening Hook — Labels the Database Doesn't Have 🤔</h2>
+
+
+  <p>Every hotel staffing report is built on business "buckets" — Permanent Staff, Contractual Staff, Inactive. None of these labels live in the raw table. The <code>employment_type</code> column only ever stores <code>'full-time'</code> or <code>'contract'</code>.</p>
+
+
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">Can you give me a headcount breakdown by employment category? I want: Permanent Staff, Contractual Staff, and Inactive — not the raw values.</div></div>
+  <div class="talk learner"><div class="who">ANALYST</div><div class="bubble">'full-time' and 'contract' are the values in the column. But 'Permanent Staff' and 'Contractual Staff' don't exist anywhere in the database.</div></div>
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">Then create them.</div></div>
+
+
+  <p>That single instruction — <i>"then create them"</i> — is exactly what <code>CASE WHEN</code> does. It runs row by row, just like any other expression in <code>SELECT</code>, translating raw values into analyst-defined categories.</p>
+
+
+  <h3>By the end of this recap, you should be able to:</h3>
+  <ul class="clean">
+    <li>Label hotel staff as 'Permanent' / 'Contractual' / 'Inactive' based on columns.</li>
+    <li>Classify staff salaries into 'Entry' / 'Mid' / 'Senior' bands.</li>
+    <li>Count how many staff fall in each band — in a single query.</li>
+    <li>Split total payroll by department in one row using conditional <code>SUM</code>.</li>
+    <li>Answer any "how many of X are Y?" questions without writing five separate queries.</li>
+  </ul>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/211/260/original/1.png?1784107875" alt="Labels the Database Doesn't Have - CASE WHEN as a bridge">
+    <div class="diaglabel">CASE WHEN is the bridge between raw column values and the business buckets a manager actually asks for</div>
+  </div>
+
+
+  <div class="golden">⭐ CASE WHEN turns raw column values into analyst-defined categories. If you can describe it, you can write it.</div>
+</div>
+
+
+<!-- ============ 2. SIMPLE CASE ============ -->
+<div class="section">
+  <span class="secnum teal">2</span>
+  <h2>Simple CASE — Match a Column to Exact Values 🎯</h2>
+
+
+  <p>Simple CASE compares one column against a fixed list of exact values — much like a <code>switch</code> statement in programming. It is the right tool whenever raw values need a direct, one-to-one label swap.</p>
+
+
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">The employment_type column has 'full-time' and 'contract'. I want a clean display column showing 'Permanent' and 'Contractual' instead.</div></div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 2.1 — Simple CASE for employment type label</div>
+<pre><span class="kw">SELECT</span>  staff_id,
+        first_name,
+        last_name,
+        employment_type,
+        <span class="kw">CASE</span> employment_type
+          <span class="kw">WHEN</span> <span class="str">'full-time'</span>  <span class="kw">THEN</span> <span class="str">'Permanent'</span>
+          <span class="kw">WHEN</span> <span class="str">'contract'</span>   <span class="kw">THEN</span> <span class="str">'Contractual'</span>
+          <span class="kw">ELSE</span> <span class="str">'Unknown'</span>
+        <span class="kw">END</span>  <span class="kw">AS</span>  emp_category
+<span class="kw">FROM</span>    leela_palace.staff
+<span class="kw">LIMIT</span>   <span class="num">10</span>;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> For each staff member, look at employment_type. If it says 'full-time' — return 'Permanent'. If 'contract' — return 'Contractual'. For anything else — return 'Unknown'.</div></div>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/211/262/original/2.png?1784107903" alt="Tool 1: The Exact Matcher - Simple CASE syntax anatomy">
+    <div class="diaglabel">Simple CASE: one target column, exact string matches, an ELSE fallback, and END AS to name the result</div>
+  </div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 2.2 — Simple CASE on role_level</div>
+<pre><span class="kw">SELECT</span>  grade_id,
+        grade_name,
+        role_level,
+        <span class="kw">CASE</span> role_level
+          <span class="kw">WHEN</span> <span class="str">'Manager'</span>   <span class="kw">THEN</span> <span class="str">'Mid-Management'</span>
+          <span class="kw">WHEN</span> <span class="str">'Director'</span>  <span class="kw">THEN</span> <span class="str">'Senior Leadership'</span>
+          <span class="kw">ELSE</span> <span class="str">'Not Defined'</span>
+        <span class="kw">END</span>  <span class="kw">AS</span>  level_label
+<span class="kw">FROM</span>    leela_palace.salary_grades;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> For each salary grade, replace the raw role_level value with a readable label.</div></div>
+
+
+  <table class="nice">
+    <tr><th>Keyword</th><th>Role in Simple CASE</th></tr>
+    <tr><td><code>CASE column_name</code></td><td>Which column to look at</td></tr>
+    <tr><td><code>WHEN exact_value</code></td><td>If the column equals this value exactly</td></tr>
+    <tr><td><code>THEN return_this</code></td><td>Return this label</td></tr>
+    <tr><td><code>ELSE fallback_value</code></td><td>Return this if no WHEN matched (optional but recommended)</td></tr>
+    <tr><td><code>END</code></td><td>Closes the CASE expression — the whole block is treated as one column</td></tr>
+  </table>
+
+
+  <p>Matching exact words works well — but what happens when the requirement is a flexible <i>range</i>, like checking whether a monthly salary falls between two numbers? Simple CASE cannot express a range. That is where Searched CASE takes over.</p>
+</div>
+
+
+<!-- ============ 3. SEARCHED CASE ============ -->
+<div class="section">
+  <span class="secnum purple">3</span>
+  <h2>Searched CASE — Write a Condition, Not Just a Value 🔍</h2>
+
+
+  <p>Searched CASE drops the column-after-CASE pattern. Instead, every <code>WHEN</code> branch carries a full condition — greater than, less than, <code>BETWEEN</code>, <code>LIKE</code>, <code>IS NULL</code>. Anything writable in a <code>WHERE</code> clause is writable inside a Searched CASE.</p>
+
+
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">Classify all staff salary records into bands: Entry (below ₹100,000), Mid (₹100,000 to ₹250,000), Senior (above ₹250,000).</div></div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 3.1 — Searched CASE for salary band</div>
+<pre><span class="kw">SELECT</span>  salary_id,
+        staff_id,
+        monthly_salary_inr,
+        <span class="kw">CASE</span>
+          <span class="kw">WHEN</span> monthly_salary_inr &lt; <span class="num">100000</span>              <span class="kw">THEN</span> <span class="str">'Entry'</span>
+          <span class="kw">WHEN</span> monthly_salary_inr <span class="kw">BETWEEN</span> <span class="num">100000</span>
+                          <span class="kw">AND</span> <span class="num">250000</span>        <span class="kw">THEN</span> <span class="str">'Mid'</span>
+          <span class="kw">WHEN</span> monthly_salary_inr &gt; <span class="num">250000</span>             <span class="kw">THEN</span> <span class="str">'Senior'</span>
+          <span class="kw">ELSE</span> <span class="str">'Uncategorised'</span>
+        <span class="kw">END</span>  <span class="kw">AS</span>  salary_band
+<span class="kw">FROM</span>    leela_palace.staff_salaries
+<span class="kw">LIMIT</span>   <span class="num">10</span>;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> For each salary record, evaluate three conditions in order. Return the label of the first condition that is true.</div></div>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/211/266/original/3.png?1784107953" alt="Tool 2: The Range Finder - Searched CASE with numeric ranges">
+    <div class="diaglabel">Searched CASE maps continuous ranges of monthly_salary_inr into discrete labels — something Simple CASE cannot do</div>
+  </div>
+
+
+  <!-- SEARCHED CASE SIMULATOR -->
+  <div class="sim">
+    <div class="simtitle">🎮 SIMULATOR — Build Your Own Salary Bands!</div>
+    <div class="simsub">Drag the two boundary sliders. Watch every staff salary record get re-labelled live — this is Searched CASE running row by row.</div>
+    <div class="rowline">
+      <div class="grp">
+        <label>Entry / Mid boundary: <span id="b1val" style="color:#7FE3C1">100000</span></label>
+        <input type="range" id="b1" min="50000" max="150000" step="5000" value="100000" oninput="renderCaseSim()">
+      </div>
+      <div class="grp">
+        <label>Mid / Senior boundary: <span id="b2val" style="color:#7FE3C1">250000</span></label>
+        <input type="range" id="b2" min="150000" max="320000" step="5000" value="250000" oninput="renderCaseSim()">
+      </div>
+    </div>
+    <div class="result" id="caseSimResult"></div>
+    <div style="overflow-x:auto"><table id="caseSimTable"></table></div>
+  </div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 3.2 — Searched CASE with multiple column conditions</div>
+<pre><span class="kw">SELECT</span>  staff_id,
+        first_name,
+        employment_type,
+        status,
+        <span class="kw">CASE</span>
+          <span class="kw">WHEN</span> status = <span class="str">'active'</span>
+           <span class="kw">AND</span> employment_type = <span class="str">'full-time'</span>   <span class="kw">THEN</span> <span class="str">'Core Staff'</span>
+          <span class="kw">WHEN</span> status = <span class="str">'active'</span>
+           <span class="kw">AND</span> employment_type = <span class="str">'contract'</span>    <span class="kw">THEN</span> <span class="str">'Active Contractor'</span>
+          <span class="kw">WHEN</span> status = <span class="str">'inactive'</span>             <span class="kw">THEN</span> <span class="str">'Alumni'</span>
+          <span class="kw">ELSE</span> <span class="str">'Review Required'</span>
+        <span class="kw">END</span>  <span class="kw">AS</span>  workforce_segment
+<span class="kw">FROM</span>    leela_palace.staff
+<span class="kw">LIMIT</span>   <span class="num">10</span>;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> Evaluate two columns together — status AND employment_type — to produce a single workforce label per staff member.</div></div>
+
+
+  <div class="warn"><div class="t">⚠️ Order matters — SQL stops at the first TRUE match</div>
+    <p>SQL reads each <code>WHEN</code> branch top to bottom and returns on the first match. Once a branch matches, all remaining branches are skipped. Always order conditions from <b>most specific to least specific</b> — if you place <code>WHEN monthly_salary_inr &gt; 0 THEN 'Has Salary'</code> first, nothing below it will ever run.</p>
+    <p style="margin-top:6px"><code>ELSE</code> catches everything that matched no <code>WHEN</code>. Omitting it returns <code>NULL</code> for unmatched rows.</p>
+  </div>
+
+
+  <div class="golden">⭐ Simple CASE = exact value match. Searched CASE = full condition. Both end with END.</div>
+</div>
+
+
+<!-- ============ 4. NULL HANDLING ============ -->
+<div class="section">
+  <span class="secnum orange">4</span>
+  <h2>NULL Handling Inside CASE WHEN 🕳️</h2>
+
+
+  <p>CASE WHEN can check for NULL directly — making it a flexible, context-aware alternative to <code>COALESCE</code> or <code>IFNULL</code> when a NULL needs its own distinct business label rather than just a generic fallback value.</p>
+
+
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">The manager_id column is NULL for the top-level staff member who reports to no one. In my report, I want them to show 'No Manager' instead of blank.</div></div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 4.1 — CASE WHEN to handle NULL manager</div>
+<pre><span class="kw">SELECT</span>  staff_id,
+        first_name,
+        manager_id,
+        <span class="kw">CASE</span>
+          <span class="kw">WHEN</span> manager_id <span class="kw">IS NULL</span>  <span class="kw">THEN</span> <span class="str">'No Manager  (Top Level)'</span>
+          <span class="kw">ELSE</span> <span class="str">'Has Manager'</span>
+        <span class="kw">END</span>  <span class="kw">AS</span>  manager_status
+<span class="kw">FROM</span>    leela_palace.staff
+<span class="kw">LIMIT</span>   <span class="num">10</span>;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> For each staff member, check if manager_id is NULL. If yes, label them as top-level. Otherwise mark them as having a manager.</div></div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 4.2 — CASE with NULL and value conditions combined</div>
+<pre><span class="kw">SELECT</span>  staff_id,
+        first_name,
+        status,
+        manager_id,
+        <span class="kw">CASE</span>
+          <span class="kw">WHEN</span> status = <span class="str">'inactive'</span>     <span class="kw">THEN</span> <span class="str">'Inactive  —  skip'</span>
+          <span class="kw">WHEN</span> manager_id <span class="kw">IS NULL</span>      <span class="kw">THEN</span> <span class="str">'General Manager level'</span>
+          <span class="kw">ELSE</span> <span class="str">'Standard staff'</span>
+        <span class="kw">END</span>  <span class="kw">AS</span>  staff_flag
+<span class="kw">FROM</span>    leela_palace.staff
+<span class="kw">LIMIT</span>   <span class="num">10</span>;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> First check if inactive — those get flagged. Among active staff, check if they have no manager — that is the General Manager. Everyone else is standard.</div></div>
+
+
+  <div class="tip"><div class="t">🧠 CASE WHEN vs COALESCE / IFNULL</div>
+    <ul class="clean">
+      <li><code>COALESCE(manager_id, 'NONE')</code> — simple replacement, one fallback value.</li>
+      <li><code>CASE WHEN manager_id IS NULL THEN 'Top Level' ELSE 'Has Manager' END</code> — full label control.</li>
+      <li>Use <code>COALESCE</code>/<code>IFNULL</code> when you just need a default value.</li>
+      <li>Use <code>CASE WHEN IS NULL</code> when you need different outputs depending on context.</li>
+    </ul>
+  </div>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/211/268/original/4.png?1784107980" alt="Handling the Unknown - COALESCE quick patch vs CASE WHEN context engine">
+    <div class="diaglabel">COALESCE is a quick patch for a default value. CASE WHEN IS NULL is a context engine — a whole new analytical label</div>
+  </div>
+</div>
+
+
+<!-- ============ 5. IF() FUNCTION ============ -->
+<div class="section">
+  <span class="secnum blue">5</span>
+  <h2>IF() Function — The Compact Two-Outcome Shortcut ⚡</h2>
+
+
+  <p>IF() is a compact conditional: one condition, two outcomes. If the condition is true — return value A. If false — return value B. Nothing more.</p>
+
+
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">I want a simple flag on each staff member — 'FT' if full-time, 'CT' if contract. Nothing more.</div></div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 5.1 — IF() for employment type flag</div>
+<pre><span class="kw">SELECT</span>  staff_id,
+        first_name,
+        employment_type,
+        <span class="fn">IF</span>(employment_type = <span class="str">'full-time'</span>, <span class="str">'FT'</span>, <span class="str">'CT'</span>)  <span class="kw">AS</span>  emp_flag
+<span class="kw">FROM</span>    leela_palace.staff
+<span class="kw">LIMIT</span>   <span class="num">10</span>;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> If employment_type equals 'full-time' — return 'FT'. Otherwise (any other value including contract) — return 'CT'.</div></div>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/211/269/original/5.png?1784108023" alt="Tool 3: The Binary Switch - IF() function true/false outcomes">
+    <div class="diaglabel">IF() is a binary switch: one condition, an illuminated TRUE path, a dimmed FALSE path — nothing more</div>
+  </div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 5.2 — IF() for salary threshold</div>
+<pre><span class="kw">SELECT</span>  staff_id,
+        monthly_salary_inr,
+        <span class="fn">IF</span>(monthly_salary_inr &gt;= <span class="num">200000</span>, <span class="str">'High'</span>, <span class="str">'Standard'</span>)  <span class="kw">AS</span>  salary_flag
+<span class="kw">FROM</span>    leela_palace.staff_salaries
+<span class="kw">LIMIT</span>   <span class="num">10</span>;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> If monthly_salary_inr is 200,000 or above — flag as 'High'. Everything else is 'Standard'.</div></div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 5.3 — IF() for NULL check</div>
+<pre><span class="kw">SELECT</span>  staff_id,
+        first_name,
+        manager_id,
+        <span class="fn">IF</span>(manager_id <span class="kw">IS NULL</span>, <span class="str">'Top Level'</span>, <span class="str">'Reports to someone'</span>)  <span class="kw">AS</span>  mgr_flag
+<span class="kw">FROM</span>    leela_palace.staff
+<span class="kw">LIMIT</span>   <span class="num">10</span>;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> Two labels — one if the manager is missing, one if not. Functionally similar to a simple COALESCE.</div></div>
+</div>
+
+
+<!-- ============ 6. CASE vs IF ============ -->
+<div class="section">
+  <span class="secnum pink">6</span>
+  <h2>CASE vs IF() — When to Use Which ⚖️</h2>
+
+
+  <p>Both produce conditional output. The choice comes down to how many outcomes are needed, and how many columns or conditions are involved.</p>
+
+
+  <table class="nice">
+    <tr><th></th><th>IF()</th><th>CASE WHEN</th></tr>
+    <tr><td><b>Outcomes</b></td><td>Exactly 2 (true / false)</td><td>2 or more (unlimited branches)</td></tr>
+    <tr><td><b>Syntax</b></td><td><code>IF(condition, true_val, false_val)</code></td><td><code>CASE WHEN … THEN … ELSE … END</code></td></tr>
+    <tr><td><b>Multiple conditions</b></td><td>Not supported directly</td><td>Each WHEN can be any condition</td></tr>
+    <tr><td><b>NULL handling</b></td><td><code>IF(col IS NULL, …)</code></td><td><code>CASE WHEN col IS NULL THEN …</code></td></tr>
+    <tr><td><b>Readability</b></td><td>Great for simple flags</td><td>Better for 3+ outcomes</td></tr>
+    <tr><td><b>Support</b></td><td>MySQL, BigQuery</td><td>All major SQL databases</td></tr>
+  </table>
+
+
+  <div class="tip"><div class="t">📌 Decision rule</div>
+    <ul class="clean">
+      <li>Exactly 2 outcomes, simple condition → use <b>IF()</b> (shorter, more readable)</li>
+      <li>3 or more outcomes → use <b>CASE WHEN</b> (IF cannot be nested cleanly beyond 2 levels)</li>
+      <li>Conditions involving multiple columns or ranges → always <b>CASE WHEN</b></li>
+      <li>Cross-platform SQL (not just MySQL) → CASE WHEN is safer</li>
+    </ul>
+  </div>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/211/270/original/6.png?1784108048" alt="The Decision Engine - which tool to use table">
+    <div class="diaglabel">Rule of thumb: 3+ outcomes, or conditions spanning multiple columns → CASE WHEN is mandatory</div>
+  </div>
+
+
+  <div class="golden">⭐ IF() for two outcomes. CASE WHEN for everything else.</div>
+</div>
+
+
+<div class="breakbanner">☕ END OF HOUR 1 — 5 MIN BREAK</div>
+
+
+<!-- ============ 7. CONDITIONAL COUNT ============ -->
+<div class="section">
+  <span class="secnum green">7</span>
+  <h2>Conditional COUNT — Pivot-Style Reporting 📊</h2>
+
+
+  <p>Wrapping <code>CASE WHEN</code> inside <code>COUNT()</code> counts only the rows that match a condition. Multiple conditional COUNTs in one query build a pivot table — without needing any pivot tool.</p>
+
+
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">How many active full-time staff do we have? How many active contractors? How many are inactive? I want all three numbers in one row.</div></div>
+
+
+  <p>The trick: <code>CASE WHEN</code> evaluates to a non-NULL value when the condition is true, and <code>NULL</code> when it isn't. <code>COUNT</code> ignores NULLs. So only matching rows get counted.</p>
+
+
+  <div class="query"><div class="qtitle">📄 Query 7.1 — conditional COUNT (3 categories in one query)</div>
+<pre><span class="kw">SELECT</span>  <span class="fn">COUNT</span>(*)  <span class="kw">AS</span>  total_staff,
+        <span class="fn">COUNT</span>(<span class="kw">CASE WHEN</span> status = <span class="str">'active'</span>
+                    <span class="kw">AND</span> employment_type = <span class="str">'full-time'</span>
+               <span class="kw">THEN</span> <span class="num">1</span> <span class="kw">END</span>)  <span class="kw">AS</span>  active_fulltime,
+        <span class="fn">COUNT</span>(<span class="kw">CASE WHEN</span> status = <span class="str">'active'</span>
+                    <span class="kw">AND</span> employment_type = <span class="str">'contract'</span>
+               <span class="kw">THEN</span> <span class="num">1</span> <span class="kw">END</span>)  <span class="kw">AS</span>  active_contractors,
+        <span class="fn">COUNT</span>(<span class="kw">CASE WHEN</span> status = <span class="str">'inactive'</span>
+               <span class="kw">THEN</span> <span class="num">1</span> <span class="kw">END</span>)  <span class="kw">AS</span>  inactive_staff
+<span class="kw">FROM</span>    leela_palace.staff;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> Total staff. Among them — count active full-timers, count active contractors, count inactive. All four numbers in one row.</div></div>
+
+
+  <table class="nice">
+    <tr><th>Step</th><th>What happens for staff member ST07 (active, full-time)</th></tr>
+    <tr><td><code>active_fulltime</code> CASE</td><td>Condition TRUE → THEN 1 → COUNT sees 1 → increments</td></tr>
+    <tr><td><code>active_contractors</code> CASE</td><td>Condition FALSE → no THEN → CASE returns NULL → COUNT ignores it</td></tr>
+    <tr><td><code>inactive</code> CASE</td><td>Condition FALSE → NULL → COUNT ignores it</td></tr>
+  </table>
+
+
+  <div class="note"><b>Note:</b> The <code>1</code> in <code>THEN 1</code> can be any non-NULL value — <code>THEN staff_id</code> works identically.</div>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/211/271/original/7.png?1784108084" alt="The Mechanism Behind Conditional Counting - filter funnel diagram">
+    <div class="diaglabel">This is why COUNT(CASE WHEN) works: NULL exclusion in COUNT is the mechanism.</div>
+  </div>
+
+
+  <!-- CONDITIONAL COUNT SIMULATOR -->
+  <div class="sim">
+    <div class="simtitle">🎮 SIMULATOR — Build a Conditional COUNT!</div>
+    <div class="simsub">Pick a status and an employment type. Rows that match stay highlighted (COUNT sees 1) — everything else dims (COUNT sees NULL, ignored).</div>
+    <div class="rowline">
+      <div class="grp">
+        <label>status =</label>
+        <select id="countStatusFilter" onchange="runCountSim()">
+          <option value="any">Any</option>
+          <option value="active">active</option>
+          <option value="inactive">inactive</option>
+        </select>
+      </div>
+      <div class="grp">
+        <label>employment_type =</label>
+        <select id="countEmpFilter" onchange="runCountSim()">
+          <option value="any">Any</option>
+          <option value="full-time">full-time</option>
+          <option value="contract">contract</option>
+        </select>
+      </div>
+      <button onclick="runCountSim()">▶ RUN COUNT</button>
+    </div>
+    <div class="result" id="countSimResult"></div>
+    <div style="overflow-x:auto"><table id="countSimTable"></table></div>
+  </div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 7.2 — conditional COUNT with GROUP BY</div>
+<pre><span class="kw">SELECT</span>  department_id,
+        <span class="fn">COUNT</span>(*)  <span class="kw">AS</span>  total,
+        <span class="fn">COUNT</span>(<span class="kw">CASE WHEN</span> employment_type = <span class="str">'full-time'</span>
+               <span class="kw">THEN</span> <span class="num">1</span> <span class="kw">END</span>)  <span class="kw">AS</span>  fulltime_count,
+        <span class="fn">COUNT</span>(<span class="kw">CASE WHEN</span> employment_type = <span class="str">'contract'</span>
+               <span class="kw">THEN</span> <span class="num">1</span> <span class="kw">END</span>)  <span class="kw">AS</span>  contract_count,
+        <span class="fn">COUNT</span>(<span class="kw">CASE WHEN</span> status = <span class="str">'inactive'</span>
+               <span class="kw">THEN</span> <span class="num">1</span> <span class="kw">END</span>)  <span class="kw">AS</span>  inactive_count
+<span class="kw">FROM</span>    leela_palace.staff
+<span class="kw">GROUP BY</span> department_id
+<span class="kw">ORDER BY</span> department_id;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> For each department — total headcount, full-timers, contractors, and inactive staff. Four numbers per department row.</div></div>
+
+
+  <div class="golden">⭐ COUNT(CASE WHEN) = count only the rows that match the condition. NULL exclusion makes it work.</div>
+</div>
+
+
+<!-- ============ 8. CONDITIONAL SUM ============ -->
+<div class="section">
+  <span class="secnum orange">8</span>
+  <h2>Conditional SUM — Split Totals in One Query 💰</h2>
+
+
+  <p>Summing only the values that meet a condition is the standard tool for split payroll, segmented revenue, and department-specific totals.</p>
+
+
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">What is the total monthly payroll for senior staff (≥ ₹2,00,000) versus standard staff (&lt; ₹2,00,000)? And what percentage of total payroll goes to senior-band staff?</div></div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 8.1 — conditional SUM on single table (no JOIN needed)</div>
+<pre><span class="kw">SELECT</span>  <span class="fn">COUNT</span>(*)                                         <span class="kw">AS</span>  total_records,
+        <span class="fn">SUM</span>(monthly_salary_inr)                          <span class="kw">AS</span>  total_payroll,
+        <span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> monthly_salary_inr &gt;= <span class="num">200000</span>  <span class="kw">THEN</span> monthly_salary_inr
+                 <span class="kw">ELSE</span> <span class="num">0</span> <span class="kw">END</span>)                            <span class="kw">AS</span>  senior_payroll,
+        <span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> monthly_salary_inr &lt; <span class="num">200000</span>   <span class="kw">THEN</span> monthly_salary_inr
+                 <span class="kw">ELSE</span> <span class="num">0</span> <span class="kw">END</span>)                            <span class="kw">AS</span>  standard_payroll,
+        <span class="fn">ROUND</span>(<span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> monthly_salary_inr &gt;= <span class="num">200000</span> <span class="kw">THEN</span> monthly_salary_inr
+                       <span class="kw">ELSE</span> <span class="num">0</span> <span class="kw">END</span>)
+              / <span class="fn">SUM</span>(monthly_salary_inr) * <span class="num">100</span>, <span class="num">1</span>)                   <span class="kw">AS</span>  senior_pct
+<span class="kw">FROM</span>    leela_palace.staff_salaries;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> Total payroll split into senior-band and standard-band amounts, plus the percentage that senior-band represents.</div></div>
+
+
+  <div class="tip"><div class="t">🧠 ELSE 0 vs ELSE NULL in conditional SUM</div>
+    <ul class="clean">
+      <li><code>SUM(CASE WHEN condition THEN monthly_salary_inr ELSE 0 END)</code> — non-matching rows contribute 0 (clean total)</li>
+      <li><code>SUM(CASE WHEN condition THEN monthly_salary_inr END)</code> — no ELSE defaults to NULL for non-matches</li>
+      <li>Both give the same SUM result because <code>NULL + number</code> — SUM ignores NULL.</li>
+      <li><code>ELSE 0</code> is slightly clearer for readers. Both are correct.</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ============ 9. BUCKET + GROUP BY ============ -->
+<div class="section">
+  <span class="secnum blue">9</span>
+  <h2>Bucket + GROUP BY — Salary Band Analysis 📈</h2>
+
+
+  <p>Create buckets with <code>CASE WHEN</code> in <code>SELECT</code>, then <code>GROUP BY</code> the result. This is the pattern behind every histogram-style HR report.</p>
+
+
+  <div class="talk"><div class="who">MANAGER</div><div class="bubble">How many staff fall into each salary band? Give me a distribution.</div></div>
+
+
+  <div class="query"><div class="qtitle">📄 Query 9.1 — CASE WHEN bucket + GROUP BY (single table)</div>
+<pre><span class="kw">SELECT</span>  <span class="kw">CASE</span>
+          <span class="kw">WHEN</span> monthly_salary_inr &lt; <span class="num">70000</span>               <span class="kw">THEN</span> <span class="str">'Entry  (&lt; 70K)'</span>
+          <span class="kw">WHEN</span> monthly_salary_inr <span class="kw">BETWEEN</span> <span class="num">70000</span>
+                           <span class="kw">AND</span> <span class="num">150000</span>        <span class="kw">THEN</span> <span class="str">'Mid  (70K – 1.5L)'</span>
+          <span class="kw">WHEN</span> monthly_salary_inr <span class="kw">BETWEEN</span> <span class="num">150001</span>
+                           <span class="kw">AND</span> <span class="num">250000</span>       <span class="kw">THEN</span> <span class="str">'Upper-Mid  (1.5L – 2.5L)'</span>
+          <span class="kw">WHEN</span> monthly_salary_inr &gt; <span class="num">250000</span>              <span class="kw">THEN</span> <span class="str">'Senior  (&gt; 2.5L)'</span>
+          <span class="kw">ELSE</span> <span class="str">'Uncategorised'</span>
+        <span class="kw">END</span>                                  <span class="kw">AS</span>  salary_band,
+        <span class="fn">COUNT</span>(*)                             <span class="kw">AS</span>  staff_count,
+        <span class="fn">ROUND</span>(<span class="fn">MIN</span>(monthly_salary_inr), <span class="num">0</span>)                <span class="kw">AS</span>  band_min,
+        <span class="fn">ROUND</span>(<span class="fn">MAX</span>(monthly_salary_inr), <span class="num">0</span>)                <span class="kw">AS</span>  band_max,
+        <span class="fn">ROUND</span>(<span class="fn">AVG</span>(monthly_salary_inr), <span class="num">0</span>)                <span class="kw">AS</span>  band_avg
+<span class="kw">FROM</span>    leela_palace.staff_salaries
+<span class="kw">GROUP BY</span>  <span class="kw">CASE</span>
+            <span class="kw">WHEN</span> monthly_salary_inr &lt; <span class="num">70000</span>             <span class="kw">THEN</span> <span class="str">'Entry  (&lt; 70K)'</span>
+            <span class="kw">WHEN</span> monthly_salary_inr <span class="kw">BETWEEN</span> <span class="num">70000</span>
+                             <span class="kw">AND</span> <span class="num">150000</span>      <span class="kw">THEN</span> <span class="str">'Mid  (70K – 1.5L)'</span>
+            <span class="kw">WHEN</span> monthly_salary_inr <span class="kw">BETWEEN</span> <span class="num">150001</span>
+                             <span class="kw">AND</span> <span class="num">250000</span>     <span class="kw">THEN</span> <span class="str">'Upper-Mid  (1.5L – 2.5L)'</span>
+            <span class="kw">WHEN</span> monthly_salary_inr &gt; <span class="num">250000</span>            <span class="kw">THEN</span> <span class="str">'Senior  (&gt; 2.5L)'</span>
+            <span class="kw">ELSE</span> <span class="str">'Uncategorised'</span>
+          <span class="kw">END</span>
+<span class="kw">ORDER BY</span>  band_min <span class="kw">ASC</span>;</pre>
+  <div class="reads"><b>🗣️ Reads as:</b> Create a salary band label for each salary row. Group all rows that share the same label. For each band — count staff, show the min, max, and average salary.</div></div>
+
+
+  <div class="diagram">
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/211/273/original/8.png?1784108111" alt="Creating Custom Distribution Buckets - CASE in SELECT and GROUP BY">
+    <div class="diaglabel">First, CASE defines the bucket. Then, GROUP BY groups the rows into those exact buckets.</div>
+  </div>
+
+
+  <!-- BUCKET + GROUP BY SIMULATOR -->
+  <div class="sim">
+    <div class="simtitle">🎮 SIMULATOR — Build the Full Distribution Report!</div>
+    <div class="simsub">Move the three band-boundary sliders. Watch staff_count, min, max, and avg recompute live for every band — exactly what GROUP BY on a CASE expression produces.</div>
+    <div class="rowline">
+      <div class="grp">
+        <label>Entry / Mid: <span id="g1val" style="color:#7FE3C1">70000</span></label>
+        <input type="range" id="g1" min="30000" max="110000" step="5000" value="70000" oninput="renderBucketSim()">
+      </div>
+      <div class="grp">
+        <label>Mid / Upper-Mid: <span id="g2val" style="color:#7FE3C1">150000</span></label>
+        <input type="range" id="g2" min="110000" max="200000" step="5000" value="150000" oninput="renderBucketSim()">
+      </div>
+      <div class="grp">
+        <label>Upper-Mid / Senior: <span id="g3val" style="color:#7FE3C1">250000</span></label>
+        <input type="range" id="g3" min="200000" max="320000" step="5000" value="250000" oninput="renderBucketSim()">
+      </div>
+    </div>
+    <div class="result" id="bucketSimResult"></div>
+    <div style="overflow-x:auto"><table id="bucketSimTable"></table></div>
+  </div>
+
+
+  <div class="note"><b>Why repeat the CASE expression twice?</b> SELECT aliases like <code>salary_band</code> cannot be used in <code>GROUP BY</code> in standard SQL — execution order runs <code>GROUP BY</code> before <code>SELECT</code>. BigQuery allows the alias as an exception, but the safe, portable practice is to repeat the full expression.</div>
+
+
+  <div class="tip"><div class="t">🧠 The key insight</div>
+    <ul class="clean">
+      <li><code>GROUP BY</code> does not have to be a raw column name — it can be a CASE expression.</li>
+      <li>Every row is assigned a band label by the CASE. GROUP BY then groups rows with the same label.</li>
+      <li>This is how you build any distribution report: <b>create the bucket → group by the bucket</b>.</li>
+      <li>Works for tenure bands, role-level tiers, age groups — any continuous value you want to segment.</li>
+    </ul>
+  </div>
+
+
+  <div class="golden">⭐ CASE creates the bucket. GROUP BY groups the buckets. Aggregates summarise each bucket.</div>
+</div>
+
+
+<!-- ============ 10. INTERVIEW QUESTIONS ============ -->
+<div class="section">
+  <span class="secnum pink">10</span>
+  <h2>Interview-Style Questions — Self-Check 🎤</h2>
+
+
+  <p>Four questions at interview difficulty, covering everything above. Try answering each before reading the model answer.</p>
+
+
+  <div class="qbox">
+    <div class="qlabel">Q1. What is the difference between Simple CASE and Searched CASE? Give an example of when you would use each.</div>
+    <div class="ans"><b>Simple CASE:</b> <code>CASE column_name WHEN value THEN result … END</code> — compares one column to exact values. Use it for mapping fixed values, e.g. replacing 'full-time' with 'Permanent'.<br><br>
+    <b>Searched CASE:</b> <code>CASE WHEN condition THEN result … END</code> — each branch is a full condition. Use it for ranges, multi-column logic, or NULL checks, e.g. salary bands.</div>
+  </div>
+
+
+  <div class="qbox">
+    <div class="qlabel">Q2. How does COUNT(CASE WHEN status = 'active' THEN 1 END) work? Why does it count only active staff?</div>
+    <div class="ans">When <code>status = 'active'</code> is TRUE, the CASE returns 1 (a non-NULL value). When it's not, there is no THEN and no ELSE — so the CASE returns NULL. COUNT ignores NULL values — it only counts non-NULL results. So this pattern effectively counts only the rows where the condition is true. <code>THEN 1</code> can be any non-NULL value — <code>THEN staff_id</code> works identically.</div>
+  </div>
+
+
+  <div class="qbox">
+    <div class="qlabel">Q3. What is the difference between IF() and CASE WHEN? When should you prefer CASE?</div>
+    <div class="ans"><code>IF(condition, true_value, false_value)</code> handles exactly two outcomes. CASE WHEN supports unlimited branches with different conditions. Prefer CASE WHEN when you need 3+ outcomes, conditions span multiple columns, you need ranges or IS NULL checks, or your SQL runs on databases other than MySQL/BigQuery. IF() is clean for simple binary flags, e.g. <code>IF(status = 'active', 'Active', 'Inactive')</code>.</div>
+  </div>
+
+
+  <div class="qbox">
+    <div class="qlabel">Q4. Write a single query to show: total staff, number of active full-time staff, number of active contractors, and number of inactive staff — all in one row.</div>
+    <div class="ans">
+<pre style="background:#241B1E;color:#FDEBDD;padding:14px 16px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:13.5px;overflow-x:auto;margin-top:6px"><span class="kw">SELECT</span>  <span class="fn">COUNT</span>(*)                                                        <span class="kw">AS</span>  total,
+        <span class="fn">COUNT</span>(<span class="kw">CASE WHEN</span> status = <span class="str">'active'</span>
+                    <span class="kw">AND</span> employment_type = <span class="str">'full-time'</span> <span class="kw">THEN</span> <span class="num">1</span> <span class="kw">END</span>)       <span class="kw">AS</span>  active_ft,
+        <span class="fn">COUNT</span>(<span class="kw">CASE WHEN</span> status = <span class="str">'active'</span>
+                    <span class="kw">AND</span> employment_type = <span class="str">'contract'</span>  <span class="kw">THEN</span> <span class="num">1</span> <span class="kw">END</span>)       <span class="kw">AS</span>  active_ct,
+        <span class="fn">COUNT</span>(<span class="kw">CASE WHEN</span> status = <span class="str">'inactive'</span> <span class="kw">THEN</span> <span class="num">1</span> <span class="kw">END</span>)                 <span class="kw">AS</span>  inactive
+<span class="kw">FROM</span>    leela_palace.staff;</pre>
+    Key point: NULL exclusion in COUNT makes this pattern work.
+    </div>
+  </div>
+</div>
+
+
+<!-- ============ 11. AI SEGMENT ============ -->
+<div class="section">
+  <span class="secnum teal">11</span>
+  <h2>AI Segment — "Write My CASE WHEN Report" 🤖</h2>
+
+
+  <div class="analogy"><span class="emoji">✈️</span><div><b>The Co-Pilot Analogy:</b> AI can draft the CASE WHEN structure fast — but boundary logic, ELSE handling, and portability are the analyst's responsibility. The pilot (you) is always in charge.</div></div>
+
+
+  <h3>Step 1 — the prompt</h3>
+  <div class="query"><div class="qtitle">📋 Paste this into Claude or ChatGPT</div>
+<pre><span class="cm">I have a table called leela_palace.staff_salaries with columns staff_id and
+monthly_salary_inr. Write a query that classifies each staff member into a
+salary band: 'Entry' for below 70000, 'Mid' for 70000 to 180000, 'Senior' for
+above 180000. Show staff_id, monthly_salary_inr, and the band label. Also add
+a GROUP BY version that shows how many staff are in each band.</span></pre>
+  </div>
+
+
+  <h3>Step 2 — what to verify in AI's response</h3>
+  <ul class="clean">
+    <li>Did it use Searched CASE (not Simple CASE)? Ranges require Searched CASE.</li>
+    <li>Are the band boundaries aligned with what you asked? Check the BETWEEN and > values.</li>
+    <li>Is ELSE included? AI sometimes omits it — what happens to a NULL salary if ELSE is missing?</li>
+    <li>Is END present? Missing END is a syntax error AI sometimes produces.</li>
+    <li>In the GROUP BY version — did AI repeat the full CASE, or use an alias? Note the portability implication.</li>
+  </ul>
+
+
+  <table class="nice">
+    <tr><th>Task</th><th>AI's tendency</th></tr>
+    <tr><td>CASE WHEN structure with correct THEN/ELSE/END</td><td>✅ Handles well — standard pattern</td></tr>
+    <tr><td>Boundary conditions (inclusive vs exclusive)</td><td>⚠️ Watch closely — BETWEEN vs strict &gt;/&lt;</td></tr>
+    <tr><td>GROUP BY using the alias</td><td>⚠️ Works in BigQuery, fails in standard SQL</td></tr>
+  </table>
+
+
+  <div class="golden">⭐ AI writes fast. You verify it is correct. The boundary check is always the analyst's job.</div>
+</div>
+
+
+<!-- ============ 12. PRACTICE PREVIEW ============ -->
+<div class="section">
+  <span class="secnum purple">12</span>
+  <h2>Practice Preview — Before Next Class 💪</h2>
+
+
+  <p>All queries are single-table. Tables available: <code>leela_palace.staff</code>, <code>leela_palace.salary_grades</code>, <code>leela_palace.staff_salaries</code>.</p>
+
+
+  <div class="tier b1">
+    <h4>🟢 Beginner — single CASE or IF()</h4>
+    <ol>
+      <li>Add a column called <code>type_label</code> to the staff table: 'Permanent' for full-time, 'Contractual' for contract. Show staff_id, first_name, employment_type, type_label.</li>
+      <li>Add a column called <code>status_display</code>: 'Currently Working' for active staff, 'Left Hotel' for inactive. Show staff_id, first_name, status, status_display.</li>
+      <li>Using IF(), add a flag column called <code>has_manager</code>: 'Yes' if manager_id IS NOT NULL, 'No' if NULL.</li>
+      <li>In the salary_grades table, add a column called <code>level_display</code>: 'Junior Role' for role_level = 'Executive', 'Senior Role' for role_level = 'Director'.</li>
+      <li>In the staff_salaries table, classify each salary as 'High' (&gt;= 200000) or 'Standard' (&lt; 200000) using IF(). Show monthly_salary_inr, salary_flag.</li>
+    </ol>
+  </div>
+
+
+  <div class="tier b2">
+    <h4>🟡 Intermediate — combining CASE with GROUP BY and aggregates</h4>
+    <ol>
+      <li>In the staff_salaries table, create three salary bands: 'Entry' (&lt; 80000), 'Mid' (80000 – 200000), 'Senior' (&gt; 200000). Show band and COUNT of staff per band.</li>
+      <li>From leela_palace.staff, in one query return: total staff, count of active staff, count of inactive staff, count of full-time staff, count of contract staff.</li>
+      <li>From leela_palace.salary_grades, classify grades into salary bands using min_salary_inr: 'Low Band' (&lt; 70000), 'Mid Band' (70000 – 200000), 'High Band' (&gt; 200000). Show grade_name, role_level, min_salary_inr, max_salary_inr, and salary_band.</li>
+      <li>From leela_palace.staff, show department_id, total count, count of active staff, and count of inactive staff — grouped by department_id.</li>
+    </ol>
+  </div>
+
+
+  <div class="tier b3">
+    <h4>🔴 Senior-track bonus</h4>
+    <p><b>Business question:</b> "Build a complete salary distribution report from leela_palace.staff_salaries. Salary bands: Entry (&lt; 70K), Mid (70K–150K), Upper-Mid (150K–250K), Senior (&gt; 250K). For each band: staff count, min salary, max salary, avg salary (ROUND 0dp), total payroll (SUM), and pct_of_total_payroll (ROUND(SUM(band) / SUM(all) * 100, 1)). Sort from lowest to highest band."</p>
+    <p style="margin-top:8px">Uses: Searched CASE, GROUP BY expression, COUNT, MIN, MAX, AVG, SUM, ROUND, inline calculation for percentage.</p>
+  </div>
+
+
+  <div class="golden">⭐ CASE WHEN is the analyst's label maker. Combine it with COUNT and SUM and it becomes a full reporting engine.</div>
+</div>
+
+
+<!-- ============ CONCEPTS TABLE ============ -->
+<div class="section">
+  <span class="secnum blue">📚 RECAP</span>
+  <h2>Concepts Covered Today — Quick Reference</h2>
+  <table class="nice">
+    <tr><th>Concept</th><th>What it does</th><th>Syntax / Key rule</th></tr>
+    <tr><td><b>Simple CASE</b></td><td>Map exact column values to labels</td><td><code>CASE col WHEN val THEN label … END</code></td></tr>
+    <tr><td><b>Searched CASE</b></td><td>Evaluate full conditions per branch</td><td><code>CASE WHEN condition THEN label … END</code></td></tr>
+    <tr><td><b>CASE with IS NULL</b></td><td>Catch and label NULL values</td><td><code>CASE WHEN col IS NULL THEN 'label' END</code></td></tr>
+    <tr><td><b>ELSE in CASE</b></td><td>Catch unmatched rows</td><td>Omitting ELSE returns NULL for unmatched</td></tr>
+    <tr><td><b>IF()</b></td><td>Two-outcome conditional</td><td><code>IF(condition, true_val, false_val)</code></td></tr>
+    <tr><td><b>CASE vs IF()</b></td><td>Choose based on outcome count</td><td>2 outcomes → IF(). 3+ → CASE WHEN</td></tr>
+    <tr><td><b>COUNT(CASE WHEN)</b></td><td>Count only rows matching a condition</td><td><code>COUNT(CASE WHEN x = y THEN 1 END)</code></td></tr>
+    <tr><td><b>SUM(CASE WHEN)</b></td><td>Sum only values matching a condition</td><td><code>SUM(CASE WHEN x = y THEN col ELSE 0 END)</code></td></tr>
+    <tr><td><b>Bucket + GROUP BY</b></td><td>Create bands then group by them</td><td>GROUP BY the full CASE expression</td></tr>
+  </table>
+
+
+  <div class="hourbanner" style="margin-top:24px;margin-bottom:0">
+    <h2>🎉 Recap complete!</h2>
+    <p>You can now translate raw column values into business labels using Simple CASE, Searched CASE, and IF() — and combine those labels with COUNT and SUM to build full pivot-style reports in a single query. Next up: JOINs across the leela_palace schema! 💪</p>
+  </div>
+</div>
+
+
+</div><!-- /wrap -->
+
+
+<script>
+/* ====== sample data mirroring staff_salaries ====== */
+const SALARY_ROWS = [
+ {salary_id:'SAL01', staff_id:'ST01', monthly_salary_inr:45000},
+ {salary_id:'SAL02', staff_id:'ST02', monthly_salary_inr:68000},
+ {salary_id:'SAL03', staff_id:'ST03', monthly_salary_inr:95000},
+ {salary_id:'SAL04', staff_id:'ST04', monthly_salary_inr:120000},
+ {salary_id:'SAL05', staff_id:'ST05', monthly_salary_inr:145000},
+ {salary_id:'SAL06', staff_id:'ST06', monthly_salary_inr:175000},
+ {salary_id:'SAL07', staff_id:'ST07', monthly_salary_inr:210000},
+ {salary_id:'SAL08', staff_id:'ST08', monthly_salary_inr:260000},
+ {salary_id:'SAL09', staff_id:'ST09', monthly_salary_inr:310000},
+ {salary_id:'SAL10', staff_id:'ST10', monthly_salary_inr:55000},
+ {salary_id:'SAL11', staff_id:'ST11', monthly_salary_inr:132000},
+ {salary_id:'SAL12', staff_id:'ST12', monthly_salary_inr:288000}
+];
+
+
+/* ====== sample data mirroring staff ====== */
+const STAFF_ROWS = [
+ {staff_id:'ST01', first_name:'Aditi',  employment_type:'full-time', status:'active',   manager_id:'MGR01'},
+ {staff_id:'ST02', first_name:'Rohan',  employment_type:'contract',  status:'active',   manager_id:'MGR01'},
+ {staff_id:'ST03', first_name:'Kavya',  employment_type:'full-time', status:'inactive', manager_id:'MGR02'},
+ {staff_id:'ST04', first_name:'Farah',  employment_type:'contract',  status:'active',   manager_id:'MGR02'},
+ {staff_id:'ST05', first_name:'Vikram', employment_type:'full-time', status:'active',   manager_id:null},
+ {staff_id:'ST06', first_name:'Neha',   employment_type:'full-time', status:'active',   manager_id:'MGR01'},
+ {staff_id:'ST07', first_name:'Sameer', employment_type:'contract',  status:'inactive', manager_id:'MGR02'},
+ {staff_id:'ST08', first_name:'Priya',  employment_type:'full-time', status:'active',   manager_id:'MGR01'},
+ {staff_id:'ST09', first_name:'Arjun',  employment_type:'contract',  status:'active',   manager_id:'MGR02'},
+ {staff_id:'ST10', first_name:'Divya',  employment_type:'full-time', status:'inactive', manager_id:'MGR01'}
+];
+
+
+function fmt(v){ return (v===null||v===undefined) ? '<span class="nullcell">NULL</span>' : v; }
+
+
+/* ====== SEARCHED CASE SIMULATOR (Section 3) ====== */
+function renderCaseSim(){
+  const b1 = parseInt(document.getElementById('b1').value);
+  const b2 = parseInt(document.getElementById('b2').value);
+  document.getElementById('b1val').textContent = b1;
+  document.getElementById('b2val').textContent = b2;
+
+
+  let entryCount=0, midCount=0, seniorCount=0;
+  let h = '<tr><th>salary_id</th><th>staff_id</th><th>monthly_salary_inr</th><th>salary_band</th></tr>';
+  SALARY_ROWS.forEach(r=>{
+    let band, cls;
+    if(r.monthly_salary_inr < b1){ band='Entry'; cls='band-entry'; entryCount++; }
+    else if(r.monthly_salary_inr <= b2){ band='Mid'; cls='band-mid'; midCount++; }
+    else { band='Senior'; cls='band-senior'; seniorCount++; }
+    h += `<tr class="${cls}"><td>${r.salary_id}</td><td>${r.staff_id}</td><td>₹${r.monthly_salary_inr.toLocaleString()}</td><td>${band}</td></tr>`;
+  });
+  document.getElementById('caseSimTable').innerHTML = h;
+  document.getElementById('caseSimResult').textContent =
+    `WHEN monthly_salary_inr < ${b1} THEN 'Entry' → ${entryCount} rows · BETWEEN ${b1} AND ${b2} THEN 'Mid' → ${midCount} rows · > ${b2} THEN 'Senior' → ${seniorCount} rows`;
+}
+renderCaseSim();
+
+
+/* ====== CONDITIONAL COUNT SIMULATOR (Section 7) ====== */
+function runCountSim(){
+  const statusF = document.getElementById('countStatusFilter').value;
+  const empF = document.getElementById('countEmpFilter').value;
+
+
+  let matchCount = 0;
+  let h = '<tr><th>staff_id</th><th>first_name</th><th>status</th><th>employment_type</th><th>CASE result</th></tr>';
+  STAFF_ROWS.forEach(r=>{
+    const statusOk = (statusF==='any') || (r.status===statusF);
+    const empOk = (empF==='any') || (r.employment_type===empF);
+    const isMatch = statusOk && empOk;
+    if(isMatch) matchCount++;
+    h += `<tr class="${isMatch?'highlight':'dimmed'}"><td>${r.staff_id}</td><td>${r.first_name}</td><td>${r.status}</td><td>${r.employment_type}</td><td>${isMatch?'1':'<span class="nullcell">NULL</span>'}</td></tr>`;
+  });
+  document.getElementById('countSimTable').innerHTML = h;
+
+
+  const statusLabel = statusF==='any' ? '' : ` status = '${statusF}'`;
+  const empLabel = empF==='any' ? '' : ` employment_type = '${empF}'`;
+  const joiner = (statusF!=='any' && empF!=='any') ? ' AND' : '';
+  const condText = (statusLabel || empLabel) ? `WHEN${statusLabel}${joiner}${empLabel}` : 'WHEN (no filter — matches everything)';
+
+
+  document.getElementById('countSimResult').textContent =
+    `COUNT(CASE ${condText} THEN 1 END) → ${matchCount} out of ${STAFF_ROWS.length} rows counted ✅`;
+}
+runCountSim();
+
+
+/* ====== BUCKET + GROUP BY SIMULATOR (Section 9) ====== */
+function renderBucketSim(){
+  const g1 = parseInt(document.getElementById('g1').value);
+  const g2 = parseInt(document.getElementById('g2').value);
+  const g3 = parseInt(document.getElementById('g3').value);
+  document.getElementById('g1val').textContent = g1;
+  document.getElementById('g2val').textContent = g2;
+  document.getElementById('g3val').textContent = g3;
+
+
+  const bands = {
+    'Entry':    {min:null, max:null, sum:0, count:0},
+    'Mid':      {min:null, max:null, sum:0, count:0},
+    'Upper-Mid':{min:null, max:null, sum:0, count:0},
+    'Senior':   {min:null, max:null, sum:0, count:0}
+  };
+
+
+  SALARY_ROWS.forEach(r=>{
+    const v = r.monthly_salary_inr;
+    let band;
+    if(v < g1) band='Entry';
+    else if(v <= g2) band='Mid';
+    else if(v <= g3) band='Upper-Mid';
+    else band='Senior';
+    const b = bands[band];
+    b.count++;
+    b.sum += v;
+    b.min = (b.min===null) ? v : Math.min(b.min, v);
+    b.max = (b.max===null) ? v : Math.max(b.max, v);
+  });
+
+
+  let h = '<tr><th>salary_band</th><th>staff_count</th><th>band_min</th><th>band_max</th><th>band_avg</th></tr>';
+  Object.keys(bands).forEach(bandName=>{
+    const b = bands[bandName];
+    const avg = b.count ? Math.round(b.sum / b.count) : 0;
+    const cls = 'band-' + bandName.toLowerCase().replace('-','');
+    h += `<tr class="${cls}"><td>${bandName}</td><td>${b.count}</td><td>${b.min===null?'—':'₹'+b.min.toLocaleString()}</td><td>${b.max===null?'—':'₹'+b.max.toLocaleString()}</td><td>${b.count?'₹'+avg.toLocaleString():'—'}</td></tr>`;
+  });
+  document.getElementById('bucketSimTable').innerHTML = h;
+  document.getElementById('bucketSimResult').textContent =
+    `GROUP BY salary_band → 4 bands built from boundaries ${g1} / ${g2} / ${g3} — ${SALARY_ROWS.length} total salary records distributed`;
+}
+renderBucketSim();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/SQL-7-postread" target="_blank" rel="noopener">github.com/scaler-content/SQL-7-postread</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

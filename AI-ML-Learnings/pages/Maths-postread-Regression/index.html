@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Math Behind the Notebook — Linear Regression, Lectures 1–4</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<style>
+:root{
+  --paper:      #F2F5FA;
+  --paper-2:    #FFFFFF;
+  --grid:       #DCE4F0;
+  --ink:        #14243F;
+  --ink-soft:   #4E6183;
+  --ink-faint:  #8496AF;
+  --rule:       #C6D2E4;
+  --pen:        #A81F27;
+  --chalk:      #0D6A67;
+  --amber:      #9C6410;
+  --code-bg:    #101C33;
+  --code-fg:    #DCE6F5;
+
+  --serif: "IBM Plex Serif", Georgia, serif;
+  --sans:  "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono:  "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --hand:  "Caveat", cursive;
+
+  --col:  700px;
+  --rail: 300px;
+}
+
+*{ box-sizing:border-box; }
+
+html{ scroll-behavior:smooth; scroll-padding-top:88px; }
+
+body{
+  margin:0;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 26px 26px;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.68;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- progress + nav ---------- */
+#progress{
+  position:fixed; top:0; left:0; height:3px; width:0%;
+  background: var(--pen); z-index:60; transition: width .08s linear;
+}
+
+nav.topbar{
+  position:sticky; top:0; z-index:50;
+  background: rgba(242,245,250,.93);
+  backdrop-filter: blur(8px);
+  border-bottom:1px solid var(--rule);
+}
+.topbar-inner{
+  max-width:1180px; margin:0 auto; padding:10px 24px;
+  display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+}
+.topbar .brand{
+  font-family: var(--mono); font-size:12px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); white-space:nowrap;
+}
+.topbar .links{ display:flex; gap:6px; flex-wrap:wrap; }
+.topbar a{
+  font-family: var(--mono); font-size:12.5px; text-decoration:none;
+  color:var(--ink-soft); padding:5px 10px; border:1px solid transparent;
+  border-radius:2px; white-space:nowrap;
+}
+.topbar a:hover{ border-color:var(--rule); background:var(--paper-2); color:var(--ink); }
+.topbar a:focus-visible{ outline:2px solid var(--pen); outline-offset:2px; }
+
+/* ---------- layout ---------- */
+.wrap{ max-width:1180px; margin:0 auto; padding:0 24px; }
+
+.sheet{
+  display:grid;
+  grid-template-columns: var(--col) var(--rail);
+  gap:0 44px;
+  align-items:start;
+}
+.sheet > *{ grid-column:1; min-width:0; }
+.sheet > .note{ grid-column:2; }
+
+/* ---------- hero ---------- */
+header.hero{
+  border-bottom:2px solid var(--ink);
+  padding:76px 0 34px;
+  margin-bottom:0;
+}
+.eyebrow{
+  font-family:var(--mono); font-size:12px; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--pen); margin-bottom:22px;
+}
+h1{
+  font-family:var(--serif); font-weight:700;
+  font-size: clamp(38px, 6.2vw, 68px);
+  line-height:1.02; letter-spacing:-.022em;
+  margin:0 0 22px; max-width:15ch;
+}
+h1 em{ font-style:italic; font-weight:400; color:var(--pen); }
+.standfirst{
+  font-family:var(--serif); font-size:20px; line-height:1.55;
+  color:var(--ink-soft); max-width:60ch; margin:0 0 30px;
+}
+.meta-row{
+  display:flex; gap:28px; flex-wrap:wrap;
+  font-family:var(--mono); font-size:12px; color:var(--ink-faint);
+  letter-spacing:.05em; padding-top:18px; border-top:1px solid var(--rule);
+}
+.meta-row b{ color:var(--ink); font-weight:500; display:block; font-size:13px; }
+
+/* ---------- chapter markers ---------- */
+.chapter{
+  margin:0; padding:64px 0 0;
+  border-top:1px solid var(--rule);
+}
+.chapter:first-of-type{ border-top:none; }
+.chapter-head{
+  display:flex; align-items:baseline; gap:16px; margin-bottom:8px;
+}
+.chapter-num{
+  font-family:var(--mono); font-size:12px; letter-spacing:.16em;
+  color:var(--pen); text-transform:uppercase; white-space:nowrap;
+}
+.chapter-rule{ flex:1; height:1px; background:var(--rule); }
+h2{
+  font-family:var(--serif); font-weight:700;
+  font-size: clamp(28px,4vw,40px); line-height:1.12;
+  letter-spacing:-.015em; margin:6px 0 14px;
+}
+.chapter-sub{
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-faint);
+  margin-bottom:34px; letter-spacing:.03em;
+}
+h3{
+  font-family:var(--serif); font-weight:600; font-size:25px;
+  line-height:1.24; margin:52px 0 12px; letter-spacing:-.01em;
+}
+h4{
+  font-family:var(--sans); font-weight:600; font-size:16.5px;
+  margin:32px 0 8px; color:var(--ink);
+}
+p{ margin:0 0 17px; }
+a{ color:var(--chalk); }
+
+ul,ol{ margin:0 0 18px; padding-left:22px; }
+li{ margin-bottom:8px; }
+li::marker{ color:var(--ink-faint); }
+
+strong{ font-weight:600; }
+code{
+  font-family:var(--mono); font-size:.88em;
+  background:#E4EAF4; padding:1px 5px; border-radius:2px; color:#1D3557;
+}
+
+/* ---------- red-pen margin notes (signature) ---------- */
+.note{
+  font-family:var(--hand);
+  font-size:21px; line-height:1.35;
+  color:var(--pen);
+  border-left:2px solid var(--pen);
+  padding:2px 0 2px 14px;
+  margin:8px 0 22px;
+  align-self:start;
+}
+.note b{ font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+
+/* ---------- derivation ladder ---------- */
+.ladder{
+  border-top:1px solid var(--ink);
+  border-bottom:1px solid var(--ink);
+  padding:8px 0; margin:30px 0;
+  background:var(--paper-2);
+}
+.ladder-title{
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-faint);
+  padding:8px 20px 10px; border-bottom:1px dashed var(--rule);
+}
+.step{
+  display:grid; grid-template-columns:44px 1fr; gap:0 14px;
+  padding:16px 20px; border-bottom:1px dashed var(--rule);
+}
+.step:last-child{ border-bottom:none; }
+.step-n{
+  font-family:var(--mono); font-size:12px; color:var(--pen);
+  padding-top:4px; letter-spacing:.04em;
+}
+.step-body p{ margin:0 0 8px; }
+.step-body p:last-child{ margin-bottom:0; }
+.step-why{
+  font-family:var(--sans); font-size:14.5px; color:var(--ink-soft);
+}
+
+/* ---------- code ---------- */
+pre{
+  background:var(--code-bg); color:var(--code-fg);
+  font-family:var(--mono); font-size:13.5px; line-height:1.62;
+  padding:18px 20px; border-radius:3px; overflow-x:auto;
+  margin:20px 0; border-left:3px solid var(--chalk);
+}
+pre code{ background:none; padding:0; color:inherit; font-size:inherit; }
+.c-com{ color:#7C93B8; font-style:italic; }
+.c-kw{ color:#F09E6C; }
+.c-str{ color:#8FD4A0; }
+.c-num{ color:#E6C77E; }
+.c-fn{ color:#7FC4E8; }
+.code-cap{
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-faint);
+  margin:-14px 0 22px; letter-spacing:.04em;
+}
+
+/* ---------- callouts ---------- */
+.box{
+  border:1px solid var(--rule); background:var(--paper-2);
+  padding:20px 22px; margin:26px 0; border-radius:3px;
+}
+.box-label{
+  font-family:var(--mono); font-size:11px; letter-spacing:.16em;
+  text-transform:uppercase; margin-bottom:10px; color:var(--ink-faint);
+}
+.box p:last-child{ margin-bottom:0; }
+.box.flag{ border-left:3px solid var(--amber); }
+.box.flag .box-label{ color:var(--amber); }
+.box.field{ border-left:3px solid var(--chalk); }
+.box.field .box-label{ color:var(--chalk); }
+.box.check{ border-left:3px solid var(--pen); }
+.box.check .box-label{ color:var(--pen); }
+
+/* ---------- figures ---------- */
+figure{ margin:34px 0; }
+figure svg{ width:100%; height:auto; display:block; background:var(--paper-2);
+  border:1px solid var(--rule); border-radius:3px; }
+figcaption{
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-faint);
+  margin-top:10px; line-height:1.55; letter-spacing:.02em;
+}
+figcaption b{ color:var(--ink-soft); font-weight:500; }
+
+/* svg text defaults */
+svg text{ font-family:"IBM Plex Sans", sans-serif; fill:var(--ink); }
+.svg-lbl{ font-size:12px; fill:#4E6183; }
+.svg-tiny{ font-size:10.5px; fill:#8496AF; font-family:"IBM Plex Mono", monospace; }
+.svg-hand{ font-family:"Caveat", cursive; font-size:19px; fill:#A81F27; }
+
+/* ---------- tables ---------- */
+table{
+  width:100%; border-collapse:collapse; margin:24px 0;
+  font-size:14.5px; background:var(--paper-2);
+}
+th,td{ text-align:left; padding:9px 12px; border-bottom:1px solid var(--rule); }
+th{
+  font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-faint);
+  border-bottom:1px solid var(--ink);
+}
+td.num{ font-family:var(--mono); font-size:13px; }
+
+/* ---------- details ---------- */
+details{
+  border:1px dashed var(--rule); border-radius:3px;
+  padding:0 18px; margin:24px 0; background:var(--paper-2);
+}
+details[open]{ padding-bottom:6px; }
+summary{
+  cursor:pointer; padding:14px 0; font-family:var(--mono);
+  font-size:12.5px; letter-spacing:.06em; color:var(--chalk);
+}
+summary:focus-visible{ outline:2px solid var(--pen); outline-offset:2px; }
+
+/* ---------- misc ---------- */
+.lede{
+  font-family:var(--serif); font-size:19px; line-height:1.6;
+  color:var(--ink-soft); margin-bottom:26px;
+}
+hr.soft{ border:none; border-top:1px dashed var(--rule); margin:38px 0; }
+.kicker{
+  font-family:var(--mono); font-size:11px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-faint); margin:44px 0 6px;
+}
+
+footer.end{
+  border-top:2px solid var(--ink); margin-top:76px;
+  padding:34px 0 80px;
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-faint);
+  line-height:1.8;
+}
+
+mjx-container[display="true"]{ margin:20px 0 !important; overflow-x:auto; overflow-y:hidden; }
+
+/* ---------- responsive ---------- */
+@media (max-width:1120px){
+  .sheet{ grid-template-columns:minmax(0,1fr); }
+  .sheet > .note{ grid-column:1; max-width:560px; }
+  :root{ --col:auto; }
+}
+@media (max-width:640px){
+  body{ font-size:16px; background-size:20px 20px; }
+  .wrap{ padding:0 18px; }
+  header.hero{ padding:44px 0 26px; }
+  .note{ font-size:19px; }
+  .step{ grid-template-columns:30px 1fr; padding:14px 14px; }
+  pre{ font-size:12.5px; padding:14px; }
+  .meta-row{ gap:16px; }
+}
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  #progress{ transition:none; }
+}
+@media print{
+  nav.topbar,#progress{ display:none; }
+  body{ background:#fff; }
+  .sheet{ grid-template-columns:1fr; }
+  .note{ grid-column:1; }
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· Math Companion · Linear regression derivations</span><span class="pn"><a href="../Linear-Regression-4/" title="ML Foundations 4 · Assumptions, VIF and polynomials">← Prev</a><a href="../ML-with-AI-workflows-7/" title="ML with AI 7 · Regularisation and cross-validation">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progress"></div>
+
+<nav class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">Math &amp; Code Companion</span>
+    <span class="links">
+      <a href="#l1">01 · Foundations</a>
+      <a href="#l2">02 · Simple LR</a>
+      <a href="#l3">03 · Multiple LR</a>
+      <a href="#l4">04 · Diagnostics</a>
+      <a href="#cheatsheet">Cheat sheet</a>
+    </span>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Post-read · Lectures 1–4 · Cars24 regression track</div>
+  <h1>What the notebook <em>doesn't</em> print</h1>
+  <p class="standfirst">Every <code>.fit()</code> call in these four lectures hides a derivation. This companion opens them up — the calculus behind gradient descent, the linear algebra behind the normal equation, why VIF is exactly one divided by one minus R-squared — and ties each one back to the exact numbers your notebooks already printed.</p>
+  <div class="meta-row">
+    <span><b>Prerequisites</b>Derivatives, basic matrices</span>
+    <span><b>Format</b>Read after class, alongside the notebooks</span>
+    <span><b>Datasets</b>Cars24 · auto-mpg · US electricity</span>
+  </div>
+</header>
+
+<section class="chapter sheet" id="inventory" style="padding-top:56px">
+  <div class="chapter-head">
+    <span class="chapter-num">Before we start</span>
+    <span class="chapter-rule"></span>
+  </div>
+  <h2>Which parts of these notebooks actually have math under them?</h2>
+  <p class="chapter-sub">An honest audit, because not every cell hides a theorem</p>
+
+  <p class="lede">Your learners asked a good question, and it deserves a precise answer rather than "yes, all of it." Roughly a third of these four notebooks is conceptual scaffolding — vocabulary, workflow, the ML lifecycle. That part has no equations to unpack. But the rest sits on top of a genuinely deep, genuinely classical body of mathematics: multivariable calculus, linear algebra, and statistical inference.</p>
+
+  <p>Here is the map. Everything in the "Has real math" column is derived from scratch later in this document.</p>
+
+  <table>
+    <thead>
+      <tr><th>From the notebook</th><th>Has real math?</th><th>What's underneath</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>ML vs classical programming, ML lifecycle, task types</td><td>No</td><td>Conceptual framing only</td></tr>
+      <tr><td>Data notation, train/test split</td><td>Partly</td><td>Why training error is a biased estimate of true error</td></tr>
+      <tr><td><code>estimate_charges(w, b)</code>, best-fit line</td><td><strong>Yes</strong></td><td>Hypothesis class, parameter space</td></tr>
+      <tr><td>Squaring the residuals (OLS)</td><td><strong>Yes</strong></td><td>Three independent justifications, incl. maximum likelihood</td></tr>
+      <tr><td><code>LinearRegression().fit()</code></td><td><strong>Yes</strong></td><td>Normal equation, derived by setting the gradient to zero</td></tr>
+      <tr><td>Gradient descent</td><td><strong>Yes</strong></td><td>Partial derivatives of MSE, convexity, learning rate</td></tr>
+      <tr><td><code>model.score()</code> → R²</td><td><strong>Yes</strong></td><td>Variance decomposition, the mean-model baseline</td></tr>
+      <tr><td>StandardScaler / MinMaxScaler</td><td><strong>Yes</strong></td><td>Condition number, why scaling changes GD but not OLS fit</td></tr>
+      <tr><td><code>pd.get_dummies()</code>, dropping a column</td><td><strong>Yes</strong></td><td>The dummy trap makes XᵀX singular — provably</td></tr>
+      <tr><td>Adjusted R²</td><td><strong>Yes</strong></td><td>Degrees-of-freedom penalty (and a bug in your notebook)</td></tr>
+      <tr><td><code>variance_inflation_factor</code></td><td><strong>Yes</strong></td><td>VIF = 1/(1−R²) falls out of the variance of an OLS coefficient</td></tr>
+      <tr><td>Shapiro–Wilk, Goldfeld–Quandt</td><td><strong>Yes</strong></td><td>Hypothesis tests with real test statistics</td></tr>
+      <tr><td><code>PolynomialFeatures</code></td><td><strong>Yes</strong></td><td>Feature maps — still linear in the parameters</td></tr>
+      <tr><td>Bias–variance tradeoff</td><td><strong>Yes</strong></td><td>An exact three-term decomposition of expected error</td></tr>
+      <tr><td>Groq / LLM narration cells</td><td>No</td><td>API calls; the math being narrated is above</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">So: Lecture 1 is vocabulary. Lectures 2–4 are applied calculus + linear algebra wearing a <b>sklearn</b> costume.</div>
+
+  <div class="box field">
+    <div class="box-label">How to use this document</div>
+    <p>Read it beside the notebooks, not instead of them. Each section names the notebook cell it explains, derives the mathematics behind that cell, then returns to the actual numbers your notebook printed. Three times in this document, the numbers turn out to reveal something the lecture never mentioned — those are marked in red.</p>
+  </div>
+</section>
+
+
+<!-- ============================ LECTURE 1 ============================ -->
+<section class="chapter sheet" id="l1">
+  <div class="chapter-head">
+    <span class="chapter-num">Lecture 01</span>
+    <span class="chapter-rule"></span>
+  </div>
+  <h2>Foundations: what "learning" means, written down</h2>
+  <p class="chapter-sub">Intro to ML Engineering &amp; Linear Regression 1 · notation, the target function, and one thing your CSV already did to you</p>
+
+  <p class="lede">Lecture 1 makes an informal promise: "machine learning finds patterns in data." Let us make that promise precise, because every later derivation depends on the precise version.</p>
+
+  <h3>The setup, formally</h3>
+
+  <p>You are given \(n\) observations. Each one is a pair: a vector of \(d\) features, and a number you want to predict.</p>
+
+  \[ \mathcal{D} = \{(\mathbf{x}_1, y_1), (\mathbf{x}_2, y_2), \ldots, (\mathbf{x}_n, y_n)\}, \qquad \mathbf{x}_i \in \mathbb{R}^d, \quad y_i \in \mathbb{R} \]
+
+  <p>In the Cars24 notebook, \(n = 19{,}820\) and \(d = 17\). The vector \(\mathbf{x}_i\) holds one car's <code>year</code>, <code>km_driven</code>, <code>mileage</code>, <code>engine</code> and so on; the scalar \(y_i\) is that car's <code>selling_price</code>.</p>
+
+  <p>We assume — and this is an assumption, not a fact — that the data was generated by some true but unknown function \(f\), corrupted by noise:</p>
+
+  \[ y_i = f(\mathbf{x}_i) + \varepsilon_i \]
+
+  <p>The noise term \(\varepsilon_i\) is doing real work here. It represents everything that affects a car's price but is not in your seventeen columns: the paint condition, whether the seller was in a hurry, a dent on the rear door. No model can predict it. It sets a floor on how good any model can ever be.</p>
+
+  <div class="note">This \(\varepsilon\) shows up again in Lecture 4 as the <b>irreducible error</b> in the bias–variance decomposition. Same symbol, same meaning.</div>
+
+  <p>Learning means searching for a function \(\hat{f}\) that is close to \(f\). But "search over all possible functions" is not a computation anyone can perform, so we do something narrower: we pick a <strong>family</strong> of functions first, then search inside that family. Linear regression picks the family of straight lines and planes:</p>
+
+  \[ \mathcal{H} = \left\{ \hat{f}(\mathbf{x}) = w_0 + \sum_{j=1}^{d} w_j x_j \;\middle|\; \mathbf{w} \in \mathbb{R}^{d+1} \right\} \]
+
+  <p>Now "learning" has become something a computer can do: find the best \(\mathbf{w}\). The whole of Lecture 2 is one question — what does "best" mean, and how do we find it?</p>
+
+  <figure>
+    <svg viewBox="0 0 660 250" role="img" aria-label="Diagram: data flows into a hypothesis family, an optimiser picks parameters, producing a fitted model that makes predictions">
+      <!-- boxes -->
+      <rect x="20" y="80" width="120" height="72" fill="#EDF2FA" stroke="#C6D2E4"/>
+      <text x="80" y="108" text-anchor="middle" font-size="13" font-weight="600">Training data</text>
+      <text x="80" y="128" text-anchor="middle" class="svg-tiny">(xᵢ , yᵢ) × n</text>
+
+      <rect x="190" y="52" width="130" height="60" fill="#FFFFFF" stroke="#14243F"/>
+      <text x="255" y="76" text-anchor="middle" font-size="13" font-weight="600">Hypothesis family</text>
+      <text x="255" y="95" text-anchor="middle" class="svg-tiny">ŷ = w₀ + Σ wⱼxⱼ</text>
+
+      <rect x="190" y="128" width="130" height="60" fill="#FFFFFF" stroke="#14243F"/>
+      <text x="255" y="152" text-anchor="middle" font-size="13" font-weight="600">Cost function</text>
+      <text x="255" y="171" text-anchor="middle" class="svg-tiny">MSE(w)</text>
+
+      <rect x="370" y="80" width="120" height="72" fill="#FFFFFF" stroke="#14243F" stroke-width="1.5"/>
+      <text x="430" y="108" text-anchor="middle" font-size="13" font-weight="600">Optimiser</text>
+      <text x="430" y="128" text-anchor="middle" class="svg-tiny">closed form / GD</text>
+
+      <rect x="540" y="80" width="100" height="72" fill="#EDF2FA" stroke="#C6D2E4"/>
+      <text x="590" y="108" text-anchor="middle" font-size="13" font-weight="600">ŵ</text>
+      <text x="590" y="128" text-anchor="middle" class="svg-tiny">fitted model</text>
+
+      <!-- arrows -->
+      <defs>
+        <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 z" fill="#4E6183"/>
+        </marker>
+      </defs>
+      <line x1="142" y1="100" x2="186" y2="84" stroke="#4E6183" marker-end="url(#ar)"/>
+      <line x1="142" y1="132" x2="186" y2="152" stroke="#4E6183" marker-end="url(#ar)"/>
+      <line x1="322" y1="82" x2="366" y2="100" stroke="#4E6183" marker-end="url(#ar)"/>
+      <line x1="322" y1="158" x2="366" y2="136" stroke="#4E6183" marker-end="url(#ar)"/>
+      <line x1="492" y1="116" x2="536" y2="116" stroke="#4E6183" marker-end="url(#ar)"/>
+
+      <text x="255" y="222" text-anchor="middle" class="svg-hand">every ML algorithm is these three boxes</text>
+    </svg>
+    <figcaption><b>Fig. 1</b> — The Model / Cost / Optimiser triple that Lecture 2 ends on. Change the top box and you get logistic regression or a neural network; change the bottom box and you get a different learning algorithm for the same model.</figcaption>
+  </figure>
+
+  <h3>The one piece of math already applied to your Lecture 1 CSV</h3>
+
+  <p>When you run <code>df.head()</code> in Lecture 1, every number is small and some are negative — a car's <code>engine</code> shows as \(-1.31\). No engine has negative displacement. The file was <strong>standardised</strong> before you got it:</p>
+
+  \[ z_{ij} = \frac{x_{ij} - \mu_j}{\sigma_j}, \qquad \mu_j = \frac{1}{n}\sum_{i=1}^n x_{ij}, \qquad \sigma_j = \sqrt{\frac{1}{n}\sum_{i=1}^n (x_{ij}-\mu_j)^2} \]
+
+  <p>Two properties follow immediately, and both matter later:</p>
+
+  <ul>
+    <li><strong>Every column now has mean 0 and standard deviation 1.</strong> Substituting the definitions gives \(\frac{1}{n}\sum_i z_{ij} = \frac{1}{n\sigma_j}\sum_i (x_{ij}-\mu_j) = 0\), and the variance calculation is similar.</li>
+    <li><strong>The units are gone.</strong> A value of \(z = 1.5\) means "1.5 standard deviations above average" whether the column was rupees, kilometres, or litres.</li>
+  </ul>
+
+  <p>Hold on to the first property. In Lecture 2 it is the reason your fitted intercept comes out as <code>-1.18e-16</code> — machine-epsilon zero — and the reason your slope and your R² turn out to be the same number twice over.</p>
+
+  <div class="box flag">
+    <div class="box-label">Worth telling learners</div>
+    <p>The Cars24 file also has <code>make</code> and <code>model</code> as numbers. They were <em>target-encoded</em>: each brand was replaced by the average selling price of cars of that brand (you can see this done explicitly in Lecture 3, <code>df.groupby('make')['selling_price'].transform('mean')</code>). This is a legitimate technique, but it builds the answer into the question. We return to what that does to your results at the end of Lecture 2 — it is the single most important caveat in the whole module.</p>
+  </div>
+</section>
+
+
+<!-- ============================ LECTURE 2 ============================ -->
+<section class="chapter sheet" id="l2">
+  <div class="chapter-head">
+    <span class="chapter-num">Lecture 02</span>
+    <span class="chapter-rule"></span>
+  </div>
+  <h2>Simple linear regression, derived twice</h2>
+  <p class="chapter-sub">Linear Regression 2 · squared error, the closed form, gradient descent, and R²</p>
+
+  <p class="lede">This lecture contains the densest mathematics of the four. We will derive the best-fit line two independent ways — by solving an equation exactly, and by walking downhill — and show they arrive at the same place.</p>
+
+  <h3>Step 1 · The model and its residuals</h3>
+
+  <p>With one feature, the hypothesis is a line with two parameters:</p>
+
+  \[ \hat{y}_i = w x_i + b \]
+
+  <p>In your notebook this is <code>estimate_charges(maxpower, w, b)</code>, and you set \(w=50, b=100\) by hand before improving them by eye. The <strong>residual</strong> for observation \(i\) is what the line got wrong:</p>
+
+  \[ e_i = y_i - \hat{y}_i = y_i - (w x_i + b) \]
+
+  <figure>
+    <svg viewBox="0 0 660 320" role="img" aria-label="Scatter plot with a fitted line and dashed vertical residual segments from each point to the line">
+      <!-- axes -->
+      <line x1="60" y1="285" x2="630" y2="285" stroke="#14243F" stroke-width="1.2"/>
+      <line x1="60" y1="30" x2="60" y2="285" stroke="#14243F" stroke-width="1.2"/>
+      <text x="345" y="310" text-anchor="middle" class="svg-lbl">x  (max_power)</text>
+      <text x="22" y="160" text-anchor="middle" class="svg-lbl" transform="rotate(-90 22 160)">y  (price)</text>
+
+      <!-- fitted line -->
+      <line x1="70" y1="240" x2="600" y2="80" stroke="#0D6A67" stroke-width="2.2"/>
+      <text x="612" y="76" class="svg-tiny" fill="#0D6A67">ŷ = wx + b</text>
+
+      <!-- residual drops + points -->
+      <g stroke="#A81F27" stroke-width="1.2" stroke-dasharray="3 3">
+        <line x1="110" y1="210" x2="110" y2="227.9"/>
+        <line x1="160" y1="226" x2="160" y2="212.8"/>
+        <line x1="215" y1="182" x2="215" y2="196.2"/>
+        <line x1="270" y1="189" x2="270" y2="179.6"/>
+        <line x1="330" y1="143" x2="330" y2="161.4"/>
+        <line x1="390" y1="155" x2="390" y2="143.3"/>
+        <line x1="455" y1="110" x2="455" y2="123.7"/>
+        <line x1="520" y1="116" x2="520" y2="104.1"/>
+        <line x1="570" y1="78"  x2="570" y2="89.0"/>
+      </g>
+      <g fill="#14243F">
+        <circle cx="110" cy="210" r="4"/><circle cx="160" cy="226" r="4"/>
+        <circle cx="215" cy="182" r="4"/><circle cx="270" cy="189" r="4"/>
+        <circle cx="330" cy="143" r="4"/><circle cx="390" cy="155" r="4"/>
+        <circle cx="455" cy="110" r="4"/><circle cx="520" cy="116" r="4"/>
+        <circle cx="570" cy="78"  r="4"/>
+      </g>
+
+      <text x="120" y="205" class="svg-tiny" fill="#A81F27">eᵢ &gt; 0</text>
+      <text x="168" y="240" class="svg-tiny" fill="#A81F27">eᵢ &lt; 0</text>
+      <text x="330" y="255" class="svg-hand">these dashed lengths are what we square</text>
+    </svg>
+    <figcaption><b>Fig. 2</b> — Residuals are <em>vertical</em> distances, not perpendicular ones. That is a deliberate choice: we are predicting \(y\) from \(x\), so error is measured in the units of \(y\).</figcaption>
+  </figure>
+
+  <h3>Step 2 · Why we square the residuals</h3>
+
+  <p>Your notebook gives one reason: positive and negative errors cancel, so a terrible line can score zero. That is correct and it is the reason to reject the plain sum. But it does not explain why we square rather than take absolute values. There are three arguments, and learners should hear all three.</p>
+
+  <div class="ladder">
+    <div class="ladder-title">Three reasons for the square</div>
+    <div class="step">
+      <div class="step-n">i</div>
+      <div class="step-body">
+        <p><strong>Cancellation.</strong> \(\sum_i e_i\) can be zero for a line that fits nothing. Squaring makes every term non-negative, so errors can only accumulate, never cancel.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">ii</div>
+      <div class="step-body">
+        <p><strong>Differentiability.</strong> \(|e|\) has no derivative at \(e = 0\); \(e^2\) is smooth everywhere. Since our entire optimisation strategy is "set the derivative to zero" or "follow the derivative downhill", this is not a cosmetic preference — the absolute-value cost has no closed-form solution at all.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">iii</div>
+      <div class="step-body">
+        <p><strong>It is the maximum-likelihood answer under Gaussian noise.</strong> Assume \(\varepsilon_i \sim \mathcal{N}(0, \sigma^2)\), independently. Then the probability of observing your data given parameters \(\mathbf{w}\) is</p>
+        \[ L(\mathbf{w}) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\!\left(-\frac{(y_i - \hat{y}_i)^2}{2\sigma^2}\right) \]
+        <p>Taking logs turns the product into a sum:</p>
+        \[ \log L(\mathbf{w}) = -\frac{n}{2}\log(2\pi\sigma^2) \;-\; \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \hat{y}_i)^2 \]
+        <p class="step-why">The first term does not involve \(\mathbf{w}\). So <em>maximising</em> the likelihood is exactly <em>minimising</em> the sum of squared errors. Least squares is not an arbitrary convention — it is the optimal estimate when noise is bell-shaped.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">Reason (iii) is also why Lecture 4 checks that residuals are normally distributed. If they are not, the assumption behind the whole method is shaky.</div>
+
+  <p>Summing the squares and dividing by \(n\) gives the <strong>cost function</strong>, mean squared error:</p>
+
+  \[ J(w, b) \;=\; \frac{1}{n}\sum_{i=1}^{n} \bigl(y_i - w x_i - b\bigr)^2 \]
+
+  <p>The \(1/n\) makes the number comparable across datasets of different sizes. It does not change <em>where</em> the minimum is, since dividing by a positive constant cannot move a minimum. Many textbooks use \(\frac{1}{2n}\) purely so that the 2 from differentiating cancels; sklearn uses \(\frac{1}{n}\).</p>
+
+  <h3>Step 3 · Solving it exactly (the closed form)</h3>
+
+  <p>\(J\) is a function of two variables. At its minimum, both partial derivatives vanish. That gives two equations in two unknowns — and this system is small enough to solve by hand.</p>
+
+  <div class="ladder">
+    <div class="ladder-title">Deriving the least-squares line</div>
+
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-body">
+        <p>Differentiate with respect to \(b\), using the chain rule on each squared term:</p>
+        \[ \frac{\partial J}{\partial b} = \frac{1}{n}\sum_{i=1}^n 2\bigl(y_i - w x_i - b\bigr)\cdot(-1) = -\frac{2}{n}\sum_{i=1}^n \bigl(y_i - w x_i - b\bigr) \]
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-body">
+        <p>Set it to zero and drop the constant \(-2/n\):</p>
+        \[ \sum_{i=1}^n y_i - w\sum_{i=1}^n x_i - nb = 0 \]
+        <p>Dividing through by \(n\) and writing \(\bar{x}, \bar{y}\) for the column means:</p>
+        \[ \boxed{\,b = \bar{y} - w\bar{x}\,} \]
+        <p class="step-why">Read this out loud: <em>the best-fit line always passes through the point \((\bar{x}, \bar{y})\)</em>. The centre of mass of your scatter plot is always on the line. This is a fact worth showing learners on a plot.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-body">
+        <p>Now differentiate with respect to \(w\). The inner derivative is \(-x_i\) this time:</p>
+        \[ \frac{\partial J}{\partial w} = -\frac{2}{n}\sum_{i=1}^n x_i\bigl(y_i - w x_i - b\bigr) = 0 \;\;\Longrightarrow\;\; \sum_i x_i y_i - w\sum_i x_i^2 - b\sum_i x_i = 0 \]
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">4</div>
+      <div class="step-body">
+        <p>Substitute \(b = \bar{y} - w\bar{x}\) from step 2 and collect the \(w\) terms:</p>
+        \[ \sum_i x_i y_i - n\bar{x}\bar{y} \;=\; w\left(\sum_i x_i^2 - n\bar{x}^2\right) \]
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">5</div>
+      <div class="step-body">
+        <p>Both sides are recognisable. Using the identities \(\sum_i x_iy_i - n\bar x\bar y = \sum_i (x_i-\bar x)(y_i-\bar y)\) and \(\sum_i x_i^2 - n\bar x^2 = \sum_i (x_i - \bar x)^2\):</p>
+        \[ \boxed{\;w = \frac{\sum_{i=1}^n (x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^n (x_i - \bar{x})^2} = \frac{\mathrm{Cov}(x,y)}{\mathrm{Var}(x)}\;} \]
+        <p class="step-why">The slope is covariance over variance. Numerator: how much \(x\) and \(y\) move together. Denominator: how much \(x\) moves at all. If \(x\) barely varies, the denominator is tiny and the slope estimate becomes wildly unstable — which is precisely the multicollinearity problem of Lecture 4, in its simplest form.</p>
+      </div>
+    </div>
+  </div>
+
+  <p>Because \(J\) is a quadratic with a positive leading coefficient in each parameter, this stationary point is a minimum, not a maximum or saddle. (Formally: the Hessian is positive semi-definite. We prove the general version in Lecture 3.)</p>
+
+  <details>
+    <summary>▸ Show the 10-line implementation that reproduces sklearn exactly</summary>
+    <pre><code><span class="c-kw">import</span> numpy <span class="c-kw">as</span> np
+
+<span class="c-kw">def</span> <span class="c-fn">ols_univariate</span>(x, y):
+    x_bar, y_bar = x.mean(), y.mean()
+    <span class="c-com"># slope = Cov(x, y) / Var(x)</span>
+    w = np.sum((x - x_bar) * (y - y_bar)) / np.sum((x - x_bar) ** <span class="c-num">2</span>)
+    b = y_bar - w * x_bar
+    <span class="c-kw">return</span> w, b
+
+w, b = ols_univariate(df[<span class="c-str">"model"</span>].values, df[<span class="c-str">"selling_price"</span>].values)
+<span class="c-fn">print</span>(w, b)   <span class="c-com"># 0.96505112  -1.18e-16  — identical to model.coef_, model.intercept_</span></code></pre>
+    <p class="code-cap">No iteration, no learning rate. sklearn does something numerically sturdier than this (it calls <code>scipy.linalg.lstsq</code>) but mathematically it is solving these same two equations.</p>
+  </details>
+
+  <h3>Step 4 · Solving it approximately (gradient descent)</h3>
+
+  <p>Your notebook introduces gradient descent right after the manual <code>try_parameters(0.5, 1)</code> experiments, with the honest motivation: there must be a better way than nudging numbers by hand. There is, and it is the same two derivatives we just computed — used differently.</p>
+
+  <p>Instead of setting the gradient to zero, we <em>step against</em> it. The gradient points in the direction of steepest increase, so its negative points downhill:</p>
+
+  \[ w \leftarrow w - \alpha \frac{\partial J}{\partial w}, \qquad b \leftarrow b - \alpha \frac{\partial J}{\partial b} \]
+
+  <p>Substituting the derivatives from steps 1 and 3, the update rules become concrete:</p>
+
+  \[ w \leftarrow w + \frac{2\alpha}{n}\sum_{i=1}^n x_i\,(y_i - \hat{y}_i), \qquad b \leftarrow b + \frac{2\alpha}{n}\sum_{i=1}^n (y_i - \hat{y}_i) \]
+
+  <figure>
+    <svg viewBox="0 0 660 300" role="img" aria-label="A parabolic cost curve with descending gradient descent steps approaching the minimum, steps shrinking as the slope flattens">
+      <line x1="60" y1="270" x2="640" y2="270" stroke="#14243F" stroke-width="1.2"/>
+      <line x1="60" y1="20" x2="60" y2="270" stroke="#14243F" stroke-width="1.2"/>
+      <text x="350" y="294" text-anchor="middle" class="svg-lbl">parameter w</text>
+      <text x="24" y="145" text-anchor="middle" class="svg-lbl" transform="rotate(-90 24 145)">cost J(w)</text>
+
+      <path d="M 80 50 Q 350 410 620 122" fill="none" stroke="#14243F" stroke-width="2"/>
+
+      <!-- steps -->
+      <g fill="#A81F27">
+        <circle cx="120" cy="99.8" r="5"/>
+        <circle cx="200" cy="178" r="5"/>
+        <circle cx="272" cy="224.1" r="5"/>
+        <circle cx="330" cy="244.4" r="5"/>
+        <circle cx="362" cy="249.3" r="5"/>
+        <circle cx="380" cy="250" r="5"/>
+      </g>
+      <g stroke="#A81F27" stroke-width="1.4" stroke-dasharray="4 3">
+        <line x1="120" y1="99.8" x2="200" y2="178"/>
+        <line x1="200" y1="178" x2="272" y2="224.1"/>
+        <line x1="272" y1="224.1" x2="330" y2="244.4"/>
+        <line x1="330" y1="244.4" x2="362" y2="249.3"/>
+        <line x1="362" y1="249.3" x2="380" y2="250"/>
+      </g>
+
+      <!-- tangent at first point -->
+      <line x1="80" y1="61" x2="170" y2="140" stroke="#0D6A67" stroke-width="1.6"/>
+      <text x="96" y="52" class="svg-tiny" fill="#0D6A67">steep slope → big step</text>
+
+      <line x1="300" y1="245" x2="380" y2="252" stroke="#0D6A67" stroke-width="1.6"/>
+      <text x="286" y="236" class="svg-tiny" fill="#0D6A67">flat → tiny step</text>
+
+      <line x1="380" y1="250" x2="380" y2="270" stroke="#8496AF" stroke-dasharray="2 2"/>
+      <text x="380" y="286" text-anchor="middle" class="svg-tiny">w*</text>
+
+      <text x="470" y="200" class="svg-hand">steps shrink automatically —</text>
+      <text x="470" y="222" class="svg-hand">no extra logic needed</text>
+    </svg>
+    <figcaption><b>Fig. 3</b> — Gradient descent on a convex cost. The step length is proportional to the slope, so progress slows as you approach the minimum. This self-braking behaviour is a property of the algorithm, not something you code.</figcaption>
+  </figure>
+
+  <h4>Choosing the learning rate</h4>
+  <p>\(\alpha\) is the one number you must supply. Its behaviour splits into three regimes:</p>
+  <ul>
+    <li><strong>Too small</strong> — convergence is correct but takes thousands of iterations.</li>
+    <li><strong>Well chosen</strong> — smooth, fast descent to the minimum.</li>
+    <li><strong>Too large</strong> — each step overshoots the valley and lands higher up the opposite wall. The cost <em>increases</em> and diverges to infinity. For MSE with cost \(J = \frac{1}{n}\sum_i(\cdots)^2\), the threshold is precise: divergence occurs when \(\alpha > 1/\lambda_{\max}\), where \(\lambda_{\max}\) is the largest eigenvalue of the feature covariance matrix. (The Hessian of this \(1/n\)-normalised cost is \(2\,\text{Cov}(X)\), and steepest descent on a quadratic converges only for \(\alpha < 2/\lambda_{\max}(\text{Hessian}) = 1/\lambda_{\max}(\text{Cov})\).)</li>
+  </ul>
+
+  <p>That last fact is the mathematical reason feature scaling matters so much, which we take up properly in Lecture 3.</p>
+
+  <div class="box field">
+    <div class="box-label">Why bother, when a closed form exists?</div>
+    <p>Fair question, and worth pre-empting from learners. The closed form requires inverting a \(d \times d\) matrix, costing roughly \(O(d^3)\) operations and \(O(d^2)\) memory. At \(d = 17\) that is instant. At \(d = 100{,}000\) — text features, one-hot encoded user IDs, embeddings — it is impossible. Gradient descent costs \(O(nd)\) per iteration and needs no matrix inverse, so it scales. It is also the only option for models like logistic regression and neural networks, which have <em>no</em> closed form. Linear regression is where you learn the tool you will use everywhere else.</p>
+  </div>
+
+  <h3>Step 5 · Scoring the fit: R²</h3>
+
+  <p>Your MSE is a number like 0.068. Is that good? You cannot tell, because MSE carries the squared units of \(y\) — change from rupees to lakhs and the number changes by a factor of \(10^{10}\). Your notebook makes exactly this point with the two-model comparison. We need a scale-free score, so we need a baseline to compare against.</p>
+
+  <p>The notebook picks the right baseline: the <strong>mean model</strong>, which ignores every feature and always predicts \(\bar{y}\). It is the least you could possibly do while still being sensible. Define two sums:</p>
+
+  \[ SS_{\text{res}} = \sum_{i=1}^n (y_i - \hat{y}_i)^2 \qquad\text{(your model's squared error)} \]
+  \[ SS_{\text{tot}} = \sum_{i=1}^n (y_i - \bar{y})^2 \qquad\text{(the mean model's squared error)} \]
+
+  <figure>
+    <svg viewBox="0 0 660 300" role="img" aria-label="Two panels comparing the mean model with large residuals against a fitted line with small residuals">
+      <!-- LEFT PANEL -->
+      <text x="165" y="24" text-anchor="middle" font-size="13" font-weight="600">Mean model → SS_tot</text>
+      <line x1="45" y1="255" x2="300" y2="255" stroke="#14243F"/>
+      <line x1="45" y1="40" x2="45" y2="255" stroke="#14243F"/>
+      <line x1="55" y1="150" x2="295" y2="150" stroke="#8496AF" stroke-width="2" stroke-dasharray="6 4"/>
+      <text x="258" y="142" class="svg-tiny">ȳ</text>
+      <g stroke="#A81F27" stroke-width="1.2" stroke-dasharray="3 3">
+        <line x1="80" y1="215" x2="80" y2="150"/><line x1="118" y1="196" x2="118" y2="150"/>
+        <line x1="156" y1="168" x2="156" y2="150"/><line x1="194" y1="128" x2="194" y2="150"/>
+        <line x1="232" y1="92" x2="232" y2="150"/><line x1="270" y1="70" x2="270" y2="150"/>
+      </g>
+      <g fill="#14243F">
+        <circle cx="80" cy="215" r="4"/><circle cx="118" cy="196" r="4"/><circle cx="156" cy="168" r="4"/>
+        <circle cx="194" cy="128" r="4"/><circle cx="232" cy="92" r="4"/><circle cx="270" cy="70" r="4"/>
+      </g>
+      <text x="165" y="285" text-anchor="middle" class="svg-tiny">large gaps — total variance in y</text>
+
+      <!-- RIGHT PANEL -->
+      <text x="500" y="24" text-anchor="middle" font-size="13" font-weight="600">Fitted line → SS_res</text>
+      <line x1="380" y1="255" x2="635" y2="255" stroke="#14243F"/>
+      <line x1="380" y1="40" x2="380" y2="255" stroke="#14243F"/>
+      <line x1="392" y1="222" x2="628" y2="66" stroke="#0D6A67" stroke-width="2"/>
+      <g stroke="#A81F27" stroke-width="1.2" stroke-dasharray="3 3">
+        <line x1="415" y1="215" x2="415" y2="207"/><line x1="453" y1="196" x2="453" y2="182"/>
+        <line x1="491" y1="168" x2="491" y2="157"/><line x1="529" y1="128" x2="529" y2="132"/>
+        <line x1="567" y1="92"  x2="567" y2="107"/><line x1="605" y1="70" x2="605" y2="82"/>
+      </g>
+      <g fill="#14243F">
+        <circle cx="415" cy="215" r="4"/><circle cx="453" cy="196" r="4"/><circle cx="491" cy="168" r="4"/>
+        <circle cx="529" cy="128" r="4"/><circle cx="567" cy="92" r="4"/><circle cx="605" cy="70" r="4"/>
+      </g>
+      <text x="500" y="285" text-anchor="middle" class="svg-tiny">small gaps — variance left unexplained</text>
+    </svg>
+    <figcaption><b>Fig. 4</b> — R² asks one question: <em>by what fraction did my line shrink the red gaps, compared with the flat line?</em> Same points, same y-axis, in both panels.</figcaption>
+  </figure>
+
+  <p>The ratio \(SS_{\text{res}}/SS_{\text{tot}}\) is the fraction of error your model failed to remove. Subtract it from one and you get the fraction it did remove:</p>
+
+  \[ R^2 = 1 - \frac{SS_{\text{res}}}{SS_{\text{tot}}} \]
+
+  <p>Now the three cases in your notebook have proofs rather than assertions:</p>
+
+  <table>
+    <thead><tr><th>Value</th><th>Condition</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="num">R² = 1</td><td class="num">SS_res = 0</td><td>Every point sits exactly on the line</td></tr>
+      <tr><td class="num">R² = 0</td><td class="num">SS_res = SS_tot</td><td>Your model is no better than predicting the average</td></tr>
+      <tr><td class="num">R² &lt; 0</td><td class="num">SS_res &gt; SS_tot</td><td>Worse than the average. Possible on test data, or with a forced-through-origin fit</td></tr>
+      <tr><td class="num">R² → −∞</td><td class="num">SS_res ≫ SS_tot</td><td>No lower bound exists — squared error is unbounded above</td></tr>
+    </tbody>
+  </table>
+
+  <details>
+    <summary>▸ Why R² is never negative on the <em>training</em> data of an OLS fit</summary>
+    <p>Because OLS minimises \(SS_{\text{res}}\) over all lines \(\{w x + b\}\), and the mean model is itself a member of that family (take \(w = 0, b = \bar{y}\)). A minimiser cannot do worse than a specific member of the set it minimises over, so \(SS_{\text{res}} \le SS_{\text{tot}}\) always holds in-sample, giving \(R^2 \ge 0\).</p>
+    <p>On <em>test</em> data this argument fails — the parameters were not chosen to minimise error on those points — which is exactly why a negative test R² is a real and informative warning sign.</p>
+  </details>
+
+  <h3>Reading your own output: three things hiding in Lecture 2's numbers</h3>
+
+  <p>Your notebook fits <code>selling_price</code> on the single feature <code>model</code> and prints three results. Each one is more interesting than it looks.</p>
+
+  <div class="box check">
+    <div class="box-label">Finding 1 — the intercept is zero, and it had to be</div>
+    <p>The notebook prints <code>c = [-1.18731936e-16]</code> and the surrounding text reads it as "\(c = -1.18\)". It is not −1.18; it is −0.000000000000000118, which is floating-point zero.</p>
+    <p>And step 2 of our derivation explains why it must be. We proved \(b = \bar{y} - w\bar{x}\). Both columns were z-scored, so \(\bar{x} = \bar{y} = 0\), giving \(b = 0 - w(0) = 0\) exactly. The fitted equation is \(\hat{y} = 0.965x\), and it passes through the origin.</p>
+    <p>Worth correcting in the slide — learners who write "price = 0.965 × model − 1.18" have an equation that is wrong by an entire unit of standard deviation.</p>
+  </div>
+
+  <div class="box check">
+    <div class="box-label">Finding 2 — the slope and the R² are the same number</div>
+    <p>The notebook prints \(w = 0.96505112\) and, thirty cells later, <code>model.score(X, Y)</code> → \(0.93132366\). Square the first: \(0.96505112^2 = 0.93132366\). Not approximately — to eight decimal places.</p>
+    <p>This is not a coincidence, it is a theorem. When both \(x\) and \(y\) are standardised, \(\mathrm{Var}(x) = 1\) and \(\mathrm{Cov}(x,y) = r\), the Pearson correlation coefficient. Our slope formula then collapses:</p>
+    \[ w = \frac{\mathrm{Cov}(x,y)}{\mathrm{Var}(x)} = \frac{r}{1} = r \]
+    <p>And for simple linear regression, \(R^2 = r^2\) — which is where the name "R-squared" comes from in the first place. So on standardised data the slope <em>is</em> the correlation, and R² <em>is</em> its square. A beautiful five-minute demonstration for a live class.</p>
+  </div>
+
+  <div class="box check">
+    <div class="box-label">Finding 3 — R² = 0.93 from one feature is too good, and here is why</div>
+    <p>A single column explaining 93% of used-car price variance should raise an eyebrow. It is not a modelling triumph; it is an artefact of how <code>model</code> was encoded.</p>
+    <p>That column was target-encoded: every car's <code>model</code> value was replaced by <em>the average selling price of that model</em>. So the feature is, almost by construction, a smoothed copy of the target. Predicting price from average-price-of-similar-cars is close to circular.</p>
+    <p>Worse, the encoding in Lecture 3 is computed with <code>groupby(...).transform('mean')</code> over the <em>whole</em> dataframe — before any train/test split. Every test row's feature value was computed using its own label. That is textbook <strong>target leakage</strong>, and it inflates test scores in a way that vanishes the moment the model meets genuinely new data.</p>
+    <p><strong>The fix in production:</strong> fit the encoding on the training fold only, using out-of-fold means, and apply it to validation and test. Libraries like <code>category_encoders.TargetEncoder</code> inside a sklearn <code>Pipeline</code> handle this correctly. Teaching learners to spot a suspiciously high R² is worth more than teaching them to celebrate one.</p>
+  </div>
+
+  <div class="note">In an interview, "my R² was 0.93" invites the question "what was in your features?" — this is the answer they are probing for.</div>
+</section>
+
+<!-- ============================ LECTURE 3 ============================ -->
+<section class="chapter sheet" id="l3">
+  <div class="chapter-head">
+    <span class="chapter-num">Lecture 03</span>
+    <span class="chapter-rule"></span>
+  </div>
+  <h2>Many features at once: the normal equation</h2>
+  <p class="chapter-sub">Linear Regression 3 · matrix calculus, scaling, encoding, and an honest metric</p>
+
+  <p class="lede">One feature was a warm-up. With seventeen features, writing out seventeen partial derivatives by hand is unpleasant. Linear algebra lets us write them all as one equation and solve it in one line — and the result has a geometric meaning that makes the entire method click.</p>
+
+  <h3>Step 1 · Stacking the data into matrices</h3>
+
+  <p>Collect the features into a matrix and the targets into a vector. The trick that makes everything clean is the <strong>column of ones</strong>: prepend a constant column to \(X\) so that the intercept becomes just another weight, requiring no special treatment.</p>
+
+  \[
+  X = \begin{bmatrix}
+  1 & x_{11} & x_{12} & \cdots & x_{1d} \\
+  1 & x_{21} & x_{22} & \cdots & x_{2d} \\
+  \vdots & \vdots & \vdots & \ddots & \vdots \\
+  1 & x_{n1} & x_{n2} & \cdots & x_{nd}
+  \end{bmatrix}_{n \times (d+1)}
+  \qquad
+  \mathbf{y} = \begin{bmatrix} y_1 \\ y_2 \\ \vdots \\ y_n \end{bmatrix},
+  \qquad
+  \mathbf{w} = \begin{bmatrix} w_0 \\ w_1 \\ \vdots \\ w_d \end{bmatrix}
+  \]
+
+  <p>For your Cars24 fit, \(X\) is \(19{,}820 \times 18\) once the ones column is added. All \(n\) predictions are now a single matrix–vector product:</p>
+
+  \[ \hat{\mathbf{y}} = X\mathbf{w} \]
+
+  <div class="note">This is why sklearn threw <code>Expected 2D array, got 1D array</code> in Lecture 2. It wants \(X\) shaped \((n, d)\) — even when \(d = 1\).</div>
+
+  <p>The residual vector is \(\mathbf{e} = \mathbf{y} - X\mathbf{w}\), and the cost is its squared length:</p>
+
+  \[ J(\mathbf{w}) = \|\mathbf{y} - X\mathbf{w}\|^2 = (\mathbf{y} - X\mathbf{w})^{\!\top}(\mathbf{y} - X\mathbf{w}) \]
+
+  <h3>Step 2 · Minimising it — the normal equation</h3>
+
+  <div class="ladder">
+    <div class="ladder-title">Deriving ŵ = (XᵀX)⁻¹Xᵀy</div>
+
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-body">
+        <p>Expand the product, treating it like \((a-b)^2 = a^2 - 2ab + b^2\):</p>
+        \[ J(\mathbf{w}) = \mathbf{y}^{\!\top}\mathbf{y} - 2\mathbf{w}^{\!\top}X^{\!\top}\mathbf{y} + \mathbf{w}^{\!\top}X^{\!\top}X\mathbf{w} \]
+        <p class="step-why">The two cross terms \(\mathbf{y}^\top X\mathbf{w}\) and \(\mathbf{w}^\top X^\top \mathbf{y}\) are each \(1\times1\) — scalars — and a scalar equals its own transpose, so they are the same number and combine into \(-2\).</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-body">
+        <p>Differentiate with respect to the vector \(\mathbf{w}\). Two standard identities do all the work:</p>
+        \[ \frac{\partial}{\partial \mathbf{w}}\left(\mathbf{w}^{\!\top}\mathbf{a}\right) = \mathbf{a}, \qquad \frac{\partial}{\partial \mathbf{w}}\left(\mathbf{w}^{\!\top}A\mathbf{w}\right) = 2A\mathbf{w} \;\;(A \text{ symmetric}) \]
+        <p>Note \(X^\top X\) <em>is</em> symmetric, since \((X^\top X)^\top = X^\top X\). Applying both:</p>
+        \[ \nabla_{\mathbf{w}} J = -2X^{\!\top}\mathbf{y} + 2X^{\!\top}X\mathbf{w} \]
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-body">
+        <p>Set the gradient to the zero vector:</p>
+        \[ X^{\!\top}X\mathbf{w} = X^{\!\top}\mathbf{y} \]
+        <p class="step-why">This is <em>the normal equation</em>. It is a square \((d{+}1) \times (d{+}1)\) linear system — 18 equations in 18 unknowns for Cars24 — and it holds whether or not \(X^\top X\) can be inverted.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">4</div>
+      <div class="step-body">
+        <p>If \(X^\top X\) is invertible, multiply both sides by its inverse:</p>
+        \[ \boxed{\;\hat{\mathbf{w}} = (X^{\!\top}X)^{-1}X^{\!\top}\mathbf{y}\;} \]
+        <p class="step-why">Every <code>LinearRegression().fit(X, y)</code> call in all four notebooks computes this. Sanity check: with one feature and a ones column, this reduces exactly to the Cov/Var formula from Lecture 2.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">5</div>
+      <div class="step-body">
+        <p><strong>Is it a minimum?</strong> The Hessian is \(\nabla^2 J = 2X^\top X\). For any vector \(\mathbf{v}\),</p>
+        \[ \mathbf{v}^{\!\top}(X^{\!\top}X)\mathbf{v} = (X\mathbf{v})^{\!\top}(X\mathbf{v}) = \|X\mathbf{v}\|^2 \ge 0 \]
+        <p class="step-why">A squared length is never negative, so the Hessian is positive semi-definite, so \(J\) is convex, so any stationary point is a global minimum. Linear regression has <strong>no local minima</strong> — gradient descent cannot get stuck. This is a luxury that disappears the moment you move to neural networks.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Step 3 · What it means geometrically</h3>
+
+  <p>Look again at the normal equation, rearranged:</p>
+
+  \[ X^{\!\top}(\mathbf{y} - X\hat{\mathbf{w}}) = \mathbf{0} \qquad\Longleftrightarrow\qquad X^{\!\top}\mathbf{e} = \mathbf{0} \]
+
+  <p>Every column of \(X\) is orthogonal to the residual vector. In words: <strong>the best fit is the one whose leftover error is uncorrelated with every feature you gave it.</strong> If any correlation remained, there would still be signal in the features that you had not extracted — and you could lower the cost further.</p>
+
+  <p>Geometrically, \(X\mathbf{w}\) ranges over the <em>column space</em> of \(X\) — every combination your features can build. The target \(\mathbf{y}\) generally does not lie in that space. The closest reachable point is the perpendicular projection of \(\mathbf{y}\) onto it.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 320" role="img" aria-label="Geometric view: the column space of X drawn as a plane, the target vector y pointing out of it, and its perpendicular projection y-hat inside the plane">
+      <polygon points="60,255 320,200 630,240 380,292" fill="#EDF2FA" stroke="#C6D2E4"/>
+      <text x="128" y="283" class="svg-tiny">col(X) — everything your features can build</text>
+
+      <defs>
+        <marker id="ar2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6 z" fill="#14243F"/>
+        </marker>
+        <marker id="ar3" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6 z" fill="#0D6A67"/>
+        </marker>
+        <marker id="ar4" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6 z" fill="#A81F27"/>
+        </marker>
+      </defs>
+
+      <!-- y vector -->
+      <line x1="180" y1="248" x2="400" y2="70" stroke="#14243F" stroke-width="2.2" marker-end="url(#ar2)"/>
+      <text x="408" y="64" font-size="13" font-weight="600">y</text>
+      <text x="408" y="82" class="svg-tiny">what actually happened</text>
+
+      <!-- y-hat -->
+      <line x1="180" y1="248" x2="440" y2="222" stroke="#0D6A67" stroke-width="2.2" marker-end="url(#ar3)"/>
+      <text x="450" y="228" font-size="13" font-weight="600" fill="#0D6A67">ŷ = Xŵ</text>
+
+      <!-- residual -->
+      <line x1="440" y1="222" x2="400" y2="70" stroke="#A81F27" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#ar4)"/>
+      <text x="452" y="150" font-size="13" font-weight="600" fill="#A81F27">e</text>
+      <text x="452" y="168" class="svg-tiny" fill="#A81F27">Xᵀe = 0</text>
+
+      <!-- right angle -->
+      <path d="M 428 219 L 424 205 L 438 202" fill="none" stroke="#A81F27" stroke-width="1.3"/>
+
+      <circle cx="180" cy="248" r="3.5" fill="#14243F"/>
+      <text x="164" y="266" class="svg-tiny">0</text>
+
+      <text x="120" y="120" class="svg-hand">least squares = dropping a</text>
+      <text x="120" y="142" class="svg-hand">perpendicular. That's all.</text>
+    </svg>
+    <figcaption><b>Fig. 5</b> — Why the perpendicular? Because for any other point \(\mathbf{p}\) in the plane, Pythagoras gives \(\|\mathbf{y}-\mathbf{p}\|^2 = \|\mathbf{y}-\hat{\mathbf{y}}\|^2 + \|\hat{\mathbf{y}}-\mathbf{p}\|^2 > \|\mathbf{y}-\hat{\mathbf{y}}\|^2\). The projection is provably closest.</figcaption>
+  </figure>
+
+  <div class="box field">
+    <div class="box-label">The cost of the closed form</div>
+    <p>Building \(X^\top X\) costs \(O(nd^2)\); inverting it costs \(O(d^3)\). With \(n = 19{,}820\) and \(d = 17\) this is microseconds. Double the rows and it doubles; double the <em>features</em> and the inversion cost goes up eightfold. At a few thousand features, gradient descent (or its cousins) wins. This is the single practical reason ML engineers know both methods.</p>
+  </div>
+
+  <h3>Step 4 · Why scaling changes everything — and nothing</h3>
+
+  <p>Your notebook motivates standardisation with the TV-vs-social-media ad-spend example: one column in rupees, another in millions, so the model is forced into a lopsided pair of coefficients. That intuition is right, but the precise statement is a bit surprising, and it is worth being exact with learners:</p>
+
+  <table>
+    <thead><tr><th>Quantity</th><th>Effect of rescaling a feature</th></tr></thead>
+    <tbody>
+      <tr><td>Predictions \(\hat{y}\), residuals, R²</td><td><strong>Unchanged.</strong> OLS finds the same fit</td></tr>
+      <tr><td>Individual coefficients \(w_j\)</td><td>Scaled inversely — divide \(x_j\) by 1000, \(w_j\) multiplies by 1000</td></tr>
+      <tr><td>Comparability of coefficients</td><td><strong>Changed completely</strong> — this is the point</td></tr>
+      <tr><td>Gradient descent convergence speed</td><td><strong>Changed dramatically</strong></td></tr>
+      <tr><td>Regularised models (Ridge/Lasso), KNN, SVM</td><td>Fit itself changes — scaling is mandatory</td></tr>
+    </tbody>
+  </table>
+
+  <p>So for plain OLS, scaling is about <em>interpretation and optimisation</em>, not accuracy. Once every column is in standard-deviation units, the coefficients are directly comparable: a bigger \(|w_j|\) genuinely means a more influential feature.</p>
+
+  <h4>The optimisation half, made precise</h4>
+
+  <p>Gradient descent's difficulty is measured by the <strong>condition number</strong> of \(X^\top X\) — the ratio of its largest to smallest eigenvalue:</p>
+
+  \[ \kappa = \frac{\lambda_{\max}}{\lambda_{\min}} \]
+
+  <p>The number of iterations to converge grows roughly in proportion to \(\kappa\). When one feature has a variance a million times another's, \(\kappa\) is enormous, the cost surface is a long narrow canyon rather than a bowl, and gradient descent zigzags across the canyon instead of running along it. Standardising equalises the variances, pulls \(\kappa\) down towards 1, and turns the canyon back into a bowl.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 300" role="img" aria-label="Left: elongated elliptical contours with a zigzagging descent path. Right: circular contours with a direct path to the centre">
+      <text x="165" y="26" text-anchor="middle" font-size="13" font-weight="600">Unscaled — κ large</text>
+      <text x="500" y="26" text-anchor="middle" font-size="13" font-weight="600">Standardised — κ ≈ 1</text>
+
+      <!-- LEFT: ellipses -->
+      <g transform="rotate(-28 165 165)" fill="none" stroke="#C6D2E4">
+        <ellipse cx="165" cy="165" rx="135" ry="26"/>
+        <ellipse cx="165" cy="165" rx="105" ry="20"/>
+        <ellipse cx="165" cy="165" rx="72"  ry="14"/>
+        <ellipse cx="165" cy="165" rx="40"  ry="8"/>
+      </g>
+      <circle cx="165" cy="165" r="4" fill="#0D6A67"/>
+      <polyline points="72,110 130,190 108,138 160,196 142,158 172,182 160,168 165,165"
+        fill="none" stroke="#A81F27" stroke-width="1.8" stroke-dasharray="4 3"/>
+      <circle cx="72" cy="110" r="4.5" fill="#A81F27"/>
+      <text x="165" y="272" text-anchor="middle" class="svg-tiny">many wasted steps across the canyon</text>
+
+      <!-- RIGHT: circles -->
+      <g fill="none" stroke="#C6D2E4">
+        <circle cx="500" cy="165" r="105"/>
+        <circle cx="500" cy="165" r="78"/>
+        <circle cx="500" cy="165" r="50"/>
+        <circle cx="500" cy="165" r="24"/>
+      </g>
+      <circle cx="500" cy="165" r="4" fill="#0D6A67"/>
+      <polyline points="425,90 458,123 480,145 493,158 500,165"
+        fill="none" stroke="#A81F27" stroke-width="1.8" stroke-dasharray="4 3"/>
+      <circle cx="425" cy="90" r="4.5" fill="#A81F27"/>
+      <text x="500" y="272" text-anchor="middle" class="svg-tiny">gradient points straight at the minimum</text>
+    </svg>
+    <figcaption><b>Fig. 6</b> — Contours of the cost surface. The gradient is always perpendicular to the contour it stands on; when contours are stretched, "perpendicular" and "towards the minimum" are two different directions.</figcaption>
+  </figure>
+
+  <h4>The two scalers, side by side</h4>
+
+  \[ \text{StandardScaler:}\;\; z = \frac{x - \mu}{\sigma} \qquad\qquad \text{MinMaxScaler:}\;\; x' = \frac{x - x_{\min}}{x_{\max} - x_{\min}} \]
+
+  <p>Your notebook's observation about min-max is exactly right and worth the algebra. Suppose salaries run from ₹3L to ₹30L, with one typo at ₹300L. Then \(x_{\max} - x_{\min} = 297\), and a genuine ₹30L salary maps to \((30-3)/297 = 0.09\). The entire real population is crushed into the bottom 9% of the range by a single bad row. Min-max scaling has <strong>no robustness to outliers whatsoever</strong>, because both of its parameters are extreme-value statistics. The z-score is safer, since \(\mu\) and \(\sigma\) are averages over all points — though still not immune.</p>
+
+  <div class="box flag">
+    <div class="box-label">The leakage rule for scalers</div>
+    <p>Fit the scaler on training data only, then <code>transform</code> the test set with those same numbers:</p>
+    <pre><code>scaler = <span class="c-fn">MinMaxScaler</span>()
+X_train = scaler.<span class="c-fn">fit_transform</span>(X_train)   <span class="c-com"># learns μ, σ (or min, max) HERE</span>
+X_test  = scaler.<span class="c-fn">transform</span>(X_test)        <span class="c-com"># reuses them — never fit_transform</span></code></pre>
+    <p>Your Lecture 3 statsmodels section does this correctly. Calling <code>fit_transform</code> on the test set would let test-set statistics influence the training pipeline — a subtle leak that flatters your score.</p>
+  </div>
+
+  <h3>Step 5 · One-hot encoding and why you must drop a column</h3>
+
+  <p>The notebook's argument against encoding origin as 1/2/3 is the right one: the model would compute \(w \times 3\) for Asia and \(w \times 1\) for America, silently asserting that Asia is "three times" America and that Europe sits exactly halfway between. There is no such ordering. One-hot encoding removes the invented arithmetic by giving each category its own binary column.</p>
+
+  <p>But then the notebook drops one column, with the explanation "it's redundant, we can figure out the third from the other two." True — and there is a hard mathematical reason it is not merely tidiness.</p>
+
+  <div class="ladder">
+    <div class="ladder-title">The dummy variable trap, proved</div>
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-body">
+        <p>Every row belongs to exactly one category, so the dummy columns sum to 1 in every row:</p>
+        \[ \mathbf{x}_{\text{American}} + \mathbf{x}_{\text{europe}} + \mathbf{x}_{\text{asia}} = \mathbf{1} \]
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-body">
+        <p>But \(\mathbf{1}\) is already a column of \(X\) — it is the intercept column. So there exists a non-zero vector \(\mathbf{v}\) with \(X\mathbf{v} = \mathbf{0}\): the columns are <strong>linearly dependent</strong>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-body">
+        <p>Then \(X^\top X \mathbf{v} = X^\top \mathbf{0} = \mathbf{0}\), which means \(X^\top X\) has a zero eigenvalue, so \(\det(X^\top X) = 0\) and the inverse in the normal equation <strong>does not exist</strong>.</p>
+        <p class="step-why">Infinitely many weight vectors achieve the identical minimum cost. Because the null-space direction spans the intercept <em>and all three</em> dummies together (\(\mathbf{1} - \mathbf{x}_{\text{American}} - \mathbf{x}_{\text{europe}} - \mathbf{x}_{\text{asia}} = \mathbf{0}\)), subtracting 5 from the intercept and adding 5 to <em>every</em> dummy coefficient — American, Europe, and Asia alike — leaves every prediction unchanged, even though the numbers are different. (Shifting the intercept and only the American coefficient, on its own, would change the predicted price for every European and Asian car — it is not a free move.) The coefficients become meaningless individually.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">4</div>
+      <div class="step-body">
+        <p>Dropping one dummy breaks the dependency. The dropped category becomes the <strong>reference level</strong>, absorbed into the intercept, and every remaining coefficient reads as "difference from the reference".</p>
+      </div>
+    </div>
+  </div>
+
+  <p>Your auto-mpg model drops <code>origin_europe</code>, so its coefficients read: <code>origin_American = −3.00</code> means an American car gets about 3 mpg <em>less</em> than an otherwise-identical European car; <code>origin_asia = −0.61</code> means Asian cars trail European ones by 0.6 mpg. Every categorical coefficient in a regression output is a comparison, never an absolute.</p>
+
+  <details>
+    <summary>▸ Why sklearn does not crash on the trap, but statsmodels warns</summary>
+    <p>sklearn's <code>LinearRegression</code> uses <code>scipy.linalg.lstsq</code>, which computes the <em>pseudo-inverse</em> via SVD. When the matrix is singular it silently returns the minimum-norm solution among the infinitely many minimisers — you get numbers, they predict fine, and they are individually uninterpretable. statsmodels is built for inference, so it will report infinite VIFs, enormous standard errors, or drop terms. Neither is wrong; they have different jobs. It also explains why you saw <code>VIF = inf</code> in Lecture 4 rather than an exception.</p>
+  </details>
+
+  <h3>Step 6 · Interpreting coefficients honestly</h3>
+
+  <p>The gradient of the prediction with respect to feature \(j\) is exactly the coefficient:</p>
+
+  \[ \frac{\partial \hat{y}}{\partial x_j} = w_j \]
+
+  <p>So \(w_j\) is "the expected change in \(y\) for a one-unit increase in \(x_j\), <em>holding all other features fixed</em>." That last clause is not decoration. It is the entire content of the statement, and it is where most misreadings begin — if \(x_j\) never moves independently of \(x_k\) in your data, then "holding \(x_k\) fixed" describes a situation your data has never observed, and the coefficient is an extrapolation.</p>
+
+  <p>From the auto-mpg output, <code>weight = −0.00735</code> means: 100 lbs heavier, at the same cylinders, displacement, horsepower and year, costs about 0.74 mpg. That is a credible physical claim. But <code>displacement = +0.0289</code> says a bigger engine <em>improves</em> mileage, which is nonsense on its face — and the fact that displacement, cylinders, horsepower and weight all measure "how big is this car" is the reason. Lecture 4's VIF section is the diagnosis for exactly this symptom.</p>
+
+  <div class="box check">
+    <div class="box-label">Finding 4 — your Cars24 coefficients contain a perfect collinearity, visible in the printout</div>
+    <p>Lecture 3 prints the 17 multivariate coefficients. The first is <code>year = +0.06495341</code>. The sixth is <code>age = −0.06495341</code>. Identical magnitude, opposite sign, to all eight decimal places.</p>
+    <p>That is not chance. In this dataset <code>age = (reference year) − year</code>, so the two columns are perfectly, exactly linearly dependent — the continuous version of the dummy trap. \(X^\top X\) is singular; sklearn's pseudo-inverse quietly split the effect between the twins in the minimum-norm way, which is why their contributions cancel to zero.</p>
+    <p>Lecture 4 then computes VIF on the same data and prints <code>year → inf</code> and <code>age → inf</code>. The infinity was already sitting in the Lecture 3 output, one lecture earlier. Showing learners these two printouts side by side is the most convincing multicollinearity demo in the module, because it is their own data.</p>
+  </div>
+
+  <h3>Step 7 · Why train/test split is mathematically necessary</h3>
+
+  <p>Lecture 2 fit and scored on the same 19,820 rows. Lecture 3 fixes this. The reason is not caution — it is that training error is a <em>systematically biased</em> estimate of true error.</p>
+
+  <p>The parameters \(\hat{\mathbf{w}}\) were chosen to minimise error on the training set. Any noise in the training targets gets partially absorbed into the fitted parameters. So the model is fitted to signal <em>plus</em> a little of that specific noise, and it will always look better on those rows than on fresh ones. Formally, for OLS with \(p\) parameters:</p>
+
+  \[ \mathbb{E}[\text{training MSE}] = \sigma^2\left(1 - \frac{p}{n}\right) \qquad\text{vs}\qquad \mathbb{E}[\text{test MSE}] = \sigma^2\left(1 + \frac{p}{n}\right) \]
+
+  <p>The gap is \(2\sigma^2 p/n\) — it grows with the number of features and shrinks with the number of rows. This single expression explains the whole overfitting story of Lecture 4 before we even get there.</p>
+
+  <p>Your auto-mpg model reports train R² = 0.814 and test R² = 0.843. Test slightly <em>above</em> train looks odd but is ordinary: with only 120 test rows, sampling variation easily swamps the small \(2\sigma^2 p/n\) gap. It is a sign of a healthy, non-overfit model, not of magic.</p>
+
+  <h3>Step 8 · Adjusted R², and a bug in your notebook</h3>
+
+  <p>R² has one fatal flaw as a model-selection tool: <strong>it can never decrease when you add a feature.</strong> The proof is the same argument as before — the old model is a special case of the new one, with the new coefficient set to zero, so the minimiser over the larger family cannot do worse. Add a column of random noise and R² goes <em>up</em>, slightly, always.</p>
+
+  <p>Adjusted R² adds a penalty for parameters by comparing <em>variances</em> (error per degree of freedom) instead of raw sums:</p>
+
+  \[ R^2_{\text{adj}} = 1 - \frac{SS_{\text{res}}/(n - p - 1)}{SS_{\text{tot}}/(n-1)} \;=\; 1 - (1 - R^2)\,\frac{n-1}{n-p-1} \]
+
+  <p>where \(n\) is the number of rows and \(p\) the number of predictors. Adding a useless feature raises \(p\), shrinks \(n-p-1\), inflates the fraction — and unless the new feature reduces \(SS_{\text{res}}\) by enough to pay for itself, the adjusted score falls. Unlike R², it can decrease, which is exactly what makes it useful for comparing models of different sizes.</p>
+
+  <div class="box check">
+    <div class="box-label">Finding 5 — the adjusted R² cell in Lecture 3 has a bracket in the wrong place</div>
+    <p>The notebook cell reads:</p>
+    <pre><code>Adj_R = <span class="c-num">1</span> - (<span class="c-num">1</span>-regression_model.<span class="c-fn">score</span>(X_test, y_test)*(<span class="c-fn">len</span>(y_test)-<span class="c-num">1</span>)/(<span class="c-fn">len</span>(y_test)-X_test.shape[<span class="c-num">1</span>]-<span class="c-num">1</span>))</code></pre>
+    <p>The \((n-1)/(n-p-1)\) factor is multiplying \(R^2\), when it should multiply \((1 - R^2)\). It computes \(1 - \left(1 - R^2\cdot\frac{n-1}{n-p-1}\right)\), which is not adjusted R² — it is not even bounded by 1.</p>
+    <p>With \(R^2 = 0.8433\), \(n = 120\), \(p = 8\): the cell prints <strong>0.9041</strong>, higher than the unadjusted R² — an immediate tell, since the adjusted value is always ≤ R². The correct value is <strong>0.8320</strong>.</p>
+    <pre><code><span class="c-com"># corrected</span>
+r2 = regression_model.<span class="c-fn">score</span>(X_test, y_test)
+n, p = X_test.shape
+adj_r2 = <span class="c-num">1</span> - (<span class="c-num">1</span> - r2) * (n - <span class="c-num">1</span>) / (n - p - <span class="c-num">1</span>)   <span class="c-com"># 0.8320</span></code></pre>
+    <p>Good news for the lesson: statsmodels prints <code>Adj. R-squared</code> in its summary for free, which is a fine reason to prefer it when you care about inference rather than prediction.</p>
+  </div>
+
+  <h4>Reading the statsmodels summary</h4>
+  <p>The Lecture 3 OLS table has more in it than R². The columns that matter for a working data scientist:</p>
+  <table>
+    <thead><tr><th>Column</th><th>What it is</th><th>How to read it</th></tr></thead>
+    <tbody>
+      <tr><td class="num">coef</td><td>\(\hat{w}_j\)</td><td>Effect size, in the units you fed in</td></tr>
+      <tr><td class="num">std err</td><td>\(\mathrm{SE}(\hat{w}_j)\)</td><td>Uncertainty. Large means "don't trust this coefficient"</td></tr>
+      <tr><td class="num">t</td><td>coef / std err</td><td>Effect size measured in units of its own uncertainty</td></tr>
+      <tr><td class="num">P&gt;|t|</td><td>p-value</td><td>Under \(H_0: w_j = 0\), how surprising is this \(t\)? Below 0.05 → keep</td></tr>
+      <tr><td class="num">[0.025 0.975]</td><td>95% CI</td><td>If it straddles zero, the sign itself is uncertain</td></tr>
+      <tr><td class="num">F-statistic</td><td>joint test</td><td>Is <em>any</em> feature useful? Tiny Prob(F) → yes</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">Notice <code>const = -4.6e+11</code> and <code>year = +4.6e+11</code> in the Lecture 3 summary. Coefficients of size 10¹¹ are a scream, not a result — that is the year/age singularity again.</div>
+</section>
+
+<!-- ============================ LECTURE 4 ============================ -->
+<section class="chapter sheet" id="l4">
+  <div class="chapter-head">
+    <span class="chapter-num">Lecture 04</span>
+    <span class="chapter-rule"></span>
+  </div>
+  <h2>Assumptions, diagnostics, and the limits of a line</h2>
+  <p class="chapter-sub">Linear Regression 4 · VIF from first principles, residual tests, feature maps, bias–variance</p>
+
+  <p class="lede">Lectures 2 and 3 answered "how do I fit a model?" This one answers a harder question: "am I allowed to believe it?" Every diagnostic here exists because some specific piece of the mathematics breaks when some specific assumption fails.</p>
+
+  <h3>What the assumptions actually protect</h3>
+
+  <p>Learners often memorise the five assumptions as a list. They stick far better when you say which one guards what — because two of them affect your predictions, and three only affect your <em>p-values and confidence intervals</em>.</p>
+
+  <table>
+    <thead><tr><th>Assumption</th><th>Breaks what, if violated</th><th>Diagnostic in your notebook</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Linearity</strong> of \(y\) in the parameters</td><td>Predictions. The model is simply wrong</td><td>Residuals vs fitted plot</td></tr>
+      <tr><td><strong>No perfect multicollinearity</strong></td><td>Coefficients — they stop being unique</td><td>VIF</td></tr>
+      <tr><td><strong>Errors have mean zero, constant variance</strong> (homoscedastic)</td><td>Standard errors, so p-values and CIs</td><td>Goldfeld–Quandt</td></tr>
+      <tr><td><strong>Errors are independent</strong></td><td>Standard errors — badly, in time series</td><td>Durbin–Watson; residual-vs-order plot</td></tr>
+      <tr><td><strong>Errors are normally distributed</strong></td><td>Only exact small-sample inference</td><td>Shapiro–Wilk; residual histogram</td></tr>
+    </tbody>
+  </table>
+
+  <p>Under the first four, the Gauss–Markov theorem gives OLS a strong guarantee: among all <em>unbiased</em> estimators that are <em>linear</em> in \(\mathbf{y}\), least squares has the smallest variance. It is <strong>BLUE</strong> — Best Linear Unbiased Estimator. Notice normality is not required for this; it is only needed for exact \(t\)- and \(F\)-distributions in small samples. With \(n = 15{,}856\) rows the Central Limit Theorem covers you regardless, which is worth telling learners who panic at a Shapiro–Wilk statistic of 0.89.</p>
+
+  <div class="note">Rule of thumb: if you only care about <b>predicting</b>, assumptions 3–5 barely matter. If you care about <b>explaining</b> — "does mileage significantly affect price?" — they matter enormously.</div>
+
+  <h3>Multicollinearity: where VIF comes from</h3>
+
+  <p>Your notebook gives VIF as a recipe: regress \(x_j\) on all the other features, take its \(R_j^2\), compute \(1/(1-R_j^2)\). That is correct, but it looks arbitrary until you see where the formula is born — inside the variance of a coefficient.</p>
+
+  <div class="ladder">
+    <div class="ladder-title">Deriving VIF = 1/(1 − R²ⱼ)</div>
+
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-body">
+        <p>Start from the estimator and substitute the true data-generating process \(\mathbf{y} = X\mathbf{w} + \boldsymbol{\varepsilon}\):</p>
+        \[ \hat{\mathbf{w}} = (X^{\!\top}X)^{-1}X^{\!\top}\mathbf{y} = \mathbf{w} + (X^{\!\top}X)^{-1}X^{\!\top}\boldsymbol{\varepsilon} \]
+        <p class="step-why">Taking expectations, \(\mathbb{E}[\hat{\mathbf{w}}] = \mathbf{w}\): OLS is unbiased. All the randomness lives in the second term.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-body">
+        <p>With \(\mathrm{Var}(\boldsymbol{\varepsilon}) = \sigma^2 I\), the covariance matrix of the estimates is</p>
+        \[ \mathrm{Var}(\hat{\mathbf{w}}) = \sigma^2 (X^{\!\top}X)^{-1} \]
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-body">
+        <p>Extracting the \(j\)-th diagonal entry — using the standard partitioned-inverse result — gives the variance of one coefficient:</p>
+        \[ \mathrm{Var}(\hat{w}_j) = \frac{\sigma^2}{\underbrace{\textstyle\sum_i (x_{ij} - \bar{x}_j)^2}_{\text{how much } x_j \text{ varies}}}\cdot\underbrace{\frac{1}{1 - R_j^2}}_{\text{the penalty}} \]
+        <p class="step-why">Here \(R_j^2\) is the R² from regressing feature \(j\) on all the <em>other</em> features. The second factor is the entire cost of multicollinearity, isolated.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-n">4</div>
+      <div class="step-body">
+        <p>That factor <em>is</em> the Variance Inflation Factor:</p>
+        \[ \boxed{\;\mathrm{VIF}_j = \frac{1}{1 - R_j^2}\;} \]
+        <p class="step-why">It is literally the multiplier by which the variance of \(\hat{w}_j\) is inflated relative to a world where feature \(j\) was uncorrelated with everything else. VIF = 4 means the standard error is \(\sqrt{4} = 2\times\) larger, so your confidence interval is twice as wide.</p>
+      </div>
+    </div>
+  </div>
+
+  <p>The thresholds now stop being magic numbers:</p>
+
+  <table>
+    <thead><tr><th>VIF</th><th>R²ⱼ</th><th>Std. error inflated by</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td class="num">0.00</td><td class="num">1.0×</td><td>Perfectly independent</td></tr>
+      <tr><td class="num">5</td><td class="num">0.80</td><td class="num">2.2×</td><td>Usual action threshold</td></tr>
+      <tr><td class="num">10</td><td class="num">0.90</td><td class="num">3.2×</td><td>Serious — investigate</td></tr>
+      <tr><td class="num">∞</td><td class="num">1.00</td><td class="num">∞</td><td>Perfect dependency; matrix singular</td></tr>
+    </tbody>
+  </table>
+
+  <p>Your Cars24 VIF table shows <code>year → inf</code> and <code>age → inf</code>, and the notebook's own note — "VIF tends to infinity when there is perfect correlation" — is exactly what the formula predicts: \(R_j^2 = 1\) makes the denominator zero. The <code>divide by zero encountered</code> warning printed by statsmodels is the formula being honest.</p>
+
+  <p>Look at the rest of that table with the formula in hand and the structure jumps out. <code>Petrol</code> at 18.29 and <code>Diesel</code> at 17.29 are near-dependent because fuel type is almost binary in this dataset — knowing one nearly determines the other. Same story for <code>5</code> and <code>&gt;5</code> seats at 11.75 and 13.04. These are dummy-trap-adjacent: not perfectly dependent (a few LPG and Electric cars break it), but close enough to inflate standard errors by more than 4×.</p>
+
+  <h4>Reading the removal loop</h4>
+  <pre><code><span class="c-kw">while</span> <span class="c-kw">True</span>:
+    vif = <span class="c-fn">compute_vif</span>(X[cols])
+    cols = vif[<span class="c-str">"Features"</span>][<span class="c-num">1</span>:].values          <span class="c-com"># drop the worst offender</span>
+    sm_model = sm.<span class="c-fn">OLS</span>(y_train, sm.<span class="c-fn">add_constant</span>(X[cols])).<span class="c-fn">fit</span>()
+    <span class="c-kw">if</span> vif.iloc[<span class="c-num">0</span>][<span class="c-str">'VIF'</span>] &lt; <span class="c-num">5</span> <span class="c-kw">or</span> sm_model.rsquared_adj &lt; <span class="c-num">0.85</span>:
+        <span class="c-kw">break</span></code></pre>
+  <p class="code-cap">Greedy backward elimination: remove the highest-VIF feature, refit, repeat — stopping when the worst VIF is acceptable <em>or</em> the model has paid too much explanatory power for the privilege.</p>
+
+  <p>The loop removes <code>year</code>, <code>Petrol</code>, <code>>5</code>, and adjusted R² falls from 0.945 to 0.832. That drop looks alarming and is worth discussing: dropping <code>year</code> when <code>age</code> is still present should cost <em>nothing</em>, since they carry identical information. The 11-point fall comes from the later removals, and it means <code>Petrol</code> and <code>&gt;5</code> were carrying real signal despite their collinearity. Removing a feature purely for a high VIF, when it genuinely predicts, is a trade — you buy interpretable coefficients with predictive accuracy.</p>
+
+  <div class="box field">
+    <div class="box-label">In practice</div>
+    <p>Multicollinearity <strong>does not hurt predictions</strong>. If your model's only job is to output a price, high VIF is not a bug — the predictions of a collinear model are as accurate as ever. It only damages your ability to say <em>which</em> feature caused what. So: pricing engine going to production, ignore VIF and check test error. Report to the business explaining what drives price, treat VIF as mandatory. This distinction separates ML engineers from statisticians, and both are right within their own goal.</p>
+    <p>The alternatives to dropping columns: combine the twins into one feature (keep <code>age</code>, drop <code>year</code> — they are the same fact), use PCA to build uncorrelated components, or use Ridge regression, which we reach at the end of this lecture.</p>
+  </div>
+
+  <h3>Residual diagnostics, and what the tests actually compute</h3>
+
+  <h4>Normality — Shapiro–Wilk</h4>
+  <p>The test statistic compares your sorted residuals against what perfectly normal data of the same size would look like:</p>
+  \[ W = \frac{\left(\sum_{i=1}^n a_i e_{(i)}\right)^2}{\sum_{i=1}^n (e_i - \bar{e})^2} \]
+  <p>where \(e_{(i)}\) are the ordered residuals and \(a_i\) are constants derived from the expected order statistics of a normal sample. \(W\) close to 1 means close to normal. Your value is <strong>0.890</strong>.</p>
+
+  <div class="box flag">
+    <div class="box-label">Careful with this one in class</div>
+    <p>SciPy printed a warning: <code>For N &gt; 5000, computed p-value may not be accurate. Current N is 15856.</code> That warning is the important output. With 15,856 rows, essentially any real dataset will fail a formal normality test, because the test has enough power to detect deviations far too small to matter. This is a general property of hypothesis tests at large \(n\), not a quirk of Shapiro–Wilk.</p>
+    <p>The right move at this sample size is to look at the histogram and a Q–Q plot and ask "is this roughly bell-shaped and symmetric?" — not to chase a p-value. And per Gauss–Markov, at \(n \approx 16{,}000\) normality is not required for your coefficient estimates to be valid anyway.</p>
+  </div>
+
+  <h4>Constant variance — Goldfeld–Quandt</h4>
+  <p>Sort the rows by a suspected driver of variance, discard a middle chunk, fit OLS separately to the low group and the high group, and compare their residual variances:</p>
+  \[ F = \frac{SS_{\text{res}}^{(2)} / \mathrm{df}_2}{SS_{\text{res}}^{(1)} / \mathrm{df}_1} \;\sim\; F(\mathrm{df}_2, \mathrm{df}_1) \text{ under } H_0 \]
+  <p>Under homoscedasticity both halves estimate the same \(\sigma^2\), so the ratio should sit near 1. Your notebook gets \(F = 1.018\), \(p = 0.218\).</p>
+
+  <div class="box flag">
+    <div class="box-label">Fix the wording in this cell</div>
+    <p>The notebook says the p-value "indicates that this difference is statistically significant." It indicates the opposite. \(p = 0.218 > 0.05\) means we <em>fail to reject</em> the null of equal variances — there is no evidence of heteroscedasticity, which is the good outcome and matches the conclusion the very next sentence draws. (The text also quotes 0.353 while the cell printed 0.218.)</p>
+    <p>Also worth correcting: the notebook's bullet "There are outliers present in the dataset" appears under "what can we understand from constant residuals?" — constant spread tells you nothing about outliers. The two ideas are unrelated.</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 660 300" role="img" aria-label="Left: residuals scattered in a constant-width band around zero. Right: residuals fanning out into a cone as fitted values increase">
+      <text x="180" y="24" text-anchor="middle" font-size="13" font-weight="600">Homoscedastic — what you want</text>
+      <text x="500" y="24" text-anchor="middle" font-size="13" font-weight="600">Heteroscedastic — the fan</text>
+
+      <!-- LEFT -->
+      <line x1="60" y1="255" x2="310" y2="255" stroke="#14243F"/>
+      <line x1="60" y1="45" x2="60" y2="255" stroke="#14243F"/>
+      <line x1="62" y1="150" x2="308" y2="150" stroke="#0D6A67" stroke-width="1.6"/>
+      <line x1="62" y1="112" x2="308" y2="112" stroke="#C6D2E4" stroke-dasharray="4 3"/>
+      <line x1="62" y1="188" x2="308" y2="188" stroke="#C6D2E4" stroke-dasharray="4 3"/>
+      <g fill="#14243F">
+        <circle cx="75" cy="138" r="3.4"/><circle cx="95" cy="163" r="3.4"/><circle cx="112" cy="132" r="3.4"/>
+        <circle cx="130" cy="158" r="3.4"/><circle cx="148" cy="145" r="3.4"/><circle cx="166" cy="171" r="3.4"/>
+        <circle cx="184" cy="131" r="3.4"/><circle cx="202" cy="156" r="3.4"/><circle cx="220" cy="140" r="3.4"/>
+        <circle cx="238" cy="167" r="3.4"/><circle cx="256" cy="134" r="3.4"/><circle cx="274" cy="159" r="3.4"/>
+        <circle cx="292" cy="146" r="3.4"/>
+      </g>
+      <text x="185" y="282" text-anchor="middle" class="svg-tiny">spread is the same everywhere</text>
+
+      <!-- RIGHT -->
+      <line x1="380" y1="255" x2="635" y2="255" stroke="#14243F"/>
+      <line x1="380" y1="45" x2="380" y2="255" stroke="#14243F"/>
+      <line x1="382" y1="150" x2="632" y2="150" stroke="#0D6A67" stroke-width="1.6"/>
+      <line x1="386" y1="142" x2="628" y2="88" stroke="#A81F27" stroke-dasharray="4 3"/>
+      <line x1="386" y1="158" x2="628" y2="212" stroke="#A81F27" stroke-dasharray="4 3"/>
+      <g fill="#14243F">
+        <circle cx="392" cy="148" r="3.4"/><circle cx="408" cy="155" r="3.4"/><circle cx="424" cy="142" r="3.4"/>
+        <circle cx="440" cy="160" r="3.4"/><circle cx="456" cy="136" r="3.4"/><circle cx="472" cy="168" r="3.4"/>
+        <circle cx="488" cy="128" r="3.4"/><circle cx="504" cy="178" r="3.4"/><circle cx="520" cy="120" r="3.4"/>
+        <circle cx="536" cy="186" r="3.4"/><circle cx="552" cy="112" r="3.4"/><circle cx="568" cy="196" r="3.4"/>
+        <circle cx="584" cy="104" r="3.4"/><circle cx="604" cy="202" r="3.4"/><circle cx="618" cy="98" r="3.4"/>
+      </g>
+      <text x="505" y="282" text-anchor="middle" class="svg-tiny">errors grow with the prediction</text>
+      <text x="470" y="66" class="svg-hand">→ std errors are wrong</text>
+    </svg>
+    <figcaption><b>Fig. 7</b> — The fan on the right is common with prices and incomes: a model that is off by ₹20k on a ₹3L car is off by ₹2L on a ₹30L car. Taking \(\log(y)\) usually converts multiplicative error into additive error and flattens the fan.</figcaption>
+  </figure>
+
+  <h3>Polynomial regression: bending the line without leaving linear regression</h3>
+
+  <p>The most common misconception here, and the one worth leading with: <strong>polynomial regression is still linear regression.</strong> The word "linear" refers to linearity in the <em>parameters</em>, not in \(x\).</p>
+
+  <p>The trick is a <strong>feature map</strong> \(\phi\) that manufactures new columns from old ones:</p>
+
+  \[ \phi(x) = \bigl[\,1,\; x,\; x^2,\; x^3\,\bigr] \qquad\Longrightarrow\qquad \hat{y} = w_0 + w_1 x + w_2 x^2 + w_3 x^3 \]
+
+  <p>That equation is a curve in \(x\), but it is a perfectly flat plane in \(\mathbf{w}\). So build the expanded design matrix and hand it to the same normal equation from Lecture 3 — nothing else changes:</p>
+
+  \[
+  \Phi = \begin{bmatrix}
+  1 & x_1 & x_1^2 & x_1^3\\
+  1 & x_2 & x_2^2 & x_2^3\\
+  \vdots & \vdots & \vdots & \vdots\\
+  1 & x_n & x_n^2 & x_n^3
+  \end{bmatrix}
+  \qquad
+  \hat{\mathbf{w}} = (\Phi^{\!\top}\Phi)^{-1}\Phi^{\!\top}\mathbf{y}
+  \]
+
+  <p>This is exactly what <code>PolynomialFeatures(degree=3)</code> builds, and why chaining it with <code>LinearRegression()</code> in a <code>Pipeline</code> works with no new solver.</p>
+
+  <div class="note">Same idea powers kernel methods and, in a sense, the hidden layers of a neural net: transform the features until the problem becomes linear, then solve it linearly.</div>
+
+  <p>With multiple features, <code>PolynomialFeatures</code> also generates <em>interaction</em> terms. For two features at degree 2 you get \([1, x_1, x_2, x_1^2, x_1x_2, x_2^2]\) — and \(x_1x_2\) lets the effect of one feature depend on the level of the other. That is how the notebook's BMI example works: BMI is \(\text{weight}/\text{height}^2\), a non-linear combination that no additive model could ever discover on its own.</p>
+
+  <h4>The catch: columns explode, and so does variance</h4>
+  <p>For \(d\) original features at degree \(p\), the number of terms is \(\binom{d+p}{p}\). With \(d = 17\) at degree 3, that is 1,140 columns from 17. Every extra column adds variance (recall the \(2\sigma^2 p / n\) gap from Lecture 3), and high powers of a feature are savagely collinear with each other — \(x\) and \(x^2\) have correlation above 0.97 over a typical positive range. Standardise before expanding, and keep the degree low.</p>
+
+  <p>Your electricity results — test R² of 0.817 → 0.988 → 0.998 for degrees 1, 2, 3 — show the good half of this story. Train and test move together, so degree 3 is genuinely better, not overfitting. But push to degree 12 on 40 training points and the picture reverses completely.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 250" role="img" aria-label="Three panels showing an underfit straight line, a well-fit quadratic, and an overfit wiggly high-degree curve on the same curved data">
+      <!-- shared data points (same in all 3 panels, offset by dx) -->
+      <g>
+        <text x="105" y="20" text-anchor="middle" font-size="12.5" font-weight="600">Degree 1 — underfit</text>
+        <line x1="30" y1="205" x2="185" y2="205" stroke="#14243F"/>
+        <line x1="30" y1="40" x2="30" y2="205" stroke="#14243F"/>
+        <path d="M 38 190 C 90 188, 120 150, 178 58" fill="none" stroke="#C6D2E4" stroke-width="1.4" stroke-dasharray="3 3"/>
+        <line x1="36" y1="168" x2="180" y2="82" stroke="#0D6A67" stroke-width="2"/>
+        <g fill="#14243F">
+          <circle cx="45" cy="192" r="3"/><circle cx="62" cy="188" r="3"/><circle cx="79" cy="180" r="3"/>
+          <circle cx="96" cy="166" r="3"/><circle cx="113" cy="148" r="3"/><circle cx="130" cy="122" r="3"/>
+          <circle cx="147" cy="96" r="3"/><circle cx="164" cy="70" r="3"/><circle cx="176" cy="56" r="3"/>
+        </g>
+        <text x="105" y="232" text-anchor="middle" class="svg-tiny">high bias</text>
+      </g>
+
+      <g>
+        <text x="330" y="20" text-anchor="middle" font-size="12.5" font-weight="600">Degree 2–3 — good</text>
+        <line x1="255" y1="205" x2="410" y2="205" stroke="#14243F"/>
+        <line x1="255" y1="40" x2="255" y2="205" stroke="#14243F"/>
+        <path d="M 263 190 C 315 188, 345 150, 403 58" fill="none" stroke="#0D6A67" stroke-width="2"/>
+        <g fill="#14243F">
+          <circle cx="270" cy="192" r="3"/><circle cx="287" cy="188" r="3"/><circle cx="304" cy="180" r="3"/>
+          <circle cx="321" cy="166" r="3"/><circle cx="338" cy="148" r="3"/><circle cx="355" cy="122" r="3"/>
+          <circle cx="372" cy="96" r="3"/><circle cx="389" cy="70" r="3"/><circle cx="401" cy="56" r="3"/>
+        </g>
+        <text x="330" y="232" text-anchor="middle" class="svg-tiny">balanced</text>
+      </g>
+
+      <g>
+        <text x="555" y="20" text-anchor="middle" font-size="12.5" font-weight="600">Degree 12 — overfit</text>
+        <line x1="480" y1="205" x2="635" y2="205" stroke="#14243F"/>
+        <line x1="480" y1="40" x2="480" y2="205" stroke="#14243F"/>
+        <path d="M 495 192 Q 503 174 512 188 Q 521 200 529 180 Q 538 160 546 166 Q 555 174 563 148
+                 Q 571 118 580 122 Q 588 128 597 96 Q 605 62 614 70 Q 620 76 626 56"
+              fill="none" stroke="#A81F27" stroke-width="2"/>
+        <g fill="#14243F">
+          <circle cx="495" cy="192" r="3"/><circle cx="512" cy="188" r="3"/><circle cx="529" cy="180" r="3"/>
+          <circle cx="546" cy="166" r="3"/><circle cx="563" cy="148" r="3"/><circle cx="580" cy="122" r="3"/>
+          <circle cx="597" cy="96" r="3"/><circle cx="614" cy="70" r="3"/><circle cx="626" cy="56" r="3"/>
+        </g>
+        <text x="555" y="232" text-anchor="middle" class="svg-tiny">high variance</text>
+      </g>
+    </svg>
+    <figcaption><b>Fig. 8</b> — Identical data, three degrees. The right-hand curve passes closer to every training point and will score a higher train R² than the middle one — and will be worse on anything new. This is why the notebook insists on checking test R².</figcaption>
+  </figure>
+
+  <h3>The bias–variance decomposition, derived</h3>
+
+  <p>Your notebook explains bias and variance with the student-and-exam analogy and the target-shooting picture, both of which are good intuition. Underneath is an exact identity — one of the most useful results in all of machine learning, and short enough to prove in a page.</p>
+
+  <p>Fix a query point \(x_0\). The true value is \(y = f(x_0) + \varepsilon\) with \(\mathbb{E}[\varepsilon]=0, \mathrm{Var}(\varepsilon) = \sigma^2\). Your model \(\hat{f}\) is random because it was trained on a random dataset — a different sample would have given different parameters. The expected squared error at \(x_0\), averaged over both noise and training sets, decomposes into three pieces:</p>
+
+  <div class="ladder">
+    <div class="ladder-title">Splitting the error into three</div>
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-body">
+        <p>Write \(\bar f = \mathbb{E}[\hat{f}(x_0)]\), the average prediction across all possible training sets. Insert and subtract it:</p>
+        \[ \mathbb{E}\bigl[(y - \hat{f}(x_0))^2\bigr] = \mathbb{E}\bigl[(\underbrace{f + \varepsilon - \bar f}_{A} + \underbrace{\bar f - \hat{f}(x_0)}_{B})^2\bigr] \]
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-body">
+        <p>Expand the square into \(A^2 + 2AB + B^2\). The cross term vanishes: \(\varepsilon\) is independent of the training data and has mean zero, and \(\mathbb{E}[\bar f - \hat f(x_0)] = 0\) by the definition of \(\bar f\).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-body">
+        <p>What survives is three non-negative terms:</p>
+        \[ \mathbb{E}\bigl[(y-\hat{f}(x_0))^2\bigr] = \underbrace{\bigl(\bar f - f(x_0)\bigr)^2}_{\text{Bias}^2} + \underbrace{\mathbb{E}\bigl[(\hat{f}(x_0) - \bar f)^2\bigr]}_{\text{Variance}} + \underbrace{\sigma^2}_{\text{Irreducible}} \]
+      </div>
+    </div>
+  </div>
+
+  <p>Now read each term as a sentence:</p>
+  <ul>
+    <li><strong>Bias²</strong> — how far the <em>average</em> model is from the truth. The student who only read the chapter titles. A straight line fitted to curved data. Reduced by adding flexibility.</li>
+    <li><strong>Variance</strong> — how much the model jumps around when the training data changes. The student who memorised the textbook and is thrown by a rephrased question. Reduced by simplifying, regularising, or getting more data.</li>
+    <li><strong>σ²</strong> — the noise floor from Lecture 1. No model, no amount of data, no algorithm removes it. If someone reports \(R^2 = 0.999\) on a noisy real-world target, suspect leakage before genius.</li>
+  </ul>
+
+  <p>The first two terms trade off against each other, and that tension is the entire reason model selection exists.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 320" role="img" aria-label="Error against model complexity: bias squared falls, variance rises, total error is U-shaped with a minimum at the optimum complexity">
+      <line x1="70" y1="270" x2="630" y2="270" stroke="#14243F"/>
+      <line x1="70" y1="30" x2="70" y2="270" stroke="#14243F"/>
+      <text x="350" y="298" text-anchor="middle" class="svg-lbl">model complexity  (polynomial degree, features, depth…)</text>
+      <text x="26" y="150" text-anchor="middle" class="svg-lbl" transform="rotate(-90 26 150)">expected error</text>
+
+      <!-- irreducible -->
+      <line x1="70" y1="240" x2="630" y2="240" stroke="#8496AF" stroke-width="1.6" stroke-dasharray="5 4"/>
+      <text x="560" y="256" class="svg-tiny">irreducible σ²</text>
+
+      <!-- bias^2 -->
+      <path d="M 82 62 C 190 200, 300 226, 622 234" fill="none" stroke="#0D6A67" stroke-width="2"/>
+      <text x="120" y="56" class="svg-tiny" fill="#0D6A67">Bias²</text>
+
+      <!-- variance -->
+      <path d="M 82 236 C 330 232, 470 200, 622 60" fill="none" stroke="#9C6410" stroke-width="2"/>
+      <text x="560" y="52" class="svg-tiny" fill="#9C6410">Variance</text>
+
+      <!-- total -->
+      <path d="M 82 48 C 200 168, 275 196, 340 197 C 440 199, 520 128, 622 40"
+            fill="none" stroke="#A81F27" stroke-width="2.6"/>
+      <text x="230" y="128" class="svg-tiny" fill="#A81F27">Total = Bias² + Variance + σ²</text>
+
+      <!-- sweet spot -->
+      <line x1="345" y1="197" x2="345" y2="270" stroke="#14243F" stroke-dasharray="3 3"/>
+      <circle cx="345" cy="197" r="5" fill="#A81F27"/>
+      <text x="345" y="288" text-anchor="middle" class="svg-tiny">optimum</text>
+
+      <text x="120" y="252" class="svg-tiny">underfitting</text>
+      <text x="520" y="252" class="svg-tiny">overfitting</text>
+
+      <text x="400" y="105" class="svg-hand">test R² is measuring this red curve</text>
+    </svg>
+    <figcaption><b>Fig. 9</b> — Train error keeps falling as complexity rises; <em>test</em> error follows the red curve. That divergence is the whole reason the train/test split of Lecture 3 exists.</figcaption>
+  </figure>
+
+  <h4>Diagnosing which one you have</h4>
+  <table>
+    <thead><tr><th>Train R²</th><th>Test R²</th><th>Diagnosis</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td class="num">low</td><td class="num">low</td><td>Underfit — high bias</td><td>Add features, raise degree, reduce regularisation</td></tr>
+      <tr><td class="num">high</td><td class="num">low</td><td>Overfit — high variance</td><td>More data, fewer features, regularise, lower degree</td></tr>
+      <tr><td class="num">high</td><td class="num">high</td><td>Healthy</td><td>Ship it — after checking for leakage</td></tr>
+      <tr><td class="num">low</td><td class="num">high</td><td>Usually a small or lucky test set</td><td>Cross-validate before believing it</td></tr>
+    </tbody>
+  </table>
+
+  <p>Your auto-mpg model (0.814 / 0.843) sits in row three. The electricity model at degree 3 (0.998 / 0.998) also sits in row three — its data really is nearly a cubic in time.</p>
+
+  <h3>Where the notebook stops, and what comes next</h3>
+
+  <p>Lecture 4 ends on the M1 / M2 / M3 discussion — the observation that a model with many large non-zero weights is more likely to overfit. That observation has a direct mathematical remedy, and it is the natural bridge to your next module.</p>
+
+  <p>If large weights are the symptom, penalise large weights in the cost function itself:</p>
+
+  \[ J_{\text{ridge}}(\mathbf{w}) = \|\mathbf{y} - X\mathbf{w}\|^2 + \lambda\|\mathbf{w}\|_2^2 \qquad\Longrightarrow\qquad \hat{\mathbf{w}} = (X^{\!\top}X + \lambda I)^{-1}X^{\!\top}\mathbf{y} \]
+
+  <p>Look closely at that inverse. Adding \(\lambda I\) shifts every eigenvalue of \(X^\top X\) up by \(\lambda\) — so a singular matrix becomes invertible, and the condition number falls. <strong>Ridge regression solves the multicollinearity problem of this lecture and the overfitting problem of this lecture with the same single term.</strong> It would have handled your <code>year</code>/<code>age</code> pair without dropping anything.</p>
+
+  <p>Swapping the squared penalty for an absolute one gives Lasso, \(\lambda\|\mathbf{w}\|_1\), whose corners drive coefficients exactly to zero — automatic feature selection, replacing the manual VIF loop. Both are one import away, and both are the same normal equation you already derived.</p>
+</section>
+
+
+<!-- ============================ CHEAT SHEET ============================ -->
+<section class="chapter sheet" id="cheatsheet">
+  <div class="chapter-head">
+    <span class="chapter-num">Appendix</span>
+    <span class="chapter-rule"></span>
+  </div>
+  <h2>One-page formula sheet</h2>
+  <p class="chapter-sub">Everything derived above, with the notebook cell it belongs to</p>
+
+  <table>
+    <thead><tr><th>Concept</th><th>Formula</th><th>Lecture</th></tr></thead>
+    <tbody>
+      <tr><td>Model</td><td>\(\hat{y} = w_0 + \sum_j w_j x_j = X\mathbf{w}\)</td><td class="num">2, 3</td></tr>
+      <tr><td>Cost (MSE)</td><td>\(J = \frac{1}{n}\sum_i (y_i - \hat{y}_i)^2\)</td><td class="num">2</td></tr>
+      <tr><td>Slope, one feature</td><td>\(w = \mathrm{Cov}(x,y)/\mathrm{Var}(x)\)</td><td class="num">2</td></tr>
+      <tr><td>Intercept</td><td>\(b = \bar{y} - w\bar{x}\)</td><td class="num">2</td></tr>
+      <tr><td>Gradient descent</td><td>\(\mathbf{w} \leftarrow \mathbf{w} - \alpha\nabla J\)</td><td class="num">2</td></tr>
+      <tr><td>Normal equation</td><td>\(\hat{\mathbf{w}} = (X^{\!\top}X)^{-1}X^{\!\top}\mathbf{y}\)</td><td class="num">3</td></tr>
+      <tr><td>Orthogonality</td><td>\(X^{\!\top}\mathbf{e} = \mathbf{0}\)</td><td class="num">3</td></tr>
+      <tr><td>R²</td><td>\(1 - SS_{\text{res}}/SS_{\text{tot}}\)</td><td class="num">2</td></tr>
+      <tr><td>Adjusted R²</td><td>\(1 - (1-R^2)\frac{n-1}{n-p-1}\)</td><td class="num">3</td></tr>
+      <tr><td>Standardisation</td><td>\(z = (x-\mu)/\sigma\)</td><td class="num">3</td></tr>
+      <tr><td>Min-max scaling</td><td>\((x - x_{\min})/(x_{\max}-x_{\min})\)</td><td class="num">3</td></tr>
+      <tr><td>Coefficient variance</td><td>\(\mathrm{Var}(\hat{\mathbf{w}}) = \sigma^2(X^{\!\top}X)^{-1}\)</td><td class="num">4</td></tr>
+      <tr><td>VIF</td><td>\(1/(1-R_j^2)\)</td><td class="num">4</td></tr>
+      <tr><td>Polynomial features</td><td>\(\hat{\mathbf{w}} = (\Phi^{\!\top}\Phi)^{-1}\Phi^{\!\top}\mathbf{y}\)</td><td class="num">4</td></tr>
+      <tr><td>Bias–variance</td><td>\(\text{Err} = \text{Bias}^2 + \text{Var} + \sigma^2\)</td><td class="num">4</td></tr>
+      <tr><td>Ridge</td><td>\((X^{\!\top}X + \lambda I)^{-1}X^{\!\top}\mathbf{y}\)</td><td class="num">next</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Corrections to carry back into the notebooks</h3>
+  <ol>
+    <li><strong>LR2, cell 58</strong> — the intercept is <code>-1.19e-16</code>, i.e. zero, not −1.18. The fitted equation is \(\hat{y} = 0.965x\).</li>
+    <li><strong>LR2</strong> — worth adding: \(w = r\) and \(R^2 = r^2\) on standardised data. \(0.96505^2 = 0.93132\), which is your printed R² exactly.</li>
+    <li><strong>LR3, cell 64</strong> — adjusted R² brackets are wrong. Correct value 0.8320, not 0.9041.</li>
+    <li><strong>LR3, cell 15</strong> — <code>year</code> and <code>age</code> coefficients are exact negatives; this is the perfect collinearity that becomes <code>VIF = inf</code> in LR4.</li>
+    <li><strong>LR4, cell 34</strong> — \(p = 0.218\) means we <em>fail to reject</em> homoscedasticity. Reword "statistically significant", and fix the quoted 0.353.</li>
+    <li><strong>LR3</strong> — the target encoding of <code>make</code>/<code>model</code> is fitted before the split, which leaks. Worth a slide of its own.</li>
+  </ol>
+
+  <h3>Suggested exercises for the learners who asked</h3>
+  <ol>
+    <li>Implement <code>ols_univariate</code> from the Lecture 2 derivation and confirm it matches <code>model.coef_</code> to eight decimals.</li>
+    <li>Write gradient descent for the same problem. Plot cost against iteration for \(\alpha \in \{0.001, 0.01, 0.5\}\) and find where it diverges.</li>
+    <li>Compute \((X^\top X)^{-1}X^\top y\) with raw NumPy on the auto-mpg data and compare with sklearn. Then try it <em>without</em> dropping <code>origin_europe</code> and watch <code>np.linalg.inv</code> fail.</li>
+    <li>Add a column of <code>np.random.randn(n)</code> to any model. Confirm R² rises and adjusted R² falls.</li>
+    <li>Verify the VIF formula by hand: regress <code>Petrol</code> on all other features, take its R², compute \(1/(1-R^2)\), and check it equals 18.29.</li>
+    <li>Refit the Cars24 model with proper out-of-fold target encoding and see how far the test R² drops from 0.94.</li>
+  </ol>
+</section>
+
+<footer class="end">
+  Post-read companion · Intro to ML Engineering &amp; Linear Regression, Lectures 1–4<br>
+  Every derivation here corresponds to a cell in the four Colab notebooks. Numerical claims were checked against the printed outputs in those notebooks.<br>
+  Equations rendered with MathJax — an internet connection is needed the first time the page loads.
+</footer>
+
+</div><!-- /wrap -->
+
+<script>
+(function () {
+  var bar = document.getElementById('progress');
+  function update() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var pct = max > 0 ? (h.scrollTop || document.body.scrollTop) / max * 100 : 0;
+    bar.style.width = pct.toFixed(2) + '%';
+  }
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Maths-postread-Regression" target="_blank" rel="noopener">github.com/scaler-content/Maths-postread-Regression</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

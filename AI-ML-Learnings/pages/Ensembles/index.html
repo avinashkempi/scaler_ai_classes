@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ensemble Learning — Interactive Post-Read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#faf5ea;
+    --paper:#fffdf9;
+    --paper-tint:#fbf2df;
+    --sand:#efe2c6;
+    --sand-line: rgba(120,90,40,0.16);
+    --sand-line-strong: rgba(120,90,40,0.28);
+
+    --royal:#2946d1;
+    --royal-deep:#1c2f9e;
+    --royal-light:#5470f2;
+    --royal-soft: rgba(41,70,209,0.09);
+    --royal-soft-strong: rgba(41,70,209,0.16);
+
+    --amber:#dc9a34;
+    --amber-soft: rgba(220,154,52,0.14);
+    --terracotta:#a34a1a;
+    --plum:#7d4fc9;
+
+    --good:#2f8f5f;
+    --good-soft: rgba(47,143,95,0.1);
+    --bad:#c34a3d;
+    --bad-soft: rgba(195,74,61,0.08);
+
+    --ink:#231d14;
+    --ink-soft:#6b6252;
+    --ink-faint:#9c9280;
+
+    --shadow: 0 18px 50px -22px rgba(120,90,40,0.35);
+    --radius: 18px;
+    --sidebar-w: 300px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 550px at 88% -8%, rgba(41,70,209,0.10), transparent 60%),
+      radial-gradient(800px 460px at -8% 15%, rgba(220,154,52,0.14), transparent 55%),
+      var(--cream);
+    color:var(--ink);
+    font-family:'Inter', -apple-system, sans-serif;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{ font-family:'Fraunces', serif; letter-spacing:-0.01em; }
+
+  a{ color:inherit; }
+
+  ::selection{ background:var(--royal-light); color:#fff8ea; }
+
+  /* ---------- Progress bar ---------- */
+  #progress-track{
+    position:fixed; top:0; left:0; right:0; height:3px; z-index:100;
+    background:rgba(120,90,40,0.08);
+  }
+  #progress-fill{
+    height:100%; width:0%;
+    background:linear-gradient(90deg, var(--amber), var(--royal), var(--royal-deep));
+    transition:width .12s linear;
+    box-shadow:0 0 12px rgba(41,70,209,0.35);
+  }
+
+  /* ---------- Layout ---------- */
+  .layout{
+    display:flex;
+    max-width:1240px;
+    margin:0 auto;
+    align-items:flex-start;
+  }
+
+  /* ---------- Sidebar ---------- */
+  #sidebar{
+    position:sticky; top:0;
+    height:100vh;
+    width:var(--sidebar-w);
+    flex-shrink:0;
+    padding:28px 14px 28px 28px;
+    display:flex;
+    flex-direction:column;
+    z-index:20;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:6px;
+  }
+  .brand-mark{
+    width:34px; height:34px; border-radius:10px;
+    background:linear-gradient(135deg, var(--royal), var(--royal-light));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces'; font-weight:700; font-size:16px; color:#fff8ea;
+    box-shadow:0 8px 18px -6px rgba(41,70,209,0.55);
+    flex-shrink:0;
+  }
+  .brand-text{ font-family:'Fraunces'; font-weight:700; font-size:16px; color:var(--ink); }
+  .brand-sub{ font-size:11px; color:var(--ink-faint); letter-spacing:.08em; text-transform:uppercase; margin-top:1px;}
+
+  .sidebar-meta{
+    margin:20px 0 18px 0;
+    padding:14px 16px;
+    background:var(--paper);
+    border:1px solid var(--sand-line);
+    border-radius:14px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    box-shadow: 0 2px 10px -6px rgba(120,90,40,0.2);
+  }
+  .sidebar-meta .meta-row{ display:flex; justify-content:space-between; padding:3px 0; }
+  .sidebar-meta .meta-row b{ color:var(--ink); font-weight:600; }
+
+  #nav{
+    overflow-y:auto;
+    padding-right:6px;
+    flex:1;
+    scrollbar-width: thin;
+    scrollbar-color: var(--sand-line-strong) transparent;
+  }
+  #nav::-webkit-scrollbar{ width:5px; }
+  #nav::-webkit-scrollbar-thumb{ background:var(--sand-line-strong); border-radius:4px; }
+
+  .nav-link{
+    display:flex; align-items:center; gap:10px;
+    text-decoration:none;
+    padding:8px 10px;
+    border-radius:10px;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:2px;
+    position:relative;
+    border-left:2px solid transparent;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .nav-link:hover{ background:rgba(120,90,40,0.06); color:var(--ink); }
+  .nav-link.active{
+    color:var(--ink);
+    background:linear-gradient(90deg, var(--royal-soft), transparent);
+    border-left:2px solid var(--royal);
+  }
+  .nav-link.nav-quiz.active{
+    border-left:2px solid var(--amber);
+    background:linear-gradient(90deg, var(--amber-soft), transparent);
+  }
+  .nav-num{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    color:var(--ink-faint);
+    width:22px;
+    flex-shrink:0;
+  }
+  .nav-link.active .nav-num{ color:var(--royal); }
+  .nav-link.nav-quiz.active .nav-num{ color:var(--amber); }
+  .nav-title{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  #sidebar-footer{
+    padding-top:14px; margin-top:10px;
+    border-top:1px solid var(--sand-line);
+    font-size:11px; color:var(--ink-faint);
+  }
+
+  /* ---------- Main content ---------- */
+  main{
+    flex:1;
+    min-width:0;
+    padding:56px 48px 120px 40px;
+  }
+
+  .hero{
+    margin-bottom:56px;
+  }
+  .hero-badge{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:11.5px; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--royal-deep);
+    background:var(--royal-soft);
+    border:1px solid var(--royal-soft-strong);
+    padding:6px 12px; border-radius:999px;
+    margin-bottom:22px;
+  }
+  .hero-badge .dot{ width:6px; height:6px; border-radius:50%; background:var(--royal); box-shadow:0 0 8px var(--royal-light); }
+  .hero h1{
+    font-size:clamp(38px, 5vw, 60px);
+    font-weight:700;
+    line-height:1.05;
+    margin:0 0 18px 0;
+    color:var(--ink);
+  }
+  .hero h1 em{
+    font-style:italic;
+    color:var(--royal);
+  }
+  .hero p.lede{
+    font-size:17px; color:var(--ink-soft); max-width:640px; margin:0 0 28px 0;
+  }
+  .hero-stats{ display:flex; gap:28px; flex-wrap:wrap; }
+  .hero-stat{ display:flex; flex-direction:column; gap:2px; }
+  .hero-stat .num{ font-family:'Fraunces'; font-weight:700; font-size:22px; color:var(--royal-deep); }
+  .hero-stat .lab{ font-size:11.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em; }
+
+  /* ---------- Cards ---------- */
+  .card{
+    background:var(--paper);
+    border:1px solid var(--sand-line);
+    border-radius:var(--radius);
+    padding:36px 40px;
+    margin-bottom:22px;
+    box-shadow:var(--shadow);
+    scroll-margin-top:24px;
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:0;
+    background:radial-gradient(460px 190px at 100% 0%, rgba(41,70,209,0.055), transparent 60%);
+    pointer-events:none;
+  }
+
+  .card-eyebrow{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .eyebrow-num{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; color:var(--royal-deep);
+    background:var(--royal-soft);
+    border:1px solid var(--royal-soft-strong);
+    padding:3px 9px; border-radius:7px;
+  }
+  .eyebrow-line{ flex:1; height:1px; background:linear-gradient(90deg, var(--sand-line-strong), transparent); }
+
+  /* prose (rendered lecture markdown) */
+  .prose h2{ font-size:23px; margin:26px 0 14px; font-weight:600; color:var(--ink); }
+  .prose h2:first-child{ margin-top:0; }
+  .prose h3{ font-size:14px; margin:20px 0 8px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; font-family:'Inter'; }
+  .prose p{ margin:0 0 14px; color:var(--ink-soft); font-size:15.5px; }
+  .prose p:last-child{ margin-bottom:0; }
+  .prose strong{ color:var(--ink); font-weight:650; }
+  .prose ul, .prose ol{ margin:0 0 14px; padding-left:22px; color:var(--ink-soft); font-size:15.5px; }
+  .prose li{ margin-bottom:6px; }
+  .prose li strong{ color:var(--ink); }
+  .prose img{
+    max-width:100%; border-radius:12px; margin:14px 0 18px;
+    border:1px solid var(--sand-line); display:block;
+    background:#fff;
+  }
+  .prose code{
+    font-family:'JetBrains Mono', monospace; font-size:13px;
+    background:var(--sand); padding:2px 6px; border-radius:5px; color:var(--royal-deep);
+  }
+  .prose pre{
+    background:#211a10; border:1px solid var(--sand-line); border-radius:12px;
+    padding:16px 18px; overflow-x:auto; margin:0 0 16px;
+  }
+  .prose pre code{
+    background:none; padding:0; color:#f2ecdd; font-size:13px; line-height:1.6;
+  }
+  .prose table{ width:100%; border-collapse:collapse; margin:8px 0 18px; font-size:14.5px; }
+  .prose th{
+    text-align:left; color:var(--ink); font-weight:600; font-size:12.5px;
+    text-transform:uppercase; letter-spacing:.04em;
+    border-bottom:1px solid var(--sand-line-strong); padding:8px 12px;
+  }
+  .prose td{ padding:10px 12px; border-bottom:1px solid var(--sand-line); color:var(--ink-soft); }
+  .prose tr:last-child td{ border-bottom:none; }
+
+  /* the content sets inline color:skyblue / violet / yellow spans, authored for a dark
+     surface. Remapped here (via attribute match, not by touching the markup) so the same
+     emphasis reads clearly on the warm light surface. */
+  .prose span[style*="skyblue"]{ color: var(--royal) !important; font-weight:600; }
+  .prose span[style*="violet"]{ color: var(--plum) !important; }
+  .prose span[style*="color: yellow"]{ color: var(--terracotta) !important; font-weight:600; }
+
+  /* ---------- Visualization CTA ---------- */
+  .viz-cta{
+    display:flex; align-items:center; gap:14px;
+    margin-top:22px;
+    padding:16px 18px;
+    background:linear-gradient(120deg, var(--royal-soft), var(--amber-soft));
+    border:1px solid var(--royal-soft-strong);
+    border-radius:14px;
+    text-decoration:none;
+    color:var(--ink);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .viz-cta:hover{ transform:translateY(-1px); box-shadow:0 10px 24px -14px rgba(41,70,209,0.45); }
+  .viz-cta-icon{
+    flex-shrink:0; width:34px; height:34px; border-radius:50%;
+    background:var(--royal); color:#fff8ea;
+    display:flex; align-items:center; justify-content:center; font-size:12px;
+  }
+  .viz-cta-copy{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .viz-cta-label{ font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--royal-deep); font-weight:700; }
+  .viz-cta-desc{ font-size:14px; color:var(--ink-soft); }
+  .viz-cta-arrow{ color:var(--royal); font-size:16px; flex-shrink:0; }
+
+  /* ---------- Quiz cards ---------- */
+  .quiz-card{
+    border-color: rgba(220,154,52,0.35);
+    background:linear-gradient(165deg, var(--paper-tint), var(--paper) 65%);
+  }
+  .quiz-tag{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--terracotta);
+    margin-bottom:16px;
+    font-weight:600;
+  }
+  .ballot-icon{ font-size:14px; }
+  .quiz-question{ margin-bottom:20px; }
+  .quiz-question p{ font-size:17px; color:var(--ink); }
+
+  .choices{ display:flex; flex-direction:column; gap:10px; }
+  .choice{
+    display:flex; align-items:center; gap:14px;
+    text-align:left;
+    background:var(--paper);
+    border:1px solid var(--sand-line-strong);
+    border-radius:12px;
+    padding:14px 16px;
+    color:var(--ink);
+    font-family:'Inter'; font-size:14.5px;
+    cursor:pointer;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .choice:hover{ background:var(--royal-soft); border-color:var(--royal-soft-strong); }
+  .choice:active{ transform: scale(0.995); }
+  .choice-mark{
+    flex-shrink:0; width:26px; height:26px; border-radius:8px;
+    background:var(--sand); border:1px solid var(--sand-line-strong);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--ink-soft);
+  }
+  .choice-text{ flex:1; }
+  .choice-icon{ width:18px; height:18px; flex-shrink:0; }
+
+  .choices.answered .choice{ cursor:default; }
+  .choices.answered .choice:hover{ background:var(--paper); }
+  .choice.is-correct{
+    border-color: var(--good); background:var(--good-soft);
+  }
+  .choice.is-correct .choice-mark{ background:var(--good); color:#f4fbf6; border-color:var(--good); }
+  .choice.is-correct .choice-icon::after{ content:"✓"; color:var(--good); font-weight:700; }
+  .choice.is-wrong{
+    border-color: var(--bad); background:var(--bad-soft);
+  }
+  .choice.is-wrong .choice-mark{ background:var(--bad); color:#fdf5f4; border-color:var(--bad); }
+  .choice.is-wrong .choice-icon::after{ content:"✕"; color:var(--bad); font-weight:700; }
+  .choices.answered .choice:not(.is-correct):not(.is-wrong){ opacity:.5; }
+
+  .quiz-feedback{
+    margin-top:16px; font-size:14px; font-weight:600;
+    min-height:0; display:none;
+    align-items:center; gap:8px;
+    padding:12px 16px; border-radius:12px;
+  }
+  .quiz-feedback.show{ display:flex; }
+  .quiz-feedback.correct{ background:var(--good-soft); color:var(--good); border:1px solid rgba(47,143,95,0.3); }
+  .quiz-feedback.wrong{ background:var(--bad-soft); color:var(--bad); border:1px solid rgba(195,74,61,0.25); }
+
+  .explanation{
+    margin-top:18px; padding-top:18px; border-top:1px dashed var(--sand-line-strong);
+    display:none;
+  }
+  .explanation.show{ display:block; animation: fadeIn .35s ease; }
+  .explanation-label{
+    font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--plum);
+    margin-bottom:8px; font-weight:700;
+  }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:translateY(0);} }
+
+  /* ---------- Footer ---------- */
+  .end-note{
+    text-align:center; color:var(--ink-faint); font-size:13px;
+    margin-top:40px; padding-top:24px; border-top:1px solid var(--sand-line);
+  }
+
+  /* ---------- Mobile ---------- */
+  #sidebar-toggle{ display:none; }
+  @media (max-width: 960px){
+    .layout{ display:block; }
+    #sidebar{
+      position:fixed; inset:0 auto 0 0; transform:translateX(-100%);
+      width:82vw; max-width:320px;
+      background:var(--cream);
+      border-right:1px solid var(--sand-line);
+      transition: transform .25s ease;
+      padding:22px;
+    }
+    #sidebar.open{ transform:translateX(0); }
+    #sidebar-scrim{
+      display:none; position:fixed; inset:0; background:rgba(40,30,10,0.35); z-index:19;
+    }
+    #sidebar-scrim.show{ display:block; }
+    #sidebar-toggle{
+      display:flex; align-items:center; gap:8px;
+      position:fixed; top:14px; left:14px; z-index:21;
+      background:var(--paper); border:1px solid var(--sand-line-strong);
+      color:var(--ink); font-family:'Fraunces'; font-weight:600; font-size:12px;
+      padding:9px 14px; border-radius:999px; cursor:pointer;
+      box-shadow:0 6px 16px -8px rgba(120,90,40,0.3);
+    }
+    main{ padding:80px 20px 100px; }
+    .card{ padding:26px 22px; }
+  }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations · Ensemble learning</span><span class="pn"><a href="../Decision-trees/" title="ML Foundations 9 · Decision trees">← Prev</a><a href="../bagging/" title="ML Foundations · Random forest and bagging">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progress-track"><div id="progress-fill"></div></div>
+
+<button id="sidebar-toggle" type="button" aria-expanded="false">☰ Contents</button>
+<div id="sidebar-scrim"></div>
+
+<div class="layout">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">E</div>
+      <div>
+        <div class="brand-text">Ensemble Learning</div>
+        <div class="brand-sub">Interactive Post-Read</div>
+      </div>
+    </div>
+
+    <div class="sidebar-meta">
+      <div class="meta-row"><span>Sections</span><b id="meta-sections">15</b></div>
+      <div class="meta-row"><span>Checkpoints</span><b id="meta-quizzes">4</b></div>
+      <div class="meta-row"><span>Progress</span><b id="meta-progress">0%</b></div>
+    </div>
+
+    <nav id="nav">
+<a href="#s0-recap-of-previous-lecture" class="nav-link" data-target="s0-recap-of-previous-lecture"><span class="nav-num">01</span><span class="nav-title">Recap of Previous Lecture</span></a>
+<a href="#s1-today-s-focus" class="nav-link" data-target="s1-today-s-focus"><span class="nav-num">02</span><span class="nav-title">Today's Focus</span></a>
+<a href="#s2-why-do-we-need-ensemble-learning" class="nav-link" data-target="s2-why-do-we-need-ensemble-learning"><span class="nav-num">03</span><span class="nav-title">Why Do We Need Ensemble Learning</span></a>
+<a href="#s3-quiz-1" class="nav-link nav-quiz" data-target="s3-quiz-1"><span class="nav-num">Q1</span><span class="nav-title">Quiz 1</span></a>
+<a href="#s4-what-are-ensembles" class="nav-link" data-target="s4-what-are-ensembles"><span class="nav-num">04</span><span class="nav-title">What are Ensembles</span></a>
+<a href="#s5-types-of-ensemble-learning" class="nav-link" data-target="s5-types-of-ensemble-learning"><span class="nav-num">05</span><span class="nav-title">Types of Ensemble Learning</span></a>
+<a href="#s6-bagging" class="nav-link" data-target="s6-bagging"><span class="nav-num">06</span><span class="nav-title">Bagging</span></a>
+<a href="#s7-boosting" class="nav-link" data-target="s7-boosting"><span class="nav-num">07</span><span class="nav-title">Boosting</span></a>
+<a href="#s8-quiz-2" class="nav-link nav-quiz" data-target="s8-quiz-2"><span class="nav-num">Q2</span><span class="nav-title">Quiz 2</span></a>
+<a href="#s9-golf-analogy-for-boosting" class="nav-link" data-target="s9-golf-analogy-for-boosting"><span class="nav-num">08</span><span class="nav-title">Golf Analogy for Boosting</span></a>
+<a href="#s10-stacking" class="nav-link" data-target="s10-stacking"><span class="nav-num">09</span><span class="nav-title">Stacking</span></a>
+<a href="#s11-how-combining-multiple-models-helps" class="nav-link" data-target="s11-how-combining-multiple-models-helps"><span class="nav-num">10</span><span class="nav-title">How Combining Multiple Models Helps</span></a>
+<a href="#s12-comparing-individual-and-ensemble-models" class="nav-link" data-target="s12-comparing-individual-and-ensemble-models"><span class="nav-num">11</span><span class="nav-title">Comparing Individual and Ensemble Models</span></a>
+<a href="#s13-bagging-vs-boosting" class="nav-link" data-target="s13-bagging-vs-boosting"><span class="nav-num">12</span><span class="nav-title">Bagging Vs Boosting</span></a>
+<a href="#s14-quiz-3" class="nav-link nav-quiz" data-target="s14-quiz-3"><span class="nav-num">Q3</span><span class="nav-title">Quiz 3</span></a>
+<a href="#s15-bias-variance-tradeoff" class="nav-link" data-target="s15-bias-variance-tradeoff"><span class="nav-num">13</span><span class="nav-title">Bias-Variance Tradeoff</span></a>
+<a href="#s16-quiz-4" class="nav-link nav-quiz" data-target="s16-quiz-4"><span class="nav-num">Q4</span><span class="nav-title">Quiz 4</span></a>
+<a href="#s17-intro-to-random-forest" class="nav-link" data-target="s17-intro-to-random-forest"><span class="nav-num">14</span><span class="nav-title">Intro to Random Forest</span></a>
+<a href="#s18-summary" class="nav-link" data-target="s18-summary"><span class="nav-num">15</span><span class="nav-title">Summary</span></a>
+    </nav>
+
+    <div id="sidebar-footer">Scroll or tap a section to jump there. Your progress isn't saved between visits.</div>
+  </aside>
+
+  <main>
+    <div class="hero">
+      <div class="hero-badge"><span class="dot"></span> Post-read &middot; Supervised Learning</div>
+      <h1>Ensemble Learning</h1>
+      <p class="lede">A self-paced recap of why combining many models usually beats relying on one — covering Bagging, Boosting, Stacking, the Bias&ndash;Variance tradeoff, and the road into Random Forests. Read through, and answer the checkpoints as you go.</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><span class="num">15</span><span class="lab">Sections</span></div>
+        <div class="hero-stat"><span class="num">4</span><span class="lab">Checkpoints</span></div>
+        <div class="hero-stat"><span class="num">~15 min</span><span class="lab">Read time</span></div>
+      </div>
+    </div>
+
+
+    <section class="card read-card" id="s0-recap-of-previous-lecture" data-nav="s0-recap-of-previous-lecture">
+      <div class="card-eyebrow"><span class="eyebrow-num">01</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Recap</span></h2>
+<p>In the previous lecture, we covered:</p>
+<ul>
+<li>Decision Tree Intuition and Working</li>
+<li>Entropy, Information Gain, and Gini Impurity</li>
+<li>Building and Visualizing Decision Trees</li>
+<li>Handling Numerical Features</li>
+<li>Underfitting vs Overfitting</li>
+<li>Decision Tree Hyperparameters</li>
+<li>Feature Importance</li>
+</ul>
+<h2><span style="color: skyblue;">Key Takeaways</span></h2>
+<ul>
+<li><strong>Decision Trees</strong> recursively partition the feature space into smaller and more homogeneous regions.</li>
+<li>The quality of a split is measured using metrics such as <strong>Entropy</strong>, <strong>Information Gain</strong>, and <strong>Gini Impurity</strong>.</li>
+<li><strong>Decision Trees</strong> can naturally handle both categorical and numerical features.</li>
+<li>Although <strong>Decision Trees</strong> are highly interpretable and easy to visualize, they are prone to <strong>overfitting</strong> if allowed to grow too deep.</li>
+<li><strong>Hyperparameters</strong> such as <code>max_depth</code>, <code>min_samples_split</code>, and <code>min_samples_leaf</code> help control the complexity of the tree and improve its generalization.</li>
+</ul>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s1-today-s-focus" data-nav="s1-today-s-focus">
+      <div class="card-eyebrow"><span class="eyebrow-num">02</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Today's Focus</span></h2>
+<p>In this lecture, we will introduce <strong>Ensemble Learning</strong>, a powerful paradigm that improves model performance by combining the predictions of multiple learners instead of relying on a single model. We will understand <strong>why ensembles work</strong>, explore the two major families of ensemble methods—<strong>Bagging</strong> and <strong>Boosting</strong>—and compare their strengths, limitations, and ideal use cases. This will lay the foundation for studying <strong>Random Forests</strong> and <strong>Boosting algorithms</strong> in the upcoming lectures.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s2-why-do-we-need-ensemble-learning" data-nav="s2-why-do-we-need-ensemble-learning">
+      <div class="card-eyebrow"><span class="eyebrow-num">03</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Why Do We Need Ensemble Learning?</span></h2>
+<p>So far, we have studied several supervised learning algorithms, including <strong>Linear Regression, Logistic Regression, KNN, and Decision Trees</strong>. Each of these models learns patterns from the training data and makes predictions independently.</p>
+<p>However, no machine learning model is perfect. Every model has its own strengths and limitations. For example, a <strong>Decision Tree</strong> is highly interpretable but is also sensitive to small changes in the training data. Even a slight variation in the dataset can produce a completely different tree, leading to different predictions.</p>
+<p>This naturally raises an interesting question:</p>
+<p><span style="color: violet;"><strong>Can we improve our predictions by combining multiple models instead of relying on just one?</strong></span></p>
+<h2><span style="color: skyblue;">Analogy: The "Ask 100 People" Game Show</span></h2>
+<p>Imagine you are on a game show. The host asks you a question:</p>
+<p>"In which year did India gain independence?"</p>
+<p>You have three options to get help:</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/103/original/Screenshot_2026-07-30_164400.png?1785410058"></p>
+<p>Just as we've seen the benefits of considering multiple perspectives, in Machine Learning we can combine multiple models rather than depending on just one. This approach is known as <strong>Ensemble Learning</strong>, where the collective decision often performs better than any individual model.</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/102/original/Screenshot_2026-07-30_164300.png?1785409997"></p>
+<p>Now that we know why relying on multiple models can be beneficial, let's understand Ensemble Methods and explore the different types we'll be learning today.</p>
+<p>A similar idea can be applied to Machine Learning.</p>
+<p>Instead of relying on the prediction of a <strong>single model</strong>, we can combine the predictions of <strong>multiple models</strong>.</p>
+<p>If the individual models make different mistakes, combining them often leads to a model that is more accurate, <strong>more stable, and more robust</strong> than any individual model.</p>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s3-quiz-1" data-nav="s3-quiz-1">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 1</div>
+      <div class="quiz-question prose"><p>Suppose you have <strong>three machine learning models</strong> that make predictions independently.</p>
+<p>Why might <strong>combining their predictions</strong> produce better results than relying on a single model?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text">Because combining models automatically eliminates all prediction errors.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">B</span><span class="choice-text">Because different models may make different mistakes, allowing some errors to cancel out.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">Because the combined model always trains faster.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">Because all models will always predict the same output.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+        <div class="explanation" data-explanation>
+          <div class="explanation-label">Why</div>
+          <div class="prose"><p>If multiple models make different errors, combining their predictions through averaging or voting often produces a more stable and accurate prediction than relying on a single model.</p></div>
+        </div>
+    </section>
+
+    <section class="card read-card" id="s4-what-are-ensembles" data-nav="s4-what-are-ensembles">
+      <div class="card-eyebrow"><span class="eyebrow-num">04</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">What are Ensembles?</span></h2>
+<p>Instead of relying on a single model, what if we <strong>train multiple base learners (models) and combine their predictions intelligently</strong>?</p>
+<p>The key idea is:</p>
+<p><strong>Train many base learners (models) that are as different as possible and combine them smartly.</strong></p>
+<p>For example, instead of training one <strong>Decision Tree</strong>, we could train <strong>100 Decision Trees</strong> and combine their predictions to make a final decision.</p>
+<p>This is the <strong>core principle of Ensemble Learning</strong>.</p>
+<p>The word <em>ensemble</em> generally refers to a collection or combination of multiple entities working together. Similarly, in machine learning, we combine multiple models to build a stronger predictor.</p>
+<p>An ensemble can consist of:</p>
+<ul>
+<li>Multiple instances of the <strong>same model</strong> (e.g., many Decision Trees).</li>
+<li>Different types of models, such as <strong>Decision Trees</strong>, <strong>Logistic Regression</strong>, and <strong>KNN</strong>, whose predictions are combined intelligently.</li>
+</ul>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s5-types-of-ensemble-learning" data-nav="s5-types-of-ensemble-learning">
+      <div class="card-eyebrow"><span class="eyebrow-num">05</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">What are the Types of Ensembles?</span></h2>
+<p><strong>Ensemble Learning</strong> can be broadly categorized into three major approaches:</p>
+<ol>
+<li><strong>Bagging</strong><ul>
+<li>Trains multiple learners independently.</li>
+<li>Example: <strong>Random Forest</strong></li>
+</ul>
+</li>
+<li><strong>Boosting</strong><ul>
+<li>Trains learners sequentially, with each learner improving upon the previous one.</li>
+<li>Example: <strong>Gradient Boosting Decision Trees (GBDT)</strong></li>
+</ul>
+</li>
+<li><strong>Stacking</strong><ul>
+<li>Trains multiple base learners and combines their predictions using a meta-learner.</li>
+<li>Example: <strong>Decision Tree</strong> + <strong>SVM</strong> + <strong>Logistic Regression</strong> → <strong>Meta-Learner</strong></li>
+</ul>
+</li>
+</ol>
+<p>In practice, hybrid approaches that combine ideas from these techniques are also possible.</p>
+<p>We have now seen the three major types of ensemble learning at a high level. To understand how ensemble methods work in practice, let's begin with <strong>Bagging</strong>, the simplest and one of the most widely used ensemble techniques. Before we study the algorithm itself, let's build an intuition through a real-life analogy that captures the core idea behind <strong>Bagging</strong>. This intuition will make the formal concepts much easier to understand.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s6-bagging" data-nav="s6-bagging">
+      <div class="card-eyebrow"><span class="eyebrow-num">06</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Bagging</span></h2>
+<p><strong>Bagging refers to training different models for the same task, independently of each other and then cleverly combining their predictions</strong>.</p>
+<p><span style="color: violet;">Question: Let's say we have 3 different models, <code>M1</code>, <code>M2</code>, <code>M3</code> and all are trained for the same regression task to predict credit score. Can you think of a simple way to use predictions from these 3 different models together?</span></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/101/original/Screenshot_2026-07-30_164204.png?1785409936"></p>
+<h2><span style="color: skyblue;">Intuition</span></h2>
+<p><strong>Bagging</strong> stands for <strong>Bootstrapped Aggregation</strong>.</p>
+<p>We'll come to <strong>Bootstrapping</strong> later.</p>
+<p>But, let's see the the intuition first</p>
+<ul>
+<li>We basically <strong>train <code>k</code> different models</strong> (<code>M1</code>, <code>M2</code>, <code>....Mk</code>) and these models are called <strong>Base Learners</strong>.</li>
+<li>This is followed by <strong>Aggregation</strong><ul>
+<li>We use <strong>majority vote</strong> for <strong>Classification</strong></li>
+<li>We use <strong>Mean/Median</strong> for <strong>Regression</strong></li>
+</ul>
+</li>
+</ul>
+<p>Hence we see that just like <code>DT</code>, <code>RF</code> also works for both classification and regression</p>
+<p><strong>DO NOTE that we want all the base learners to be as different as possible</strong>.</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/100/original/Screenshot_2026-07-30_164122.png?1785409900"></p>
+<h2><span style="color: skyblue;"> But how to Ensure Models are Different?</span></h2>
+<p>We basically train each base learner on a subset of data.</p>
+<p><strong>Remember bootstrapping</strong>?</p>
+<ul>
+<li><strong>Bootstrapping</strong> in stats basically means to resample a single dataset to create multiple datasets.</li>
+</ul>
+<p>In <strong>Random Forest</strong>, for each tree <code>Mi</code>,<br />
+-   we randomly select a subset of training data. This is known as <strong>row sampling</strong>.<br />
+-   we can select a subset of the columns. This is known as <strong>column sampling</strong><br />
+-    We can tune the depth of the tree. Deeper trees have a higher chance of being different from each other.</p>
+<p>Hence, we have many different trees, trained on a different subset of points, and different combinations of features.</p>
+<p>Let us assume a train data set <code>DTr</code> with <code>n</code> data points i.e <code>Dn</code></p>
+<ul>
+<li>Now, we sample <code>m</code> data points with replacement to get <code>D1m</code></li>
+<li>Similarly, we sample <code>d′</code> columns.</li>
+</ul>
+<p>We then train our model <code>M1</code> on <code>D1m</code></p>
+<p>Similarly, we sample <code>m</code> datapoints with replacement to get <code>D2m</code> and</p>
+<ul>
+<li>train our model <code>M2</code> on <code>D2m</code></li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/098/original/Screenshot_2026-07-30_164032.png?1785409845"><br />
+<img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/097/original/Screenshot_2026-07-30_163954.png?1785409810"><br />
+<img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/096/original/Screenshot_2026-07-30_163917.png?1785409773"></p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s7-boosting" data-nav="s7-boosting">
+      <div class="card-eyebrow"><span class="eyebrow-num">07</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Boosting</span></h2>
+<h3>Boosting Analogy</h3>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/095/original/Screenshot_2026-07-30_163738.png?1785409730"><br />
+<img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/093/original/Screenshot_2026-07-30_163637.png?1785409633"></p>
+<p>So far, we have explored one major family of ensemble methods—<strong>Bagging</strong>. In Bagging, multiple base learners are trained <strong>independently</strong> on different subsets of the training data, and their predictions are combined using <strong>voting</strong> (for classification) or <strong>averaging</strong> (for regression). This makes the overall model more stable and helps reduce variance.</p>
+<p>However, <strong>Bagging</strong> is not the only way to build an ensemble. There is another powerful approach called <strong>Boosting</strong>, where the base learners are not trained independently. Instead, they are trained sequentially, with each new learner trying to correct the mistakes made by the previous one. Rather than combining many independent opinions, Boosting builds a strong model by gradually improving weak learners, one step at a time.</p>
+<p>In the upcoming lecture, we will study <strong>Boosting</strong> in detail—understanding the intuition behind sequential learning, how weak learners are combined, and why this approach is often able to achieve excellent predictive performance.</p>
+<h2><span style="color: skyblue;">Boosting Introduction</span></h2>
+<p><span style="color: violet;">Question: So, what's the nature of base learners in <strong>boosting</strong>?</span></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/092/original/Screenshot_2026-07-30_163552.png?1785409573"></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/091/original/Screenshot_2026-07-30_163508.png?1785409527"></p>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s8-quiz-2" data-nav="s8-quiz-2">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 2</div>
+      <div class="quiz-question prose"><p>Typically, <strong>high bias</strong> and <strong>low variance</strong> models are:</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text">Overfit</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">B</span><span class="choice-text">Underfit</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">Best fit</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card read-card" id="s9-golf-analogy-for-boosting" data-nav="s9-golf-analogy-for-boosting">
+      <div class="card-eyebrow"><span class="eyebrow-num">08</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/089/original/Screenshot_2026-07-30_163340.png?1785409463"></p>
+<h2><span style="color: skyblue;">Golf Example Summary</span></h2>
+<ul>
+<li>It might be helpful to think of this <strong>boosting</strong> approach as a golfer initially whacking a golf ball towards the hole but only getting as far as.</li>
+<li>The golfer then repeatedly taps the ball more softly, working the ball towards the hole, after reassessing direction and distance to the hole at each stage.</li>
+<li>The following diagram illustrates 5 strokes getting to the hole, including two strokes, and that overshoot the hole.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/088/original/Screenshot_2026-07-30_163247.png?1785409382"></p>
+      </div>
+        <a class="viz-cta" href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/boosting-sequential-error-correction/" target="_blank" rel="noopener">
+          <span class="viz-cta-icon" aria-hidden="true">▶</span>
+          <span class="viz-cta-copy">
+            <span class="viz-cta-label">Interactive visualization</span>
+            <span class="viz-cta-desc">How sequential error correction in boosting helps to improve the model performance</span>
+          </span>
+          <span class="viz-cta-arrow" aria-hidden="true">↗</span>
+        </a>
+    </section>
+
+    <section class="card read-card" id="s10-stacking" data-nav="s10-stacking">
+      <div class="card-eyebrow"><span class="eyebrow-num">09</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Stacking</span></h2>
+<p>Unlike <strong>Bagging</strong> and <strong>Boosting</strong>, which combine learners through voting, averaging, or weighted combinations, <strong>Stacking</strong> introduces an additional model to make the final prediction.</p>
+<p>Instead of directly combining the outputs of multiple learners, <strong>Stacking</strong> first trains several different models and then uses another model, called a <strong>meta-learner</strong>, to learn how to combine their predictions effectively.</p>
+<h2><span style="color: skyblue;">How Does Stacking Work?</span></h2>
+<p>The process can be understood in three simple steps:</p>
+<ol>
+<li>Train multiple base learners on the same dataset.</li>
+<li>Each learner makes its own prediction.</li>
+<li>A <strong>meta-learner</strong> takes these predictions as input and produces the final prediction.</li>
+</ol>
+<p>Rather than relying on a fixed rule such as majority voting, the <strong>meta-learner</strong> learns the best way to combine the predictions of the base models.</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/087/original/Screenshot_2026-07-30_163152.png?1785409341"></p>
+<h2><span style="color: skyblue;">Example</span></h2>
+<p>Suppose we train three different models:</p>
+<ul>
+<li>A Decision Tree</li>
+<li>A Support Vector Machine (SVM)</li>
+<li>A Logistic Regression model</li>
+</ul>
+<p>Each model makes a prediction for the same input.</p>
+<p>Instead of selecting the majority prediction, a <strong>meta-learner</strong> uses the predictions from all three models to determine the final output. In this way, the ensemble learns <strong>how much to trust each base learner</strong> for making better predictions.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s11-how-combining-multiple-models-helps" data-nav="s11-how-combining-multiple-models-helps">
+      <div class="card-eyebrow"><span class="eyebrow-num">10</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">How Does Combining Multiple Models Help?</span></h2>
+<p>So far, we have seen that an ensemble combines the predictions of multiple models instead of relying on a single one.</p>
+<p>But an important question still remains:</p>
+<p><span style="color: violet;"><strong>Why does combining multiple models often produce better predictions?</strong></span></p>
+<p>The key idea is that <strong>different models do not always make the same mistakes</strong>. While one model may misclassify a particular data point, another model may classify it correctly.</p>
+<p>When we combine the predictions of several models using <strong>majority voting</strong> (for classification) or <strong>averaging</strong> (for regression), the correct predictions tend to reinforce one another, making the final prediction more reliable.</p>
+<h2><span style="color: skyblue;">Intuition</span></h2>
+<p>Suppose we have three decision trees making predictions for the same data point.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Model</th>
+<th style="text-align: left;">Prediction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Tree 1</td>
+<td style="text-align: left;">Cat</td>
+</tr>
+<tr>
+<td style="text-align: left;">Tree 2</td>
+<td style="text-align: left;">Dog</td>
+</tr>
+<tr>
+<td style="text-align: left;">Tree 3</td>
+<td style="text-align: left;">Cat</td>
+</tr>
+</tbody>
+</table>
+<p>If we rely only on <code>Tree 2</code>, the prediction would be <code>Dog</code>, which is incorrect.</p>
+<p>However, if we combine all three predictions using majority voting, the final prediction becomes <code>Cat</code>, since two out of the three models agree on that class.</p>
+<p>In this case, the ensemble is able to correct the mistake made by an individual model.</p>
+<p>Notice that the ensemble does <strong>not</strong> require every model to be perfect.</p>
+<p>Instead, the idea is that <strong>different models contribute different perspectives</strong>, and by combining these predictions, the ensemble often produces a result that is more stable and reliable than relying on any single model alone.</p>
+<p>This is the fundamental reason why ensemble methods are widely used in Machine Learning.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s12-comparing-individual-and-ensemble-models" data-nav="s12-comparing-individual-and-ensemble-models">
+      <div class="card-eyebrow"><span class="eyebrow-num">11</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Comparing Individual and Ensemble Models</span></h2>
+<p>So far, we have learned that <strong>Bagging</strong> and <strong>Boosting</strong> are two popular ensemble learning techniques. Both combine the predictions of multiple learners, but they do so in different ways.</p>
+<p>A natural question now is:</p>
+<p><span style="color: violet;"><strong>Do ensemble methods actually perform better than a single model?</strong></span></p>
+<p>To answer this, let's conduct a simple experiment using a real-world dataset.</p>
+<p>We will train three models on the same dataset:</p>
+<ul>
+<li>A <strong>Decision Tree</strong></li>
+<li>A <strong>Bagging Classifier</strong></li>
+<li>An <strong>AdaBoost Classifier</strong></li>
+</ul>
+<p>We will then compare their performance on the test set.</p>
+<h2><span style="color: skyblue;">Dataset</span></h2>
+<p>For this demonstration, we will use the <strong>Wine Dataset</strong>, which is available directly through <code>scikit-learn</code>.</p>
+<p>The objective is to classify a wine sample into one of <strong>three different classes</strong> based on its chemical properties.</p>
+<p>Since this is a multiclass classification problem with numerical features, it serves as an excellent dataset for comparing different classification algorithms.</p>
+<h3>Code</h3>
+<pre><code class="language-python"># Import required libraries
+
+import pandas as pd
+
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># Load the Wine dataset
+
+wine = load_wine()
+
+X = pd.DataFrame(wine.data, columns=wine.feature_names)
+y = pd.Series(wine.target, name=&quot;Target&quot;)
+
+# Display the first few rows
+
+X.head()
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/085/original/Screenshot_2026-07-30_163046.png?1785409261"></p>
+<p>Before training our models, let's take a quick look at the dataset.</p>
+<h3>Code</h3>
+<pre><code class="language-python">print(f&quot;Number of Samples : {X.shape[0]}&quot;)
+print(f&quot;Number of Features: {X.shape[1]}&quot;)
+print()
+
+print(&quot;Target Classes:&quot;)
+print(wine.target_names)
+</code></pre>
+<h3>Output</h3>
+<pre><code>Number of Samples : 178
+Number of Features: 13
+
+Target Classes:
+['class_0' 'class_1' 'class_2']
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">y.value_counts().sort_index()
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/083/original/Screenshot_2026-07-30_163003.png?1785409217"></p>
+<p>Now that the dataset is ready, we will split it into training and testing sets.</p>
+<p>Each model will be trained using <strong>exactly the same data</strong>, ensuring that the comparison is fair.</p>
+<h3>Code</h3>
+<pre><code class="language-python">X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+print(&quot;Training Samples :&quot;, X_train.shape[0])
+print(&quot;Testing Samples  :&quot;, X_test.shape[0])
+</code></pre>
+<h3>Output</h3>
+<pre><code>Training Samples : 142
+Testing Samples  : 36
+</code></pre>
+<h2><span style="color: skyblue;">Training the Models</span></h2>
+<p>We will now train three different classifiers:</p>
+<ol>
+<li>A <strong>Decision Tree</strong>, which acts as our baseline model.</li>
+<li>A <strong>Bagging Classifier</strong>, which combines multiple <strong>Decision Trees</strong> trained independently.</li>
+<li>An <strong>AdaBoost Classifier</strong>, which builds a sequence of learners, where each learner focuses on correcting the mistakes made by the previous ones.</li>
+</ol>
+<h3>Code</h3>
+<pre><code class="language-python">from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import BaggingClassifier, AdaBoostClassifier
+from sklearn.metrics import accuracy_score
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">from lightgbm import LGBMClassifier
+
+# Decision Tree
+
+dt = DecisionTreeClassifier(random_state=42)
+dt.fit(X_train, y_train)
+
+# Bagging
+
+bag = BaggingClassifier(
+    estimator=DecisionTreeClassifier(random_state=42),
+    n_estimators=50,
+    random_state=42
+)
+bag.fit(X_train, y_train)
+
+# LightGBM
+
+lgbm = LGBMClassifier(
+    n_estimators=50,
+    random_state=42,
+    verbosity=-1
+)
+lgbm.fit(X_train, y_train)
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/082/original/Screenshot_2026-07-30_162910.png?1785409165"></p>
+<p>Now that all three models have been trained, let's evaluate their performance on the test dataset.</p>
+<h3>Code</h3>
+<pre><code class="language-python">results = pd.DataFrame({
+    &quot;Model&quot;: [
+        &quot;Decision Tree&quot;,
+        &quot;Bagging&quot;,
+        &quot;LightGBM&quot;
+    ],
+    &quot;Accuracy&quot;: [
+        accuracy_score(y_test, dt.predict(X_test)),
+        accuracy_score(y_test, bag.predict(X_test)),
+        accuracy_score(y_test, lgbm.predict(X_test))
+    ]
+})
+
+results[&quot;Accuracy&quot;] = results[&quot;Accuracy&quot;].round(4)
+
+results
+</code></pre>
+<h3>Output</h3>
+<pre><code>           Model  Accuracy
+0  Decision Tree    0.9167
+1        Bagging    0.9722
+2       LightGBM    0.9722
+</code></pre>
+<h2><span style="color: skyblue;">Observations</span></h2>
+<p>From the results, we can see that the ensemble methods achieve performance that is comparable to or better than the single <strong>Decision Tree</strong>.</p>
+<p>This demonstrates the key idea behind <strong>Ensemble Learning</strong>: by combining the predictions of multiple learners, we can often build a model that is more reliable than relying on a single learner alone.</p>
+<p>At this stage, our goal is simply to observe this improvement. In the upcoming lectures, we will study <strong>Random Forests</strong> and <strong>Boosting algorithms</strong> in detail to understand why these ensemble methods are so effective.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s13-bagging-vs-boosting" data-nav="s13-bagging-vs-boosting">
+      <div class="card-eyebrow"><span class="eyebrow-num">12</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Bagging Vs Boosting</span></h2>
+<p>So far, we have introduced the two major families of ensemble learning:</p>
+<ul>
+<li><strong>Bagging</strong></li>
+<li><strong>Boosting</strong></li>
+</ul>
+<p>Although both combine multiple learners to build a stronger model, they differ significantly in the way those learners are trained.</p>
+<p>The key difference lies in <strong>how the individual learners are created and combined.</strong></p>
+<h2><span style="color: skyblue;">Comparison</span></h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Property</th>
+<th style="text-align: left;">Bagging</th>
+<th style="text-align: left;">Boosting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Training Strategy</td>
+<td style="text-align: left;">Parallel</td>
+<td style="text-align: left;">Sequential</td>
+</tr>
+<tr>
+<td style="text-align: left;">Learners</td>
+<td style="text-align: left;">Independent</td>
+<td style="text-align: left;">Dependent</td>
+</tr>
+<tr>
+<td style="text-align: left;">Main Idea</td>
+<td style="text-align: left;">Combine many independent learners</td>
+<td style="text-align: left;">Improve learners one after another</td>
+</tr>
+<tr>
+<td style="text-align: left;">Prediction</td>
+<td style="text-align: left;">Voting / Averaging</td>
+<td style="text-align: left;">Weighted combination of learners</td>
+</tr>
+</tbody>
+</table>
+<h2><span style="color: skyblue;">Understanding the Difference</span></h2>
+<p>Imagine you have to solve a difficult problem.</p>
+<p><strong>Bagging</strong> is like asking <strong>many people to solve the problem independently</strong> and then combining their answers.</p>
+<p>On the other hand, <strong>Boosting</strong> is like having <strong>one person solve the problem repeatedly</strong>, learning from their previous mistakes after every attempt until the final answer improves.</p>
+<p>Although both approaches produce an ensemble, the learning strategy is fundamentally different.</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/081/original/Screenshot_2026-07-30_162819.png?1785409117"></p>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s14-quiz-3" data-nav="s14-quiz-3">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 3</div>
+      <div class="quiz-question prose"><p>Which of the following statements correctly distinguishes <strong>Bagging</strong> from <strong>Boosting</strong>?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text"><strong>Bagging</strong> trains learners sequentially, while <strong>Boosting</strong> trains them independently.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">B</span><span class="choice-text"><strong>Bagging</strong> trains learners independently, while <strong>Boosting</strong> trains them sequentially.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">Both <strong>Bagging</strong> and <strong>Boosting</strong> train learners independently.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">Both <strong>Bagging</strong> and <strong>Boosting</strong> train learners sequentially.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+        <div class="explanation" data-explanation>
+          <div class="explanation-label">Why</div>
+          <div class="prose"><p><strong>Bagging</strong> trains multiple learners independently and combines their predictions, whereas <strong>Boosting</strong> trains learners sequentially, with each learner attempting to improve upon the mistakes made by the previous learner.</p></div>
+        </div>
+    </section>
+
+    <section class="card read-card" id="s15-bias-variance-tradeoff" data-nav="s15-bias-variance-tradeoff">
+      <div class="card-eyebrow"><span class="eyebrow-num">13</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Bias-Variance Tradeoff</span></h2>
+<p>When building Machine Learning models, we often face a tradeoff between <strong>bias</strong> and <strong>variance</strong>.</p>
+<ul>
+<li>A model with <strong>high bias</strong> is usually too simple and may fail to capture important patterns in the data, leading to <strong>underfitting</strong>.</li>
+<li>A model with <strong>high variance</strong> is often too complex and may fit the training data very closely, resulting in <strong>overfitting</strong>.</li>
+</ul>
+<p>The goal is to build a model that strikes a balance between these two extremes, achieving good performance on both the training data and unseen data.</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/079/original/Screenshot_2026-07-30_162738.png?1785409073"></p>
+<p>Although both <strong>Bagging</strong> and <strong>Boosting</strong> combine multiple learners, they improve model performance in different ways.</p>
+<ul>
+<li><strong>Bagging</strong> primarily helps reduce <strong>variance</strong> by combining multiple independently trained learners.</li>
+<li><strong>Boosting</strong> primarily helps reduce <strong>bias</strong> by sequentially improving weak learners.</li>
+</ul>
+<p>As a result, ensemble methods often produce models that generalize better than a single learner.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">Primarily Reduces</th>
+<th style="text-align: left;">Main Idea</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Bagging</td>
+<td style="text-align: left;">Variance</td>
+<td style="text-align: left;">Combine many independent learners</td>
+</tr>
+<tr>
+<td style="text-align: left;">Boosting</td>
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">Improve learners sequentially</td>
+</tr>
+</tbody>
+</table>
+<p>This does <strong>not</strong> mean that Bagging only affects variance or that Boosting only affects bias. In practice, both techniques can influence both aspects of model performance.</p>
+<p>However, as a general rule of thumb:</p>
+<ul>
+<li><strong>Bagging</strong> → <strong>Lower Variance</strong></li>
+<li><strong>Boosting</strong> → <strong>Lower Bias</strong></li>
+</ul>
+<p>This simple intuition is often sufficient when deciding which ensemble approach is appropriate for a problem.</p>
+      </div>
+        <a class="viz-cta" href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/bagging-vs-boosting-on-bias-variance-spectrum/" target="_blank" rel="noopener">
+          <span class="viz-cta-icon" aria-hidden="true">▶</span>
+          <span class="viz-cta-copy">
+            <span class="viz-cta-label">Interactive visualization</span>
+            <span class="viz-cta-desc">The effect of Bagging and Boosting on the bias-variance spectrum</span>
+          </span>
+          <span class="viz-cta-arrow" aria-hidden="true">↗</span>
+        </a>
+    </section>
+
+    <section class="card quiz-card" id="s16-quiz-4" data-nav="s16-quiz-4">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 4</div>
+      <div class="quiz-question prose"><p>Which of the following statements is generally <strong>true</strong>?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text"><strong>Bagging</strong> primarily reduces bias, while <strong>Boosting</strong> primarily reduces variance.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">B</span><span class="choice-text"><strong>Bagging</strong> primarily reduces variance, while <strong>Boosting</strong> primarily reduces bias.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">Both <strong>Bagging</strong> and <strong>Boosting</strong> only reduce variance.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">Both <strong>Bagging</strong> and <strong>Boosting</strong> only reduce bias.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+        <div class="explanation" data-explanation>
+          <div class="explanation-label">Why</div>
+          <div class="prose"><p><strong>Bagging</strong> reduces prediction variability by combining multiple independent learners, whereas <strong>Boosting</strong> improves performance by sequentially correcting mistakes, which primarily helps reduce bias.</p></div>
+        </div>
+    </section>
+
+    <section class="card read-card" id="s17-intro-to-random-forest" data-nav="s17-intro-to-random-forest">
+      <div class="card-eyebrow"><span class="eyebrow-num">14</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Random Forest: The Most Popular Bagging Algorithm</span></h2>
+<p>So far, we have learned that <strong>Bagging</strong> is a general ensemble learning technique that combines multiple independently trained learners.</p>
+<p>A natural question now is:</p>
+<p><span style="color: violet;"><strong>Which machine learning algorithm makes the best use of Bagging?</strong></span></p>
+<p>One of the most successful answers is the <strong>Random Forest</strong> algorithm.</p>
+<p>Random Forest is one of the most widely used ensemble methods in Machine Learning because it combines the simplicity of Decision Trees with the power of Bagging.</p>
+<p>The Decision tree base learners in Random Forest are <strong>Deep Decision Trees (non-shallow)</strong>.</p>
+<p>As they are deep,</p>
+<ul>
+<li>the models overfit slightly on a sub sample of data, as the base learners are made of <code>m</code> rows and <code>d′</code> columns only.</li>
+</ul>
+<p>Now, we perform aggregation/averaging on these slightly overfit models (high variance and low bias)</p>
+<ul>
+<li>This aggregation helps in reducing the <strong>variance</strong> of the model.</li>
+</ul>
+<p>But, how? Let's see</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/078/original/Screenshot_2026-07-30_162653.png?1785409028"></p>
+<p>We just said that aggregation reduces variance. But that is a big claim. Why should averaging a bunch of overfit models give us something better? Let us build the intuition step by step so this does not feel like a magic trick.</p>
+<h2><span style="color: skyblue;">Why Does Bagging Reduce Variance?</span></h2>
+<p><span style="color: violet;">(Recall) Question:  What does overfit mean?</span></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/076/original/Screenshot_2026-07-30_162501.png?1785408913"></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/077/original/Screenshot_2026-07-30_162555.png?1785408968"></p>
+<p>Let's try to understand the intuition behind how <strong>bagging</strong> reduces <strong>variance</strong></p>
+<ul>
+<li>Say, we had <code>n</code> points in our training data</li>
+<li>we sampled <code>m</code> points and made <code>k</code> samples for <code>k</code> models.</li>
+</ul>
+<p>Remember, <strong>High variance model means model changes if data points change slightly</strong>.</p>
+<p>and</p>
+<p><strong>Base learners are high variance, low bias models</strong></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/075/original/Screenshot_2026-07-30_162355.png?1785408848"></p>
+<p>Let's assume</p>
+<p>we are representing varying datapoint using <span style="color: yellow;">yellow point</span></p>
+<p><span style="color: violet;">Question: When we sample, how many sample will contain yellow point?</span></p>
+<p>Answer: Only a handful of samples will have <span style="color: yellow;">yellow point</span></p>
+<p>when there's a change in <span style="color: yellow;">yellow datapoint</span>,</p>
+<ul>
+<li>it'll only impact handful of base learners</li>
+</ul>
+<p>On top of that, we are aggregating the results of all base learners</p>
+<ul>
+<li>so it'll negate the impact of noise/ variance in datapoints.</li>
+</ul>
+<p>Hence, reducing the <strong>variance</strong>.</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/074/original/Screenshot_2026-07-30_162222.png?1785408798"></p>
+<p>At first glance, <strong>Random Forest</strong> may seem straightforward—just train many <strong>Decision Trees</strong> and combine their predictions.</p>
+<p>However, an important question still remains.</p>
+<p>If every Decision Tree is trained on exactly the same data, won't they all become identical?</p>
+<p>If all the trees make similar predictions, combining them will provide very little benefit.</p>
+<p>To make Bagging effective, the individual trees must be <strong>different from one another</strong>.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s18-summary" data-nav="s18-summary">
+      <div class="card-eyebrow"><span class="eyebrow-num">15</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Wrap-Up</span></h2>
+<p>In this lecture, we introduced <strong>Ensemble Learning</strong> and learned how combining multiple models can often produce better predictions than relying on a single learner. We explored the three major ensemble techniques—<strong>Bagging</strong>, <strong>Boosting</strong>, and <strong>Stacking</strong>—and understood the intuition behind how each combines the strengths of multiple models.</p>
+<p>We also compared a <strong>Decision Tree</strong>, <strong>Bagging Classifier</strong>, and <strong>AdaBoost Classifier</strong> through a hands-on example, observed the role of ensembles in improving predictive performance, and connected these ideas to the <strong>Bias-Variance Tradeoff</strong>. Finally, we introduced <strong>Random Forest</strong>, one of the most widely used <strong>Bagging</strong> algorithms, and developed an intuition for why combining multiple <strong>Decision Trees</strong> can lead to more robust predictions.</p>
+<p>In the next lecture, we will dive deep into the <strong>Random Forest</strong> algorithm. We will learn how it creates diverse Decision Trees using <strong>bootstrap sampling</strong> and <strong>random feature selection</strong>, and understand why these ideas make Random Forests such a powerful ensemble method.</p>
+      </div>
+    </section>
+
+    <div class="end-note">You've reached the end of the post-read. Next lecture: Random Forest, in depth.</div>
+  </main>
+</div>
+
+<script>
+(function(){
+  // ---- Sidebar mobile toggle ----
+  var sidebar = document.getElementById('sidebar');
+  var toggle = document.getElementById('sidebar-toggle');
+  var scrim = document.getElementById('sidebar-scrim');
+  function closeSidebar(){ sidebar.classList.remove('open'); scrim.classList.remove('show'); toggle.setAttribute('aria-expanded','false'); }
+  function openSidebar(){ sidebar.classList.add('open'); scrim.classList.add('show'); toggle.setAttribute('aria-expanded','true'); }
+  toggle.addEventListener('click', function(){
+    sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+  });
+  scrim.addEventListener('click', closeSidebar);
+  document.querySelectorAll('.nav-link').forEach(function(a){
+    a.addEventListener('click', function(){ if(window.innerWidth <= 960){ closeSidebar(); } });
+  });
+
+  // ---- Progress bar + active nav tracking ----
+  var fill = document.getElementById('progress-fill');
+  var metaProgress = document.getElementById('meta-progress');
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sections = navLinks.map(function(a){ return document.getElementById(a.dataset.target); }).filter(Boolean);
+
+  function onScroll(){
+    var doc = document.documentElement;
+    var scrollTop = doc.scrollTop || document.body.scrollTop;
+    var height = doc.scrollHeight - doc.clientHeight;
+    var pct = height > 0 ? Math.min(100, Math.max(0, (scrollTop / height) * 100)) : 0;
+    fill.style.width = pct + '%';
+    metaProgress.textContent = Math.round(pct) + '%';
+
+    var activeIdx = 0;
+    var probe = scrollTop + window.innerHeight * 0.28;
+    for(var i=0;i<sections.length;i++){
+      if(sections[i].offsetTop <= probe) activeIdx = i;
+    }
+    navLinks.forEach(function(a){ a.classList.remove('active'); });
+    if(navLinks[activeIdx]) navLinks[activeIdx].classList.add('active');
+  }
+  document.addEventListener('scroll', onScroll, { passive:true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+
+  // ---- Quiz interactivity ----
+  document.querySelectorAll('.quiz-card').forEach(function(card){
+    var group = card.querySelector('.choices');
+    var feedback = card.querySelector('[data-feedback]');
+    var explanation = card.querySelector('[data-explanation]');
+    var answered = false;
+
+    group.querySelectorAll('.choice').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(answered) return;
+        answered = true;
+        group.classList.add('answered');
+        var isCorrect = btn.dataset.correct === 'true';
+
+        group.querySelectorAll('.choice').forEach(function(b){
+          if(b.dataset.correct === 'true'){ b.classList.add('is-correct'); }
+          else if(b === btn){ b.classList.add('is-wrong'); }
+        });
+
+        feedback.classList.add('show');
+        if(isCorrect){
+          feedback.classList.add('correct');
+          feedback.textContent = '✓ Correct — the ensemble agrees with you.';
+        } else {
+          feedback.classList.add('wrong');
+          feedback.textContent = '✕ Not quite — the correct answer is highlighted above.';
+        }
+        if(explanation){ explanation.classList.add('show'); }
+      });
+    });
+  });
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Ensembles" target="_blank" rel="noopener">github.com/scaler-content/Ensembles</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

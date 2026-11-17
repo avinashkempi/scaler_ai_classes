@@ -1,0 +1,2048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recommender System 1 post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --paper: #f6f8f2;
+  --paper-raised: #ffffff;
+  --ink: #172a20;
+  --ink-soft: #52604f;
+  --ink-faint: #7c8a76;
+  --pine: #1c6b45;
+  --pine-deep: #0d3c26;
+  --pine-bright: #2f8f5b;
+  --tomato: #b23a2e;
+  --tomato-deep: #7d2a22;
+  --sage-tint: #e7efe1;
+  --sage-tint-2: #dbe8d5;
+  --tomato-tint: #f4ded9;
+  --line: #d6ddcd;
+  --line-strong: #b9c4ac;
+  --shadow-soft: 0 1px 2px rgba(23,42,32,0.06);
+
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+
+  --measure: 680px;
+  --measure-wide: 1040px;
+}
+
+*, *::before, *::after{ box-sizing: border-box; }
+html{ scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior: auto; }
+  *, *::before, *::after{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+body{
+  margin:0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+img{ max-width:100%; display:block; }
+
+h1,h2,h3,h4{
+  font-family: var(--font-display);
+  color: var(--pine-deep);
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 0 0 0.5em;
+}
+
+a{ color: var(--pine); text-underline-offset: 3px; }
+a:hover{ color: var(--tomato); }
+
+:focus-visible{
+  outline: 2.5px solid var(--tomato);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+p{ margin: 0 0 1.15em; }
+strong{ color: var(--ink); }
+
+code, .mono{ font-family: var(--font-mono); }
+
+/* ============================================================
+   LAYOUT PRIMITIVES
+   ============================================================ */
+.wrap{
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.wrap-wide{
+  max-width: var(--measure-wide);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+main{ position: relative; }
+
+.section{
+  padding: 76px 0 12px;
+  border-top: 1px solid var(--line);
+}
+.section:first-of-type{ border-top: none; }
+
+.section-head{
+  display:flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 34px;
+}
+.section-tag{
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--paper);
+  background: var(--pine);
+  padding: 3px 9px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+  flex: none;
+  transform: translateY(-2px);
+}
+.section-head h2{
+  font-size: clamp(1.55rem, 1.15rem + 1.6vw, 2.35rem);
+  margin: 0;
+}
+.section-kicker{
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-faint);
+  margin: -18px 0 22px;
+}
+
+.lede{
+  font-size: 1.14em;
+  color: var(--ink-soft);
+}
+
+/* ============================================================
+   HEADER / PROGRESS RAIL
+   ============================================================ */
+.top-bar{
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(246,248,242,0.92);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+}
+.top-bar-inner{
+  max-width: var(--measure-wide);
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 52px;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.brand-chip{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--pine-deep);
+  white-space: nowrap;
+}
+.brand-chip .dot{
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--tomato);
+  flex: none;
+}
+.progress-track{
+  flex: 1;
+  height: 3px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+  max-width: 340px;
+  display: none;
+}
+.progress-fill{
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--pine), var(--pine-bright));
+  transition: width 0.15s linear;
+}
+@media (min-width: 720px){
+  .progress-track{ display:block; }
+}
+
+.rail{
+  position: fixed;
+  left: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  display: none;
+  flex-direction: column;
+  gap: 13px;
+}
+@media (min-width: 1180px){
+  .rail{ display:flex; }
+}
+.rail a{
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  display:block;
+  position: relative;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.2s;
+}
+.rail a.active{
+  background: var(--pine);
+  transform: scale(1.35);
+}
+.rail a:hover{ background: var(--tomato); }
+.rail a .rail-label{
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  background: var(--paper-raised);
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+}
+.rail a:hover .rail-label, .rail a.active .rail-label{ opacity: 1; }
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{
+  position: relative;
+  padding: 64px 0 60px;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(28,107,69,0.10) 1px, transparent 1.6px) 0 0/16px 16px,
+    var(--paper);
+  overflow: hidden;
+  opacity: 0;
+  animation: heroIn 0.7s ease-out 0.05s forwards;
+}
+@keyframes heroIn{
+  from{ opacity: 0; transform: translateY(10px); }
+  to{ opacity: 1; transform: translateY(0); }
+}
+.tag-chip{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--pine-deep);
+  background: var(--paper-raised);
+  border: 1.5px dashed var(--pine);
+  padding: 6px 12px 6px 10px;
+  border-radius: 100px;
+  margin-bottom: 26px;
+}
+.tag-chip svg{ flex:none; }
+
+.hero h1{
+  font-size: clamp(2.3rem, 1.6rem + 3.2vw, 4.1rem);
+  letter-spacing: -0.01em;
+  max-width: 15ch;
+  margin-bottom: 14px;
+}
+.hero .subhead{
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.15rem, 1rem + 0.7vw, 1.5rem);
+  color: var(--pine);
+  max-width: 32ch;
+  margin-bottom: 30px;
+}
+.hero-intro{
+  max-width: var(--measure);
+  font-size: 1.08em;
+  color: var(--ink-soft);
+}
+.hero-intro strong{ color: var(--pine-deep); }
+
+.receipt-quote{
+  position: relative;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  padding: 22px 26px 24px;
+  margin: 28px 0;
+  max-width: 560px;
+  clip-path: polygon(0% 3%, 2% 0%, 5% 3%, 8% 0%, 11% 3%, 14% 0%, 17% 3%, 20% 0%, 23% 3%, 26% 0%, 29% 3%, 32% 0%, 35% 3%, 38% 0%, 41% 3%, 44% 0%, 47% 3%, 50% 0%, 53% 3%, 56% 0%, 59% 3%, 62% 0%, 65% 3%, 68% 0%, 71% 3%, 74% 0%, 77% 3%, 80% 0%, 83% 3%, 86% 0%, 89% 3%, 92% 0%, 95% 3%, 98% 0%, 100% 3%, 100% 100%, 0% 100%);
+  box-shadow: var(--shadow-soft);
+}
+.receipt-quote p{
+  font-family: var(--font-mono);
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--ink);
+  margin: 0;
+}
+.receipt-quote .who{
+  display:block;
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.receipt-quote .who::before{ content: '— '; }
+
+.scroll-cue{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  margin-top: 36px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.scroll-cue svg{ animation: bob 1.8s ease-in-out infinite; }
+@keyframes bob{ 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(4px);} }
+
+/* ============================================================
+   PROSE + Q&A RHYTHM
+   ============================================================ */
+.prose{ max-width: var(--measure); }
+.prose h3{
+  font-size: 1.28rem;
+  margin-top: 1.6em;
+}
+.prose ul, .prose ol{ padding-left: 1.3em; margin: 0 0 1.15em; }
+.prose li{ margin-bottom: 0.4em; }
+.prose .analogy{
+  background: var(--sage-tint);
+  border-left: 3px solid var(--pine);
+  padding: 14px 18px;
+  border-radius: 0 6px 6px 0;
+  margin: 1.3em 0;
+  font-size: 0.98em;
+  color: var(--ink);
+}
+.prose .analogy strong.label{
+  display:block;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--pine);
+  margin-bottom: 6px;
+}
+
+.q-prompt{
+  display:flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 1.9em 0 0.7em;
+}
+.q-prompt .q-mark{
+  flex: none;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--pine-deep);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 14px;
+  display:flex; align-items:center; justify-content:center;
+  margin-top: 2px;
+}
+.q-prompt .q-text{
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.18em;
+  color: var(--pine-deep);
+  line-height: 1.4;
+}
+
+/* ============================================================
+   STAT CARDS
+   ============================================================ */
+.stat-row{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+  gap: 14px;
+  margin: 1.6em 0;
+}
+.stat-card{
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--pine);
+  padding: 16px 16px 14px;
+  border-radius: 4px;
+}
+.stat-card .num{
+  font-family: var(--font-mono);
+  font-size: 1.55rem;
+  font-weight: 600;
+  color: var(--pine-deep);
+  display:block;
+  line-height: 1.1;
+}
+.stat-card .lbl{
+  font-size: 0.86em;
+  color: var(--ink-soft);
+  margin-top: 4px;
+  display:block;
+}
+.stat-card.tomato{ border-left-color: var(--tomato); }
+.stat-card.tomato .num{ color: var(--tomato-deep); }
+
+/* ============================================================
+   CALLOUT / ASIDE (dashed ticket-style, collapsible)
+   ============================================================ */
+details.aside{
+  background: var(--paper-raised);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 6px;
+  padding: 14px 18px;
+  margin: 1.6em 0;
+}
+details.aside summary{
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--pine);
+  font-weight: 500;
+  list-style: none;
+  display:flex; align-items:center; gap: 8px;
+}
+details.aside summary::-webkit-details-marker{ display:none; }
+details.aside summary::before{
+  content: '+';
+  display:inline-flex; align-items:center; justify-content:center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--pine);
+  font-size: 14px;
+  color: var(--pine);
+  transition: transform 0.2s;
+}
+details.aside[open] summary::before{ content: '–'; }
+details.aside .aside-body{
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 0.96em;
+  color: var(--ink-soft);
+}
+details.aside .aside-body p:last-child{ margin-bottom: 0; }
+
+/* ============================================================
+   CARD GRIDS (applications, pros/cons, flavours, strategies)
+   ============================================================ */
+.card-grid{
+  display:grid;
+  gap: 14px;
+  margin: 1.6em 0;
+}
+.card-grid.cols-2{ grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); }
+.card-grid.cols-3{ grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); }
+
+.info-card{
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 18px 19px;
+}
+.info-card h4{
+  font-size: 1.02rem;
+  margin-bottom: 6px;
+  color: var(--pine-deep);
+}
+.info-card p{ font-size: 0.94em; color: var(--ink-soft); margin-bottom: 0; }
+
+.pros-cons{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 1.6em 0;
+}
+@media (max-width: 560px){ .pros-cons{ grid-template-columns: 1fr; } }
+.pc-col{
+  border-radius: 6px;
+  padding: 17px 19px;
+  border: 1px solid var(--line);
+}
+.pc-col.pro{ background: var(--sage-tint); border-color: var(--sage-tint-2); }
+.pc-col.con{ background: var(--tomato-tint); border-color: #e8c3ba; }
+.pc-col h4{
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  text-transform: none;
+  margin-bottom: 10px;
+  display:flex; align-items:center; gap:7px;
+}
+.pc-col.pro h4{ color: var(--pine-deep); }
+.pc-col.con h4{ color: var(--tomato-deep); }
+.pc-col ul{ margin:0; padding-left: 1.1em; }
+.pc-col li{ font-size: 0.93em; margin-bottom: 0.5em; color: var(--ink); }
+.pc-col li::marker{ font-size: 0.9em; }
+.pc-col.pro li::marker{ color: var(--pine); content: '✓  '; }
+.pc-col.con li::marker{ color: var(--tomato); content: '✗  '; }
+
+/* ============================================================
+   FLAVOUR / RECAP CARDS with numbers (legitimate sequence)
+   ============================================================ */
+.flavour-card{
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 18px 18px 16px;
+  position: relative;
+}
+.flavour-card .fnum{
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--pine);
+  border: 1px solid var(--pine);
+  border-radius: 100px;
+  padding: 2px 9px;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+.flavour-card h4{ font-size: 1.02rem; margin-bottom: 6px; }
+.flavour-card p{ font-size: 0.92em; color: var(--ink-soft); margin: 0; }
+
+/* ============================================================
+   FIGURES / DIAGRAMS
+   ============================================================ */
+.figure{
+  margin: 2em 0;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 22px 20px 18px;
+}
+.figure.breakout{ }
+.wrap-wide .figure{ padding: 26px 30px 22px; }
+.figure svg{ width: 100%; height: auto; display:block; }
+.figure figcaption{
+  font-size: 0.86em;
+  color: var(--ink-faint);
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.figure figcaption strong{ color: var(--ink-soft); }
+
+/* ============================================================
+   PIPELINE / STEP TRACKER
+   ============================================================ */
+.pipeline{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  margin: 0;
+  counter-reset: step;
+}
+@media (max-width: 760px){ .pipeline{ grid-template-columns: 1fr; } }
+.pipeline .step{
+  position: relative;
+  padding: 0 18px 0 0;
+  border-right: 1px dashed var(--line-strong);
+}
+.pipeline .step:last-child{ border-right: none; padding-right: 0; }
+@media (max-width: 760px){
+  .pipeline .step{ border-right:none; border-bottom: 1px dashed var(--line-strong); padding: 0 0 18px; margin-bottom: 18px; }
+  .pipeline .step:last-child{ border-bottom: none; margin-bottom:0; padding-bottom:0; }
+}
+.pipeline .step .snum{
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--pine);
+  display:block;
+  margin-bottom: 8px;
+}
+.pipeline .step .sval{
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--pine-deep);
+  display:block;
+}
+.pipeline .step .slabel{
+  font-size: 0.85em;
+  color: var(--ink-soft);
+  margin-top: 4px;
+  display:block;
+}
+
+/* ============================================================
+   QUIZ
+   ============================================================ */
+.quiz{
+  background: var(--paper-raised);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 8px;
+  padding: 22px 24px 24px;
+  margin: 2.2em 0;
+}
+.quiz .quiz-kicker{
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--tomato-deep);
+  margin-bottom: 8px;
+  display:flex; align-items:center; gap:7px;
+}
+.quiz .quiz-q{
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  color: var(--ink);
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+.quiz .quiz-q code{ background: var(--sage-tint); padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+.quiz-opts{
+  display:flex;
+  flex-direction: column;
+  gap: 9px;
+  list-style: none;
+  margin:0; padding:0;
+}
+.quiz-opt{
+  display:block;
+  width:100%;
+  text-align:left;
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  padding: 11px 14px;
+  font-family: var(--font-body);
+  font-size: 0.95em;
+  color: var(--ink);
+  cursor:pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.quiz-opt:hover{ border-color: var(--pine); }
+.quiz-opt.correct{
+  border-color: var(--pine);
+  background: var(--sage-tint);
+  color: var(--pine-deep);
+  font-weight: 600;
+}
+.quiz-opt.incorrect{
+  border-color: var(--tomato);
+  background: var(--tomato-tint);
+  color: var(--tomato-deep);
+}
+.quiz-opt[disabled]{ cursor: default; }
+.quiz-opt .mark{ font-family: var(--font-mono); margin-right:8px; font-size: 0.85em; }
+.quiz-explain{
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 0.93em;
+  color: var(--ink-soft);
+  display:none;
+}
+.quiz-explain.show{ display:block; }
+.quiz-explain strong{ color: var(--pine-deep); }
+
+/* ============================================================
+   PLAYGROUND (interactive sliders)
+   ============================================================ */
+.playground{
+  background: var(--pine-deep);
+  color: var(--paper);
+  border-radius: 12px;
+  padding: 30px 26px 32px;
+  margin: 2.4em 0;
+}
+.wrap-wide .playground{ padding: 36px 40px 38px; }
+.playground .pg-kicker{
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--sage-tint);
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+.playground h3{
+  color: var(--paper);
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+}
+.playground > p{
+  color: rgba(246,248,242,0.8);
+  font-size: 0.95em;
+  max-width: 62ch;
+  margin-bottom: 24px;
+}
+.pg-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  align-items: start;
+}
+@media (max-width: 780px){ .pg-grid{ grid-template-columns: 1fr; } }
+.pg-controls{
+  display:flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.slider-row label{
+  display:flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: rgba(246,248,242,0.85);
+  margin-bottom: 7px;
+}
+.slider-row label .v{ color: #bfe6cf; font-weight: 600; }
+input[type=range]{
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(246,248,242,0.25);
+  outline-offset: 4px;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 3px solid var(--pine-bright);
+  cursor: pointer;
+}
+input[type=range]::-moz-range-thumb{
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 3px solid var(--pine-bright);
+  cursor: pointer;
+}
+.pg-output{
+  background: rgba(246,248,242,0.06);
+  border: 1px solid rgba(246,248,242,0.18);
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+.metric-line{
+  display:flex;
+  justify-content: space-between;
+  align-items:baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(246,248,242,0.12);
+  font-size: 0.92em;
+}
+.metric-line:last-of-type{ border-bottom:none; }
+.metric-line .m-lbl{ color: rgba(246,248,242,0.75); }
+.metric-line .m-val{ font-family: var(--font-mono); font-weight:600; color: var(--paper); font-size: 1.02em; }
+.pg-verdict{
+  margin-top: 14px;
+  padding: 11px 14px;
+  border-radius: 6px;
+  font-size: 0.9em;
+  font-weight: 600;
+  text-align:center;
+}
+.pg-verdict.pos{ background: rgba(47,143,91,0.35); color: #d3f2df; }
+.pg-verdict.neu{ background: rgba(246,248,242,0.14); color: rgba(246,248,242,0.85); }
+.pg-verdict.neg{ background: rgba(178,58,46,0.35); color: #f6d9d3; }
+
+.twin-result{
+  background: rgba(246,248,242,0.06);
+  border: 1px solid rgba(246,248,242,0.18);
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+.twin-result .twin-name{
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.2rem;
+  color: #d3f2df;
+  margin-bottom: 4px;
+}
+.twin-result .twin-sim{
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: rgba(246,248,242,0.7);
+  margin-bottom: 14px;
+}
+.sim-bars{ display:flex; flex-direction:column; gap:8px; margin-bottom: 14px; }
+.sim-bar-row{ display:grid; grid-template-columns: 118px 1fr 44px; align-items:center; gap:8px; font-size: 11.5px; font-family: var(--font-mono); color: rgba(246,248,242,0.8); }
+.sim-bar-track{ height:6px; background: rgba(246,248,242,0.15); border-radius:3px; overflow:hidden; }
+.sim-bar-fill{ height:100%; background: linear-gradient(90deg, var(--pine-bright), #bfe6cf); border-radius:3px; }
+.twin-rec{
+  padding-top: 12px;
+  border-top: 1px solid rgba(246,248,242,0.15);
+  font-size: 0.95em;
+}
+.twin-rec .rec-item{ color: #ffe1b0; font-weight:600; font-family: var(--font-display); font-style: italic; font-size: 1.05em; }
+
+/* ============================================================
+   LIFT SCALE
+   ============================================================ */
+.lift-scale{ margin: 1.8em 0; }
+.lift-scale .track{
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--tomato) 0%, #e8c3ba 22%, var(--line-strong) 48%, var(--sage-tint-2) 72%, var(--pine) 100%);
+  position: relative;
+}
+.lift-scale .labels{
+  display:flex; justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  margin-top: 8px;
+}
+.lift-scale .labels span:nth-child(2){ color: var(--ink-soft); }
+
+/* ============================================================
+   BREAKOUT WRAPPER for wide components inside prose flow
+   ============================================================ */
+.breakout-wrap{
+  max-width: var(--measure-wide);
+  margin: 2em auto;
+  padding: 0 24px;
+}
+
+/* ============================================================
+   COMPARE TOGGLE (item-item vs user-user, PCA vs SVD)
+   ============================================================ */
+.compare{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 1.8em 0;
+}
+@media (max-width: 620px){ .compare{ grid-template-columns: 1fr; } }
+.compare-col{
+  border-radius: 8px;
+  padding: 19px 20px;
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+}
+.compare-col .cc-label{
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--pine);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+.compare-col h4{ font-size: 1.05rem; margin-bottom:8px; }
+.compare-col p{ font-size: 0.93em; color: var(--ink-soft); margin-bottom: 0; }
+
+/* ============================================================
+   WORKED EXAMPLE BAR CHART (bread & milk)
+   ============================================================ */
+.bar-chart{ display:flex; gap: 34px; align-items:flex-end; height: 150px; padding: 0 6px; margin-top: 34px;}
+.bar-chart .bar-col{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; flex:1; height:100%; }
+.bar-chart .bar{ width: 56px; border-radius: 4px 4px 0 0; position:relative; }
+.bar-chart .bar .bval{ position:absolute; top:-24px; left:50%; transform:translateX(-50%); font-family: var(--font-mono); font-size:12.5px; font-weight:600; white-space:nowrap; }
+.bar-chart .bar-lbl{ margin-top:10px; font-size:12.5px; color: var(--ink-soft); text-align:center; font-family: var(--font-mono); }
+
+/* ============================================================
+   RECAP GRID (wrap up)
+   ============================================================ */
+.recap-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1.8em 0;
+}
+@media (max-width: 640px){ .recap-grid{ grid-template-columns: 1fr; } }
+.recap-item{
+  background: var(--paper-raised);
+  padding: 18px 20px;
+  display:flex;
+  gap: 14px;
+}
+.recap-item .rnum{
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--pine);
+  flex: none;
+  padding-top: 2px;
+}
+.recap-item p{ font-size: 0.92em; margin:0; color: var(--ink); }
+.recap-item strong{ color: var(--pine-deep); }
+
+/* ============================================================
+   MANAGER QUOTE (inline, smaller than hero receipt)
+   ============================================================ */
+.manager-quote{
+  border-left: 3px solid var(--tomato);
+  background: var(--tomato-tint);
+  padding: 14px 18px;
+  margin: 1.8em 0;
+  border-radius: 0 6px 6px 0;
+}
+.manager-quote p{
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.05em;
+  color: var(--tomato-deep);
+  margin: 0;
+}
+.manager-quote .who{
+  display:block;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+#site-footer{
+  background: var(--pine-deep);
+  color: rgba(246,248,242,0.82);
+  padding: 52px 0 34px;
+  margin-top: 60px;
+}
+#site-footer .wrap{ display:flex; flex-direction:column; gap: 18px; }
+#site-footer .foot-title{
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--paper);
+  letter-spacing: 0.01em;
+}
+#site-footer p{ font-size: 0.88em; color: rgba(246,248,242,0.6); max-width: 60ch; margin:0; }
+#site-footer .foot-rule{ height:1px; background: rgba(246,248,242,0.15); border:none; margin: 4px 0; }
+#site-footer .back-top{
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: #bfe6cf;
+  text-decoration: none;
+  display:inline-flex; align-items:center; gap:6px;
+  width: fit-content;
+}
+
+.formula{
+  font-family: var(--font-mono);
+  background: var(--sage-tint);
+  border: 1px solid var(--sage-tint-2);
+  border-radius: 6px;
+  padding: 14px 18px;
+  font-size: 1.02em;
+  color: var(--pine-deep);
+  margin: 1.3em 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.stat-card.big{
+  padding: 24px 26px 22px;
+  border-left-width: 4px;
+}
+.stat-card.big .num{ font-size: 2.6rem; }
+.stat-card.big .lbl{ font-size: 0.95em; margin-top: 8px; }
+
+.story-frame{
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 28px 28px 26px;
+  margin: 1.8em 0;
+  box-shadow: var(--shadow-soft);
+}
+.story-frame p:last-child{ margin-bottom: 0; }
+
+@media (max-width: 480px){
+  body{ font-size: 16px; }
+  .section{ padding: 54px 0 8px; }
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Recommender Systems 1 · Apriori and association rules</span><span class="pn"><a href="../DSML-UnSL-11/" title="DSML Unsupervised 11 · Case study: error analysis and drift">← Prev</a><a href="../Recommender-Systems-2/" title="Recommender Systems 2 · Matrix factorization for DailyMart">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="top-bar">
+  <div class="top-bar-inner">
+    <span class="brand-chip"><span class="dot"></span>DailyMart Files · Recommender System 1</span>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+</div>
+
+<nav class="rail" id="rail" aria-label="Section navigation">
+  <a href="#sec-basket" data-label="01 Basket Problem"><span class="rail-label">01 Basket Problem</span></a>
+  <a href="#sec-apriori" data-label="02 Apriori"><span class="rail-label">02 Apriori</span></a>
+  <a href="#sec-rules" data-label="03 Association Rules"><span class="rail-label">03 Association Rules</span></a>
+  <a href="#sec-individuals" data-label="04 Individuals"><span class="rail-label">04 Individuals</span></a>
+  <a href="#sec-cf" data-label="05 Collaborative Filtering"><span class="rail-label">05 Collaborative Filtering</span></a>
+  <a href="#sec-coldstart" data-label="06 Cold Start"><span class="rail-label">06 Cold Start</span></a>
+  <a href="#sec-content" data-label="07 Content-Based"><span class="rail-label">07 Content-Based</span></a>
+  <a href="#sec-matrix" data-label="08 Matrix Factorization"><span class="rail-label">08 Matrix Factorization</span></a>
+  <a href="#sec-wrap" data-label="09 Wrap-Up"><span class="rail-label">09 Wrap-Up</span></a>
+</nav>
+
+<main id="top">
+
+<header class="hero">
+  <div class="wrap">
+    <span class="tag-chip">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      Recommender System 1 · Post-read
+    </span>
+    <h1>The DailyMart Files</h1>
+    <p class="subhead">From shopping carts to smart recommendations</p>
+    <div class="hero-intro">
+      <p><strong>Meet Nisha.</strong> She has just joined DailyMart, a retail chain with stores across India, as a data scientist. On her first day, her manager walks up to her desk with a simple ask.</p>
+      <div class="receipt-quote">
+        <p>"Nisha, our sales have plateaued. We think customers are buying things, but we're not placing products smartly, and our app doesn't recommend anything personal to them. Can you fix that — with data?"</p>
+        <span class="who">DailyMart, Day One</span>
+      </div>
+      <p>Nisha opens a fresh notebook and gets to work. Over the next few hours, her journey will take her from <strong>"which products go together in a basket?"</strong> all the way to <strong>"what should we show this specific customer on their app home screen?"</strong> This is her story, and the ideas she picks up along the way.</p>
+    </div>
+    <span class="scroll-cue">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      Start with the basket problem
+    </span>
+  </div>
+</header>
+
+<section class="section" id="sec-basket">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">01</span>
+      <h2>The Basket Problem</h2>
+    </div>
+    <div class="prose">
+      <p>Nisha's manager hands her a laptop with a folder called <code>store_transactions</code>.</p>
+      <div class="manager-quote">
+        <p>"Suppose you are the data scientist here. We want to know: which products do customers tend to buy together? If we know that, we can place those products near each other, bundle them, or offer combo discounts."</p>
+        <span class="who">DailyMart, briefing Nisha</span>
+      </div>
+      <p>This is a classic retail problem, faced by every store from a neighbourhood kirana shop to the largest supermarket chains.</p>
+
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">How many products are we even dealing with?</span></div>
+      <p>At a large supermarket, products span many categories — daily essentials, food items, beauty products, toys, and more. Even so, that's usually a few hundred to a few thousand distinct products — tiny compared to an e-commerce catalog, which can run into the lakhs or millions. Call the total number of distinct products <code>n</code>, and the full collection of past purchase records — the transaction log — <code>D</code>.</p>
+
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">How do we even approach solving this?</span></div>
+      <p>The transaction log is huge — hundreds of thousands of rows. There's no way to eyeball it and spot patterns manually.</p>
+      <div class="analogy">
+        <strong class="label">Analogy</strong>
+        Imagine trying to find out which two ingredients show up together most often across every recipe ever posted on the internet — by reading each recipe one by one. That's simply not feasible by hand. We need an automated, systematic way to scan through all the transactions and count co-occurring items.
+      </div>
+      <p>Nisha decides the first step is simple: look at what the data actually looks like. Her dataset — a real, anonymized retail invoice log that mirrors the kind of data DailyMart itself would have — turns out to be sizeable.</p>
+
+      <div class="stat-row">
+        <div class="stat-card"><span class="num">25,900</span><span class="lbl">unique invoice numbers</span></div>
+        <div class="stat-card"><span class="num">4,372</span><span class="lbl">unique customer IDs</span></div>
+      </div>
+
+      <p>541,909 rows across 8 columns — confirmation of just how impossible manual pattern-spotting would be. Time to clean it up before doing anything clever.</p>
+    </div>
+  </div>
+
+  <div class="breakout-wrap">
+    <div class="figure breakout">
+      <div class="pipeline">
+        <div class="step">
+          <span class="snum">Step 1 · Raw log</span>
+          <span class="sval">541,909</span>
+          <span class="slabel">transaction rows across 8 columns</span>
+        </div>
+        <div class="step">
+          <span class="snum">Step 2 · Clean up</span>
+          <span class="sval">531,285</span>
+          <span class="slabel">rows left after dropping returns, cancellations &amp; missing invoice numbers</span>
+        </div>
+        <div class="step">
+          <span class="snum">Step 3 · Encode</span>
+          <span class="sval">1 / 0</span>
+          <span class="slabel">UK transactions reshaped into a basket × product grid — bought or not bought</span>
+        </div>
+        <div class="step">
+          <span class="snum">Step 4 · Filter</span>
+          <span class="sval">16,539</span>
+          <span class="slabel">multi-item baskets kept — about 91% of all qualifying UK baskets</span>
+        </div>
+      </div>
+      <figcaption>Nisha focuses on the UK subset first — a common trick, since it's the segment with the most reliable, high-volume data. From there, single-item baskets are dropped: they can't reveal what gets bought <em>together</em>.</figcaption>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <p>Now for the key transformation: converting the log into a format where <strong>each row is one transaction (a basket)</strong> and <strong>each column is one product</strong>, with a 1 if it was bought in that basket and 0 otherwise.</p>
+      <div class="analogy">
+        <strong class="label">Analogy</strong>
+        Think of it like a class attendance register — instead of "students," the rows are "shopping trips," and instead of "present / absent," the columns mark "bought / not bought" for every single product.
+      </div>
+    </div>
+  </div>
+
+  <div class="breakout-wrap">
+    <div class="figure breakout" role="img" aria-label="Illustrative example of a basket-encoding table: transactions as rows, products as columns, filled with 1 for bought and 0 for not bought">
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-family: var(--font-mono); font-size: 13.5px;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--pine);">
+              <th style="text-align:left; padding:8px 10px; color:var(--pine-deep);">Basket</th>
+              <th style="padding:8px 10px; color:var(--ink-soft);">Tea</th>
+              <th style="padding:8px 10px; color:var(--ink-soft);">Sugar</th>
+              <th style="padding:8px 10px; color:var(--ink-soft);">Bread</th>
+              <th style="padding:8px 10px; color:var(--ink-soft);">Milk</th>
+              <th style="padding:8px 10px; color:var(--ink-soft);">Candle</th>
+              <th style="padding:8px 10px; color:var(--ink-soft);">Mug</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 10px;">536365</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td style="text-align:center;">0</td><td style="text-align:center;">0</td><td style="text-align:center;">1</td></tr>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 10px;">536366</td><td style="text-align:center;">0</td><td style="text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td style="text-align:center;">0</td></tr>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 10px;">536367</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td style="text-align:center;">0</td><td style="text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td></tr>
+            <tr><td style="padding:8px 10px;">536368</td><td style="text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td style="text-align:center;">0</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption><strong>How the encoding works</strong> — an illustrative mini-example, not DailyMart's actual data: four sample baskets against six grocery items. Nisha's real matrix has 16,539 rows and hundreds of product columns, built the same way.</figcaption>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="sec-apriori">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">02</span>
+      <h2>The Apriori Algorithm</h2>
+    </div>
+    <div class="prose">
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">How can we systematically find the frequent item combinations?</span></div>
+      <p>The simplest idea: for every possible combination of items, count how many transactions contain it. Combinations with a high count are "frequent" — likely to reflect a real relationship.</p>
+
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">Can we optimize this instead of checking literally everything?</span></div>
+      <div class="analogy">
+        <strong class="label">Analogy</strong>
+        Imagine you're a detective trying to find suspicious duos who always show up together at the scene. Instead of cross-checking every possible group of people — which explodes very quickly as the group size grows — you first shortlist people who show up often enough on their own, and only then check combinations among that shortlist. If someone barely shows up at all, there's no point checking who they hang out with.
+      </div>
+      <p>This is exactly the intuition behind <strong>Apriori</strong>: if an item — or item-set — doesn't appear often enough on its own, none of its bigger combinations can possibly be frequent either, so we can safely skip checking them. We define a <strong>minimum support threshold</strong>: a cutoff frequency below which we simply stop caring about a combination.</p>
+      <p>The Apriori algorithm was developed around 1994–95. It's elegant and simple — but as the number of products <code>n</code> grows, checking combinations still gets expensive fast (its worst case still scales roughly with 2<sup>n</sup> combinations). That's why, for catalogs with millions of products, pure Apriori isn't practical on its own — later algorithms like <strong>FP-Growth</strong> improve on the idea.</p>
+    </div>
+  </div>
+
+  <div class="breakout-wrap">
+    <div class="figure breakout">
+      <svg viewBox="0 0 780 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of the Apriori pruning principle. A simplified example: individual items below the support threshold are pruned, and none of their larger combinations are ever checked, saving work.">
+
+        <!-- level 1 -->
+        <g font-family="IBM Plex Mono, monospace" font-size="13">
+          <rect x="20" y="20" width="150" height="56" rx="6" fill="#e7efe1" stroke="#1c6b45" stroke-width="1.5"/>
+          <text x="95" y="44" text-anchor="middle" fill="#0d3c26" font-weight="600">{Tea}</text>
+          <text x="95" y="62" text-anchor="middle" fill="#1c6b45">support 42% ✓</text>
+
+          <rect x="205" y="20" width="150" height="56" rx="6" fill="#e7efe1" stroke="#1c6b45" stroke-width="1.5"/>
+          <text x="280" y="44" text-anchor="middle" fill="#0d3c26" font-weight="600">{Sugar}</text>
+          <text x="280" y="62" text-anchor="middle" fill="#1c6b45">support 38% ✓</text>
+
+          <rect x="390" y="20" width="150" height="56" rx="6" fill="#f4ded9" stroke="#b23a2e" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="465" y="44" text-anchor="middle" fill="#7d2a22" font-weight="600">{Candle}</text>
+          <text x="465" y="62" text-anchor="middle" fill="#b23a2e">support 4% ✗ pruned</text>
+
+          <rect x="575" y="20" width="150" height="56" rx="6" fill="#e7efe1" stroke="#1c6b45" stroke-width="1.5"/>
+          <text x="650" y="44" text-anchor="middle" fill="#0d3c26" font-weight="600">{Mug}</text>
+          <text x="650" y="62" text-anchor="middle" fill="#1c6b45">support 31% ✓</text>
+
+          <!-- skipped note under candle, kept narrow and clear of row 2 -->
+          <line x1="465" y1="76" x2="465" y2="112" stroke="#b9c4ac" stroke-width="1.5" stroke-dasharray="3 4"/>
+          <text x="465" y="128" text-anchor="middle" fill="#7c8a76" font-size="11.5">skips every pair</text>
+          <text x="465" y="143" text-anchor="middle" fill="#7c8a76" font-size="11.5">with {Candle} — never counted</text>
+
+          <!-- level 2 -->
+          <rect x="55" y="175" width="180" height="56" rx="6" fill="#e7efe1" stroke="#1c6b45" stroke-width="1.5"/>
+          <text x="145" y="199" text-anchor="middle" fill="#0d3c26" font-weight="600">{Tea, Sugar}</text>
+          <text x="145" y="217" text-anchor="middle" fill="#1c6b45">support 19% ✓</text>
+
+          <rect x="290" y="175" width="180" height="56" rx="6" fill="#e7efe1" stroke="#1c6b45" stroke-width="1.5"/>
+          <text x="380" y="199" text-anchor="middle" fill="#0d3c26" font-weight="600">{Tea, Mug}</text>
+          <text x="380" y="217" text-anchor="middle" fill="#1c6b45">support 9% ✓</text>
+
+          <rect x="545" y="175" width="180" height="56" rx="6" fill="#f4ded9" stroke="#b23a2e" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="635" y="199" text-anchor="middle" fill="#7d2a22" font-weight="600">{Sugar, Mug}</text>
+          <text x="635" y="217" text-anchor="middle" fill="#b23a2e">support 3% ✗ pruned</text>
+
+          <!-- level 3 -->
+          <rect x="165" y="300" width="230" height="56" rx="6" fill="#1c6b45" stroke="#0d3c26" stroke-width="1.5"/>
+          <text x="280" y="324" text-anchor="middle" fill="#f6f8f2" font-weight="600">{Tea, Sugar, Mug}</text>
+          <text x="280" y="342" text-anchor="middle" fill="#d3f2df" font-size="12">support 6% ✓ final frequent set</text>
+        </g>
+
+        <!-- connecting edges: level 1 to level 2, kept combinations -->
+        <g stroke="#1c6b45" stroke-width="1.5" fill="none">
+          <line x1="95" y1="76" x2="145" y2="175"/>
+          <line x1="280" y1="76" x2="145" y2="175"/>
+          <line x1="95" y1="76" x2="380" y2="175"/>
+          <line x1="650" y1="76" x2="380" y2="175"/>
+        </g>
+        <!-- edges into the checked-but-pruned pair: solid, neutral grey (it was computed, just didn't clear the bar) -->
+        <g stroke="#7c8a76" stroke-width="1.5" fill="none">
+          <line x1="280" y1="76" x2="635" y2="175"/>
+          <line x1="650" y1="76" x2="635" y2="175"/>
+        </g>
+        <g stroke="#1c6b45" stroke-width="1.5" fill="none">
+          <line x1="145" y1="231" x2="280" y2="300"/>
+          <line x1="380" y1="231" x2="280" y2="300"/>
+        </g>
+      </svg>
+      <figcaption><strong>The Apriori principle, illustrated.</strong> Percentages and items here are a simplified teaching example, not DailyMart's real figures. {Candle} falls below the minimum support threshold on its own, so no pair or triple containing {Candle} is ever checked — that whole branch is skipped for free. {Sugar, Mug} <em>is</em> checked, since both items individually cleared the bar, but the pair itself falls short and gets pruned before the final round.</figcaption>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">Does this idea only apply to retail?</span></div>
+      <p>Not at all — the same "frequent combination hunting" idea shows up well beyond the supermarket aisle.</p>
+    </div>
+    <div class="card-grid cols-2">
+      <div class="info-card">
+        <h4>Bio-informatics</h4>
+        <p>If two gene sequences frequently occur together in a species, that hints at a biological relationship worth investigating.</p>
+      </div>
+      <div class="info-card">
+        <h4>Medicine</h4>
+        <p>If two symptoms or two drugs frequently co-occur in patient records, that pattern is worth flagging for further study.</p>
+      </div>
+    </div>
+    <div class="prose">
+      <p>Nisha realizes this "shopping basket" trick is really a general-purpose pattern-finder in disguise.</p>
+
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">How do we implement Apriori in code?</span></div>
+      <p>No need to write it from scratch — the <code>mlxtend.frequent_patterns</code> library ships a ready-made <code>apriori()</code> function. Nisha just supplies a <code>min_support</code> threshold and lets it do the heavy lifting.</p>
+
+      <div class="stat-row">
+        <div class="stat-card"><span class="num">177</span><span class="lbl">frequent item-sets returned, at a 3% minimum support</span></div>
+        <div class="stat-card"><span class="num">~13%</span><span class="lbl">support for the top single item — White Hanging Heart T-Light Holder, 2,148 baskets</span></div>
+      </div>
+      <p>That tells Nisha what's popular. It doesn't yet tell her what's strongly <em>linked</em> together — that's the next piece of the puzzle.</p>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="quiz" data-quiz>
+      <div class="quiz-kicker">Quick check</div>
+      <p class="quiz-q">Why does Apriori first filter out infrequent individual items before checking bigger item-set combinations?</p>
+      <ul class="quiz-opts">
+        <li><button class="quiz-opt" data-correct="false">Because individual items are always more profitable than combinations.</button></li>
+        <li><button class="quiz-opt" data-correct="true">Because if a single item doesn't meet the minimum support threshold, none of its larger combinations can meet it either — so checking them would be wasted effort.</button></li>
+        <li><button class="quiz-opt" data-correct="false">Because the algorithm can only handle one item at a time.</button></li>
+        <li><button class="quiz-opt" data-correct="false">Because larger item-sets are always statistically insignificant.</button></li>
+      </ul>
+      <div class="quiz-explain"><strong>Why:</strong> This is the core Apriori principle — if an item-set is infrequent, every superset containing it must be at least as infrequent. Apriori prunes away entire branches of combinations early, instead of blindly checking every possible group of products. That's what makes it smarter than brute-force checking, even though it can still get slow for very large catalogs.</div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="sec-rules">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">03</span>
+      <h2>Association Rules</h2>
+    </div>
+    <div class="prose">
+      <p>Nisha now knows which item combinations are frequent. But her manager asks a sharper question.</p>
+      <div class="manager-quote">
+        <p>"Okay, but if I place two products together, how confident are we that customers who buy one will actually buy the other?"</p>
+        <span class="who">DailyMart, pushing further</span>
+      </div>
+      <p>This is where <strong>association rules</strong> come in — they measure the strength of a "bought together" relationship, not just how often it occurs.</p>
+      <div class="analogy">
+        <strong class="label">Analogy</strong>
+        Picture ordering at a pizza place. Both of these patterns exist in the data: <code>{Pizza} → {Coke}</code> and <code>{Pizza} → {Garlic Bread}</code>. Both are "true" in the sense that some customers do this. But intuitively, pizza + coke feels like a much stronger pairing than pizza + garlic bread. We need actual numbers to back up that gut feeling — that's what the three metrics below give us.
+      </div>
+
+      <h3>Support — how common is this combination overall?</h3>
+      <p>Support just tells you what fraction of all transactions contain a given item or item-set — nothing more, nothing less. It's like asking: out of every 100 shopping trips, in how many did the customer buy both milk and bread?</p>
+      <div class="formula">Support(X) = transactions containing X / total transactions</div>
+      <p>This is the same idea Nisha already used as the "minimum support threshold" back in Apriori.</p>
+
+      <h3>Confidence — if they bought X, how likely are they to also buy Y?</h3>
+      <p>Confidence answers a directional question: given that someone already has item X in their basket, what fraction of the time do they also pick up item Y? It's like asking, of everyone who bought milk, what percentage also bought bread.</p>
+      <div class="formula">Confidence(X→Y) = transactions containing X and Y / transactions containing X</div>
+    </div>
+
+    <div class="compare">
+      <div class="compare-col">
+        <div class="cc-label">high support, low confidence</div>
+        <h4>Looks common, isn't reliable</h4>
+        <p>The pair shows up a lot in the raw data — but knowing someone bought X doesn't reliably predict they'll also buy Y.</p>
+      </div>
+      <div class="compare-col">
+        <div class="cc-label">high confidence, low support</div>
+        <h4>Reliable, but rare</h4>
+        <p>Whenever it happens, it happens together almost every time — it's just an uncommon pattern overall.</p>
+      </div>
+    </div>
+
+    <div class="prose">
+      <p>Both numbers matter, and neither alone tells the full story.</p>
+
+      <h3>Lift — is this pairing actually meaningful, or just a coincidence of popularity?</h3>
+      <p>Here's the catch with confidence alone: <code>{Toothbrush} → {Milk}</code> might also show high confidence — simply because milk is bought so often by everyone, regardless of what else is in the cart. Confidence alone can mislead when the "then" item is just generally popular.</p>
+      <div class="analogy">
+        <strong class="label">Analogy</strong>
+        If 95% of people you meet also happen to have eaten breakfast today, "meeting you" doesn't really cause or predict "eating breakfast" — pretty much everyone did, breakfast is just common. Lift corrects for this by comparing the observed co-occurrence to what we'd expect if the two items were totally unrelated.
+      </div>
+
+      <p><strong>Worked example</strong> — a store's records show:</p>
+      <div class="stat-row">
+        <div class="stat-card"><span class="num">600,000</span><span class="lbl">total transactions</span></div>
+        <div class="stat-card"><span class="num">7,500</span><span class="lbl">with Bread — 1.25%</span></div>
+        <div class="stat-card"><span class="num">60,000</span><span class="lbl">with Milk — 10%</span></div>
+        <div class="stat-card"><span class="num">6,000</span><span class="lbl">with both — 1.0%</span></div>
+      </div>
+      <p>If Bread and Milk were completely unrelated, we'd expect about 1.25% × 10% = 0.125% of transactions to have both. We actually observe 1.0% — eight times higher than chance would predict.</p>
+    </div>
+  </div>
+
+  <div class="breakout-wrap">
+    <div class="figure breakout">
+      <div class="bar-chart">
+        <div class="bar-col">
+          <div class="bar" style="height:19px; background:var(--line-strong);"><span class="bval" style="color:var(--ink-soft);">0.125%</span></div>
+          <span class="bar-lbl">If unrelated<br>(expected)</span>
+        </div>
+        <div class="bar-col">
+          <div class="bar" style="height:150px; background:var(--pine);"><span class="bval" style="color:var(--pine-deep);">1.0%</span></div>
+          <span class="bar-lbl">Actually observed<br>— 8× higher</span>
+        </div>
+      </div>
+      <figcaption>Bread &amp; Milk co-occurrence: what independence would predict, versus what DailyMart's worked example actually shows.</figcaption>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <p>That "how many times more than expected" number is exactly what lift measures:</p>
+      <div class="formula">Lift(X→Y) = Confidence(X→Y) / Support(Y)</div>
+
+      <div class="lift-scale">
+        <div class="track"></div>
+        <div class="labels">
+          <span>Lift &lt; 1 — negatively associated</span>
+          <span>Lift = 1 — independent</span>
+          <span>Lift &gt; 1 — positively associated</span>
+        </div>
+      </div>
+
+      <details class="aside">
+        <summary>Two more metrics Nisha bookmarks for later</summary>
+        <div class="aside-body">
+          <p><strong>Leverage</strong> — similar to lift, but measures the absolute difference (not the ratio) between observed and expected co-occurrence. Useful because, unlike lift, it isn't skewed by very rare items.</p>
+          <p><strong>Conviction</strong> — compares how often the rule is wrong (X happens without Y) to how often we'd expect it to be wrong if X and Y were unrelated. High conviction means Y really does depend strongly on X.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="breakout-wrap">
+    <div class="playground">
+      <div class="pg-kicker">Interactive playground · 01</div>
+      <h3>Build your own association rule</h3>
+      <p>Instead of just reading the formulas, plug in transaction counts and watch support, confidence and lift update live — the same "what-if" tool a real analyst plays with before trusting a business recommendation.</p>
+      <div class="pg-grid">
+        <div class="pg-controls">
+          <div class="slider-row">
+            <label for="pgTotal">Total baskets <span class="v" id="pgTotalVal">1000</span></label>
+            <input type="range" id="pgTotal" min="100" max="5000" step="100" value="1000">
+          </div>
+          <div class="slider-row">
+            <label for="pgX">Baskets with X <span class="v" id="pgXVal">200</span></label>
+            <input type="range" id="pgX" min="1" max="2000" step="10" value="200">
+          </div>
+          <div class="slider-row">
+            <label for="pgY">Baskets with Y <span class="v" id="pgYVal">300</span></label>
+            <input type="range" id="pgY" min="1" max="2000" step="10" value="300">
+          </div>
+          <div class="slider-row">
+            <label for="pgBoth">Baskets with both <span class="v" id="pgBothVal">90</span></label>
+            <input type="range" id="pgBoth" min="0" max="2000" step="5" value="90">
+          </div>
+        </div>
+        <div class="pg-output" aria-live="polite">
+          <div class="metric-line"><span class="m-lbl">Support(X)</span><span class="m-val" id="outSupX">—</span></div>
+          <div class="metric-line"><span class="m-lbl">Support(Y)</span><span class="m-val" id="outSupY">—</span></div>
+          <div class="metric-line"><span class="m-lbl">Support(X ∩ Y)</span><span class="m-val" id="outSupXY">—</span></div>
+          <div class="metric-line"><span class="m-lbl">Confidence(X→Y)</span><span class="m-val" id="outConf">—</span></div>
+          <div class="metric-line"><span class="m-lbl">Lift(X→Y)</span><span class="m-val" id="outLift">—</span></div>
+          <div class="metric-line"><span class="m-lbl">Leverage</span><span class="m-val" id="outLeverage">—</span></div>
+          <div class="pg-verdict neu" id="pgVerdict">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <p><strong>Try this:</strong> push "baskets with both" close to "baskets with X" — almost everyone who buys X also buys Y — while keeping "baskets with Y" small. Watch lift shoot up: a strong, meaningful pairing. Now push "baskets with Y" up close to "total baskets," so Y is bought by almost everyone, and watch lift collapse toward 1 even if confidence stays high — the toothbrush-and-milk trap in action.</p>
+
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">What can Nisha conclude from DailyMart's real data?</span></div>
+      <p>Running the same calculation with <code>mlxtend</code> on the cleaned UK transactions, the top rule that emerges is:</p>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card big">
+        <span class="num">14.6×</span>
+        <span class="lbl">{Green Regency Teacup and Saucer} → {Pink Regency Teacup and Saucer} — the highest lift in the dataset. A customer who buys the green set is 14.6 times more likely to also buy the pink one than a random customer would be.</span>
+      </div>
+    </div>
+
+    <div class="prose">
+      <p>The business strategy Nisha can now propose to her manager:</p>
+    </div>
+    <div class="card-grid cols-3">
+      <div class="info-card"><h4>Item placement</h4><p>Put the green and pink sets near each other for easy access.</p></div>
+      <div class="info-card"><h4>Bundling</h4><p>Sell them together at a small discount.</p></div>
+      <div class="info-card"><h4>Targeted discounts</h4><p>Offer a coupon for the pink set at checkout, whenever the green one is purchased.</p></div>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <div class="quiz-kicker">Quick check</div>
+      <p class="quiz-q">A rule <code>{Umbrella} → {Bottled Water}</code> has a high confidence of 85%, but a lift of exactly 1.0. What should Nisha conclude?</p>
+      <ul class="quiz-opts">
+        <li><button class="quiz-opt" data-correct="false">This is DailyMart's strongest, most actionable pairing — bundle them immediately.</button></li>
+        <li><button class="quiz-opt" data-correct="true">Bottled water is probably bought so frequently by almost everyone that buying an umbrella doesn't actually change the odds of buying water — the high confidence is misleading.</button></li>
+        <li><button class="quiz-opt" data-correct="false">The data must be wrong, since confidence and lift should always match.</button></li>
+        <li><button class="quiz-opt" data-correct="false">A lift of 1.0 means the two items are never bought together.</button></li>
+      </ul>
+      <div class="quiz-explain"><strong>Why:</strong> A lift of exactly 1 means the two items are statistically independent — buying the antecedent doesn't change the likelihood of the consequent at all, no matter how high the confidence looks. High confidence combined with lift ≈ 1 is the classic sign of a generally popular item inflating the confidence score, not a genuine relationship.</div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="sec-individuals">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">04</span>
+      <h2>From Baskets to Individuals</h2>
+    </div>
+    <div class="prose">
+      <p>Nisha presents her basket-analysis findings, and her manager is impressed — but pushes further.</p>
+      <div class="manager-quote">
+        <p>"This is great for store layout. But our app shows the same homepage to every customer. Can we make it personal — like Netflix or Amazon does?"</p>
+        <span class="who">DailyMart, raising the bar</span>
+      </div>
+      <p>This is a fundamentally different kind of problem. Market basket analysis found patterns across all customers, for one shopping trip. Now Nisha needs to find patterns for one specific customer, across their entire history, and predict what that individual is likely to want next. This is the world of <strong>recommendation systems</strong>.</p>
+
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">What exactly is a recommendation system?</span></div>
+      <p>A recommender predicts how much a specific user might like a specific item — a rating, or the likelihood of interaction — ranks all possible items by that predicted score, and shows the user the top ones. Netflix's "Because you watched…", YouTube's homepage, Amazon's "customers also bought," Spotify's Discover Weekly — all the same underlying idea.</p>
+
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">How do we formally set this problem up?</span></div>
+      <p>Suppose there are <code>n</code> users and <code>m</code> items — products, movies, songs, whatever DailyMart sells. The goal: for each user <code>Ui</code>, suggest a ranked list of items they're likely to enjoy, based on historical data.</p>
+
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">How do we represent all this data?</span></div>
+      <p>Picture a giant spreadsheet: every row is a user, every column is an item, and each cell tells us how that user interacted with that item — a star rating, a "liked" flag, a percentage of a song listened to. Call this matrix <code>A</code>, where <code>Aij</code> is user <em>i</em>'s interaction with item <em>j</em>.</p>
+      <div class="analogy">
+        <strong class="label">Analogy</strong>
+        Think of it as a giant, mostly-empty attendance register, where every student (user) has attended only a handful of classes (items) out of the thousands on offer. If DailyMart's app hypothetically had a billion users and a hundred million products across categories, this matrix would technically have 10<sup>17</sup> cells — but any single user has realistically interacted with maybe a thousand items. The matrix is almost entirely empty: what we call <strong>sparse</strong>.
+      </div>
+      <p>Nisha's real task, then: how do we fill in the blanks of this mostly-empty matrix?</p>
+    </div>
+  </div>
+
+  <div class="breakout-wrap">
+    <div class="figure breakout">
+      <div id="sparseMatrixWrap" role="img" aria-label="A wide grid representing users as rows and items as columns, almost entirely empty, with only a scattering of filled cells showing the rare user-item interactions that actually exist"></div>
+      <figcaption><strong>Matrix A — mostly empty by nature.</strong> Each filled cell is one real interaction; the rest is exactly what a recommender system needs to predict.</figcaption>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="sec-cf">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">05</span>
+      <h2>Collaborative Filtering</h2>
+    </div>
+    <p class="section-kicker">"Wisdom of the crowd"</p>
+    <div class="prose">
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">We're just given this mostly-empty matrix A. How do we recommend items to a user from that alone?</span></div>
+      <div class="analogy">
+        <strong class="label">Analogy</strong>
+        This is exactly what happens when you ask a friend, "I loved this movie — what should I watch next?" You're relying on the idea that people with similar taste tend to like similar things — that's the entire philosophy behind collaborative filtering. No product descriptions, no demographics, just behaviour.
+      </div>
+
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">How do we even get a "profile" for a user or item out of matrix A?</span></div>
+      <p>Just like text can be represented as a "bag of words" vector, a user can be represented as a vector — one number per item, capturing their interaction with it. Two users with similar vectors have similar taste. Two items with similar vectors tend to appeal to the same kind of person.</p>
+
+      <h3>Item-item similarity</h3>
+      <p>Nisha already knows the items a given customer has bought — or rated highly — in the past. So what if she finds other items that are similar to those?</p>
+      <div class="analogy">
+        <strong class="label">Analogy</strong>
+        If a listener frequently plays Lata Mangeshkar, and we know from everyone's listening patterns that people who play Lata Mangeshkar also tend to play Kishore Kumar, then Kishore Kumar becomes a solid recommendation — even if this particular listener has never heard of him.
+      </div>
+
+      <h3>User-user similarity</h3>
+      <p>Alternatively — what if Nisha finds other customers whose purchase history looks a lot like this customer's? Once she's found such "twins," she can recommend things they bought that this customer hasn't tried yet, using <strong>cosine similarity</strong> between user vectors to measure how alike two shopping histories are.</p>
+    </div>
+
+    <div class="compare">
+      <div class="compare-col">
+        <div class="cc-label">item-item similarity</div>
+        <h4>Compare products to products</h4>
+        <p>Stable when there are far more users than items, and item behaviour doesn't drift much over time.</p>
+      </div>
+      <div class="compare-col">
+        <div class="cc-label">user-user similarity</div>
+        <h4>Compare people to people</h4>
+        <p>Finds a "taste twin" directly — but recomputing similarity across a huge, fast-growing pool of users is expensive.</p>
+      </div>
+    </div>
+
+    <div class="prose">
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">When should Nisha use user-user vs. item-item similarity?</span></div>
+      <div class="analogy">
+        <strong class="label">Rule of thumb</strong>
+        When there are far more users than items (<code>n ≫ m</code>), and item preferences don't drift much over time, item-item similarity tends to be more stable and efficient — items don't change their "personality" as often as the fast-growing pool of users does.
+      </div>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <div class="quiz-kicker">Quick check</div>
+      <p class="quiz-q">DailyMart has 50 million app users but only 4,000 distinct products, and product categories are fairly stable month to month. Which similarity approach should Nisha lean towards, and why?</p>
+      <ul class="quiz-opts">
+        <li><button class="quiz-opt" data-correct="false">User-user similarity, because more data always means better recommendations.</button></li>
+        <li><button class="quiz-opt" data-correct="true">Item-item similarity, because with far more users than items, and stable item behaviour over time, item relationships stay reliable and don't need constant recomputation.</button></li>
+        <li><button class="quiz-opt" data-correct="false">Neither — collaborative filtering can't work unless users and items are equal in number.</button></li>
+        <li><button class="quiz-opt" data-correct="false">User-user similarity, because items can never be compared meaningfully.</button></li>
+      </ul>
+      <div class="quiz-explain"><strong>Why:</strong> The rule of thumb: when <code>n ≫ m</code> (many more users than items) and item ratings don't shift dramatically over time, item-item similarity is the more practical and stable choice — you compute similarities among a small, slowly-changing set of items rather than a massive, constantly-changing set of users.</div>
+    </div>
+  </div>
+
+  <div class="breakout-wrap">
+    <div class="playground">
+      <div class="pg-kicker">Interactive playground · 02</div>
+      <h3>Build your own mini recommender</h3>
+      <p>A tiny, made-up dataset of five customers and their ratings (1–5) for six grocery-adjacent products. Rate the items yourself, and the same cosine-similarity math that powers real "customers like you also bought" features will find your closest taste-twin and recommend something you haven't tried.</p>
+      <div class="pg-grid">
+        <div class="pg-controls">
+          <div class="slider-row"><label for="riOats">Oats <span class="v" id="riOatsVal">0</span></label><input type="range" id="riOats" min="0" max="5" step="1" value="0"></div>
+          <div class="slider-row"><label for="riTea">Green Tea <span class="v" id="riTeaVal">0</span></label><input type="range" id="riTea" min="0" max="5" step="1" value="0"></div>
+          <div class="slider-row"><label for="riChoc">Chocolate <span class="v" id="riChocVal">0</span></label><input type="range" id="riChoc" min="0" max="5" step="1" value="0"></div>
+          <div class="slider-row"><label for="riDiap">Diapers <span class="v" id="riDiapVal">0</span></label><input type="range" id="riDiap" min="0" max="5" step="1" value="0"></div>
+          <div class="slider-row"><label for="riProt">Protein Bar <span class="v" id="riProtVal">0</span></label><input type="range" id="riProt" min="0" max="5" step="1" value="0"></div>
+          <div class="slider-row"><label for="riNoodle">Instant Noodles <span class="v" id="riNoodleVal">0</span></label><input type="range" id="riNoodle" min="0" max="5" step="1" value="0"></div>
+        </div>
+        <div class="twin-result" aria-live="polite">
+          <div class="twin-name" id="twinName">Rate a few items to begin</div>
+          <div class="twin-sim" id="twinSimLbl">similarity score: —</div>
+          <div class="sim-bars" id="simBars"></div>
+          <div class="twin-rec" id="twinRec">Your recommendation will appear here once your ratings overlap with a customer.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <p><strong>Try this:</strong> set high ratings only for Oats, Green Tea and Protein Bar — you should land closest to "Health Nut Hema" or "Fitness Freak Farah." Then flip it: rate Diapers and Instant Noodles high, and watch your twin shift to a parent persona. This is exactly the mechanism behind "users like you also liked…"</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="sec-coldstart">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">06</span>
+      <h2>The Cold Start Problem</h2>
+    </div>
+    <div class="prose">
+      <p>Nisha demos her similarity-based prototype, and her manager immediately spots a gap.</p>
+      <div class="manager-quote">
+        <p>"This is great for existing customers. But what happens the moment someone downloads our app for the very first time? We know nothing about them yet!"</p>
+        <span class="who">DailyMart, spotting the gap</span>
+      </div>
+      <div class="analogy">
+        <strong class="label">Analogy</strong>
+        This is like being the new kid at school on day one. Nobody knows your taste in music yet, and you don't have a friend group to be compared against. Everything about collaborative filtering breaks down here — there's no history, no vector, no "taste twin" to find.
+      </div>
+      <p>Since a brand-new user's row in matrix <code>A</code> is essentially empty, there's no behavioural data to compute similarity from. Every recommender system needs some strategy for this exact moment — usually by falling back on other kinds of information, which is exactly where Nisha heads next.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="sec-content">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">07</span>
+      <h2>Content-Based Filtering</h2>
+    </div>
+    <p class="section-kicker">Falling back on profiles</p>
+    <div class="prose">
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">How can we get around the cold start problem?</span></div>
+      <p>A naive fix: just recommend the most popular items to everyone new. It works a little, but it isn't personal at all.</p>
+      <p>Instead — even though DailyMart knows nothing about how a new user <em>behaves</em>, it usually still knows something about <em>who they are</em>: signup location, device type, maybe age group. This is the idea behind <strong>content-based filtering</strong>: build a profile of the user (and of each item) using descriptive attributes, then match users to items with a similar profile, rather than relying purely on behaviour.</p>
+
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">What are the trade-offs?</span></div>
+    </div>
+
+    <div class="pros-cons">
+      <div class="pc-col pro">
+        <h4>Advantages</h4>
+        <ul>
+          <li>Doesn't need any data from other users — works from day one for a single user, so it scales easily</li>
+          <li>Can surface niche items that few other people are interested in, since it isn't relying on "the crowd"</li>
+        </ul>
+      </div>
+      <div class="pc-col con">
+        <h4>Disadvantages</h4>
+        <ul>
+          <li>Item and user features often need to be hand-engineered — someone has to decide what attributes matter</li>
+          <li>Tends to over-specialize — if you only ever liked comedy, you may never get shown a great thriller</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <div class="quiz-kicker">Quick check</div>
+      <p class="quiz-q">Priya just signed up on the DailyMart app 5 minutes ago. She has zero purchase history, but she entered her location — a city known for a health-food-conscious population — during signup. Which approach can give her a reasonably personalized recommendation right away?</p>
+      <ul class="quiz-opts">
+        <li><button class="quiz-opt" data-correct="false">Collaborative filtering, since it works best with no data at all.</button></li>
+        <li><button class="quiz-opt" data-correct="true">Content-based filtering, since it can use her location and profile attributes even without any purchase history.</button></li>
+        <li><button class="quiz-opt" data-correct="false">Matrix factorization, since it requires the least amount of data.</button></li>
+        <li><button class="quiz-opt" data-correct="false">None — no recommendation is possible until she buys something.</button></li>
+      </ul>
+      <div class="quiz-explain"><strong>Why:</strong> Content-based filtering relies on descriptive attributes — location, declared preferences, demographics — rather than behavioural history, which is exactly why it's the standard fallback for the cold start problem. It can make a reasonable first guess for Priya using her city profile alone, before she's ever clicked "buy."</div>
+    </div>
+
+    <div class="prose">
+      <p>One more angle Nisha considers: if she already has feature vectors for users and items from content-based profiling, she could concatenate a user's vector with an item's vector and treat the known rating as the label — turning "predict the rating" into a standard regression (or classification, for a binary like/dislike) problem, solvable with the same tools she already knows.</p>
+      <h3>Quick recap: the three flavours of recommenders</h3>
+    </div>
+
+    <div class="card-grid cols-3">
+      <div class="flavour-card">
+        <span class="fnum">1</span>
+        <h4>Content-based</h4>
+        <p>Uses item and user attributes — location, category, gender, and so on. Great for cold start.</p>
+      </div>
+      <div class="flavour-card">
+        <span class="fnum">2</span>
+        <h4>Collaborative filtering</h4>
+        <p>User-user or item-item — works purely off behaviour: "people or items like this."</p>
+      </div>
+      <div class="flavour-card">
+        <span class="fnum">3</span>
+        <h4>Hybrid models</h4>
+        <p>Combine both, and are what most production systems actually use today.</p>
+      </div>
+    </div>
+    <p class="prose" style="max-width:var(--measure); font-size:0.92em; color:var(--ink-faint);">User-user and item-item similarity are both flavours of the same collaborative-filtering family.</p>
+  </div>
+</section>
+
+<section class="section" id="sec-matrix">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">08</span>
+      <h2>Matrix Factorization</h2>
+    </div>
+    <p class="section-kicker">The engine under the hood</p>
+    <div class="prose">
+      <p>Nisha's manager is happy with the prototypes, but asks one final, practical question.</p>
+      <div class="manager-quote">
+        <p>"This is nice for small demos, but our real matrix has millions of users and products, and it's almost entirely empty. How do real companies actually fill in a matrix that huge?"</p>
+        <span class="who">DailyMart, thinking at scale</span>
+      </div>
+      <p>This is where <strong>matrix factorization</strong> enters the picture — the technique that famously powered the winning solution of the Netflix Prize competition, 2008–09.</p>
+      <div class="analogy">
+        <strong class="label">Analogy</strong>
+        Think back to basic factorization — 6 = 2 × 3. Now imagine doing something similar for taste itself: every user's preferences can be described as a short "flavour profile" — how much they like comedy, action, spice, sweetness, budget-friendliness — and every product or movie can be described along the same set of flavour dimensions. A user's predicted rating for an item is then just how well their flavour profile matches the item's flavour profile.
+      </div>
+      <p>Formally, the giant matrix <code>A</code> (n×m, users by items) gets approximated as the product of two much smaller matrices:</p>
+      <div class="formula">A[n×m] ≈ B[n×d] · C[d×m]</div>
+      <p>B holds a compact "taste profile" — d numbers — for every user, and C holds a compact "flavour profile" for every item. The number of hidden flavours, d, is usually much smaller than n or m — that's exactly what makes this compact and computable.</p>
+    </div>
+  </div>
+
+  <div class="breakout-wrap">
+    <div class="figure breakout">
+      <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Matrix factorization diagram: a large sparse matrix A is approximated as the product of two much smaller matrices, B and C.">
+        <g font-family="IBM Plex Mono, monospace" font-size="13">
+          <rect x="10" y="30" width="150" height="150" rx="4" fill="#f6f8f2" stroke="#b9c4ac" stroke-width="1.5" stroke-dasharray="2 3"/>
+          <circle cx="35" cy="55" r="2.5" fill="#1c6b45"/>
+          <circle cx="80" cy="90" r="2.5" fill="#1c6b45"/>
+          <circle cx="120" cy="60" r="2.5" fill="#1c6b45"/>
+          <circle cx="60" cy="140" r="2.5" fill="#1c6b45"/>
+          <circle cx="130" cy="150" r="2.5" fill="#1c6b45"/>
+          <circle cx="100" cy="120" r="2.5" fill="#1c6b45"/>
+          <text x="85" y="200" text-anchor="middle" fill="#4b5a50">A  (n × m, sparse)</text>
+
+          <text x="195" y="115" text-anchor="middle" fill="#7c8a76" font-size="20">≈</text>
+
+          <rect x="225" y="30" width="60" height="150" rx="4" fill="#e7efe1" stroke="#1c6b45" stroke-width="1.5"/>
+          <text x="255" y="200" text-anchor="middle" fill="#0d3c26">B (n × d)</text>
+
+          <text x="310" y="115" text-anchor="middle" fill="#7c8a76" font-size="20">·</text>
+
+          <rect x="335" y="80" width="220" height="45" rx="4" fill="#e7efe1" stroke="#1c6b45" stroke-width="1.5"/>
+          <text x="445" y="145" text-anchor="middle" fill="#0d3c26">C (d × m)</text>
+
+          <text x="610" y="108" text-anchor="middle" fill="#4b5a50" font-size="12">d = a handful of</text>
+          <text x="610" y="124" text-anchor="middle" fill="#4b5a50" font-size="12">hidden "flavours,"</text>
+          <text x="610" y="140" text-anchor="middle" fill="#4b5a50" font-size="12">d ≪ n and d ≪ m</text>
+        </g>
+      </svg>
+      <figcaption>The giant sparse matrix A is never filled in directly. Instead, two small, dense matrices — B (user profiles) and C (item profiles) — are learned so that their product approximates the ratings we already know.</figcaption>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">How does this help fill in the missing cells?</span></div>
+      <p>Here's the elegant part: Nisha doesn't need every cell of A filled in to find B and C. She can use the relatively small number of ratings she does have — say, out of 10 million cells, only 100,000 are filled — to learn good values for B and C using an optimization technique. In practice, this is done with <strong>stochastic gradient descent</strong>: nudging the profile numbers bit by bit until predictions match the known ratings as closely as possible.</p>
+      <p>Once B and C are learned, filling in a missing cell — say user 3's predicted rating for item 10 — is as simple as taking the dot product of user 3's profile with item 10's profile. No separate lookup needed; the model has learned to generalize.</p>
+    </div>
+  </div>
+
+  <div class="breakout-wrap">
+    <div class="figure breakout">
+      <svg viewBox="0 0 720 90" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow diagram: Recommendation System is solved via Matrix Completion, achieved via Matrix Factorization, optimized using Stochastic Gradient Descent">
+        <g font-family="IBM Plex Mono, monospace" font-size="12.5">
+          <rect x="0" y="15" width="150" height="55" rx="6" fill="#1c6b45"/>
+          <text x="75" y="47" text-anchor="middle" fill="#f6f8f2">Recommendation<tspan x="75" dy="14">System</tspan></text>
+
+          <text x="168" y="47" fill="#7c8a76">→</text>
+
+          <rect x="190" y="15" width="150" height="55" rx="6" fill="#e7efe1" stroke="#1c6b45" stroke-width="1.5"/>
+          <text x="265" y="47" text-anchor="middle" fill="#0d3c26">Matrix<tspan x="265" dy="14">Completion</tspan></text>
+
+          <text x="358" y="47" fill="#7c8a76">→</text>
+
+          <rect x="380" y="15" width="150" height="55" rx="6" fill="#e7efe1" stroke="#1c6b45" stroke-width="1.5"/>
+          <text x="455" y="47" text-anchor="middle" fill="#0d3c26">Matrix<tspan x="455" dy="14">Factorization</tspan></text>
+
+          <text x="548" y="47" fill="#7c8a76">→</text>
+
+          <rect x="570" y="15" width="150" height="55" rx="6" fill="#e7efe1" stroke="#1c6b45" stroke-width="1.5"/>
+          <text x="645" y="47" text-anchor="middle" fill="#0d3c26">Stochastic<tspan x="645" dy="14">Gradient Descent</tspan></text>
+        </g>
+      </svg>
+      <figcaption>Nisha's mental map: what the problem is called, how it's framed, how it's solved, and what actually optimizes it.</figcaption>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <h3>A quick detour: PCA and SVD</h3>
+      <p>Nisha's manager asks one last thing: "we used PCA in a previous project — is that related to this at all?"</p>
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">How does PCA connect to matrix factorization?</span></div>
+      <p>Recall that PCA works with a covariance matrix, which must be square and symmetric — it's essentially another way of finding a small number of "hidden dimensions" that summarize a dataset well, very much in the same spirit as the flavour-profile idea above.</p>
+      <div class="q-prompt"><span class="q-mark">Q</span><span class="q-text">What about SVD — Singular Value Decomposition?</span></div>
+      <p>SVD does something similar to PCA, but it doesn't require a square matrix — it works directly on a rectangular data matrix.</p>
+    </div>
+
+    <div class="compare">
+      <div class="compare-col">
+        <div class="cc-label">PCA</div>
+        <h4>Needs a square, symmetric matrix</h4>
+        <p>Like summarizing a story by its main characters — but it only works if the "cast" and "chapters" happen to be the same size.</p>
+      </div>
+      <div class="compare-col">
+        <div class="cc-label">SVD</div>
+        <h4>Works on any rectangular matrix</h4>
+        <p>A more flexible summarizer: a small number of "essential ingredients" — singular values — that capture most of what matters, discarding the rest as noise.</p>
+      </div>
+    </div>
+
+    <div class="prose">
+      <p>A special case, <strong>truncated SVD</strong>, is a powerful feature-engineering tool for exactly this kind of user-item matrix, and it's closely related to the matrix factorization idea above.</p>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <div class="quiz-kicker">Quick check</div>
+      <p class="quiz-q">Why does matrix factorization work well even when the ratings matrix A is 99% empty?</p>
+      <ul class="quiz-opts">
+        <li><button class="quiz-opt" data-correct="false">Because it ignores missing values completely and only uses zeros.</button></li>
+        <li><button class="quiz-opt" data-correct="true">Because it learns compact "profile" vectors for users and items from just the known ratings, and can predict any missing cell as the dot product of those two profiles — without needing that specific cell to have ever been filled in.</button></li>
+        <li><button class="quiz-opt" data-correct="false">Because it requires the matrix to be fully filled in before it can run.</button></li>
+        <li><button class="quiz-opt" data-correct="false">Because it only works on square matrices like PCA.</button></li>
+      </ul>
+      <div class="quiz-explain"><strong>Why:</strong> Matrix factorization learns two much smaller matrices — B for users, C for items — using only the ratings that are actually known. Because these learned profiles generalize across the whole matrix, predicting a missing rating is simply a dot product of the relevant user and item profile vectors, with no need for that exact cell to have ever been observed.</div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="sec-wrap">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">09</span>
+      <h2>Wrap-Up</h2>
+    </div>
+    <div class="prose">
+      <div class="story-frame">
+        <p>Nisha closes her notebook and walks over to her manager's desk. What started as "which products go together in a basket?" has turned into a working plan for personalizing DailyMart's entire app home screen — one customer at a time.</p>
+      </div>
+    </div>
+
+    <div class="recap-grid">
+      <div class="recap-item"><span class="rnum">01</span><p><strong>Market basket analysis</strong> finds product combinations that occur frequently together across all transactions.</p></div>
+      <div class="recap-item"><span class="rnum">02</span><p><strong>Apriori</strong> prunes the search space efficiently: if a small combination isn't frequent, no bigger combination containing it can be either.</p></div>
+      <div class="recap-item"><span class="rnum">03</span><p><strong>Support, confidence and lift</strong> each answer a different question — how common, how predictive, and how meaningful beyond chance a pairing is.</p></div>
+      <div class="recap-item"><span class="rnum">04</span><p><strong>Recommendation systems</strong> predict a personalized score per user-item pair, from a matrix that's almost entirely empty.</p></div>
+      <div class="recap-item"><span class="rnum">05</span><p><strong>Collaborative filtering</strong> — user-user or item-item — works purely off behaviour: "people or items like this."</p></div>
+      <div class="recap-item"><span class="rnum">06</span><p><strong>Cold start</strong> is solved by falling back on content-based filtering — profile attributes instead of history.</p></div>
+      <div class="recap-item"><span class="rnum">07</span><p><strong>Matrix factorization</strong> compresses the giant matrix into compact user and item "profile" vectors, learned via optimization, enabling predictions for cells that were never observed.</p></div>
+      <div class="recap-item"><span class="rnum">08</span><p><strong>PCA and SVD</strong> are closely related dimensionality-reduction ideas — SVD is the more flexible cousin, usable on any rectangular matrix.</p></div>
+    </div>
+  </div>
+</section>
+
+
+</main>
+
+<footer id="site-footer">
+  <div class="wrap">
+    <span class="foot-title">Recommender System 1 post read</span>
+    <p>Built from Nisha's walkthrough of market basket analysis, association rules, and the three main families of recommendation systems — content-based, collaborative filtering, and matrix factorization.</p>
+    <hr class="foot-rule">
+    <a class="back-top" href="#top">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      Back to top
+    </a>
+  </div>
+</footer>
+
+<script>
+(function(){
+
+  /* ---------- progress bar + rail highlighting ---------- */
+  var progressFill = document.getElementById('progressFill');
+  function onScroll(){
+    var scrollTop = window.scrollY;
+    var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    var pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    if(progressFill) progressFill.style.width = pct + '%';
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  var railLinks = document.querySelectorAll('.rail a');
+  var sections = document.querySelectorAll('main > section[id]');
+  if('IntersectionObserver' in window && sections.length){
+    var observer = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        var link = document.querySelector('.rail a[href="#' + entry.target.id + '"]');
+        if(!link) return;
+        if(entry.isIntersecting){
+          railLinks.forEach(function(l){ l.classList.remove('active'); });
+          link.classList.add('active');
+        }
+      });
+    }, {rootMargin: '-40% 0px -50% 0px', threshold: 0});
+    sections.forEach(function(s){ observer.observe(s); });
+  }
+
+  /* ---------- quiz handler ---------- */
+  function markOption(opt, symbol){
+    var m = document.createElement('span');
+    m.className = 'mark';
+    m.textContent = symbol;
+    opt.prepend(m);
+  }
+  document.querySelectorAll('.quiz[data-quiz]').forEach(function(quiz){
+    var opts = quiz.querySelectorAll('.quiz-opt');
+    var explain = quiz.querySelector('.quiz-explain');
+    var answered = false;
+    opts.forEach(function(opt){
+      opt.addEventListener('click', function(){
+        if(answered) return;
+        answered = true;
+        var isCorrect = opt.getAttribute('data-correct') === 'true';
+        opts.forEach(function(o){
+          o.disabled = true;
+          if(o.getAttribute('data-correct') === 'true'){
+            o.classList.add('correct');
+            markOption(o, '✓');
+          } else if(o === opt && !isCorrect){
+            o.classList.add('incorrect');
+            markOption(o, '✗');
+          }
+        });
+        if(explain) explain.classList.add('show');
+      });
+    });
+  });
+
+  /* ---------- playground 1: association rule calculator ---------- */
+  var pgTotal = document.getElementById('pgTotal');
+  var pgX = document.getElementById('pgX');
+  var pgY = document.getElementById('pgY');
+  var pgBoth = document.getElementById('pgBoth');
+
+  function pct(v){ return (v * 100).toFixed(2) + '%'; }
+
+  function updatePlayground1(){
+    if(!pgTotal) return;
+    var total = parseInt(pgTotal.value, 10);
+    var X = parseInt(pgX.value, 10);
+    var Y = parseInt(pgY.value, 10);
+    var bothRaw = parseInt(pgBoth.value, 10);
+    var both = Math.min(bothRaw, X, Y);
+
+    document.getElementById('pgTotalVal').textContent = total.toLocaleString();
+    document.getElementById('pgXVal').textContent = X.toLocaleString();
+    document.getElementById('pgYVal').textContent = Y.toLocaleString();
+    document.getElementById('pgBothVal').textContent = bothRaw.toLocaleString();
+
+    var supX = X / total;
+    var supY = Y / total;
+    var supXY = both / total;
+    var conf = X ? both / X : 0;
+    var lift = supY ? conf / supY : 0;
+    var leverage = supXY - (supX * supY);
+
+    document.getElementById('outSupX').textContent = pct(supX);
+    document.getElementById('outSupY').textContent = pct(supY);
+    document.getElementById('outSupXY').textContent = pct(supXY);
+    document.getElementById('outConf').textContent = pct(conf);
+    document.getElementById('outLift').textContent = lift.toFixed(2);
+    document.getElementById('outLeverage').textContent = leverage.toFixed(3);
+
+    var verdictEl = document.getElementById('pgVerdict');
+    var text, cls;
+    if(lift > 1.3){ text = '🔥 Strongly linked — bought together far more than chance'; cls = 'pos'; }
+    else if(lift >= 0.8 && lift <= 1.3){ text = '😐 No real relationship — roughly independent'; cls = 'neu'; }
+    else { text = '🚫 Negatively linked — buying X makes Y less likely'; cls = 'neg'; }
+    verdictEl.textContent = text;
+    verdictEl.className = 'pg-verdict ' + cls;
+  }
+  [pgTotal, pgX, pgY, pgBoth].forEach(function(el){
+    if(el) el.addEventListener('input', updatePlayground1);
+  });
+  updatePlayground1();
+
+  /* ---------- playground 2: mini recommender ---------- */
+  var riIds = ['riOats','riTea','riChoc','riDiap','riProt','riNoodle'];
+  var riValIds = ['riOatsVal','riTeaVal','riChocVal','riDiapVal','riProtVal','riNoodleVal'];
+  var items = ['Oats', 'Green Tea', 'Chocolate', 'Diapers', 'Protein Bar', 'Instant Noodles'];
+  var customers = {
+    'Health Nut Hema': [5,4,1,0,5,1],
+    'Snack Lover Sam': [1,1,5,0,1,4],
+    'Fitness Freak Farah': [4,5,1,0,4,1],
+    'New Parent Nikhil': [0,0,2,5,0,3],
+    'Busy Parent Priya': [1,1,4,4,1,4]
+  };
+
+  function cosineSim(a, b){
+    var mask = [];
+    var any = false;
+    for(var i = 0; i < a.length; i++){ var m = a[i] > 0 && b[i] > 0; mask.push(m); if(m) any = true; }
+    if(!any) return 0;
+    var dot = 0, na = 0, nb = 0;
+    for(i = 0; i < a.length; i++){
+      if(mask[i]){ dot += a[i]*b[i]; na += a[i]*a[i]; nb += b[i]*b[i]; }
+    }
+    return dot / (Math.sqrt(na) * Math.sqrt(nb) + 1e-9);
+  }
+
+  function updatePlayground2(){
+    var el0 = document.getElementById('riOats');
+    if(!el0) return;
+    var you = riIds.map(function(id){ return parseInt(document.getElementById(id).value, 10); });
+    riValIds.forEach(function(vid, idx){ document.getElementById(vid).textContent = you[idx]; });
+
+    var allZero = you.every(function(v){ return v === 0; });
+    var sims = {};
+    Object.keys(customers).forEach(function(name){ sims[name] = cosineSim(you, customers[name]); });
+    var sorted = Object.keys(sims).sort(function(a,b){ return sims[b] - sims[a]; });
+    var twin = sorted[0];
+
+    document.getElementById('twinName').textContent = allZero ? 'Rate a few items to begin' : ('Your closest taste-twin: ' + twin);
+    document.getElementById('twinSimLbl').textContent = 'similarity score: ' + sims[twin].toFixed(2);
+
+    var barsWrap = document.getElementById('simBars');
+    barsWrap.innerHTML = '';
+    sorted.forEach(function(name){
+      var w = Math.max(0, Math.min(100, sims[name] * 100));
+      var row = document.createElement('div');
+      row.className = 'sim-bar-row';
+      var nameSpan = document.createElement('span');
+      nameSpan.textContent = name;
+      var track = document.createElement('span');
+      track.className = 'sim-bar-track';
+      var fill = document.createElement('span');
+      fill.className = 'sim-bar-fill';
+      fill.style.width = w + '%';
+      track.appendChild(fill);
+      var valSpan = document.createElement('span');
+      valSpan.textContent = sims[name].toFixed(2);
+      row.appendChild(nameSpan); row.appendChild(track); row.appendChild(valSpan);
+      barsWrap.appendChild(row);
+    });
+
+    var twinRatings = customers[twin];
+    var candidates = [];
+    for(var i = 0; i < items.length; i++){
+      if(you[i] === 0){ candidates.push([items[i], twinRatings[i]]); }
+    }
+    var recEl = document.getElementById('twinRec');
+    if(allZero){
+      recEl.textContent = 'Your recommendation will appear here once your ratings overlap with a customer.';
+    } else if(candidates.length === 0){
+      recEl.textContent = "You've rated everything your twin has — no new item to suggest!";
+    } else {
+      candidates.sort(function(a,b){ return b[1]-a[1]; });
+      if(candidates[0][1] > 0){
+        recEl.innerHTML = 'Recommended for you: <span class="rec-item">' + candidates[0][0] + '</span> — the item your twin rated highly that you haven\'t tried yet.';
+      } else {
+        recEl.textContent = "No strong recommendation yet — your twin hasn't rated your unrated items highly either.";
+      }
+    }
+  }
+  riIds.forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.addEventListener('input', updatePlayground2);
+  });
+  updatePlayground2();
+
+  /* ---------- sparse matrix visualization ---------- */
+  function renderSparseMatrix(){
+    var wrap = document.getElementById('sparseMatrixWrap');
+    if(!wrap) return;
+    var cols = 44, rows = 12, w = 720, h = 190;
+    var cellW = w / cols, cellH = h / rows;
+    var seed = 42;
+    function rand(){ seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    var parts = ['<svg viewBox="0 0 ' + w + ' ' + (h + 28) + '" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">'];
+    parts.push('<text x="0" y="12" font-family="IBM Plex Mono, monospace" font-size="11" fill="#7c8a76">users ↓ · items →</text>');
+    for(var r = 0; r < rows; r++){
+      for(var c = 0; c < cols; c++){
+        var cx = (c * cellW + cellW/2).toFixed(1);
+        var cy = (r * cellH + cellH/2 + 24).toFixed(1);
+        var filled = rand() < 0.035;
+        parts.push('<circle cx="' + cx + '" cy="' + cy + '" r="2.6" fill="' + (filled ? '#1c6b45' : '#dbe3d3') + '" />');
+      }
+    }
+    parts.push('</svg>');
+    wrap.innerHTML = parts.join('');
+  }
+  renderSparseMatrix();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Recommender-Systems-1" target="_blank" rel="noopener">github.com/scaler-content/Recommender-Systems-1</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

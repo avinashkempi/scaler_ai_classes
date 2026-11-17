@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gaussian Mixture Models  post read</title>
+<style>
+:root{
+  --bg:#fafaf9;--panel:#ffffff;--alt:#f4f4f5;--line:#d4d4d8;--ink:#18181b;--body:#3f3f46;--muted:#62626b;
+  --or:#ea580c;--or-d:#c2410c;--or-l:#fed7aa;--or-xl:#fff7ed;--ch:#27272a;--gr:#a1a1aa;
+  --r:14px;--shadow:0 1px 2px rgba(24,24,27,.06),0 6px 20px rgba(24,24,27,.05);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--body);font:17px/1.7 Georgia,"Iowan Old Style","Times New Roman",serif}
+h1,h2,h3,h4,nav,.ui,button,label,table,.tag,.stat,summary,input{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--or-d)}
+:focus-visible{outline:3px solid var(--or);outline-offset:2px;border-radius:4px}
+#bar{position:fixed;top:0;left:0;height:3px;width:0;background:var(--or);z-index:60}
+nav{position:sticky;top:0;z-index:50;background:rgba(250,250,249,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav .in{max-width:1000px;margin:auto;display:flex;align-items:center;gap:6px;padding:10px 20px;overflow-x:auto;white-space:nowrap}
+nav b{color:var(--ink);font-size:14px;margin-right:10px}
+nav a{font-size:13px;text-decoration:none;color:var(--muted);padding:5px 10px;border-radius:99px}
+nav a:hover,nav a.on{background:var(--ink);color:#fff}
+header.hero{background:linear-gradient(135deg,#27272a 0%,#3f3f46 100%);color:#fff;padding:84px 20px 76px;position:relative;overflow:hidden}
+header.hero:after{content:"";position:absolute;right:-90px;top:-90px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(234,88,12,.85),rgba(234,88,12,0) 68%)}
+.hero .in{max-width:820px;margin:auto;position:relative;z-index:1}
+.tag{display:inline-block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#fdba74;font-weight:700}
+.hero h1{font-size:clamp(34px,6vw,58px);line-height:1.08;margin:14px 0 18px;letter-spacing:-.02em}
+.hero p{font-size:20px;color:#e4e4e7;max-width:640px;margin:0}
+main{max-width:820px;margin:auto;padding:0 20px 40px}
+section{padding:56px 0 8px}
+section>.kick{font:700 12px system-ui;letter-spacing:.14em;text-transform:uppercase;color:var(--or-d)}
+h2{font-size:clamp(26px,4vw,36px);line-height:1.2;color:var(--ink);margin:6px 0 18px;letter-spacing:-.01em}
+h3{font-size:21px;color:var(--ink);margin:30px 0 8px}
+p{margin:0 0 16px}
+.lead{font-size:19px;color:var(--ink)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:22px;margin:24px 0}
+.card h4{margin:0 0 4px;font-size:16px;color:var(--ink)}
+.card .cap{font:14px/1.5 system-ui;color:var(--muted);margin:0 0 14px}
+.story{border-left:5px solid var(--or);background:var(--or-xl);border-radius:0 var(--r) var(--r) 0;padding:22px 24px;margin:20px 0}
+.story blockquote{margin:12px 0;padding:0 0 0 16px;border-left:3px solid var(--or-l);color:var(--ink);font-style:italic}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.mini{background:var(--alt);border-radius:12px;padding:16px;font:15px/1.5 system-ui}
+.mini b{display:block;color:var(--ink);margin-bottom:4px}
+.mini .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--or);color:#fff;font-weight:700;font-size:13px;margin-bottom:8px}
+.formula{background:var(--ch);color:#f4f4f5;border-radius:12px;padding:18px 20px;margin:18px 0;overflow-x:auto;font:italic 19px/1.8 "Cambria Math",Cambria,Georgia,serif;text-align:center}
+.formula small{display:block;font:13px system-ui;color:#d4d4d8;font-style:normal;margin-top:6px}
+.formula em{color:#fdba74}
+.call{border:1px solid var(--or-l);background:var(--or-xl);border-radius:12px;padding:14px 18px;margin:18px 0;font:15px/1.6 system-ui;color:var(--ink)}
+.call b{color:var(--or-d)}
+.stats{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:18px 0}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.stat .v{font-size:28px;font-weight:800;color:var(--ink);line-height:1.1}
+.stat .v.o{color:var(--or-d)}
+.stat .l{font-size:13px;color:var(--muted);margin-top:4px}
+canvas{display:block;width:100%;border-radius:10px;background:#fff;border:1px solid var(--line)}
+.ctrls{display:grid;gap:10px 18px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-top:14px;font:14px system-ui}
+.ctrls label{display:block;color:var(--ink);font-weight:600}
+.ctrls label span{float:right;color:var(--or-d);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--or)}
+input[type=number]{width:100%;padding:8px 10px;border:1px solid var(--gr);border-radius:8px;font-size:15px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--alt);padding:4px;border-radius:99px;margin-bottom:12px}
+.seg button,.btn{font-size:14px;font-weight:600;border:0;background:transparent;color:var(--body);padding:7px 14px;border-radius:99px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.btn{background:var(--or);color:#fff;border-radius:10px}
+.btn:hover{background:var(--or-d)}
+.btn.ghost{background:var(--alt);color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font:13px system-ui;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.read{font:14px/1.6 system-ui;color:var(--ink);background:var(--alt);border-radius:10px;padding:10px 14px;margin-top:12px;min-height:44px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--alt);color:var(--ink);font-weight:700}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff;margin:16px 0}
+.tw table{min-width:520px}
+.tw tr:last-child td{border-bottom:0}
+.sb{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--alt);min-width:120px}
+.sb span{display:block;height:100%}
+.c0{background:var(--or)}.c1{background:var(--ch)}.c2{background:var(--gr)}
+details{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin:16px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:700;font-size:15px;color:var(--ink)}
+details[open] summary{border-bottom:1px solid var(--line)}
+pre{margin:0;padding:16px;overflow-x:auto;background:#27272a;color:#f4f4f5;border-radius:0 0 12px 12px;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace}
+pre.out{background:#3f3f46;color:#fed7aa;border-radius:0;border-top:1px solid #52525b}
+.q{border:1px solid var(--line);border-left:5px solid var(--or);border-radius:12px;background:#fff;padding:18px 20px;margin:26px 0}
+.q .qh{font:700 12px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--or-d)}
+.q p.qt{font:600 17px/1.5 system-ui;color:var(--ink);margin:6px 0 12px}
+.q button.o{display:block;width:100%;text-align:left;font:15px/1.45 system-ui;color:var(--ink);background:var(--alt);border:2px solid transparent;border-radius:10px;padding:11px 14px;margin:8px 0;cursor:pointer}
+.q button.o:hover:not(:disabled){border-color:var(--gr)}
+.q button.o.ok{border-color:var(--ch);background:#e4e4e7}
+.q button.o.bad{border-color:var(--or);background:var(--or-xl)}
+.q .fb{font:15px/1.6 system-ui;margin-top:10px;display:none;padding:12px 14px;border-radius:10px;background:var(--alt);color:var(--ink)}
+.q .fb b{color:var(--or-d)}
+.flow{display:block;margin:auto;max-width:100%}
+ul.chk{list-style:none;padding:0;margin:0}
+ul.chk li{position:relative;padding:10px 0 10px 34px;border-bottom:1px solid var(--line);font-size:16.5px}
+ul.chk li:before{content:"";position:absolute;left:4px;top:17px;width:14px;height:14px;border-radius:4px;background:var(--or)}
+footer{background:var(--ch);color:#d4d4d8;text-align:center;padding:34px 20px;font:14px system-ui;margin-top:40px}
+footer b{color:#fff;display:block;font-size:16px;margin-bottom:4px}
+@media(max-width:600px){body{font-size:16px}.card{padding:16px}header.hero{padding:60px 20px 54px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· DSML Unsupervised 6 · Gaussian mixture models</span><span class="pn"><a href="../DSML-UnSL-5/" title="DSML Unsupervised 5 · K-Means++ and choosing K">← Prev</a><a href="../DSML-UnSL-7/" title="DSML Unsupervised 7 · Hierarchical clustering">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="bar"></div>
+<nav aria-label="Sections"><div class="in" id="nav"><b>GMM</b></div></nav>
+
+<header class="hero"><div class="in">
+  <span class="tag">Clustering with probability</span>
+  <h1>Gaussian Mixture Models&nbsp; post read</h1>
+  <p>Why hard, round clusters are not enough, and how a weighted sum of Gaussians lets us say <em>"55% this segment, 45% that one"</em>.</p>
+</div></header>
+
+<main>
+
+<section id="story" data-t="Story">
+  <div class="kick">The problem</div>
+  <h2>The customer who lived in two segments</h2>
+  <div class="story">
+    <p><b>ShopSphere</b> is an online marketplace with millions of shoppers. Last year, a consulting team segmented its customers with K-Means into three groups: <em>Bargain Hunters</em>, <em>Regulars</em> and <em>Big Spenders</em>.</p>
+    <p>Anjali, a data scientist who joined this month, sits with Vikram, the head of customer relations.</p>
+    <blockquote>"Look at Shreya. She buys heavily discounted kitchen basics every other week. But last month she also bought an expensive air fryer. The model says she is a Bargain Hunter, 100%. So our recommendation engine only shows her cheap items."</blockquote>
+    <blockquote>"And on your scatter plots the groups look like tilted, stretched clouds, but the segments look like round balls drawn over them."</blockquote>
+    <p>K-Means asked one question: <em>which centroid is nearest?</em> It then forced every customer into exactly <b>one</b> segment, with no sense of confidence, and it only knows how to draw round clusters.</p>
+  </div>
+  <p class="lead">What Vikram needs is a model that says <b>Shreya is 55% Bargain Hunter and 45% Big Spender</b>, and that can draw clusters in the shapes the data actually has. That model is the <b>Gaussian Mixture Model (GMM)</b>.</p>
+</section>
+
+<section id="kmeans" data-t="K-Means limits">
+  <div class="kick">1 · Recap</div>
+  <h2>Where K-Means struggles</h2>
+  <p>K-Means starts with K centroids, <b>assigns</b> every point to the nearest one, and <b>recomputes</b> centroids until nothing changes. Because its objective sums squared distances to a centroid, it implicitly assumes <b>round, similarly sized</b> clusters, and it gives each point <b>one</b> label. Three problems follow:</p>
+  <div class="grid g3">
+    <div class="mini"><span class="n">1</span><b>Globular clusters only</b>Elongated or tilted clusters get cut by straight boundaries.</div>
+    <div class="mini"><span class="n">2</span><b>Similar sizes and spreads</b>K-Means tends to produce clusters of comparable width.</div>
+    <div class="mini"><span class="n">3</span><b>Hard clustering</b>A border point gets the same unqualified label as a point deep inside a group.</div>
+  </div>
+
+  <div class="card">
+    <h4>Same data, three views</h4>
+    <p class="cap">Three clusters of 500 points each: one tilted upward (covariance 0.9), one round, one tilted downward (covariance −0.8). Switch views to compare the true groups, K-Means, and a GMM. This is a fresh simulation using the same recipe, computed live in your browser.</p>
+    <div class="seg" role="group" aria-label="View">
+      <button data-v="truth" aria-pressed="true">True groups</button>
+      <button data-v="km" aria-pressed="false">K-Means (k=3)</button>
+      <button data-v="gmm" aria-pressed="false">GMM (k=3)</button>
+    </div>
+    <canvas id="cvTilt" role="img" aria-label="Scatter plot of three clusters, two of them tilted in opposite directions, coloured by the selected method"></canvas>
+    <div class="legend"><span><i class="c0"></i>cluster A</span><span><i class="c1"></i>cluster B</span><span><i class="c2"></i>cluster C</span><span id="tiltNote">Red X = K-Means centroids · red ellipses = fitted Gaussians (2 std)</span></div>
+    <div class="read" id="tiltRead" aria-live="polite"></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="v">0.912</div><div class="l">K-Means agreement with truth (ARI, 1 = perfect), lecture run</div></div>
+    <div class="stat"><div class="v o">0.99</div><div class="l">GMM agreement with truth (ARI), lecture run</div></div>
+  </div>
+  <p>K-Means draws straight boundaries midway between centroids. Where two tilted clouds are close, points from one cloud end up in the neighbouring segment. These tilted clouds are exactly the "round balls" complaint from the story.</p>
+  <details><summary>Code: build the data and fit K-Means</summary>
+<pre>rs = np.random.RandomState(21)
+n = 500
+X1 = rs.multivariate_normal([-2, 2], [[1, 0.9], [0.9, 1]], n)      # strong positive correlation
+X2 = rs.multivariate_normal([5, 5],  [[1, 0.0], [0.0, 1]], n)      # round
+X3 = rs.multivariate_normal([-5, 5], [[1, -0.8], [-0.8, 1]], n)    # negative correlation
+X_syn = np.vstack([X1, X2, X3])
+y_syn = np.repeat([0, 1, 2], n)
+
+km_syn = KMeans(n_clusters=3, n_init=10, random_state=42).fit(X_syn)
+adjusted_rand_score(y_syn, km_syn.labels_)   # 0.912</pre></details>
+</section>
+
+<section id="soft" data-t="Hard vs soft">
+  <div class="kick">2 · The second problem</div>
+  <h2>Hard vs soft clustering</h2>
+  <p><b>Hard clustering:</b> every point belongs to exactly one cluster. K-Means is hard.<br>
+     <b>Soft clustering:</b> every point gets a <b>probability for each cluster</b>, and the probabilities add up to 1.</p>
+  <div class="tw"><table><thead><tr><th>Segment</th><th>Shreya's probability</th></tr></thead><tbody>
+    <tr><td>Bargain Hunters</td><td>0.55</td></tr><tr><td>Big Spenders</td><td>0.45</td></tr><tr><td>Regulars</td><td>0.00</td></tr></tbody></table></div>
+  <p>With the hard label, ShopSphere sees "Bargain Hunter". With the soft one, it sees <b>a customer on the border</b> and can show her items from both worlds.</p>
+
+  <div class="card">
+    <h4>Slide a customer between two segments</h4>
+    <p class="cap">An illustrative one-dimensional "spending style" axis with two equally sized, equally wide segments. Move the customer and watch the hard label jump while the soft probabilities change smoothly.</p>
+    <canvas id="cvHS" role="img" aria-label="Two bell curves for Bargain Hunters and Big Spenders with a movable customer marker"></canvas>
+    <div class="ctrls"><label>Customer position <span id="hsV"></span><input id="hsX" type="range" min="-4" max="4" step="0.05" value="0.2"></label></div>
+    <div class="grid g2" style="margin-top:14px">
+      <div><div class="ui" style="font-size:13px;font-weight:700;color:var(--ink)">Hard (K-Means style)</div><div class="sb" id="hsHard" role="img" aria-label="Hard assignment bar"></div><div class="ui" id="hsHardT" style="font-size:13px;color:var(--muted);margin-top:4px"></div></div>
+      <div><div class="ui" style="font-size:13px;font-weight:700;color:var(--ink)">Soft (GMM style)</div><div class="sb" id="hsSoft" role="img" aria-label="Soft assignment bar"></div><div class="ui" id="hsSoftT" style="font-size:13px;color:var(--muted);margin-top:4px"></div></div>
+    </div>
+  </div>
+  <div class="q" data-q="0"></div>
+  <p>K-Means cannot give probabilities. To get them, we need a model with a <b>notion of probability</b>. That model is built from <b>Gaussian distributions</b>, so let's refresh them.</p>
+</section>
+
+<section id="gauss" data-t="Gaussians">
+  <div class="kick">3 · Building block</div>
+  <h2>Gaussians, refreshed</h2>
+  <h3>The 1D Gaussian</h3>
+  <p>Heights of people across a country pile up around the average and thin out symmetrically on both sides. This bell curve is the <b>Gaussian (normal) distribution</b>:</p>
+  <div class="formula">𝒩(x | <em>μ</em>, <em>σ</em>²) = <span style="white-space:nowrap">1 / (<em>σ</em>√(2π))</span> · exp( −(x − <em>μ</em>)² / (2<em>σ</em>²) )</div>
+  <ul>
+    <li>The <b>height of the curve at x</b> is the <b>likelihood</b> (density) of that value.</li>
+    <li><b>μ (mean)</b> sets the <b>position</b>. Changing it slides the curve without changing its shape.</li>
+    <li><b>σ (standard deviation)</b> sets the <b>shape</b>. Larger σ gives a flatter, wider curve; smaller σ gives a tall, narrow one.</li>
+  </ul>
+  <div class="card">
+    <h4>1D Gaussian explorer</h4>
+    <p class="cap">Move μ and σ and watch what each one controls.</p>
+    <canvas id="cv1d" role="img" aria-label="A Gaussian bell curve that changes with mean and standard deviation"></canvas>
+    <div class="ctrls">
+      <label>Mean μ <span id="g1m"></span><input id="g1mu" type="range" min="-4" max="4" step="0.1" value="0"></label>
+      <label>Std dev σ <span id="g1s"></span><input id="g1sg" type="range" min="0.4" max="3" step="0.05" value="1"></label>
+    </div>
+    <div class="read" id="g1r" aria-live="polite"></div>
+  </div>
+
+  <h3>The 2D Gaussian</h3>
+  <p>With two variables x = (x₁, x₂), the bell becomes a <b>hill</b>:</p>
+  <div class="formula">𝒩(x | <em>μ</em>, <em>Σ</em>) = 1 / ((2π)<sup>d/2</sup> |<em>Σ</em>|<sup>1/2</sup>) · exp( −½ (x − <em>μ</em>)ᵀ <em>Σ</em>⁻¹ (x − <em>μ</em>) ),  d = 2</div>
+  <ul>
+    <li><b>μ</b> is now a <b>vector</b> with two entries; it moves the hill along both axes.</li>
+    <li><b>Σ</b> is a <b>2×2 covariance matrix</b>. Its diagonal holds the two variances (width along each axis). Its off-diagonal holds the <b>covariance</b> (how the two variables move together).</li>
+    <li>Seen from above, the hill gives <b>contour lines</b>: rings of equal likelihood. Equal variances and no covariance give circles. Unequal variances stretch them into ellipses. A non-zero covariance <b>tilts</b> the ellipse.</li>
+  </ul>
+  <p>All points on one ring have the same likelihood, and inner rings have higher likelihood than outer rings.</p>
+  <div class="card">
+    <h4>2D Gaussian explorer</h4>
+    <p class="cap">Rings mark 1, 2 and 3 standard deviations. Try the presets, then tune each parameter.</p>
+    <div class="seg" role="group" aria-label="Presets" id="pre2">
+      <button data-p="0">Identity</button><button data-p="1">Shifted mean</button><button data-p="2">Wider along x</button><button data-p="3">Tilted (cov 0.8)</button>
+    </div>
+    <canvas id="cv2d" role="img" aria-label="Contour rings of a two-dimensional Gaussian that change with mean, variance and covariance"></canvas>
+    <div class="ctrls">
+      <label>Mean μ₁ <span id="a1"></span><input id="mx" type="range" min="-3" max="3" step="0.1" value="0"></label>
+      <label>Mean μ₂ <span id="a2"></span><input id="my" type="range" min="-3" max="3" step="0.1" value="0"></label>
+      <label>Variance of x₁ <span id="a3"></span><input id="vx" type="range" min="0.3" max="4" step="0.1" value="1"></label>
+      <label>Variance of x₂ <span id="a4"></span><input id="vy" type="range" min="0.3" max="4" step="0.1" value="1"></label>
+      <label>Covariance <span id="a5"></span><input id="cxy" type="range" min="-2" max="2" step="0.05" value="0"></label>
+    </div>
+    <div class="read" id="g2r" aria-live="polite"></div>
+  </div>
+  <div class="q" data-q="1"></div>
+  <div class="call"><b>Takeaway.</b> A Gaussian can be placed anywhere and shaped as any (possibly tilted) ellipse using μ and Σ. That is exactly the flexibility K-Means lacks.</div>
+</section>
+
+<section id="mix" data-t="Mixture idea">
+  <div class="kick">4 · The model</div>
+  <h2>One Gaussian per cluster</h2>
+  <p>Consider <b>minutes spent per shopping session</b> at ShopSphere. Some visits are quick check-ins (a few minutes) and others are long browsing sessions, so a histogram has <b>two humps</b>.</p>
+  <ul>
+    <li><b>One Gaussian</b> over the whole histogram sits between the humps and describes neither group.</li>
+    <li><b>Two Gaussians</b>, one per hump, each with its own mean and spread, describe the data well.</li>
+  </ul>
+  <p>That is the <b>Gaussian Mixture Model</b>:</p>
+  <div class="formula">p(x) = Σ<sub>k=1..K</sub> <em>π</em><sub>k</sub> 𝒩(x | <em>μ</em><sub>k</sub>, <em>Σ</em><sub>k</sub>),  <em>π</em><sub>k</sub> ≥ 0,  Σ<sub>k</sub> <em>π</em><sub>k</sub> = 1</div>
+  <ul>
+    <li>Each component k is a Gaussian that stands for <b>one cluster</b>.</li>
+    <li><b>π<sub>k</sub></b> is the <b>mixing weight</b>: the share of the data in cluster k. A bigger cluster has a larger π<sub>k</sub>.</li>
+    <li>A point is assigned according to <b>how likely that cluster's Gaussian makes it</b>, weighted by π<sub>k</sub>. This gives soft assignments.</li>
+  </ul>
+  <div class="card">
+    <h4>Mixture builder</h4>
+    <p class="cap">1,000 simulated sessions from two hidden groups. Compare one Gaussian with a two-component mixture, then change the weight to see how the mixture's shape depends on π.</p>
+    <div class="seg" role="group" aria-label="Model"><button data-m="1" aria-pressed="false">One Gaussian</button><button data-m="2" aria-pressed="true">Two Gaussians</button></div>
+    <canvas id="cvMix" role="img" aria-label="Histogram of session minutes with fitted Gaussian curves"></canvas>
+    <div class="legend"><span><i style="background:#d4d4d8"></i>data</span><span><i class="c0"></i>quick-visit Gaussian × π</span><span><i class="c1"></i>browsing Gaussian × (1−π)</span><span>dashed = mixture</span></div>
+    <div class="ctrls"><label>Weight of quick-visit component π₁ <span id="mwV"></span><input id="mw" type="range" min="0.05" max="0.95" step="0.01" value="0.4"></label></div>
+    <div class="read" id="mixR" aria-live="polite"></div>
+  </div>
+  <p>As with K-Means, we must choose the number of components K before fitting. A principled way comes later.</p>
+  <p><b>But how do we find the right means, spreads and weights without labels?</b> If we knew which Gaussian each point came from, we could compute each group's mean and spread. If we knew the Gaussians, we could compute which one each point most likely came from. We know neither: a chicken-and-egg problem that <b>Expectation-Maximisation (EM)</b> solves by alternating.</p>
+</section>
+
+<section id="em" data-t="EM">
+  <div class="kick">5 · Fitting</div>
+  <h2>Expectation-Maximisation: alternating guesses</h2>
+  <p>Start with a rough guess for the Gaussians, then alternate between (1) using the Gaussians to <b>guess each point's membership</b> (soft), and (2) using those soft memberships to <b>improve the Gaussians</b>, until nothing changes much.</p>
+
+  <div class="card">
+    <svg class="flow" viewBox="0 0 640 250" role="img" aria-label="EM loop: E-step computes responsibilities from the Gaussians, M-step updates mu, Sigma and pi from the responsibilities, repeating until log-likelihood stops improving">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#27272a"/></marker></defs>
+      <rect x="170" y="14" width="300" height="74" rx="14" fill="#ea580c"/>
+      <text x="320" y="44" text-anchor="middle" fill="#fff" font-family="system-ui" font-weight="700" font-size="17">E-step</text>
+      <text x="320" y="68" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="13.5">given the Gaussians, compute responsibility r_ik</text>
+      <rect x="170" y="160" width="300" height="74" rx="14" fill="#27272a"/>
+      <text x="320" y="190" text-anchor="middle" fill="#fff" font-family="system-ui" font-weight="700" font-size="17">M-step</text>
+      <text x="320" y="214" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="13.5">given r_ik, update μ, Σ, π (weighted averages)</text>
+      <path d="M470 51 C590 51 590 197 472 197" fill="none" stroke="#27272a" stroke-width="2.5" marker-end="url(#ar)"/>
+      <path d="M170 197 C50 197 50 51 168 51" fill="none" stroke="#27272a" stroke-width="2.5" marker-end="url(#ar)"/>
+      <text x="320" y="130" text-anchor="middle" font-family="system-ui" font-size="13" fill="#62626b">repeat until the log-likelihood stops improving</text>
+    </svg>
+  </div>
+
+  <h3>Step 0: Initialise</h3>
+  <p>Choose starting values for each component's mean μ<sub>k</sub>, variance Σ<sub>k</sub> and weight π<sub>k</sub>. A simple choice: take K random data points as the means, give every component the data's overall variance, and set all weights to 1/K. (sklearn initialises from K-Means by default.)</p>
+
+  <h3>Step 1: E-step, "how responsible is each Gaussian for this point?"</h3>
+  <p>For every point x<sub>i</sub> and component k, compute the <b>responsibility</b>:</p>
+  <div class="formula">r<sub>ik</sub> = <em>π</em><sub>k</sub> 𝒩(x<sub>i</sub> | <em>μ</em><sub>k</sub>, <em>Σ</em><sub>k</sub>) / Σ<sub>j=1..K</sub> <em>π</em><sub>j</sub> 𝒩(x<sub>i</sub> | <em>μ</em><sub>j</sub>, <em>Σ</em><sub>j</sub>)<small>the denominator normalises, so each point's responsibilities add up to 1</small></div>
+  <div class="call"><b>Why normalise, and why the weights π<sub>k</sub>?</b> The chance that a random Indian is in Delhi is small, and in New York even smaller, and the two numbers do not add up to 1. <i>If we know the person is in one of the two cities</i>, we divide each by their sum. Delhi gets a much larger share, partly because many more people live there. In a GMM that "how many people live there" is the <b>weight π<sub>k</sub></b>: a big cluster is a priori more likely to claim a point.</div>
+  <div class="card">
+    <h4>Responsibility calculator</h4>
+    <p class="cap">Two clusters, one point. Edit the weights and densities.</p>
+    <div class="ctrls" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+      <label>Weight π<sub>A</sub><input id="rpa" type="number" step="0.05" min="0" max="1" value="0.2"></label>
+      <label>Density A<input id="rda" type="number" step="0.05" min="0" value="0.30"></label>
+      <label>Weight π<sub>B</sub><input id="rpb" type="number" step="0.05" min="0" max="1" value="0.8"></label>
+      <label>Density B<input id="rdb" type="number" step="0.05" min="0" value="0.10"></label>
+    </div>
+    <p style="margin:12px 0 0"><label class="ui" style="font-size:14px"><input type="checkbox" id="rig"> Ignore the weights (the common mistake)</label></p>
+    <div class="grid g2" style="margin-top:12px">
+      <div><div class="ui" style="font-size:13px;font-weight:700">Cluster A responsibility</div><div class="sb"><span class="c0" id="rbA"></span></div></div>
+      <div><div class="ui" style="font-size:13px;font-weight:700">Cluster B responsibility</div><div class="sb"><span class="c1" id="rbB"></span></div></div>
+    </div>
+    <div class="read" id="rR" aria-live="polite"></div>
+  </div>
+
+  <h3>Step 2: M-step, "refit each Gaussian using its share of every point"</h3>
+  <p>With N<sub>k</sub> = Σ<sub>i</sub> r<sub>ik</sub> (the effective number of points in cluster k):</p>
+  <div class="formula"><em>μ</em><sub>k</sub> = (1/N<sub>k</sub>) Σ<sub>i</sub> r<sub>ik</sub> x<sub>i</sub> <br> <em>Σ</em><sub>k</sub> = (1/N<sub>k</sub>) Σ<sub>i</sub> r<sub>ik</sub> (x<sub>i</sub> − <em>μ</em><sub>k</sub>)(x<sub>i</sub> − <em>μ</em><sub>k</sub>)ᵀ <br> <em>π</em><sub>k</sub> = N<sub>k</sub> / N</div>
+  <p>These are <b>weighted</b> averages. A point that is 90% responsible to cluster k pulls on μ<sub>k</sub> nine times harder than a point that is 10% responsible.</p>
+  <h3>Step 3: Repeat until convergence</h3>
+  <p>Each EM round <b>never decreases</b> the log-likelihood of the data, so the procedure converges. Like K-Means, it reaches a <b>local</b> optimum, not necessarily the best one.</p>
+  <div class="q" data-q="2"></div>
+
+  <h3>Watch EM learn, from scratch</h3>
+  <p>The same two hidden groups as before: 400 quick visits (average 3 minutes) and 600 long browsing sessions (average 10 minutes). EM is never told this. Step through its iterations below. The run is computed live from a freshly simulated dataset, so exact digits differ slightly from the lecture notebook.</p>
+  <div class="card">
+    <h4>EM stepper</h4>
+    <p class="cap">Grey bars: data. Coloured curves: the two fitted Gaussians scaled by their weights. Dashed: their sum.</p>
+    <canvas id="cvEM" role="img" aria-label="Histogram of session minutes with two Gaussian curves evolving across EM iterations"></canvas>
+    <div class="ctrls">
+      <label>Iteration <span id="emIV"></span><input id="emI" type="range" min="0" max="10" step="1" value="0"></label>
+      <label>Probe a session of … minutes <span id="emXV"></span><input id="emX" type="range" min="0" max="16" step="0.1" value="6"></label>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="emPlay">▶ Play</button><button class="btn ghost" id="emReset">Reset</button></div>
+    <div class="read" id="emR" aria-live="polite"></div>
+    <h4 style="margin-top:18px">Log-likelihood by iteration</h4>
+    <canvas id="cvLL" role="img" aria-label="Line chart of log-likelihood rising and flattening across EM iterations"></canvas>
+  </div>
+  <div class="grid g3">
+    <div class="mini"><b>It only goes up</b>The log-likelihood rises at every iteration, then flattens. That is EM converging.</div>
+    <div class="mini"><b>No labels needed</b>Final means land near 3 and 10 and weights near 0.4 and 0.6, without EM ever seeing a label.</div>
+    <div class="mini"><b>Borderline sessions</b>A session between the humps (about 6 minutes) gets a soft split such as roughly 50/50. Probe it above.</div>
+  </div>
+  <details><summary>Code: EM for a 1D mixture</summary>
+<pre>def normal_pdf(x, mu, sigma):
+    return np.exp(-0.5 * ((x - mu) / sigma) ** 2) / (sigma * np.sqrt(2 * np.pi))
+
+def em_1d(x, k=2, n_iter=100, seed=0, tol=1e-8):
+    rs = np.random.RandomState(seed)
+    mu = rs.choice(x, k, replace=False)               # step 0: random data points as means
+    sigma = np.full(k, x.std())                       #         overall spread for every component
+    pi = np.full(k, 1.0 / k)                          #         equal weights
+    history = []
+    for it in range(n_iter):
+        # E-step: r_ik = pi_k N(x_i | mu_k, sigma_k) / sum_j pi_j N(x_i | mu_j, sigma_j)
+        dens = np.stack([pi[j] * normal_pdf(x, mu[j], sigma[j]) for j in range(k)], axis=1)
+        total = dens.sum(axis=1, keepdims=True)
+        resp = dens / total
+        loglik = np.log(total).sum()
+        history.append((mu.copy(), sigma.copy(), pi.copy(), loglik))
+        # M-step: weighted updates
+        Nk = resp.sum(axis=0)
+        mu = (resp * x[:, None]).sum(axis=0) / Nk
+        sigma = np.maximum(np.sqrt((resp * (x[:, None] - mu) ** 2).sum(axis=0) / Nk), 1e-3)
+        pi = Nk / len(x)
+        if it &gt; 0 and abs(loglik - history[-2][3]) &lt; tol:
+            break
+    return mu, sigma, pi, resp, history</pre>
+<pre class="out">Fitted means   : [ 3.06 10.1 ]   (true: 3, 10)
+Fitted std devs: [1.01 1.95]   (true: 1, 2)
+Fitted weights : [0.4 0.6]   (true: 0.4, 0.6)
+Converged after 43 iterations   (lecture notebook run)</pre></details>
+  <div class="call"><b>Local optima.</b> Like K-Means, EM can end in a poor local optimum, for example two components sitting on one hump. That is why sklearn offers several restarts (<code>n_init</code>) and initialises from K-Means by default.</div>
+</section>
+
+<section id="shop" data-t="Real customers">
+  <div class="kick">6 · In practice</div>
+  <h2>GMM on real ShopSphere customers</h2>
+  <p>Apply the GMM to the customer behaviour data: each row is a customer with an identifier plus numeric features such as clicks, visits and spend. The plan: drop the identifier and <b>standardise</b> (Gaussians are fitted on variances, so features need comparable scales); fit a 3-component GMM; inspect soft assignments; choose the number of components with BIC.</p>
+  <div class="stats">
+    <div class="stat"><div class="v">2,500</div><div class="l">customers</div></div>
+    <div class="stat"><div class="v">6</div><div class="l">numeric features</div></div>
+    <div class="stat"><div class="v">7</div><div class="l">EM iterations to converge</div></div>
+    <div class="stat"><div class="v o">28 / 31 / 41%</div><div class="l">mixing weights (cluster shares)</div></div>
+  </div>
+  <details><summary>Code: standardise and fit</summary>
+<pre>df = pd.read_csv("E-commerce.csv")
+features = df.drop(columns=["ID"]).select_dtypes("number")
+Xs = StandardScaler().fit_transform(features.values)
+
+# 3 components, full covariance (tilted ellipses allowed), 10 restarts, keep the best
+gmm = GaussianMixture(n_components=3, covariance_type="full", n_init=10, random_state=42).fit(Xs)
+print("Mixing weights (cluster shares):", gmm.weights_.round(3))   # [0.28 0.31 0.41]</pre></details>
+
+  <h3>Soft assignments</h3>
+  <p><code>predict_proba</code> gives every customer one probability per segment, each row summing to 1. From it we derive <code>hard</code> (the most likely segment) and <code>conf</code> (the highest probability, i.e. how sure the model is). This table is what K-Means could not give us.</p>
+  <div class="card">
+    <h4>First 5 customers</h4>
+    <p class="cap">Each bar is one customer; segment colours are consistent across the post.</p>
+    <div class="tw"><table id="tProb"></table></div>
+    <div class="legend"><span><i class="c0"></i>seg 0</span><span><i class="c1"></i>seg 1</span><span><i class="c2"></i>seg 2</span></div>
+  </div>
+
+  <h3>Finding the Shreyas</h3>
+  <p>Only <b>2.4%</b> of customers have a top probability below 70%. The five least certain ones sit almost evenly between segment 0 and segment 2, like Shreya in the story.</p>
+  <div class="card">
+    <h4>The 5 most uncertain customers</h4>
+    <div class="tw"><table id="tUnc"></table></div>
+  </div>
+  <p>The <b>uncertain customers</b> sit in the overlap zones between segments: people whose behaviour blends two segments. In a PCA view (a 2D squash of the 6 features) they appear as the borders between segments, while segment cores are confident. PCA shows structure but cannot show the full separation.</p>
+
+  <h3>Hard counts vs soft counts</h3>
+  <p><b>Hard counts</b> are how many customers have each segment as their top choice. <b>Soft counts</b> are the sum of all customers' probabilities for a segment. They differ a little, because a soft count also credits customers who only partly belong.</p>
+  <div class="card">
+    <h4>Segment sizes</h4>
+    <div class="seg" role="group" aria-label="Count type"><button data-c="hard" aria-pressed="true">Hard labels</button><button data-c="soft" aria-pressed="false">Soft (sum of probabilities)</button><button data-c="both" aria-pressed="false">Compare</button></div>
+    <svg id="svCnt" viewBox="0 0 640 230" role="img" aria-label="Bar chart of segment sizes by hard or soft count" style="width:100%;height:auto"></svg>
+  </div>
+  <details><summary>Code: probabilities, uncertainty, counts</summary>
+<pre>proba = gmm.predict_proba(Xs)        # one probability per segment, rows sum to 1
+hard = proba.argmax(axis=1)          # same as gmm.predict(Xs)
+conf = proba.max(axis=1)             # how sure the model is about each customer
+
+uncertain = np.argsort(conf)[:5]     # the 5 lowest-confidence customers
+print((conf &lt; 0.7).mean())           # 0.024
+
+np.bincount(hard)                    # [ 681  772 1047]
+proba.sum(axis=0).round(0)           # [ 705  775 1020]</pre></details>
+</section>
+
+<section id="bic" data-t="Choosing K">
+  <div class="kick">7 · How many components?</div>
+  <h2>Choosing K with BIC</h2>
+  <p>K-Means needed the elbow and silhouette. A GMM is a <b>probabilistic model</b>, so we can score how well it explains the data with a criterion that also <b>penalises complexity</b>:</p>
+  <div class="formula">BIC = p · ln(n) − 2 ln(<em>L̂</em>)<small>p = number of parameters · n = number of customers · L̂ = maximised likelihood · lower is better</small></div>
+  <p>More components fit better (higher likelihood), but each extra component adds many parameters (a mean, a covariance matrix and a weight), and BIC punishes that. AIC is similar with a lighter penalty.</p>
+  <div class="card">
+    <h4>BIC by number of components (ShopSphere data)</h4>
+    <p class="cap">Hover or focus a point for its value.</p>
+    <svg id="svBic" viewBox="0 0 640 320" role="img" aria-label="Line chart of BIC for 1 to 8 components" style="width:100%;height:auto"></svg>
+    <div class="read" id="bicR" aria-live="polite">Hover or tab to a point.</div>
+  </div>
+  <ul>
+    <li>Look for the <b>lowest</b> point. A curve that keeps falling steeply means the data has more structure than K allows. A curve that turns upward means extra components are not worth their parameters.</li>
+    <li>Here BIC falls steeply from K=1 to K=3, then barely changes. Its lowest value is at K=6, but the neighbours between 3 and 8 are within a few hundred of each other.</li>
+    <li>If neighbouring values are nearly tied, BIC cannot separate them and <b>business sense</b> should decide.</li>
+  </ul>
+  <details><summary>Code: BIC loop</summary>
+<pre>ks = range(1, 9)
+fits = [GaussianMixture(n_components=k, covariance_type="full", n_init=3, random_state=0).fit(Xs) for k in ks]
+bic = [m.bic(Xs) for m in fits]
+aic = [m.aic(Xs) for m in fits]</pre></details>
+  <div class="q" data-q="3"></div>
+</section>
+
+<section id="cmp" data-t="K-Means vs GMM">
+  <div class="kick">8 · Head to head</div>
+  <h2>K-Means vs GMM: same data, two answers</h2>
+  <p>Back to the tilted clusters. A GMM with <code>covariance_type="full"</code> lets every component have its own tilted ellipse. Each ellipse covers the region within 2 standard deviations of its mean.</p>
+  <div class="card">
+    <h4>Side by side</h4>
+    <p class="cap">Left: K-Means with centroids. Right: GMM labels with fitted Gaussians. Drag the slider to reveal one over the other.</p>
+    <canvas id="cvCmp" role="img" aria-label="K-Means result on the left and GMM result with ellipses on the right, separated by a movable divider"></canvas>
+    <div class="ctrls"><label>Divider <span id="cmpV"></span><input id="cmpS" type="range" min="0" max="100" value="50"></label></div>
+  </div>
+  <h3>What else the GMM learns</h3>
+  <p>Besides labels, a GMM learns each cluster's <b>weight</b> (its share of the data) and <b>covariance</b> (its shape). K-Means gives us none of this.</p>
+  <div class="stats">
+    <div class="stat"><div class="v">0.33 · 0.33 · 0.33</div><div class="l">fitted mixing weights (true: one third each)</div></div>
+    <div class="stat"><div class="v">[[1.06, 0.11], [0.11, 0.92]]</div><div class="l">fitted covariance of the first component (true recipe: [[1, 0.9], [0.9, 1]] or its relatives)</div></div>
+  </div>
+  <p>The GMM ellipses <b>follow the tilt and spread</b> of each cloud, and it recovers the covariances, so we learn how features such as clicks and visits move together within a segment. Points in the overlap of two clouds still carry uncertain probabilities. That is not a flaw: the data really is ambiguous there.</p>
+  <details><summary>Code: fit the GMM and draw an ellipse</summary>
+<pre>def draw_ellipse(ax, mean, cov, n_std=2.0, **kw):
+    vals, vecs = np.linalg.eigh(cov)
+    order = vals.argsort()[::-1]
+    vals, vecs = vals[order], vecs[:, order]
+    angle = np.degrees(np.arctan2(vecs[1, 0], vecs[0, 0]))
+    width, height = 2 * n_std * np.sqrt(vals)
+    ax.add_patch(Ellipse(mean, width, height, angle=angle, fill=False, lw=2, **kw))
+
+gmm_syn = GaussianMixture(n_components=3, covariance_type="full", random_state=42).fit(X_syn)
+gmm_labels = gmm_syn.predict(X_syn)      # ARI: K-Means 0.912 | GMM 0.99</pre></details>
+
+  <h3>How the two are related</h3>
+  <p>Force all components to have <b>equal weights and the same round (spherical) covariance</b>, and let that variance shrink toward zero: GMM's soft assignments become hard and the EM updates turn into K-Means. <b>K-Means is a special, restricted case of GMM.</b> GMM relaxes those restrictions: each cluster gets its own weight, spread and tilt, and every point gets probabilities.</p>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>K-Means</th><th>GMM</th></tr></thead><tbody>
+    <tr><td><b>Assignment</b></td><td>Hard (nearest centroid)</td><td>Soft (probabilities)</td></tr>
+    <tr><td><b>Cluster shape</b></td><td>Round (spherical)</td><td>Ellipses of any tilt and width (full covariance)</td></tr>
+    <tr><td><b>Cluster sizes</b></td><td>Tends toward similar</td><td>Can differ (weights, spreads)</td></tr>
+    <tr><td><b>Number of clusters</b></td><td>Must choose K</td><td>Must choose K (BIC helps)</td></tr>
+    <tr><td><b>Fitting</b></td><td>Lloyd's algorithm</td><td>EM</td></tr>
+    <tr><td><b>Local optima</b></td><td>Yes</td><td>Yes</td></tr>
+    <tr><td><b>Cost per iteration</b></td><td>About O(n·k·d)</td><td>Higher, about O(n·k·d²) with full covariance</td></tr>
+    <tr><td><b>Gives a density model?</b></td><td>No</td><td>Yes (can score and sample points)</td></tr></tbody></table></div>
+  <div class="q" data-q="4"></div>
+</section>
+
+<section id="limits" data-t="Limits">
+  <div class="kick">9 · Honest limits</div>
+  <h2>What GMM cannot do</h2>
+  <p>GMM is more flexible than K-Means, but it has its own limits. Open each to see why it matters.</p>
+  <div id="lim"></div>
+  <p style="margin-top:18px">The last two are worth seeing. GMM can <b>score</b> how typical a customer is under the fitted model, but it still has to put that customer into one of its segments.</p>
+  <details><summary>Code: likelihood of each customer under the mixture</summary>
+<pre>loglik = gmm.score_samples(Xs)          # low = unusual under every segment
+cut = np.percentile(loglik, 1)
+odd = loglik &lt;= cut</pre>
+<pre class="out">Customers in the lowest 1% of likelihood: 25
+Their typical segment confidence is still: 0.99 (they get assigned anyway)</pre></details>
+  <div class="card">
+    <h4>The unusual 1% vs everyone else</h4>
+    <p class="cap">Feature means for all customers and for the 25 lowest-likelihood customers.</p>
+    <div class="tw"><table id="tOut"></table></div>
+  </div>
+  <div class="call"><b>Remember.</b> The unusual customers have extreme values on some features. The mixture gives them a very low likelihood <i>and yet still hands them to a segment</i>, with a probability that may even look confident, because probabilities only compare components with each other. Low likelihood is a hint that a customer is unusual, but a GMM has no built-in concept of "belongs to no group" or "noise".</div>
+</section>
+
+<section id="wrap" data-t="Takeaways">
+  <div class="kick">10 · Wrap-up</div>
+  <h2>Back to Vikram's desk</h2>
+  <p>Anjali returns with a segmentation that behaves differently from last year's:</p>
+  <div class="grid g2">
+    <div class="mini"><b>Shreya is 55% / 45%</b>The recommendation engine can blend both worlds instead of hiding premium products from her.</div>
+    <div class="mini"><b>Shapes follow the data</b>Clusters are tilted ellipses, and ShopSphere knows how clicks and visits co-vary within each segment.</div>
+    <div class="mini"><b>Evidence for K</b>BIC gives a principled starting point; business sense settles the close calls.</div>
+    <div class="mini"><b>Honest limits</b>Probabilities depend on the Gaussian assumption, and a GMM never says "this customer belongs nowhere".</div>
+  </div>
+  <h3>Key takeaways</h3>
+  <ul class="chk">
+    <li>K-Means gives <b>hard</b> labels and favours <b>round, similar-sized</b> clusters.</li>
+    <li>A <b>GMM</b> models the data as a weighted sum of Gaussians, p(x) = Σ π<sub>k</sub> 𝒩(x | μ<sub>k</sub>, Σ<sub>k</sub>), one Gaussian per cluster.</li>
+    <li>The mean sets a Gaussian's position, the variances set its size, and the <b>covariance</b> sets its tilt.</li>
+    <li><b>EM</b> alternates: the <b>E-step</b> computes soft responsibilities (using the weights and normalising); the <b>M-step</b> recomputes weights, means and covariances as weighted averages. The log-likelihood never decreases, but EM can reach a <b>local</b> optimum, so use several restarts.</li>
+    <li><code>predict_proba</code> gives <b>soft</b> assignments; uncertain customers sit between segments.</li>
+    <li>Choose the number of components with <b>BIC/AIC</b> (lower is better), then check with business sense.</li>
+    <li>K-Means is a special, restricted case of GMM.</li>
+    <li>GMM still assumes Gaussian shapes, needs K, and has no notion of noise.</li>
+  </ul>
+  <h3>Where this leads</h3>
+  <div class="grid g2">
+    <div class="mini"><b>Segments as a tree</b>Leadership wants broad segments for brand campaigns; category teams want fine-grained ones. <b>Hierarchical clustering</b> builds a tree of nested groups, so the number of clusters is chosen <i>after</i> fitting by cutting the tree at the level each team needs.</div>
+    <div class="mini"><b>Accounts that belong nowhere</b>Resellers and bots behave like no real customer, yet a GMM still assigns them to a segment. Finding them needs a different kind of clustering.</div>
+  </div>
+</section>
+</main>
+
+<footer><b>Gaussian Mixture Models&nbsp; post read</b>Clustering with probability</footer>
+
+<script id="core">
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(r){let u=0;while(!u)u=r();const v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function mvn(r,mu,c,n){const a=Math.sqrt(c[0][0]),b=c[0][1]/a,d=Math.sqrt(c[1][1]-b*b),o=[];for(let i=0;i<n;i++){const z1=gauss(r),z2=gauss(r);o.push([mu[0]+a*z1,mu[1]+b*z1+d*z2])}return o}
+function npdf(x,m,s){return Math.exp(-.5*((x-m)/s)**2)/(s*Math.sqrt(2*Math.PI))}
+function pdf2(x,y,m,c){const det=c[0][0]*c[1][1]-c[0][1]*c[0][1],dx=x-m[0],dy=y-m[1];const q=(c[1][1]*dx*dx-2*c[0][1]*dx*dy+c[0][0]*dy*dy)/det;return Math.exp(-q/2)/(2*Math.PI*Math.sqrt(det))}
+function makeTilt(){const r=rng(21),n=500;const A=mvn(r,[-2,2],[[1,.9],[.9,1]],n),B=mvn(r,[5,5],[[1,0],[0,1]],n),C=mvn(r,[-5,5],[[1,-.8],[-.8,1]],n);return{X:A.concat(B,C),y:[].concat(Array(n).fill(0),Array(n).fill(1),Array(n).fill(2))}}
+function kmeans(X,k,restarts,seed){const r=rng(seed);let best=null;for(let t=0;t<restarts;t++){let cen=[X[Math.floor(r()*X.length)].slice()];while(cen.length<k){const d=X.map(p=>Math.min(...cen.map(c=>(p[0]-c[0])**2+(p[1]-c[1])**2)));let s=d.reduce((a,b)=>a+b,0)*r(),i=0;while(s>d[i]&&i<d.length-1){s-=d[i];i++}cen.push(X[i].slice())}
+ let lab=new Array(X.length).fill(0),inertia=0;for(let it=0;it<100;it++){let ch=false;inertia=0;X.forEach((p,i)=>{let b=0,bd=1e18;cen.forEach((c,j)=>{const d=(p[0]-c[0])**2+(p[1]-c[1])**2;if(d<bd){bd=d;b=j}});inertia+=bd;if(lab[i]!==b){lab[i]=b;ch=true}});
+ cen=cen.map((c,j)=>{let sx=0,sy=0,m=0;X.forEach((p,i)=>{if(lab[i]===j){sx+=p[0];sy+=p[1];m++}});return m?[sx/m,sy/m]:c});if(!ch)break}
+ if(!best||inertia<best.inertia)best={labels:lab,centers:cen,inertia}}return best}
+function gmm2d(X,lab,k){const n=X.length;let R=X.map((_,i)=>{const r=new Array(k).fill(0);r[lab[i]]=1;return r}),prev=-1e18,P;
+ for(let it=0;it<300;it++){P=[];for(let j=0;j<k;j++){let N=0,mx=0,my=0;for(let i=0;i<n;i++){N+=R[i][j];mx+=R[i][j]*X[i][0];my+=R[i][j]*X[i][1]}mx/=N;my/=N;let sxx=0,sxy=0,syy=0;for(let i=0;i<n;i++){const dx=X[i][0]-mx,dy=X[i][1]-my,w=R[i][j];sxx+=w*dx*dx;sxy+=w*dx*dy;syy+=w*dy*dy}P.push({pi:N/n,mu:[mx,my],cov:[[sxx/N+1e-6,sxy/N],[sxy/N,syy/N+1e-6]]})}
+ let ll=0;for(let i=0;i<n;i++){let t=0;const d=P.map(p=>p.pi*pdf2(X[i][0],X[i][1],p.mu,p.cov));d.forEach(v=>t+=v);for(let j=0;j<k;j++)R[i][j]=d[j]/t;ll+=Math.log(t)}
+ if(Math.abs(ll-prev)<1e-7)break;prev=ll}
+ return{params:P,labels:R.map(r=>r.indexOf(Math.max(...r)))}}
+function makeSessions(){const r=rng(5),x=[];for(let i=0;i<400;i++)x.push(3+gauss(r));for(let i=0;i<600;i++)x.push(10+2*gauss(r));return x}
+function em1d(x,k,seed,nIter,tol){const r=rng(seed),n=x.length;const mean=x.reduce((a,b)=>a+b,0)/n,sd=Math.sqrt(x.reduce((a,b)=>a+(b-mean)**2,0)/n);
+ const pick=new Set();while(pick.size<k)pick.add(Math.floor(r()*n));let mu=[...pick].map(i=>x[i]),sg=new Array(k).fill(sd),pi=new Array(k).fill(1/k),hist=[];
+ for(let it=0;it<nIter;it++){const resp=x.map(v=>{const d=mu.map((m,j)=>pi[j]*npdf(v,m,sg[j])),t=d.reduce((a,b)=>a+b,0);return d.map(e=>e/t)});
+  let ll=0;x.forEach(v=>{let t=0;for(let j=0;j<k;j++)t+=pi[j]*npdf(v,mu[j],sg[j]);ll+=Math.log(t)});hist.push({mu:mu.slice(),sg:sg.slice(),pi:pi.slice(),ll});
+  const Nk=new Array(k).fill(0);resp.forEach(rr=>rr.forEach((v,j)=>Nk[j]+=v));
+  mu=Nk.map((_,j)=>resp.reduce((a,rr,i)=>a+rr[j]*x[i],0)/Nk[j]);
+  sg=Nk.map((_,j)=>Math.max(Math.sqrt(resp.reduce((a,rr,i)=>a+rr[j]*(x[i]-mu[j])**2,0)/Nk[j]),1e-3));pi=Nk.map(v=>v/n);
+  if(it>0&&Math.abs(ll-hist[hist.length-2].ll)<tol)break}
+ return hist}
+</script>
+
+<script>
+const $=id=>document.getElementById(id),f2=(v,d=2)=>(+v).toFixed(d);
+const COL=['#ea580c','#27272a','#a1a1aa'];
+/* nav + progress */
+const secs=[...document.querySelectorAll('section[data-t]')];
+$('nav').insertAdjacentHTML('beforeend',secs.map(s=>`<a href="#${s.id}">${s.dataset.t}</a>`).join(''));
+const links=[...document.querySelectorAll('nav a')];
+function onScroll(){const h=document.documentElement;$('bar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';let cur=secs[0].id;secs.forEach(s=>{if(s.getBoundingClientRect().top<140)cur=s.id});links.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+cur))}
+addEventListener('scroll',onScroll,{passive:true});onScroll();
+/* canvas helper */
+const redraws=[];
+function cv(id,ar,draw){const c=$(id);const f=()=>{const w=c.parentElement.clientWidth-(c.parentElement.classList.contains('card')?0:0);const h=Math.round(w*ar),d=devicePixelRatio||1;c.width=w*d;c.height=h*d;c.style.height=h+'px';const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,w,h);draw(x,w,h)};redraws.push(f);f();return f}
+addEventListener('resize',()=>redraws.forEach(f=>f()));
+const seg=(root,cb)=>{const bs=root.querySelectorAll('button');bs.forEach(b=>b.addEventListener('click',()=>{bs.forEach(o=>o.setAttribute('aria-pressed',o===b));cb(b)}))};
+function axes(x,w,h,m,xr,yr,xl,step){x.strokeStyle='#e4e4e7';x.fillStyle='#62626b';x.font='11px system-ui';x.lineWidth=1;x.textAlign='center';
+ for(let v=Math.ceil(xr[0]/step)*step;v<=xr[1];v+=step){const px=m.l+(v-xr[0])/(xr[1]-xr[0])*(w-m.l-m.r);x.beginPath();x.moveTo(px,m.t);x.lineTo(px,h-m.b);x.stroke();x.fillText(v,px,h-m.b+14)}
+ x.beginPath();x.moveTo(m.l,h-m.b);x.lineTo(w-m.r,h-m.b);x.strokeStyle='#a1a1aa';x.stroke();if(xl){x.fillText(xl,(w+m.l-m.r)/2,h-4)}}
+
+/* ---------- Section 1: tilted clusters ---------- */
+const T=makeTilt(),KM=kmeans(T.X,3,10,42),GM=gmm2d(T.X,KM.labels,3);
+let tiltView='truth';
+const TM={l:10,r:10,t:10,b:10},TX=[-9,9],TY=[-2,9.5];
+function tmap(w,h){const sx=(w-20)/(TX[1]-TX[0]),sy=(h-20)/(TY[1]-TY[0]);return p=>[10+(p[0]-TX[0])*sx,h-10-(p[1]-TY[0])*sy]}
+function ellipse(x,w,h,mu,cov,ns,col,lw){const m=tmap(w,h),a=Math.sqrt(cov[0][0]),b=cov[0][1]/a,d=Math.sqrt(Math.max(cov[1][1]-b*b,1e-9));x.beginPath();for(let t=0;t<=64;t++){const th=t/64*2*Math.PI,z1=Math.cos(th)*ns,z2=Math.sin(th)*ns,p=m([mu[0]+a*z1,mu[1]+b*z1+d*z2]);t?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1])}x.closePath();x.strokeStyle=col;x.lineWidth=lw;x.stroke()}
+function scatter(x,w,h,X,lab,alpha){const m=tmap(w,h);X.forEach((p,i)=>{const q=m(p);x.fillStyle=COL[lab[i]];x.globalAlpha=alpha||.75;x.beginPath();x.arc(q[0],q[1],2.4,0,6.3);x.fill()});x.globalAlpha=1}
+const drawTilt=cv('cvTilt',.6,(x,w,h)=>{const lab=tiltView==='truth'?T.y:tiltView==='km'?KM.labels:GM.labels;scatter(x,w,h,T.X,lab);const m=tmap(w,h);
+ if(tiltView==='km'){KM.centers.forEach(c=>{const q=m(c);x.strokeStyle='#dc2626';x.lineWidth=4;x.beginPath();x.moveTo(q[0]-9,q[1]-9);x.lineTo(q[0]+9,q[1]+9);x.moveTo(q[0]+9,q[1]-9);x.lineTo(q[0]-9,q[1]+9);x.stroke()})}
+ if(tiltView==='gmm')GM.params.forEach(p=>ellipse(x,w,h,p.mu,p.cov,2,'#dc2626',2.5))});
+const tiltTxt={truth:'The true groups: two tilted clouds (upper-left and left) and one round cloud on the right.',km:'K-Means cuts with straight lines midway between centroids, so points from the tilted clouds near the overlap are pushed into the neighbouring segment.',gmm:'Each fitted Gaussian ellipse follows the tilt and spread of its cloud, so the assignments track the true groups much more closely.'};
+$('tiltRead').textContent=tiltTxt.truth;$('tiltNote').style.visibility='hidden';
+seg(document.querySelector('#kmeans .seg'),b=>{tiltView=b.dataset.v;drawTilt();$('tiltRead').textContent=tiltTxt[tiltView];$('tiltNote').style.visibility=tiltView==='truth'?'hidden':'visible'});
+
+/* ---------- Section 2: hard vs soft ---------- */
+const drawHS=cv('cvHS',.36,(x,w,h)=>{const m={l:14,r:14,t:16,b:30},xr=[-5,5];axes(x,w,h,m,xr,0,'spending style →',1);const X=v=>m.l+(v-xr[0])/10*(w-m.l-m.r),Y=v=>h-m.b-v*(h-m.b-m.t)/.46;
+ [[-1.5,COL[0]],[1.5,COL[1]]].forEach(([mu,c])=>{x.beginPath();for(let v=-5;v<=5;v+=.05){const px=X(v),py=Y(.5*npdf(v,mu,1)*1.15);v===-5?x.moveTo(px,py):x.lineTo(px,py)}x.strokeStyle=c;x.lineWidth=2.5;x.stroke()});
+ x.fillStyle=COL[0];x.font='bold 12px system-ui';x.textAlign='center';x.fillText('Bargain Hunters',X(-1.5),Y(.5*npdf(0,0,1)*1.15)-8);x.fillStyle=COL[1];x.fillText('Big Spenders',X(1.5),Y(.5*npdf(0,0,1)*1.15)-8);
+ const cx=X(+$('hsX').value);x.strokeStyle='#dc2626';x.lineWidth=2;x.setLineDash([5,4]);x.beginPath();x.moveTo(cx,m.t);x.lineTo(cx,h-m.b);x.stroke();x.setLineDash([]);x.fillStyle='#dc2626';x.beginPath();x.arc(cx,h-m.b,6,0,6.3);x.fill()});
+function updHS(){const v=+$('hsX').value,a=npdf(v,-1.5,1),b=npdf(v,1.5,1),pa=a/(a+b),pb=1-pa;$('hsV').textContent=f2(v,2);
+ const bar=(pa,pb)=>`<span class="c0" style="width:${pa*100}%"></span><span class="c1" style="width:${pb*100}%"></span>`;
+ const ha=pa>=.5?1:0;$('hsHard').innerHTML=bar(ha,1-ha);$('hsHardT').textContent=`Label: ${ha?'Bargain Hunter':'Big Spender'} (100%)`;
+ $('hsSoft').innerHTML=bar(pa,pb);$('hsSoftT').textContent=`Bargain Hunter ${f2(pa*100,0)}% · Big Spender ${f2(pb*100,0)}%`;drawHS()}
+$('hsX').addEventListener('input',updHS);updHS();
+
+/* ---------- Section 3: Gaussians ---------- */
+const draw1=cv('cv1d',.42,(x,w,h)=>{const mu=+$('g1mu').value,s=+$('g1sg').value,m={l:14,r:14,t:14,b:30},xr=[-8,8];axes(x,w,h,m,xr,0,'x',2);const X=v=>m.l+(v-xr[0])/16*(w-m.l-m.r),Y=v=>h-m.b-v*(h-m.b-m.t)/1.05;
+ x.beginPath();x.moveTo(X(-8),Y(0));for(let v=-8;v<=8;v+=.05)x.lineTo(X(v),Y(npdf(v,mu,s)));x.lineTo(X(8),Y(0));x.fillStyle='rgba(234,88,12,.18)';x.fill();
+ x.beginPath();for(let v=-8;v<=8;v+=.05){const px=X(v),py=Y(npdf(v,mu,s));v===-8?x.moveTo(px,py):x.lineTo(px,py)}x.strokeStyle=COL[0];x.lineWidth=3;x.stroke();
+ x.strokeStyle='#27272a';x.setLineDash([5,4]);x.lineWidth=1.5;x.beginPath();x.moveTo(X(mu),Y(0));x.lineTo(X(mu),Y(npdf(mu,mu,s)));x.stroke();x.setLineDash([]);
+ x.strokeStyle='#27272a';x.lineWidth=2;const yy=Y(npdf(mu+s,mu,s));x.beginPath();x.moveTo(X(mu-s),yy);x.lineTo(X(mu+s),yy);x.stroke();x.fillStyle='#27272a';x.font='12px system-ui';x.textAlign='center';x.fillText('±1σ',X(mu),yy-6)});
+function upd1(){const mu=+$('g1mu').value,s=+$('g1sg').value;$('g1m').textContent=f2(mu,1);$('g1s').textContent=f2(s);$('g1r').textContent=`The curve peaks at x = ${f2(mu,1)} with height ${f2(npdf(mu,mu,s),3)}. Larger σ lowers and widens it; μ only slides it.`;draw1()}
+['g1mu','g1sg'].forEach(i=>$(i).addEventListener('input',upd1));upd1();
+
+const P2=[[0,0,1,1,0],[2,2,1,1,0],[0,0,4,.5,0],[0,0,1,1,.8]];
+const draw2=cv('cv2d',.62,(x,w,h)=>{const mx=+$('mx').value,my=+$('my').value,vx=+$('vx').value,vy=+$('vy').value;let c=+$('cxy').value;const lim=.98*Math.sqrt(vx*vy);c=Math.max(-lim,Math.min(lim,c));const cov=[[vx,c],[c,vy]];
+ const R=[-7,7],RY=[-4.5,4.5],sx=(w-20)/14,sy=(h-20)/9,M=p=>[10+(p[0]-R[0])*sx,h-10-(p[1]-RY[0])*sy];
+ const pk=pdf2(mx,my,[mx,my],cov),cell=7;for(let px=10;px<w-10;px+=cell)for(let py=10;py<h-10;py+=cell){const gx=R[0]+(px+cell/2-10)/sx,gy=RY[0]+(h-10-(py+cell/2))/sy;const d=pdf2(gx,gy,[mx,my],cov)/pk;x.fillStyle=`rgba(234,88,12,${Math.min(d,1)*.55})`;x.fillRect(px,py,cell,cell)}
+ x.strokeStyle='#e4e4e7';x.lineWidth=1;const o=M([0,0]);x.beginPath();x.moveTo(10,o[1]);x.lineTo(w-10,o[1]);x.moveTo(o[0],10);x.lineTo(o[0],h-10);x.stroke();
+ const a=Math.sqrt(vx),b=c/a,d=Math.sqrt(Math.max(vy-b*b,1e-9));[1,2,3].forEach(ns=>{x.beginPath();for(let t=0;t<=64;t++){const th=t/64*6.2832,z1=Math.cos(th)*ns,z2=Math.sin(th)*ns,q=M([mx+a*z1,my+b*z1+d*z2]);t?x.lineTo(q[0],q[1]):x.moveTo(q[0],q[1])}x.strokeStyle=ns===1?'#27272a':'#71717a';x.lineWidth=ns===1?2.5:1.5;x.stroke()});
+ const q=M([mx,my]);x.fillStyle='#27272a';x.beginPath();x.arc(q[0],q[1],4,0,6.3);x.fill()});
+function upd2(){const mx=+$('mx').value,my=+$('my').value,vx=+$('vx').value,vy=+$('vy').value,lim=.98*Math.sqrt(vx*vy),c=Math.max(-lim,Math.min(lim,+$('cxy').value));
+ $('a1').textContent=f2(mx,1);$('a2').textContent=f2(my,1);$('a3').textContent=f2(vx,1);$('a4').textContent=f2(vy,1);$('a5').textContent=f2(c);
+ const shape=Math.abs(c)>.05?(c>0?'tilted upward (positive covariance)':'tilted downward (negative covariance)'):(Math.abs(vx-vy)>.15?'stretched along an axis':'circular');
+ $('g2r').textContent=`Centred at (${f2(mx,1)}, ${f2(my,1)}); the rings are ${shape}.`;draw2()}
+['mx','my','vx','vy','cxy'].forEach(i=>$(i).addEventListener('input',upd2));upd2();
+document.querySelectorAll('#pre2 button').forEach(b=>b.addEventListener('click',()=>{const p=P2[+b.dataset.p];['mx','my','vx','vy','cxy'].forEach((id,i)=>$(id).value=p[i]);upd2()}));
+
+/* ---------- Section 4: mixture ---------- */
+const SES=makeSessions();let EMH=null;
+for(const sd of [0,1,2,3,4,5,6,7,8,9]){const h=em1d(SES,2,sd,100,1e-8),l=h[h.length-1],ms=l.mu.slice().sort((a,b)=>a-b);if(Math.abs(ms[0]-3)<.5&&Math.abs(ms[1]-10)<.5){EMH=h;break}}
+const FIN=EMH[EMH.length-1];const ord=FIN.mu[0]<FIN.mu[1]?[0,1]:[1,0];
+const sMean=SES.reduce((a,b)=>a+b,0)/SES.length,sSd=Math.sqrt(SES.reduce((a,b)=>a+(b-sMean)**2,0)/SES.length);
+function hist(x,lo,hi,bins){const c=new Array(bins).fill(0);x.forEach(v=>{const i=Math.min(bins-1,Math.max(0,Math.floor((v-lo)/(hi-lo)*bins)));c[i]++});return c.map(v=>v/(x.length*(hi-lo)/bins))}
+const LO=-2,HI=18,HB=hist(SES,LO,HI,50);
+function drawMixture(x,w,h,comps,showSum,ymax){const m={l:14,r:14,t:14,b:30};axes(x,w,h,m,[LO,HI],0,'minutes per session',2);const X=v=>m.l+(v-LO)/(HI-LO)*(w-m.l-m.r),Y=v=>h-m.b-v*(h-m.b-m.t)/ymax,bw=(w-m.l-m.r)/50;
+ HB.forEach((v,i)=>{x.fillStyle='#d4d4d8';x.fillRect(m.l+i*bw+1,Y(v),bw-2,h-m.b-Y(v))});
+ comps.forEach((c,j)=>{x.beginPath();for(let v=LO;v<=HI;v+=.1){const px=X(v),py=Y(c.pi*npdf(v,c.mu,c.sg));v===LO?x.moveTo(px,py):x.lineTo(px,py)}x.strokeStyle=COL[j];x.lineWidth=2.5;x.stroke()});
+ if(showSum){x.beginPath();for(let v=LO;v<=HI;v+=.1){const s=comps.reduce((a,c)=>a+c.pi*npdf(v,c.mu,c.sg),0),px=X(v),py=Y(s);v===LO?x.moveTo(px,py):x.lineTo(px,py)}x.strokeStyle='#18181b';x.setLineDash([6,4]);x.lineWidth=2;x.stroke();x.setLineDash([])}}
+let mixMode=2;
+const drawMix=cv('cvMix',.5,(x,w,h)=>{if(mixMode===1)drawMixture(x,w,h,[{pi:1,mu:sMean,sg:sSd}],false,.3);else{const p=+$('mw').value;drawMixture(x,w,h,[{pi:p,mu:FIN.mu[ord[0]],sg:FIN.sg[ord[0]]},{pi:1-p,mu:FIN.mu[ord[1]],sg:FIN.sg[ord[1]]}],true,.3)}});
+function updMix(){const p=+$('mw').value;$('mwV').textContent=f2(p);$('mw').disabled=mixMode===1;
+ $('mixR').textContent=mixMode===1?`A single Gaussian (mean ${f2(sMean,1)}, std ${f2(sSd,1)}) sits between the humps and describes neither group.`:`Two Gaussians (means ≈ ${f2(FIN.mu[ord[0]],1)} and ${f2(FIN.mu[ord[1]],1)}) with weights ${f2(p)} and ${f2(1-p)}. The fit is best near π₁ ≈ ${f2(FIN.pi[ord[0]])}.`;drawMix()}
+$('mw').value=FIN.pi[ord[0]].toFixed(2);$('mw').addEventListener('input',updMix);
+seg(document.querySelector('#mix .seg'),b=>{mixMode=+b.dataset.m;updMix()});updMix();
+
+/* ---------- Section 5: EM ---------- */
+function updRes(){let pa=+$('rpa').value,da=+$('rda').value,pb=+$('rpb').value,db=+$('rdb').value;if($('rig').checked){pa=1;pb=1}const A=pa*da,B=pb*db,t=A+B||1,r=A/t;$('rbA').style.width=r*100+'%';$('rbB').parentElement.firstElementChild.style.width=(1-r)*100+'%';
+ $('rR').innerHTML=`A: ${f2(pa,2)} × ${f2(da)} = <b>${f2(A,3)}</b> &nbsp;·&nbsp; B: ${f2(pb,2)} × ${f2(db)} = <b>${f2(B,3)}</b> &nbsp;·&nbsp; total ${f2(t,3)}<br>Responsibility of A = <b>${f2(r)}</b>, of B = <b>${f2(1-r)}</b>${$('rig').checked?' (weights ignored: a bigger cluster gets no credit for being bigger)':''}`}
+['rpa','rda','rpb','rdb','rig'].forEach(i=>$(i).addEventListener('input',updRes));updRes();
+$('emI').max=EMH.length-1;let emIt=0,timer=null;
+const drawEM=cv('cvEM',.5,(x,w,h)=>{const s=EMH[emIt],o=s.mu[0]<s.mu[1]?[0,1]:[1,0];drawMixture(x,w,h,o.map(j=>({pi:s.pi[j],mu:s.mu[j],sg:s.sg[j]})),true,.32);
+ const m={l:14,r:14,t:14,b:30},px=m.l+(+$('emX').value-LO)/(HI-LO)*(w-m.l-m.r);x.strokeStyle='#dc2626';x.lineWidth=2;x.beginPath();x.moveTo(px,m.t);x.lineTo(px,h-m.b);x.stroke()});
+const drawLL=cv('cvLL',.32,(x,w,h)=>{const m={l:52,r:14,t:14,b:28},L=EMH.map(s=>s.ll),lo=Math.min(...L),hi=Math.max(...L),pad=(hi-lo)*.08||1,n=L.length;const X=i=>m.l+(n>1?i/(n-1):0)*(w-m.l-m.r),Y=v=>h-m.b-(v-(lo-pad))/(hi-lo+2*pad)*(h-m.b-m.t);
+ x.strokeStyle='#e4e4e7';x.fillStyle='#62626b';x.font='11px system-ui';x.textAlign='right';for(let k=0;k<4;k++){const v=lo+(hi-lo)*k/3,py=Y(v);x.beginPath();x.moveTo(m.l,py);x.lineTo(w-m.r,py);x.stroke();x.fillText(Math.round(v),m.l-6,py+4)}
+ x.textAlign='center';x.fillText('iteration',(w+m.l)/2,h-6);x.beginPath();L.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));x.strokeStyle=COL[1];x.lineWidth=2.5;x.stroke();x.fillStyle=COL[0];x.beginPath();x.arc(X(emIt),Y(L[emIt]),6,0,6.3);x.fill()});
+function updEM(){const s=EMH[emIt],o=s.mu[0]<s.mu[1]?[0,1]:[1,0],v=+$('emX').value;$('emI').value=emIt;$('emIV').textContent=`${emIt} of ${EMH.length-1}`;$('emXV').textContent=f2(v,1);
+ const d=o.map(j=>s.pi[j]*npdf(v,s.mu[j],s.sg[j])),t=d[0]+d[1],r=t>0?d[0]/t:.5;
+ $('emR').innerHTML=`<b>Iteration ${emIt}</b> · log-likelihood ${f2(s.ll,1)}<br>Component 1: μ ${f2(s.mu[o[0]])}, σ ${f2(s.sg[o[0]])}, π ${f2(s.pi[o[0]])} &nbsp;|&nbsp; Component 2: μ ${f2(s.mu[o[1]])}, σ ${f2(s.sg[o[1]])}, π ${f2(s.pi[o[1]])}<br>A session of ${f2(v,1)} min → responsibility ${f2(r)} for component 1, ${f2(1-r)} for component 2.`;drawEM();drawLL()}
+$('emI').addEventListener('input',e=>{emIt=+e.target.value;updEM()});$('emX').addEventListener('input',updEM);
+$('emPlay').addEventListener('click',()=>{if(timer){clearInterval(timer);timer=null;$('emPlay').textContent='▶ Play';return}if(emIt>=EMH.length-1)emIt=0;$('emPlay').textContent='❚❚ Pause';timer=setInterval(()=>{if(emIt>=EMH.length-1){clearInterval(timer);timer=null;$('emPlay').textContent='▶ Play';return}emIt++;updEM()},650)});
+$('emReset').addEventListener('click',()=>{emIt=0;if(timer){clearInterval(timer);timer=null;$('emPlay').textContent='▶ Play'}updEM()});updEM();
+
+/* ---------- Section 6: tables + counts ---------- */
+const probs=[[.181,.002,.817],[.015,0,.985],[0,1,0],[0,1,0],[.069,.007,.923]],unc=[[2310,.52,0,.48],[224,.48,0,.52],[426,.48,0,.52],[1022,.48,0,.52],[440,.52,0,.48]];
+const bar3=a=>`<div class="sb" aria-hidden="true">${a.map((v,i)=>`<span class="c${i}" style="width:${v*100}%"></span>`).join('')}</div>`;
+$('tProb').innerHTML='<thead><tr><th>Customer</th><th>seg 0</th><th>seg 1</th><th>seg 2</th><th>Split</th></tr></thead><tbody>'+probs.map((p,i)=>`<tr><td>${i}</td><td>${p[0].toFixed(3)}</td><td>${p[1].toFixed(3)}</td><td>${p[2].toFixed(3)}</td><td>${bar3(p)}</td></tr>`).join('')+'</tbody>';
+$('tUnc').innerHTML='<thead><tr><th>Customer</th><th>seg 0</th><th>seg 1</th><th>seg 2</th><th>Split</th></tr></thead><tbody>'+unc.map(u=>`<tr><td>${u[0]}</td><td>${u[1].toFixed(2)}</td><td>${u[2].toFixed(2)}</td><td>${u[3].toFixed(2)}</td><td>${bar3(u.slice(1))}</td></tr>`).join('')+'</tbody>';
+const CH=[681,772,1047],CS=[705,775,1020];
+function drawCnt(mode){const W=640,H=230,base=190,top=22,mx=1100,Y=v=>base-v/mx*(base-top);let s=`<line x1="40" x2="620" y1="${base}" y2="${base}" stroke="#a1a1aa"/>`;
+ for(let g=0;g<3;g++){const gx=70+g*190;const bars=mode==='both'?[[CH[g],COL[1],'hard'],[CS[g],COL[0],'soft']]:[[mode==='hard'?CH[g]:CS[g],mode==='hard'?COL[1]:COL[0],mode]];
+  bars.forEach((b,i)=>{const bw=mode==='both'?60:90,bx=mode==='both'?gx+i*66:gx+20;s+=`<rect x="${bx}" y="${Y(b[0])}" width="${bw}" height="${base-Y(b[0])}" rx="5" fill="${b[1]}"/><text x="${bx+bw/2}" y="${Y(b[0])-6}" text-anchor="middle" font-family="system-ui" font-size="13" font-weight="700" fill="#18181b">${b[0]}</text>`});
+  s+=`<text x="${gx+65}" y="${base+22}" text-anchor="middle" font-family="system-ui" font-size="13" fill="#3f3f46">Segment ${g}</text>`}
+ if(mode==='both')s+=`<rect x="440" y="6" width="10" height="10" fill="${COL[1]}"/><text x="456" y="15" font-family="system-ui" font-size="12" fill="#3f3f46">hard</text><rect x="500" y="6" width="10" height="10" fill="${COL[0]}"/><text x="516" y="15" font-family="system-ui" font-size="12" fill="#3f3f46">soft</text>`;$('svCnt').innerHTML=s}
+drawCnt('hard');seg($('svCnt').previousElementSibling,b=>drawCnt(b.dataset.c));
+
+/* ---------- Section 7: BIC ---------- */
+const BIC=[40948,33949,31494,31378,31436,31320,31370,31466];
+(function(){const W=640,H=320,m={l:64,r:20,t:20,b:44},lo=31000,hi=41200,X=i=>m.l+i/7*(W-m.l-m.r),Y=v=>H-m.b-(v-lo)/(hi-lo)*(H-m.b-m.t);let s='';
+ [31000,34000,37000,40000].forEach(v=>{s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e4e4e7"/><text x="${m.l-8}" y="${Y(v)+4}" text-anchor="end" font-family="system-ui" font-size="11" fill="#62626b">${v}</text>`});
+ s+=`<text x="${(W+m.l)/2}" y="${H-8}" text-anchor="middle" font-family="system-ui" font-size="12" fill="#62626b">number of components K</text>`;
+ s+=`<polyline fill="none" stroke="#27272a" stroke-width="2.5" points="${BIC.map((v,i)=>X(i)+','+Y(v)).join(' ')}"/>`;
+ BIC.forEach((v,i)=>{const lowest=v===Math.min(...BIC);s+=`<text x="${X(i)}" y="${H-m.b+18}" text-anchor="middle" font-family="system-ui" font-size="12" fill="#3f3f46">${i+1}</text><circle class="bp" tabindex="0" data-i="${i}" cx="${X(i)}" cy="${Y(v)}" r="${lowest?9:7}" fill="${lowest?'#ea580c':'#fff'}" stroke="${lowest?'#c2410c':'#27272a'}" stroke-width="3" aria-label="K ${i+1}, BIC ${v}${lowest?', lowest':''}" style="cursor:pointer"/>`});
+ s+=`<text x="${X(5)}" y="${Y(BIC[5])-16}" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="700" fill="#c2410c">lowest: K=6</text>`;
+ $('svBic').innerHTML=s;const show=i=>{const v=BIC[i];$('bicR').innerHTML=`<b>K = ${i+1}</b> · BIC ${v.toLocaleString()}${i?` · change from K=${i}: ${(v-BIC[i-1]>0?'+':'')+(v-BIC[i-1]).toLocaleString()}`:''}`};
+ document.querySelectorAll('.bp').forEach(c=>{['mouseenter','focus','click'].forEach(e=>c.addEventListener(e,()=>show(+c.dataset.i)))})})();
+
+/* ---------- Section 8: compare ---------- */
+function updCmp(){$('cmpV').textContent=$('cmpS').value+'%';drawCmp()}
+const drawCmp=cv('cvCmp',.6,(x,w,h)=>{const cut=w*(+$('cmpS').value/100);
+ x.save();x.beginPath();x.rect(0,0,cut,h);x.clip();scatter(x,w,h,T.X,KM.labels);const m=tmap(w,h);KM.centers.forEach(c=>{const q=m(c);x.strokeStyle='#dc2626';x.lineWidth=4;x.beginPath();x.moveTo(q[0]-9,q[1]-9);x.lineTo(q[0]+9,q[1]+9);x.moveTo(q[0]+9,q[1]-9);x.lineTo(q[0]-9,q[1]+9);x.stroke()});x.restore();
+ x.save();x.beginPath();x.rect(cut,0,w-cut,h);x.clip();x.fillStyle='#fff';x.fillRect(cut,0,w-cut,h);scatter(x,w,h,T.X,GM.labels);GM.params.forEach(p=>ellipse(x,w,h,p.mu,p.cov,2,'#dc2626',2.5));x.restore();
+ x.strokeStyle='#18181b';x.lineWidth=3;x.beginPath();x.moveTo(cut,0);x.lineTo(cut,h);x.stroke();x.fillStyle='#18181b';x.font='bold 13px system-ui';x.textAlign='left';x.fillText('K-Means',12,22);x.textAlign='right';x.fillText('GMM',w-12,22)});
+$('cmpS').addEventListener('input',updCmp);updCmp();
+
+/* ---------- Section 9: limits ---------- */
+const LIM=[['Assumes Gaussian-shaped clusters','Each cluster is modelled as an ellipse-shaped bell. Banana-shaped, ring-shaped or otherwise curved clusters are poorly captured, and a curved cluster may be split into several Gaussians.'],
+['Needs K','The number of components must still be chosen. BIC and AIC help but do not decide on their own.'],
+['Local optima','EM depends on initialisation, so use several restarts (n_init).'],
+['Singular covariances','If a component collapses onto very few points (or duplicates), its covariance can become degenerate. sklearn adds a small reg_covar to stay stable.'],
+['Sensitive to outliers','Extreme points inflate covariances or can claim a component of their own. A point that fits no Gaussian still receives probabilities that sum to 1, so the model never says "this belongs nowhere".'],
+['Heavier computation','Full covariance matrices cost more than K-Means centroids, especially in many dimensions.']];
+$('lim').innerHTML=LIM.map((l,i)=>`<details${i===4?' open':''}><summary>${l[0]}</summary><p style="padding:14px 16px 2px;margin:0">${l[1]}</p></details>`).join('');
+const OUT=[['n_clicks',408.68,533.88],['n_visits',94.48,90.52],['amount_spent',1445.09,2569.54],['amount_discount',388.51,932.42],['days_since_registration',200.97,277.32],['profile_information',201.04,248.08]];
+$('tOut').innerHTML='<thead><tr><th>Feature</th><th>All customers (mean)</th><th>Unusual 1% (mean)</th></tr></thead><tbody>'+OUT.map(r=>`<tr><td>${r[0]}</td><td>${r[1].toFixed(2)}</td><td>${r[2].toFixed(2)}</td></tr>`).join('')+'</tbody>';
+
+/* ---------- Quizzes ---------- */
+const Q=[
+{q:"Shreya's probabilities are 0.55 for Bargain Hunters and 0.45 for Big Spenders. Why is the hard K-Means label (\"Bargain Hunter\") a problem for ShopSphere?",o:["It is not a problem, because the larger probability is always the correct label to use","It makes K-Means run slower, because every customer needs an extra probability calculation","It hides the uncertainty, so a border customer is treated like one deep inside a segment","It means the customer was removed from the data, so she no longer appears in any segment"],a:2,e:"A hard label throws away how confident the model is. Shreya sits almost evenly between two segments, and a soft assignment tells us that, which enables blended recommendations. Picking the larger probability may still be the best single guess, but it loses information, and neither speed nor data removal is involved."},
+{q:"A 2D Gaussian currently looks like circles centred at (0, 0). You want a hill centred at (3, 1) that is stretched horizontally and tilted. Which parameters do you change?",o:["The mean vector to move it, the variances to stretch it, and the covariance to tilt it","Only the mean, since moving the centre also stretches and tilts the hill automatically","Only the number of data points, since adding more points makes the hill wider","Only the covariance, since it controls the position of the hill as well as its shape"],a:0,e:"The mean vector sets the position, the diagonal of the covariance matrix sets the width along each axis (the stretch), and the off-diagonal covariance sets the tilt. Covariance cannot change position, and changing only the mean would just shift the circles."},
+{q:"In the E-step, a point has two components. Cluster A has weight 0.2 and gives the point a density of 0.30. Cluster B has weight 0.8 and gives the point a density of 0.10. What is the responsibility of cluster A for this point?",o:["0.30","0.75","0.50","0.43"],a:3,e:"Multiply each density by its weight: A gives 0.2 × 0.30 = 0.06 and B gives 0.8 × 0.10 = 0.08. The total is 0.14, so A's responsibility is 0.06 / 0.14 = 0.43 (B gets 0.57). Although the point fits A's Gaussian better, B is bigger, so B wins the larger share. Ignoring the weights would give 0.30 / 0.40 = 0.75."},
+{q:"ShopSphere's BIC values for K = 1 to 6 are: 5200, 4700, 4500, 4510, 4560, 4640. Which K does BIC favour, and what should Anjali do about K = 4?",o:["K = 6, because it is the largest value and therefore fits the data best","K = 3, the lowest BIC; K = 4 is nearly tied, so check if a fourth segment is actionable","K = 1, because fewer components are always better than having more of them","BIC cannot be used with GMMs, because it only works for hard clustering methods"],a:1,e:"BIC rewards fit but penalises parameters, and lower is better, so K = 3 (4500) wins. K = 4 (4510) is practically tied, so the statistics alone cannot separate them and business usefulness should break the tie. K = 1 has the worst BIC here, and BIC is designed precisely for probabilistic models like GMMs."},
+{q:"What is the primary difference between K-Means and a Gaussian Mixture Model?",o:["K-Means needs the number of clusters in advance, but a GMM does not need it","K-Means assumes the data is a mixture of Gaussians, but a GMM makes no assumptions","K-Means gives hard labels and favours round clusters, while a GMM gives probabilities and fits tilted ellipses","K-Means is always slower than a GMM, because it needs more iterations to converge"],a:2,e:"Both algorithms need K up front. It is the GMM that assumes the data is generated by a mixture of Gaussians. K-Means is usually cheaper per iteration. The real difference is hard versus soft assignment and the flexibility of cluster shapes."}];
+document.querySelectorAll('.q').forEach(el=>{const d=Q[+el.dataset.q];el.innerHTML=`<div class="qh">Check your understanding</div><p class="qt">${d.q}</p><div class="opts" role="group" aria-label="Answer choices">${d.o.map((t,i)=>`<button class="o" data-i="${i}">${t}</button>`).join('')}</div><div class="fb" aria-live="polite"></div>`;
+ el.querySelectorAll('.o').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;el.querySelectorAll('.o').forEach(o=>{o.disabled=true;if(+o.dataset.i===d.a)o.classList.add('ok')});if(i!==d.a)b.classList.add('bad');const fb=el.querySelector('.fb');fb.style.display='block';fb.innerHTML=`<b>${i===d.a?'Correct.':'Not quite.'}</b> ${i===d.a?'':'The right answer is highlighted. '}${d.e}`}))});
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-UnSL-6" target="_blank" rel="noopener">github.com/scaler-content/DSML-UnSL-6</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

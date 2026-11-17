@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boosting — Interactive Post-Read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#fffbea;
+    --paper:#fffef7;
+    --paper-tint:#fff3cf;
+    --sand:#f5e6b8;
+    --sand-line: rgba(150,110,10,0.16);
+    --sand-line-strong: rgba(150,110,10,0.28);
+
+    --royal:#8f6b00;
+    --royal-deep:#6b4e00;
+    --royal-light:#f2c14e;
+    --royal-soft: rgba(143,107,0,0.10);
+    --royal-soft-strong: rgba(143,107,0,0.18);
+
+    --amber:#9c5a12;
+    --amber-soft: rgba(156,90,18,0.16);
+    --terracotta:#8a5010;
+    --plum:#7a3e10;
+
+    --good:#2f8f5f;
+    --good-soft: rgba(47,143,95,0.1);
+    --bad:#c34a3d;
+    --bad-soft: rgba(195,74,61,0.08);
+
+    --ink:#2b2410;
+    --ink-soft:#6b5f42;
+    --ink-faint:#a0937a;
+
+    --shadow: 0 18px 50px -22px rgba(150,110,10,0.28);
+    --radius: 18px;
+    --sidebar-w: 300px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 550px at 88% -8%, rgba(143,107,0,0.10), transparent 60%),
+      radial-gradient(800px 460px at -8% 15%, rgba(156,90,18,0.16), transparent 55%),
+      var(--cream);
+    color:var(--ink);
+    font-family:'Inter', -apple-system, sans-serif;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{ font-family:'Fraunces', serif; letter-spacing:-0.01em; }
+
+  a{ color:inherit; }
+
+  ::selection{ background:var(--royal-light); color:#fff8ea; }
+
+  /* ---------- Progress bar ---------- */
+  #progress-track{
+    position:fixed; top:0; left:0; right:0; height:3px; z-index:100;
+    background:rgba(120,90,40,0.08);
+  }
+  #progress-fill{
+    height:100%; width:0%;
+    background:linear-gradient(90deg, var(--amber), var(--royal), var(--royal-deep));
+    transition:width .12s linear;
+    box-shadow:0 0 12px rgba(143,107,0,0.28);
+  }
+
+  /* ---------- Layout ---------- */
+  .layout{
+    display:flex;
+    max-width:1240px;
+    margin:0 auto;
+    align-items:flex-start;
+  }
+
+  /* ---------- Sidebar ---------- */
+  #sidebar{
+    position:sticky; top:0;
+    height:100vh;
+    width:var(--sidebar-w);
+    flex-shrink:0;
+    padding:28px 14px 28px 28px;
+    display:flex;
+    flex-direction:column;
+    z-index:20;
+    background:
+      radial-gradient(420px 260px at 100% 0%, rgba(255,255,255,0.10), transparent 60%),
+      linear-gradient(190deg, var(--royal-deep), var(--royal) 65%, #4a3600 100%);
+    color:#eef1ff;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:6px;
+  }
+  .brand-mark{
+    width:34px; height:34px; border-radius:10px;
+    background:linear-gradient(135deg, var(--amber), #e0b64a);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces'; font-weight:700; font-size:16px; color:#2a1c05;
+    box-shadow:0 8px 18px -6px rgba(0,0,0,0.35);
+    flex-shrink:0;
+  }
+  .brand-text{ font-family:'Fraunces'; font-weight:700; font-size:16px; color:#fff; }
+  .brand-sub{ font-size:11px; color:rgba(238,241,255,0.62); letter-spacing:.08em; text-transform:uppercase; margin-top:1px;}
+
+  .sidebar-meta{
+    margin:20px 0 18px 0;
+    padding:14px 16px;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.16);
+    border-radius:14px;
+    font-size:12.5px;
+    color:rgba(238,241,255,0.85);
+    backdrop-filter: blur(6px);
+  }
+  .sidebar-meta .meta-row{ display:flex; justify-content:space-between; padding:3px 0; }
+  .sidebar-meta .meta-row b{ color:#fff; font-weight:600; }
+
+  #nav{
+    overflow-y:auto;
+    padding-right:6px;
+    flex:1;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.25) transparent;
+  }
+  #nav::-webkit-scrollbar{ width:5px; }
+  #nav::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.25); border-radius:4px; }
+
+  .nav-link{
+    display:flex; align-items:center; gap:10px;
+    text-decoration:none;
+    padding:8px 10px;
+    border-radius:10px;
+    font-size:13px;
+    color:rgba(238,241,255,0.68);
+    margin-bottom:2px;
+    position:relative;
+    border-left:2px solid transparent;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .nav-link:hover{ background:rgba(255,255,255,0.09); color:#fff; }
+  .nav-link.active{
+    color:#fff;
+    background:rgba(255,255,255,0.14);
+    border-left:2px solid #fff;
+  }
+  .nav-link.nav-quiz.active{
+    border-left:2px solid var(--amber);
+    background:rgba(255,191,92,0.16);
+  }
+  .nav-num{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    color:rgba(238,241,255,0.5);
+    width:22px;
+    flex-shrink:0;
+  }
+  .nav-link.active .nav-num{ color:#fff; }
+  .nav-link.nav-quiz.active .nav-num{ color:var(--amber); }
+  .nav-title{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  #sidebar-footer{
+    padding-top:14px; margin-top:10px;
+    border-top:1px solid rgba(255,255,255,0.16);
+    font-size:11px; color:rgba(238,241,255,0.55);
+  }
+
+  /* ---------- Main content ---------- */
+  main{
+    flex:1;
+    min-width:0;
+    padding:56px 48px 120px 40px;
+  }
+
+  .hero{
+    margin-bottom:56px;
+  }
+  .hero-badge{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:11.5px; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--royal-deep);
+    background:var(--royal-soft);
+    border:1px solid var(--royal-soft-strong);
+    padding:6px 12px; border-radius:999px;
+    margin-bottom:22px;
+  }
+  .hero-badge .dot{ width:6px; height:6px; border-radius:50%; background:var(--royal); box-shadow:0 0 8px var(--royal-light); }
+  .hero h1{
+    font-size:clamp(38px, 5vw, 60px);
+    font-weight:700;
+    line-height:1.05;
+    margin:0 0 18px 0;
+    color:var(--ink);
+  }
+  .hero h1 em{
+    font-style:italic;
+    color:var(--royal);
+  }
+  .hero p.lede{
+    font-size:17px; color:var(--ink-soft); max-width:640px; margin:0 0 28px 0;
+  }
+  .hero-stats{ display:flex; gap:28px; flex-wrap:wrap; }
+  .hero-stat{ display:flex; flex-direction:column; gap:2px; }
+  .hero-stat .num{ font-family:'Fraunces'; font-weight:700; font-size:22px; color:var(--royal-deep); }
+  .hero-stat .lab{ font-size:11.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em; }
+
+  /* ---------- Cards ---------- */
+  .card{
+    background:var(--paper);
+    border:1px solid var(--sand-line);
+    border-radius:var(--radius);
+    padding:36px 40px;
+    margin-bottom:22px;
+    box-shadow:var(--shadow);
+    scroll-margin-top:24px;
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:0;
+    background:radial-gradient(460px 190px at 100% 0%, rgba(143,107,0,0.07), transparent 60%);
+    pointer-events:none;
+  }
+
+  .card-eyebrow{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .eyebrow-num{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; color:var(--royal-deep);
+    background:var(--royal-soft);
+    border:1px solid var(--royal-soft-strong);
+    padding:3px 9px; border-radius:7px;
+  }
+  .eyebrow-line{ flex:1; height:1px; background:linear-gradient(90deg, var(--sand-line-strong), transparent); }
+
+  /* prose (rendered lecture markdown) */
+  .prose h2{ font-size:23px; margin:26px 0 14px; font-weight:600; color:var(--ink); }
+  .prose h2:first-child{ margin-top:0; }
+  .prose h3{ font-size:14px; margin:20px 0 8px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; font-family:'Inter'; }
+  .prose p{ margin:0 0 14px; color:var(--ink-soft); font-size:15.5px; }
+  .prose p:last-child{ margin-bottom:0; }
+  .prose strong{ color:var(--ink); font-weight:650; }
+  .prose ul, .prose ol{ margin:0 0 14px; padding-left:22px; color:var(--ink-soft); font-size:15.5px; }
+  .prose li{ margin-bottom:6px; }
+  .prose li strong{ color:var(--ink); }
+  .prose img{
+    max-width:100%; border-radius:12px; margin:14px 0 18px;
+    border:1px solid var(--sand-line); display:block;
+    background:#fff;
+  }
+  .prose code{
+    font-family:'JetBrains Mono', monospace; font-size:13px;
+    background:var(--sand); padding:2px 6px; border-radius:5px; color:var(--royal-deep);
+  }
+  .prose pre{
+    background:#211a10; border:1px solid var(--sand-line); border-radius:12px;
+    padding:16px 18px; overflow-x:auto; margin:0 0 16px;
+  }
+  .prose pre code{
+    background:none; padding:0; color:#f2ecdd; font-size:13px; line-height:1.6;
+  }
+  .prose table{ width:100%; border-collapse:collapse; margin:8px 0 18px; font-size:14.5px; }
+  .prose th{
+    text-align:left; color:var(--ink); font-weight:600; font-size:12.5px;
+    text-transform:uppercase; letter-spacing:.04em;
+    border-bottom:1px solid var(--sand-line-strong); padding:8px 12px;
+  }
+  .prose td{ padding:10px 12px; border-bottom:1px solid var(--sand-line); color:var(--ink-soft); }
+  .prose tr:last-child td{ border-bottom:none; }
+
+  /* the content sets inline color:skyblue / violet / yellow spans, authored for a dark
+     surface. Remapped here (via attribute match, not by touching the markup) so the same
+     emphasis reads clearly on the warm light surface. */
+  .prose span[style*="skyblue"]{ color: var(--royal) !important; font-weight:600; }
+  .prose span[style*="violet"]{ color: var(--plum) !important; }
+  .prose span[style*="color: yellow"]{ color: var(--terracotta) !important; font-weight:600; }
+  .prose .inline-link{
+    display:inline-block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+    color:var(--royal-deep);
+    background:var(--royal-soft);
+    border:1px solid var(--royal-soft-strong);
+    padding:2px 8px;
+    border-radius:6px;
+    text-decoration:none;
+    word-break:break-all;
+  }
+  .prose .inline-link:hover{ background:var(--royal-soft-strong); }
+
+  /* ---------- Visualization CTA ---------- */
+  .viz-cta{
+    display:flex; align-items:center; gap:14px;
+    margin-top:22px;
+    padding:16px 18px;
+    background:linear-gradient(120deg, var(--royal-soft), var(--amber-soft));
+    border:1px solid var(--royal-soft-strong);
+    border-radius:14px;
+    text-decoration:none;
+    color:var(--ink);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .viz-cta:hover{ transform:translateY(-1px); box-shadow:0 10px 24px -14px rgba(143,107,0,0.35); }
+  .viz-cta-icon{
+    flex-shrink:0; width:34px; height:34px; border-radius:50%;
+    background:var(--royal); color:#fff8ea;
+    display:flex; align-items:center; justify-content:center; font-size:12px;
+  }
+  .viz-cta-copy{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .viz-cta-label{ font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--royal-deep); font-weight:700; }
+  .viz-cta-desc{ font-size:14px; color:var(--ink-soft); }
+  .viz-cta-arrow{ color:var(--royal); font-size:16px; flex-shrink:0; }
+
+  /* ---------- Quiz cards ---------- */
+  .quiz-card{
+    border-color: rgba(220,154,52,0.35);
+    background:linear-gradient(165deg, var(--paper-tint), var(--paper) 65%);
+  }
+  .quiz-tag{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--terracotta);
+    margin-bottom:16px;
+    font-weight:600;
+  }
+  .ballot-icon{ font-size:14px; }
+  .quiz-question{ margin-bottom:20px; }
+  .quiz-question p{ font-size:17px; color:var(--ink); }
+
+  .choices{ display:flex; flex-direction:column; gap:10px; }
+  .choice{
+    display:flex; align-items:center; gap:14px;
+    text-align:left;
+    background:var(--paper);
+    border:1px solid var(--sand-line-strong);
+    border-radius:12px;
+    padding:14px 16px;
+    color:var(--ink);
+    font-family:'Inter'; font-size:14.5px;
+    cursor:pointer;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .choice:hover{ background:var(--royal-soft); border-color:var(--royal-soft-strong); }
+  .choice:active{ transform: scale(0.995); }
+  .choice-mark{
+    flex-shrink:0; width:26px; height:26px; border-radius:8px;
+    background:var(--sand); border:1px solid var(--sand-line-strong);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--ink-soft);
+  }
+  .choice-text{ flex:1; }
+  .choice-icon{ width:18px; height:18px; flex-shrink:0; }
+
+  .choices.answered .choice{ cursor:default; }
+  .choices.answered .choice:hover{ background:var(--paper); }
+  .choice.is-correct{
+    border-color: var(--good); background:var(--good-soft);
+  }
+  .choice.is-correct .choice-mark{ background:var(--good); color:#f4fbf6; border-color:var(--good); }
+  .choice.is-correct .choice-icon::after{ content:"✓"; color:var(--good); font-weight:700; }
+  .choice.is-wrong{
+    border-color: var(--bad); background:var(--bad-soft);
+  }
+  .choice.is-wrong .choice-mark{ background:var(--bad); color:#fdf5f4; border-color:var(--bad); }
+  .choice.is-wrong .choice-icon::after{ content:"✕"; color:var(--bad); font-weight:700; }
+  .choices.answered .choice:not(.is-correct):not(.is-wrong){ opacity:.5; }
+
+  .quiz-feedback{
+    margin-top:16px; font-size:14px; font-weight:600;
+    min-height:0; display:none;
+    align-items:center; gap:8px;
+    padding:12px 16px; border-radius:12px;
+  }
+  .quiz-feedback.show{ display:flex; }
+  .quiz-feedback.correct{ background:var(--good-soft); color:var(--good); border:1px solid rgba(47,143,95,0.3); }
+  .quiz-feedback.wrong{ background:var(--bad-soft); color:var(--bad); border:1px solid rgba(195,74,61,0.25); }
+
+  .explanation{
+    margin-top:18px; padding-top:18px; border-top:1px dashed var(--sand-line-strong);
+    display:none;
+  }
+  .explanation.show{ display:block; animation: fadeIn .35s ease; }
+  .explanation-label{
+    font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--plum);
+    margin-bottom:8px; font-weight:700;
+  }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:translateY(0);} }
+
+  /* ---------- Footer ---------- */
+  .end-note{
+    text-align:center; color:var(--ink-faint); font-size:13px;
+    margin-top:40px; padding-top:24px; border-top:1px solid var(--sand-line);
+  }
+
+  /* ---------- Mobile ---------- */
+  #sidebar-toggle{ display:none; }
+  @media (max-width: 960px){
+    .layout{ display:block; }
+    #sidebar{
+      position:fixed; inset:0 auto 0 0; transform:translateX(-100%);
+      width:82vw; max-width:320px;
+      background:
+        radial-gradient(420px 260px at 100% 0%, rgba(255,255,255,0.10), transparent 60%),
+        linear-gradient(190deg, var(--royal-deep), var(--royal) 65%, #4a3600 100%);
+      border-right:1px solid rgba(255,255,255,0.16);
+      transition: transform .25s ease;
+      padding:22px;
+    }
+    #sidebar.open{ transform:translateX(0); }
+    #sidebar-scrim{
+      display:none; position:fixed; inset:0; background:rgba(40,30,10,0.35); z-index:19;
+    }
+    #sidebar-scrim.show{ display:block; }
+    #sidebar-toggle{
+      display:flex; align-items:center; gap:8px;
+      position:fixed; top:14px; left:14px; z-index:21;
+      background:var(--paper); border:1px solid var(--sand-line-strong);
+      color:var(--ink); font-family:'Fraunces'; font-weight:600; font-size:12px;
+      padding:9px 14px; border-radius:999px; cursor:pointer;
+      box-shadow:0 6px 16px -8px rgba(150,110,10,0.28);
+    }
+    main{ padding:80px 20px 100px; }
+    .card{ padding:26px 22px; }
+  }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations · Boosting</span><span class="pn"><a href="../bagging/" title="ML Foundations · Random forest and bagging">← Prev</a><a href="../DSML-SL-1/" title="DSML Supervised 1 · K-nearest neighbors">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progress-track"><div id="progress-fill"></div></div>
+
+<button id="sidebar-toggle" type="button" aria-expanded="false">☰ Contents</button>
+<div id="sidebar-scrim"></div>
+
+<div class="layout">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">B</div>
+      <div>
+        <div class="brand-text">Boosting</div>
+        <div class="brand-sub">Interactive Post-Read</div>
+      </div>
+    </div>
+
+    <div class="sidebar-meta">
+      <div class="meta-row"><span>Sections</span><b id="meta-sections">19</b></div>
+      <div class="meta-row"><span>Checkpoints</span><b id="meta-quizzes">6</b></div>
+      <div class="meta-row"><span>Progress</span><b id="meta-progress">0%</b></div>
+    </div>
+
+    <nav id="nav">
+<a href="#s0-recap-of-previous-lecture" class="nav-link" data-target="s0-recap-of-previous-lecture"><span class="nav-num">01</span><span class="nav-title">Recap of Previous Lecture</span></a>
+<a href="#s1-today-s-focus" class="nav-link" data-target="s1-today-s-focus"><span class="nav-num">02</span><span class="nav-title">Today's Focus</span></a>
+<a href="#s2-quiz-1" class="nav-link nav-quiz" data-target="s2-quiz-1"><span class="nav-num">Q1</span><span class="nav-title">Quiz 1</span></a>
+<a href="#s3-boosting-intuition" class="nav-link" data-target="s3-boosting-intuition"><span class="nav-num">03</span><span class="nav-title">Boosting Intuition</span></a>
+<a href="#s4-quiz-2" class="nav-link nav-quiz" data-target="s4-quiz-2"><span class="nav-num">Q2</span><span class="nav-title">Quiz 2</span></a>
+<a href="#s5-quiz-3" class="nav-link nav-quiz" data-target="s5-quiz-3"><span class="nav-num">Q3</span><span class="nav-title">Quiz 3</span></a>
+<a href="#s6-geometric-interpretation-of-boosting" class="nav-link" data-target="s6-geometric-interpretation-of-boosting"><span class="nav-num">04</span><span class="nav-title">Geometric Interpretation of Boosting</span></a>
+<a href="#s7-boosting-in-classification" class="nav-link" data-target="s7-boosting-in-classification"><span class="nav-num">05</span><span class="nav-title">Boosting in Classification</span></a>
+<a href="#s8-overfitting-underfitting-tradeoff-and-regularization" class="nav-link" data-target="s8-overfitting-underfitting-tradeoff-and-regularization"><span class="nav-num">06</span><span class="nav-title">Overfitting Underfitting Tradeoff and Regularization</span></a>
+<a href="#s9-quiz-4" class="nav-link nav-quiz" data-target="s9-quiz-4"><span class="nav-num">Q4</span><span class="nav-title">Quiz 4</span></a>
+<a href="#s10-learning-rate-vs-base-learners" class="nav-link" data-target="s10-learning-rate-vs-base-learners"><span class="nav-num">07</span><span class="nav-title">Learning Rate vs Base Learners</span></a>
+<a href="#s11-usecase-emg-signal-classification-problem-statement" class="nav-link" data-target="s11-usecase-emg-signal-classification-problem-statement"><span class="nav-num">08</span><span class="nav-title">UseCase EMG Signal Classification Problem Statement</span></a>
+<a href="#s12-modeling-decision-tree" class="nav-link" data-target="s12-modeling-decision-tree"><span class="nav-num">09</span><span class="nav-title">Modeling Decision Tree</span></a>
+<a href="#s13-modeling-random-forest" class="nav-link" data-target="s13-modeling-random-forest"><span class="nav-num">10</span><span class="nav-title">Modeling Random Forest</span></a>
+<a href="#s14-modeling-gradient-boosting-decision-tree-gbdt" class="nav-link" data-target="s14-modeling-gradient-boosting-decision-tree-gbdt"><span class="nav-num">11</span><span class="nav-title">Modeling Gradient Boosting Decision Tree GBDT</span></a>
+<a href="#s15-feature-importance-in-gbdt" class="nav-link" data-target="s15-feature-importance-in-gbdt"><span class="nav-num">12</span><span class="nav-title">Feature Importance in GBDT</span></a>
+<a href="#s16-what-happens-at-train-and-test-time-debate-with-ai" class="nav-link" data-target="s16-what-happens-at-train-and-test-time-debate-with-ai"><span class="nav-num">13</span><span class="nav-title">What Happens at Train and Test Time & Debate with AI</span></a>
+<a href="#s17-how-to-speed-up-gbdt-impact-of-outliers" class="nav-link" data-target="s17-how-to-speed-up-gbdt-impact-of-outliers"><span class="nav-num">14</span><span class="nav-title">How to Speed Up GBDT & Impact of Outliers</span></a>
+<a href="#s18-quiz-5" class="nav-link nav-quiz" data-target="s18-quiz-5"><span class="nav-num">Q5</span><span class="nav-title">Quiz 5</span></a>
+<a href="#s19-stochastic-gradient-boosting" class="nav-link" data-target="s19-stochastic-gradient-boosting"><span class="nav-num">15</span><span class="nav-title">Stochastic Gradient Boosting</span></a>
+<a href="#s20-xgboost" class="nav-link" data-target="s20-xgboost"><span class="nav-num">16</span><span class="nav-title">XGBoost</span></a>
+<a href="#s21-lightgbm" class="nav-link" data-target="s21-lightgbm"><span class="nav-num">17</span><span class="nav-title">LightGBM</span></a>
+<a href="#s22-quiz-6" class="nav-link nav-quiz" data-target="s22-quiz-6"><span class="nav-num">Q6</span><span class="nav-title">Quiz 6</span></a>
+<a href="#s23-lightgbm-optimizations-implementation" class="nav-link" data-target="s23-lightgbm-optimizations-implementation"><span class="nav-num">18</span><span class="nav-title">LightGBM Optimizations & Implementation</span></a>
+<a href="#s24-wrap-up" class="nav-link" data-target="s24-wrap-up"><span class="nav-num">19</span><span class="nav-title">Wrap Up</span></a>
+    </nav>
+
+    <div id="sidebar-footer">Scroll or tap a section to jump there. Your progress isn't saved between visits.</div>
+  </aside>
+
+  <main>
+    <div class="hero">
+      <div class="hero-badge"><span class="dot"></span> Post-read &middot; Sequential Ensembles</div>
+      <h1>Boosting</h1>
+      <p class="lede">A self-paced walkthrough of how Boosting actually works — the intuition behind sequential error correction, the bias&ndash;variance tradeoff, a real EMG classification build, and the optimizations behind XGBoost and LightGBM. Read through, and answer the checkpoints as you go.</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><span class="num">19</span><span class="lab">Sections</span></div>
+        <div class="hero-stat"><span class="num">6</span><span class="lab">Checkpoints</span></div>
+        <div class="hero-stat"><span class="num">~30 min</span><span class="lab">Read time</span></div>
+      </div>
+    </div>
+
+
+    <section class="card read-card" id="s0-recap-of-previous-lecture" data-nav="s0-recap-of-previous-lecture">
+      <div class="card-eyebrow"><span class="eyebrow-num">01</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Recap</span></h2>
+<p>In the previous lecture, we covered:</p>
+<ul>
+<li>Random Forest as an application of Bagging</li>
+<li>Bootstrap Sampling</li>
+<li>Random Feature Selection</li>
+<li>Why diversity among base learners is important</li>
+<li>Why Bagging reduces variance</li>
+<li>Random Forest implementation using <code>Scikit-learn</code></li>
+<li>Hyperparameter Tuning<ul>
+<li><code>n_estimators</code></li>
+<li><code>max_depth</code></li>
+<li><code>max_features</code></li>
+<li><code>min_samples_split</code></li>
+<li><code>min_samples_leaf</code></li>
+<li><code>ccp_alpha</code></li>
+</ul>
+</li>
+<li>Grid Search and Randomized Search</li>
+<li>Out-of-Bag (OOB) Samples and <strong>OOB Score</strong></li>
+<li>Bias-Variance Tradeoff in Random Forest</li>
+<li>Interview Questions on Random Forest</li>
+</ul>
+<h2><span style="color: skyblue;">Key Takeaways</span></h2>
+<ul>
+<li>Ensemble Learning combines multiple models to build a stronger and more robust predictor.</li>
+<li>Bagging trains multiple models <strong>independently</strong> on different bootstrap samples and combines their predictions.</li>
+<li>Random Forest improves upon a single Decision Tree by reducing variance through <strong>bootstrap sampling and random feature selection</strong>.</li>
+<li>Hyperparameters such as the number of trees, tree depth, and sampled features have a significant impact on model performance.</li>
+<li>The <strong>Out-of-Bag (OOB) Score</strong> provides an efficient estimate of generalization performance without requiring a separate validation dataset.</li>
+</ul>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s1-today-s-focus" data-nav="s1-today-s-focus">
+      <div class="card-eyebrow"><span class="eyebrow-num">02</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Today's Focus</span></h2>
+<p>So far, we have studied <strong>Bagging</strong>, where multiple models are trained <strong>independently</strong> and their predictions are combined to improve performance.</p>
+<p>In this lecture, we will explore another powerful ensemble technique called <strong>Boosting</strong>. Unlike Bagging, Boosting builds models <strong>sequentially</strong>, where each new model focuses on correcting the mistakes made by the previous ones. We'll develop the intuition behind Boosting and understand why it often achieves higher predictive performance than a single model.</p>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s2-quiz-1" data-nav="s2-quiz-1">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 1</div>
+      <div class="quiz-question prose"><p>Which of the following models are <strong>underfit</strong> models?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="true"><span class="choice-mark">A</span><span class="choice-text">Decision Stump (Decision Tree with <code>depth = 1</code>)</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">B</span><span class="choice-text">Decision Tree with <code>depth = 20</code></span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">Decision Tree with <code>depth = 10</code></span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">None of the above.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card read-card" id="s3-boosting-intuition" data-nav="s3-boosting-intuition">
+      <div class="card-eyebrow"><span class="eyebrow-num">03</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">What is Boosting Doing Intuitively?</span></h2>
+<p>Intuitively, we are iteratively building our models on the error of the previous models.</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/584/original/Screenshot_2026-08-03_122416.png?1785747234"></p>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s4-quiz-2" data-nav="s4-quiz-2">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 2</div>
+      <div class="quiz-question prose"><p>Which of the following statements is <strong>true</strong> about <strong>Boosting</strong>?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text">Boosting is a sequential model building technique.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">B</span><span class="choice-text">We use weights to adjust the influence of each model in the final prediction.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">A new model is built on the errors of the previous models.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">D</span><span class="choice-text">All of the above.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card quiz-card" id="s5-quiz-3" data-nav="s5-quiz-3">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 3</div>
+      <div class="quiz-question prose"><p>After training a <strong>Boosting</strong> model with <strong>4 base learners</strong>, you notice that the <strong>residuals of the final base learner are 0</strong>. What can you conclude?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text">The model is optimal.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">B</span><span class="choice-text">The model is overfitting.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">The model is underfitting.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">The final base learner is optimal.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card read-card" id="s6-geometric-interpretation-of-boosting" data-nav="s6-geometric-interpretation-of-boosting">
+      <div class="card-eyebrow"><span class="eyebrow-num">04</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Geometric Interpretation</span></h2>
+<ul>
+<li>In Stage 0, we get mean model <code>h0(x)</code>, which you could observe as the orange line.</li>
+<li>After the mean model, we can see the errors as green lines which seem to be high.</li>
+<li>After Stage 1, we get <code>F1(x)</code> model, which learnt from previous errors and now we can observe that errors for the black line are less than before.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/585/original/Screenshot_2026-08-03_122430.png?1785747287"></p>
+<p>The whole process will look like (gif):</p>
+<p>Image source: <a href="https://drive.google.com/uc?id=1vr-XTgG7DNAuDCNTVs7oTFnp0ejLXNUC" target="_blank" rel="noopener" class="inline-link">https://drive.google.com/uc?id=1vr-XTgG7DNAuDCNTVs7oTFnp0ejLXNUC</a></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/586/original/Screenshot_2026-08-03_122447.png?1785747336"></p>
+<p>The whole process along with the reduction in residual looks as follows:</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/646/original/Screenshot_2026-08-03_150129.png?1785749555"><br />
+<img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/648/original/Screenshot_2026-08-03_150141.png?1785749593"><br />
+<img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/652/original/Screenshot_2026-08-03_150449.png?1785749701"></p>
+<p>So far we have worked with a regression example where the target was continuous. But in practice, many real-world problems are classification tasks. Does Boosting work for classification too? Yes, it does. The core idea stays the same: learn from mistakes sequentially. But the way we define 'error' changes. Let us see how."</p>
+      </div>
+        <a class="viz-cta" href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/sequential-residual-fitting-stages/" target="_blank" rel="noopener">
+          <span class="viz-cta-icon" aria-hidden="true">&#9654;</span>
+          <span class="viz-cta-copy">
+            <span class="viz-cta-label">Interactive visualization</span>
+            <span class="viz-cta-desc">See the interactive flow of this</span>
+          </span>
+          <span class="viz-cta-arrow" aria-hidden="true">&#8599;</span>
+        </a>
+    </section>
+
+    <section class="card read-card" id="s7-boosting-in-classification" data-nav="s7-boosting-in-classification">
+      <div class="card-eyebrow"><span class="eyebrow-num">05</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">How Does Boosting Work for Classification?</span></h2>
+<p>Let us assume:</p>
+<ul>
+<li>We have the data (<code>xi</code>, <code>yi</code>)</li>
+<li>But our values of <code>yi</code> are 0 or 1.</li>
+</ul>
+<p>Now, we have to predict the probability of <code>yi</code> being 0 or 1, i.e., <code>pi</code>.</p>
+<h3>Case 1: <code>yi</code> = 1</h3>
+<p>For model where <code>xi</code> = [0,1,3,1] and <code>yi</code>=1</p>
+<ul>
+<li>Let's assume <code>h0(x1)</code> predicts 0.4</li>
+</ul>
+<p>What will be the error here?<br />
+-    <code>error0</code> = 1 - 0.4 = 0.6<br />
+-   Second model will fit the data on (<code>xi</code>, 0.6)<br />
+-   Suppose <code>h1(x)</code> = 0.2</p>
+<p>What will be the final model after stage 2?<br />
+-    So, final model after second stage<br />
+-    <code>F1(x)</code>=<code>γ0h0(x)</code>+<code>y1h1(x)</code> = 0.4 + 0.2 = 0.6</p>
+<p>What will be the residual?<br />
+    Residual will be <code>yi</code>−<code>F1(x)</code> = 1 - 0.6 = 0.4</p>
+<p>We keep on fitting the models on the residual....</p>
+<h3>Case 2: <code>yi</code> = 0</h3>
+<p>Assume the same case,</p>
+<p>For model where <code>xi</code> = [0,1,3,1] and <code>yi</code>=0</p>
+<ul>
+<li>Let's assume <code>h0(x1)</code> predicts 0.4</li>
+</ul>
+<h5>What will be the residual after <code>F0(x)</code> or <code>h0(x)</code>?</h5>
+<p>Residual = <code>yi</code>−<code>F0(x)</code> = 0 - 0.4 = -0.4<br />
+Now, next model will fit on (<code>xi</code>, −0.4) and so on ..</p>
+<p>Before implementing boosting using sklearn, let's look at hyperparams.</p>
+<p>We now know how Boosting works for both regression and classification. But remember the caution we raised earlier: if we keep adding stages, the training error keeps dropping toward zero. That sounds great, but it means the model could memorize the training data. So how do we control this? Let us look at the overfit-underfit tradeoff in Boosting and understand which knobs we can turn.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s8-overfitting-underfitting-tradeoff-and-regularization" data-nav="s8-overfitting-underfitting-tradeoff-and-regularization">
+      <div class="card-eyebrow"><span class="eyebrow-num">06</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Overfitting-Underfitting Trade-off</span></h2>
+<h3>How Can We Regularize the GBDT Model?</h3>
+<p>sklearn documentation: <a href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html" target="_blank" rel="noopener" class="inline-link">https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html</a></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/587/original/Screenshot_2026-08-03_122510.png?1785747383"></p>
+<h3>1. <em>M</em> - The Number of Base Learners</h3>
+<p><strong>What will happen if M increases?</strong></p>
+<p>As the number of base learners increases, it is more likely that the train error will go to 0.<br />
+Hence, the model will overfit.</p>
+<p><strong>As M increases, the model will overfit</strong>.</p>
+<h3>2. The Depth of Base Learners</h3>
+<p>What will happen if depth increases?<br />
+As <code>depth</code> increases, the model will overfit.</p>
+<p><strong>How?</strong><br />
+Let's say we have deep DT for base learners, i.e., overfit models.<br />
+-   In that case, within 4 or 5 models, we'll crazily overfit to noise.</p>
+<p>Hence, we don't use deep DT as base learners.</p>
+<p>With great power comes great risk</p>
+<p>The biggest risk of GBDT is:</p>
+<ul>
+<li>it can overfit easily if we are not careful</li>
+</ul>
+<p>So, in order to avoid that, we introduce another level of regularization.</p>
+<h3>3. Shrinkage or Learning Rate (<code>ν</code>)</h3>
+<p>We add a regularization term <code>ν</code> to the model <code>Fm(x)</code> such that:</p>
+<ul>
+<li><code>Fm(x)</code>=<code>Fm−1(x)</code>+<code>ν γmhm(x)</code></li>
+</ul>
+<p><strong>What will be the value of ν (nu)?</strong><br />
+This 𝜈 always lies between 0 and 1.</p>
+<p><strong>What is ν doing intuitively?</strong><br />
+Intuitively, ν is shrinking the impact of the <code>mth</code> model so that models don't overfit easily.</p>
+<p>Think of it as an additional lever to control the overfit.</p>
+<p>So, we can say that,</p>
+<p><strong>as ν increases, chances of model overfitting increases</strong>.</p>
+<p>Note: We have the <strong>same 𝜈 for all models in GBDT</strong>.</p>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s9-quiz-4" data-nav="s9-quiz-4">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 4</div>
+      <div class="quiz-question prose"><p>What happens to a <strong>Boosting</strong> model when the <strong>learning rate (<code>ν</code>)</strong> is set to <strong>0</strong> and <strong>1</strong>, respectively?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="true"><span class="choice-mark">A</span><span class="choice-text"><code>ν = 0</code> → Underfit; <code>ν = 1</code> → Overfit</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">B</span><span class="choice-text"><code>ν = 0</code> → Overfit; <code>ν = 1</code> → Underfit</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text"><code>ν = 0</code> → Underfit; <code>ν = 1</code> → Underfit</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text"><code>ν = 0</code> → Overfit; <code>ν = 1</code> → Overfit</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card read-card" id="s10-learning-rate-vs-base-learners" data-nav="s10-learning-rate-vs-base-learners">
+      <div class="card-eyebrow"><span class="eyebrow-num">07</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Learning Rate vs Base Learners</span></h2>
+<h4><span style="color: violet;">Question: What should be done to <em>M</em> if ν is decreased to keep the performance same?</span></h4>
+<p>Number of <strong>base learners should be increased</strong> because as we are decreasing ν, <br />
+-    we are restricting base learners contribution, <br />
+-    due to which the error increases. </p>
+<p>We use ν even when the γ is there to avoid overfit, as there are high chances of overfitting.</p>
+<p>We now have a solid understanding of Boosting theory, the math behind it, and how to control overfitting. Time to see it in action on a real dataset. We will work with EMG (Electromyography) signals, which are electrical signals produced by muscles. The goal is to classify these signals into different categories. Let us start by understanding the data.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s11-usecase-emg-signal-classification-problem-statement" data-nav="s11-usecase-emg-signal-classification-problem-statement">
+      <div class="card-eyebrow"><span class="eyebrow-num">08</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">UseCase - EMG Signal Classification</span></h2>
+<h3>Problem Statement :</h3>
+<ul>
+<li>Your task is to classify these EMG signals into 20 different physical actions.</li>
+<li>This will then be used for controlling the robotics arm.</li>
+</ul>
+<h3>What is EMG (ElectroMioGraphy)?</h3>
+<ul>
+<li>Technique to study electrical signals produced by muscular movement.</li>
+</ul>
+<h3>Dataset</h3>
+<ul>
+<li>You have a dataset of EMG signals from 4 subjects/people.</li>
+</ul>
+<h3>How was the data collected?</h3>
+<ul>
+<li>Subject was asked to perform specific physical actions.</li>
+<li>Signals produced due to that movement were recorded over time.</li>
+<li>8 channels were used to record the signals.</li>
+<li>Channels here correspond to muscles.</li>
+<li>For example: Right-hand bicep</li>
+<li>Frequency: 10 <code>ms−1</code></li>
+</ul>
+<p>Now, let's import some libs at first.</p>
+<p>Source: <a href="https://archive.ics.uci.edu/ml/datasets/EMG+Physical+Action+Data+Set" target="_blank" rel="noopener" class="inline-link">https://archive.ics.uci.edu/ml/datasets/EMG+Physical+Action+Data+Set</a></p>
+<h3>Code: Initial Imports</h3>
+<pre><code class="language-python">import matplotlib.pyplot as plt
+import numpy as np
+import os
+import pandas as pd
+import sklearn
+</code></pre>
+<h3>Extracting Data</h3>
+<h3>Code</h3>
+<pre><code class="language-python">!pip install gdown==4.6.0
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">!gdown 1h86M8si2YT-aI4Zec1MeMP_mPYsLPy5F
+</code></pre>
+<h3>Output</h3>
+<pre><code>Downloading...
+From: https://drive.google.com/uc?id=1h86M8si2YT-aI4Zec1MeMP_mPYsLPy5F
+To: /content/emg.rar
+100% 18.6M/18.6M [00:00&lt;00:00, 88.4MB/s]
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># x is extract
+
+!unrar x &quot;./emg.rar&quot; &quot;./&quot;
+</code></pre>
+<h3>Visualizing File Structure</h3>
+<h3>Code</h3>
+<pre><code class="language-python">!sudo apt install tree
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">!tree &quot;./EMG Physical Action Data Set/sub1&quot;
+</code></pre>
+<p>Here if you see for subject 1, we have sub folders:</p>
+<ul>
+<li>aggressive and</li>
+<li>normal</li>
+</ul>
+<p>These folders mention the aggressive and normal activities respectively with corresponding log and txt files.</p>
+<p>We will use txt files.</p>
+<p>Let's see one of the folders from above.</p>
+<h3>Code</h3>
+<pre><code class="language-python">!ls -lrt ./EMG\ Physical\ Action\ Data\ Set/sub1/Aggressive/txt/
+</code></pre>
+<h3>Reading Data</h3>
+<p>Now, let's see what is the data in slapping.txt.</p>
+<h3>Code</h3>
+<pre><code class="language-python">!cat ./EMG\ Physical\ Action\ Data\ Set/sub1/Aggressive/txt/Slapping.txt
+</code></pre>
+<h3>Key Observations</h3>
+<ul>
+<li>We got eight columns of the data which corresponds to eight electrodes.</li>
+<li>We are collecting data 10 times per millisecond.</li>
+<li>Each row gives the data for every 0.1 millisecond.</li>
+</ul>
+<p>After this, we perform a series of preprocessing on the data.</p>
+<h3>Summary of Preprocessing</h3>
+<p><strong>Preprocessing Post Read</strong></p>
+<p>Link : <a href="https://colab.research.google.com/drive/1jRl6U-gGxTvT1FHGzMW-5BDAhQ6ON6om?usp=sharing" target="_blank" rel="noopener" class="inline-link">https://colab.research.google.com/drive/1jRl6U-gGxTvT1FHGzMW-5BDAhQ6ON6om?usp=sharing</a></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/588/original/Screenshot_2026-08-03_122549.png?1785747444"></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/594/original/Screenshot_2026-08-03_122603.png?1785747533"></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/596/original/Screenshot_2026-08-03_122611.png?1785747572"></p>
+<h3>Preprocessed Data</h3>
+<h3>Code</h3>
+<pre><code class="language-python">import pickle
+
+!gdown 171Yoe_GSapyrmOnD9oBzHWNOD_OnQs0F
+!gdown 1hnIlTPW3AMeB69EbeaXCRIrpMVT1Vwmc
+!gdown 1nZtB_RtxMg_MgoRczb8UWQX-AEK_l3qE
+!gdown 1zLDUErwKdmF-RacOyHEuI_z_46LssQtP
+
+with open('X_train.pickle', 'rb') as handle:
+    X_train = pickle.load(handle)
+
+with open('X_test.pickle', 'rb') as handle:
+    X_test = pickle.load(handle)
+
+with open('Y_train.pickle', 'rb') as handle:
+    y_train = pickle.load(handle)
+
+with open('Y_test.pickle', 'rb') as handle:
+    y_test = pickle.load(handle)
+</code></pre>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s12-modeling-decision-tree" data-nav="s12-modeling-decision-tree">
+      <div class="card-eyebrow"><span class="eyebrow-num">09</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Modeling</span></h2>
+<h3>Decision Tree</h3>
+<pre><code class="language-python">from sklearn.tree import DecisionTreeClassifier as DTC
+from sklearn import tree
+from sklearn.model_selection import GridSearchCV
+
+params = {
+    &quot;max_depth&quot; : [3, 5, 7, 10, 15],
+    &quot;max_leaf_nodes&quot; : [20, 40, 60]
+}
+
+model1 = DTC()
+clf = GridSearchCV(model1, params, scoring = &quot;accuracy&quot;, cv=5)
+
+clf.fit(X_train, y_train)
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/599/original/Screenshot_2026-08-03_124048.png?1785747613"></p>
+<p>Let's see the results of our GridSearch.</p>
+<pre><code class="language-python">res = clf.cv_results_
+
+for i in range(len(res[&quot;params&quot;])):
+  print(f&quot;Parameters:{res['params'][i]} Mean_score: {res['mean_test_score'][i]} Rank: {res['rank_test_score'][i]}&quot;)
+</code></pre>
+<h3>Output (Example)</h3>
+<pre><code>Parameters:{'max_depth': 3, 'max_leaf_nodes': 20} Mean_score: 0.6012345679012346 Rank: 15
+Parameters:{'max_depth': 3, 'max_leaf_nodes': 40} Mean_score: 0.6012345679012346 Rank: 14
+...
+Parameters:{'max_depth': 15, 'max_leaf_nodes': 60} Mean_score: 0.8123456790123457 Rank: 1
+</code></pre>
+<p>So what's the best estimator and score?</p>
+<h3>Code</h3>
+<pre><code class="language-python">print(clf.best_estimator_)
+</code></pre>
+<h3>Output</h3>
+<pre><code>DecisionTreeClassifier(max_depth=15, max_leaf_nodes=60)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">clf = DTC(**clf.best_params_)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">clf.fit(X_train, y_train)
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/600/original/Screenshot_2026-08-03_124054.png?1785747649"></p>
+<h3>Train Score</h3>
+<h3>Code</h3>
+<pre><code class="language-python">clf.score(X_train, y_train)
+</code></pre>
+<h3>Output</h3>
+<pre><code>0.8223617453069508
+</code></pre>
+<h3>Test Score</h3>
+<h3>Code</h3>
+<pre><code class="language-python">clf.score(X_test, y_test)
+</code></pre>
+<h3>Output</h3>
+<pre><code>0.8125792543748415
+</code></pre>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s13-modeling-random-forest" data-nav="s13-modeling-random-forest">
+      <div class="card-eyebrow"><span class="eyebrow-num">10</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Random Forest</span></h2>
+<h3>Code</h3>
+<pre><code class="language-python">from sklearn.ensemble import RandomForestClassifier as RFC
+from sklearn import tree
+from sklearn.model_selection import RandomizedSearchCV
+import datetime as dt
+
+params = {
+    &quot;n_estimators&quot;: [10,25,50,100,150,200],
+    &quot;max_depth&quot; : [3, 5, 10, 15, 20],
+    &quot;max_leaf_nodes&quot; : [20, 40, 80]
+}
+
+rfc = RFC(n_jobs = -1)
+clf = RandomizedSearchCV(rfc, params, scoring = &quot;accuracy&quot;, cv=3, n_jobs = -1, verbose = 1)
+
+start = dt.datetime.now()
+clf.fit(X_train, y_train)
+end = dt.datetime.now()
+</code></pre>
+<h3>Output</h3>
+<pre><code>Fitting 3 folds for each of 10 candidates, totalling 30 fits
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">res = clf.cv_results_
+
+for i in range(len(res[&quot;params&quot;])):
+  print(f&quot;Parameters:{res['params'][i]} Mean_score: {res['mean_test_score'][i]} Rank: {res['rank_test_score'][i]}&quot;)
+</code></pre>
+<p>Notice that,</p>
+<p>The performance of Random Forest (0.89) is better than Decision Tree (0.81).</p>
+<h3>Code</h3>
+<pre><code class="language-python">print(f&quot;Time taken for fits : {end - start}&quot;)
+</code></pre>
+<h3>Output</h3>
+<pre><code>Time taken for fits : 0:00:33.296615
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">print(clf.best_estimator_)
+</code></pre>
+<h3>Output</h3>
+<pre><code>RandomForestClassifier(max_depth=20, max_leaf_nodes=80, n_jobs=-1)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">rf = clf.best_estimator_
+
+rf.fit(X_train, y_train)
+
+print(&quot;Model acc&quot;,rf.score(X_test, y_test))
+</code></pre>
+<h3>Output</h3>
+<pre><code>Model acc 0.8937357342125285
+</code></pre>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s14-modeling-gradient-boosting-decision-tree-gbdt" data-nav="s14-modeling-gradient-boosting-decision-tree-gbdt">
+      <div class="card-eyebrow"><span class="eyebrow-num">11</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Gradient Boosting Decision Tree</span></h2>
+<h3>Code</h3>
+<pre><code class="language-python">params = {
+    &quot;n_estimators&quot;: [50,100,150,200],
+    &quot;max_depth&quot; : [3, 4, 5, 7],
+    &quot;max_leaf_nodes&quot; : [20, 40, 80],
+    &quot;learning_rate&quot;: [0.1, 0.2, 0.3]
+}
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">from sklearn.ensemble import GradientBoostingClassifier as GBC
+from sklearn.model_selection import RandomizedSearchCV
+import datetime as dt
+
+gbc = GBC()
+clf = RandomizedSearchCV(gbc, params, scoring = &quot;accuracy&quot;, cv=3, n_jobs = -1, verbose = 1)
+
+start = dt.datetime.now()
+
+clf.fit(X_train, y_train)
+
+end = dt.datetime.now()
+</code></pre>
+<h3>Output</h3>
+<pre><code>Fitting 3 folds for each of 10 candidates, totalling 30 fits
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">res = clf.cv_results_
+
+for i in range(len(res[&quot;params&quot;])):
+  print(f&quot;Parameters:{res['params'][i]} Mean_score: {res['mean_test_score'][i]} Rank: {res['rank_test_score'][i]}&quot;)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">print(f&quot;Time taken for fits : {end - start}&quot;)
+</code></pre>
+<h3>Output</h3>
+<pre><code>Time taken for fits : 0:43:28.313080
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">print(clf.best_estimator_)
+</code></pre>
+<h3>Output</h3>
+<pre><code>GradientBoostingClassifier(learning_rate=0.2, max_depth=7, max_leaf_nodes=40)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">gbc = clf.best_estimator_
+
+gbc.fit(X_train, y_train)
+
+print(&quot;Model acc&quot;,gbc.score(X_test, y_test))
+</code></pre>
+<h3>Output</h3>
+<pre><code>Model acc 0.9693127060613745
+</code></pre>
+<p>Notice that:</p>
+<ul>
+<li>It took us approx 1 hr to hyperparam tune sklearn GBDT (slow).</li>
+<li>Test accuracy: 0.96 (better than RF).</li>
+</ul>
+<h3>Interactive GBDT</h3>
+<p>Let's visualize the process of training a GBDT.</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/601/original/Screenshot_2026-08-03_124127.png?1785747696"></p>
+<p>Click <a href="https://interactive-gbdt.streamlit.app/"><strong>here</strong></a> and play</p>
+<p>Our model is trained and evaluated. But which features are driving the predictions? Just like we saw in Random Forest, Boosting also gives us feature importances. Let us plot them and see which EMG signal features matter the most.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s15-feature-importance-in-gbdt" data-nav="s15-feature-importance-in-gbdt">
+      <div class="card-eyebrow"><span class="eyebrow-num">12</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Feature Importance</span></h2>
+<h3>How Do We Find Feature Importance in GBDT?</h3>
+<p>We simply find the feature importance of a feature in each tree and then take the average of these values to get overall feature importance.</p>
+<h3>Code Walkthrough</h3>
+<h3>Code</h3>
+<pre><code class="language-python">print(gbc.feature_importances_)
+
+plt.bar(range(len(gbc.feature_importances_)), gbc.feature_importances_)
+plt.show()
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/603/original/Screenshot_2026-08-03_124136.png?1785747720"></p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s16-what-happens-at-train-and-test-time-debate-with-ai" data-nav="s16-what-happens-at-train-and-test-time-debate-with-ai">
+      <div class="card-eyebrow"><span class="eyebrow-num">13</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Debate With AI: Is Boosting Always Better Than Random Forest?</span></h2>
+<p><em>Instructor to learners:</em></p>
+<p>"We have now learned both Random Forest and Boosting. Big question: which one is better? Let us ask Gemini and see if we agree."</p>
+<p>Paste this prompt into Gemini:</p>
+<p><em>"I have a tabular dataset with 30,000 rows, 24 features, and an imbalanced binary target (78% class 0, 22% class 1). I trained both a Random Forest and a GBDT model. Both give around 82% accuracy. Which model should I go with and why?"</em></p>
+<p>"Gemini picked [its answer]. Raise your hand if you agree. Now raise your hand if you disagree."</p>
+<p>Then ask the class:</p>
+<p>"What questions should we ask before choosing? Think about what we learned in both lectures."</p>
+<p>Guide learners toward these questions:</p>
+<ul>
+<li>Which model has better recall for the minority class?</li>
+<li>How long does each model take to train?</li>
+<li>Random Forest trains in parallel. GBDT trains sequentially. Does that matter for our data size?</li>
+<li>Is the data noisy? Boosting is sensitive to outliers, which we just discussed.</li>
+<li>Do we need interpretability? Both give feature importances, but are they the same?</li>
+</ul>
+<p><em>Instructor to learners:</em></p>
+<p>"There is no single right answer. The right model depends on the problem. AI gave us one opinion. We asked five follow-up questions it did not consider. That is what this course teaches you: not just how to use models, but how to think about them."</p>
+<p>Let me know if this direction works.</p>
+<h2><span style="color: skyblue;">What Happens at Train and Test Time?</span></h2>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/605/original/Screenshot_2026-08-03_124146.png?1785747763"></p>
+<p>GBDT is a sequential model, hence it is slow to train.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s17-how-to-speed-up-gbdt-impact-of-outliers" data-nav="s17-how-to-speed-up-gbdt-impact-of-outliers">
+      <div class="card-eyebrow"><span class="eyebrow-num">14</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h3><span style="color: skyblue;">How Can We Speed Up GBDT?</span></h3>
+<ul>
+<li>Row sampling and column sampling can speed up the model a little.</li>
+<li>While building each base learner, we can apply <strong>parallelization</strong>, i.e., one sub-tree can be built on a core and the other sub-tree can be built on another core.</li>
+<li>Even for building a single tree, <strong>we have to calculate entropy of many features; this can be parallelized</strong>.</li>
+</ul>
+<p>We have covered how to make GBDT faster. One last important topic before we wrap up. Boosting learns from errors sequentially. So what happens when there is an outlier in the data, a data point with a very large error? Will Boosting keep trying to fix that one outlier and ignore everything else? Let us understand how outliers affect Boosting and what we can do about it."</p>
+<h2><span style="color: skyblue;">Impact of Outliers</span></h2>
+<p><span style="color: violet;">Question: Will outliers impact GBDT?</span></p>
+<p>Outliers can impact GBDT.</p>
+<ul>
+<li>Each model is fit on the residual of the previous model.</li>
+<li>Outliers will have higher residual values.</li>
+<li>So, gradient boosting will focus a large amount of its attention on reducing residual for these points.</li>
+</ul>
+<p><span style="color: violet;">Question: How to handle outliers?</span></p>
+<ol>
+<li>Remove outliers.</li>
+<li>Specialized or smart loss functions to handle outliers.</li>
+</ol>
+<h4>What changes can we make in the loss function so that the model be robust to outliers?</h4>
+<ul>
+<li>We can use <strong>Root mean squared error</strong>.</li>
+<li>We can use absolute values of the error.</li>
+</ul>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s18-quiz-5" data-nav="s18-quiz-5">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 5</div>
+      <div class="quiz-question prose"><p>Which of the following statements is <strong>true</strong> about <strong>Gradient Boosting Decision Trees (GBDT)</strong>?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text">GBDT is not impacted by outliers.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">B</span><span class="choice-text">GBDT is impacted by outliers.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">Mean Squared Error (MSE) is not impacted by outliers in the data.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">All of the above except 1.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card read-card" id="s19-stochastic-gradient-boosting" data-nav="s19-stochastic-gradient-boosting">
+      <div class="card-eyebrow"><span class="eyebrow-num">15</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Stochastic Gradient Boosting</span></h2>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/606/original/Screenshot_2026-08-03_124156.png?1785747805"></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/607/original/Screenshot_2026-08-03_124203.png?1785747831"></p>
+<p>sklearn documentation: <a href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html" target="_blank" rel="noopener" class="inline-link">https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html</a></p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s20-xgboost" data-nav="s20-xgboost">
+      <div class="card-eyebrow"><span class="eyebrow-num">16</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">XGBoost</span></h2>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/608/original/Screenshot_2026-08-03_124210.png?1785747865"></p>
+<p>Let's see how it does that.</p>
+<h3>What Optimization Does XGBoost Provide?</h3>
+<p>Parallelization of features selection</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/609/original/Screenshot_2026-08-03_124218.png?1785747886"></p>
+<p>Parallelization in building DT</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/611/original/Screenshot_2026-08-03_124225.png?1785747906"></p>
+<p>Optimizing thresholding in numerical feature</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/612/original/Screenshot_2026-08-03_124233.png?1785747930"></p>
+<p>If you want to dive deep into it,</p>
+<p>here's the link to the research paper: <a href="https://www.kdd.org/kdd2016/papers/files/rfp0697-chenAemb.pdf" target="_blank" rel="noopener" class="inline-link">https://www.kdd.org/kdd2016/papers/files/rfp0697-chenAemb.pdf</a></p>
+<ul>
+<li>published in 2016.</li>
+</ul>
+<p>Let's look into the numerous hyperparameters provided by XGBoost.</p>
+<h3>Hyperparameters</h3>
+<p>XGBoost doc: <a href="https://xgboost.readthedocs.io/en/stable/python/python_api.html#xgboost.XGBClassifier" target="_blank" rel="noopener" class="inline-link">https://xgboost.readthedocs.io/en/stable/python/python_api.html#xgboost.XGBClassifier</a></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/639/original/Screenshot_2026-08-03_145657.png?1785749227"></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/615/original/Screenshot_2026-08-03_124305.png?1785747963"></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/617/original/Screenshot_2026-08-03_124314.png?1785747987"></p>
+<p>Now that we are aware of the hyperparameters,</p>
+<p>let's give them a try.</p>
+<h3>Code Walkthrough</h3>
+<h3>Code</h3>
+<pre><code class="language-python">import pickle
+
+!gdown 171Yoe_GSapyrmOnD9oBzHWNOD_OnQs0F
+!gdown 1hnIlTPW3AMeB69EbeaXCRIrpMVT1Vwmc
+!gdown 1nZtB_RtxMg_MgoRczb8UWQX-AEK_l3qE
+!gdown 1zLDUErwKdmF-RacOyHEuI_z_46LssQtP
+
+with open('X_train.pickle', 'rb') as handle:
+    X_train = pickle.load(handle)
+
+with open('X_test.pickle', 'rb') as handle:
+    X_test = pickle.load(handle)
+
+with open('Y_train.pickle', 'rb') as handle:
+    y_train = pickle.load(handle)
+
+with open('Y_test.pickle', 'rb') as handle:
+    y_test = pickle.load(handle)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">from xgboost import XGBClassifier
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
+from sklearn.model_selection import StratifiedKFold
+
+import datetime as dt
+
+params = {
+        &quot;n_estimators&quot;: [50,100,150,200],
+        &quot;max_depth&quot; : [3, 4, 5, 7],
+        &quot;learning_rate&quot;: [0.1, 0.2, 0.3],
+        'subsample': [0.6, 0.8, 1.0],
+        'colsample_bytree': [0.6, 0.8, 1.0],
+        }
+xgb = XGBClassifier(objective='multi:softmax', num_class=20, silent=True)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">random_search = RandomizedSearchCV(xgb,
+                                   param_distributions=params,
+                                   n_iter=10,
+                                   scoring='accuracy',
+                                   n_jobs=-1,
+                                   cv=3,
+                                   verbose=2)
+
+start = dt.datetime.now()
+random_search.fit(X_train, y_train)
+end = dt.datetime.now()
+</code></pre>
+<h3>Output</h3>
+<pre><code>Fitting 3 folds for each of 10 candidates, totalling 30 fits
+/usr/local/lib/python3.12/dist-packages/xgboost/training.py:200: UserWarning: [06:56:17] WARNING: /__w/xgboost/xgboost/src/learner.cc:793: 
+Parameters: { &quot;silent&quot; } are not used.
+
+  bst.update(dtrain, iteration=i, fobj=obj)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">res = random_search.cv_results_
+
+for i in range(len(res[&quot;params&quot;])):
+  print(f&quot;Parameters:{res['params'][i]} Mean_score: {res['mean_test_score'][i]} Rank: {res['rank_test_score'][i]}&quot;)
+</code></pre>
+<h3>Output</h3>
+<pre><code>Parameters:{'subsample': 0.8, 'n_estimators': 150, 'max_depth': 3, 'learning_rate': 0.2, 'colsample_bytree': 0.6} Mean_score: 0.9419076610857432 Rank: 9
+Parameters:{'subsample': 0.6, 'n_estimators': 150, 'max_depth': 4, 'learning_rate': 0.3, 'colsample_bytree': 0.6} Mean_score: 0.958650431253171 Rank: 7
+Parameters:{'subsample': 0.6, 'n_estimators': 200, 'max_depth': 7, 'learning_rate': 0.2, 'colsample_bytree': 0.6} Mean_score: 0.964041095890411 Rank: 2
+Parameters:{'subsample': 0.6, 'n_estimators': 200, 'max_depth': 5, 'learning_rate': 0.2, 'colsample_bytree': 1.0} Mean_score: 0.9656265854895992 Rank: 1
+Parameters:{'subsample': 0.6, 'n_estimators': 200, 'max_depth': 4, 'learning_rate': 0.1, 'colsample_bytree': 0.6} Mean_score: 0.9470446473871131 Rank: 8
+Parameters:{'subsample': 1.0, 'n_estimators': 200, 'max_depth': 4, 'learning_rate': 0.3, 'colsample_bytree': 0.6} Mean_score: 0.9608701166920345 Rank: 4
+Parameters:{'subsample': 1.0, 'n_estimators': 200, 'max_depth': 5, 'learning_rate': 0.1, 'colsample_bytree': 0.8} Mean_score: 0.9589675291730085 Rank: 6
+Parameters:{'subsample': 0.6, 'n_estimators': 150, 'max_depth': 5, 'learning_rate': 0.2, 'colsample_bytree': 0.8} Mean_score: 0.9632166412988331 Rank: 3
+Parameters:{'subsample': 0.8, 'n_estimators': 100, 'max_depth': 3, 'learning_rate': 0.1, 'colsample_bytree': 1.0} Mean_score: 0.9167935058346018 Rank: 10
+Parameters:{'subsample': 0.8, 'n_estimators': 100, 'max_depth': 7, 'learning_rate': 0.3, 'colsample_bytree': 0.6} Mean_score: 0.9604895991882293 Rank: 5
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">print(f&quot;Time taken for fits : {end - start}&quot;)
+</code></pre>
+<h3>Output</h3>
+<pre><code>Time taken for fits : 0:01:13.617493
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">print(random_search.best_estimator_)
+</code></pre>
+<h3>Output</h3>
+<pre><code>XGBClassifier(base_score=None, booster=None, callbacks=None,
+              colsample_bylevel=None, colsample_bynode=None,
+              colsample_bytree=1.0, device=None, early_stopping_rounds=None,
+              enable_categorical=True, eval_metric=None, feature_types=None,
+              feature_weights=None, gamma=None, grow_policy=None,
+              importance_type=None, interaction_constraints=None,
+              learning_rate=0.2, max_bin=None, max_cat_threshold=None,
+              max_cat_to_onehot=None, max_delta_step=None, max_depth=5,
+              max_leaves=None, min_child_weight=None, missing=nan,
+              monotone_constraints=None, multi_strategy=None, n_estimators=200,
+              n_jobs=None, num_class=20, ...)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">xgb = random_search.best_estimator_
+
+xgb.fit(X_train, y_train)
+
+print(&quot;Model acc&quot;,xgb.score(X_test, y_test))
+</code></pre>
+<h3>Output</h3>
+<pre><code>/usr/local/lib/python3.12/dist-packages/xgboost/training.py:200: UserWarning: [06:56:22] WARNING: /__w/xgboost/xgboost/src/learner.cc:793: 
+Parameters: { &quot;silent&quot; } are not used.
+
+  bst.update(dtrain, iteration=i, fobj=obj)
+Model acc 0.9804717220390565
+</code></pre>
+<p>Notice that:</p>
+<ul>
+<li>It took us 10 mins to hyperparam tune XGB vs &gt; 30 mins in sklearn GBDT.</li>
+</ul>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s21-lightgbm" data-nav="s21-lightgbm">
+      <div class="card-eyebrow"><span class="eyebrow-num">17</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">LightGBM</span></h2>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/620/original/Screenshot_2026-08-03_143707.png?1785748036"></p>
+<p>Research paper link: <a href="https://proceedings.neurips.cc/paper_files/paper/2017/file/6449f44a102fde848669bdd9eb6b76fa-Paper.pdf" target="_blank" rel="noopener" class="inline-link">https://proceedings.neurips.cc/paper_files/paper/2017/file/6449f44a102fde848669bdd9eb6b76fa-Paper.pdf</a></p>
+<h3>What Makes LightGBM Faster?</h3>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s22-quiz-6" data-nav="s22-quiz-6">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 6</div>
+      <div class="quiz-question prose"><p>How can we make a machine learning algorithm <strong>train faster</strong>?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text">Reduce the number of datapoints.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">B</span><span class="choice-text">Reduce the number of features.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">C</span><span class="choice-text">Both of the above.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">None of the above.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card read-card" id="s23-lightgbm-optimizations-implementation" data-nav="s23-lightgbm-optimizations-implementation">
+      <div class="card-eyebrow"><span class="eyebrow-num">18</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <p>Reducing the number of datapoints or features will help algo train faster.<br />
+This is what LightGBM does with its optimization.</p>
+<p>Let's look into that.</p>
+<h3>GOSS (Gradient-based One-Side Sampling)</h3>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/631/original/Screenshot_2026-08-03_143757.png?1785748209"></p>
+<p>But, what does one side sampling mean?</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/629/original/Screenshot_2026-08-03_143805.png?1785748176"></p>
+<p>Moving on to next optimization.</p>
+<h3>EFB (Exclusive Feature Bundling)</h3>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/627/original/Screenshot_2026-08-03_143812.png?1785748150"></p>
+<h4>But, it is obvious that when Male feature value is 1, female feature value will be zero.</h4>
+<p>Yes. But:</p>
+<ul>
+<li>problem has numerous features.</li>
+<li>and we can't check manually which features are exclusive.</li>
+</ul>
+<p>There can be a case where two categorical features, <br />
+-    say, for example:<br />
+        -   binary feature: whether person likes football?<br />
+        -   and another feature: whether person likes swimming?</p>
+<p>There can be a chance that this pair of feature is exclusive for the given dataset.</p>
+<p><strong>What happens after it has identified Exclusive feature pair?</strong></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/624/original/Screenshot_2026-08-03_143819.png?1785748112"></p>
+<p>If you want to deep dive into it,</p>
+<p>here a blog explaining it in detail: <a href="https://towardsdatascience.com/what-makes-lightgbm-lightning-fast-a27cf0d9785e" target="_blank" rel="noopener" class="inline-link">https://towardsdatascience.com/what-makes-lightgbm-lightning-fast-a27cf0d9785e</a></p>
+<p>Let's look into how can we implement it.</p>
+<h3>Code Walkthrough</h3>
+<p>Documentation: <a href="https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMClassifier.html" target="_blank" rel="noopener" class="inline-link">https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMClassifier.html</a></p>
+<h3>Code</h3>
+<pre><code class="language-python">import lightgbm as lgb
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
+#Refer: https://lightgbm.readthedocs.io/en/latest/Parameters.html
+import datetime as dt
+gridParams = {
+    'learning_rate': [0.1, 0.3, 0.5],
+    'boosting_type' : ['gbdt'],
+    'objective' : ['multiclass'],
+    'max_depth' : [5,6,7,8],
+    'colsample_bytree' : [0.5,0.7],
+    'subsample' : [0.5,0.7],
+    'metric':['multi_error'],
+    }
+
+clf = lgb.LGBMClassifier(num_classes=20)
+random_cv = RandomizedSearchCV(clf,gridParams,verbose=3,cv=3,n_jobs = -1,n_iter=10)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">start = dt.datetime.now()
+random_cv.fit(X_train,y_train)
+end = dt.datetime.now()
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">res = random_cv.cv_results_
+
+for i in range(len(res[&quot;params&quot;])):
+  print(f&quot;Parameters:{res['params'][i]} Mean_score: {res['mean_test_score'][i]} Rank: {res['rank_test_score'][i]}&quot;)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">print(f&quot;Time taken for fits : {end - start}&quot;)
+</code></pre>
+<h3>Output</h3>
+<pre><code>Time taken for fits : 0:00:35.195211
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">print(random_cv.best_estimator_)
+</code></pre>
+<h3>Output</h3>
+<pre><code>LGBMClassifier(colsample_bytree=0.7, learning_rate=0.3, max_depth=7,
+               metric='multi_error', num_classes=20, objective='multiclass',
+               subsample=0.7)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">lgb = random_cv.best_estimator_
+
+lgb.fit(X_train, y_train)
+
+print(&quot;Model acc&quot;,lgb.score(X_test, y_test))
+</code></pre>
+<h3>Output</h3>
+<pre><code>[LightGBM] [Info] Auto-choosing col-wise multi-threading, the overhead of testing was 0.000953 seconds.
+You can set `force_col_wise=true` to remove the overhead.
+[LightGBM] [Info] Total Bins 2040
+[LightGBM] [Info] Number of data points in the train set: 15768, number of used features: 8
+[LightGBM] [Info] Start training from score -2.982377
+[LightGBM] [Info] Start training from score -2.993705
+[LightGBM] [Info] Start training from score -3.016753
+[LightGBM] [Info] Start training from score -2.986139
+[LightGBM] [Info] Start training from score -3.010297
+[LightGBM] [Info] Start training from score -3.014166
+[LightGBM] [Info] Start training from score -3.037696
+[LightGBM] [Info] Start training from score -3.011585
+[LightGBM] [Info] Start training from score -2.972414
+[LightGBM] [Info] Start training from score -2.988654
+[LightGBM] [Info] Start training from score -3.021948
+[LightGBM] [Info] Start training from score -2.962550
+[LightGBM] [Info] Start training from score -3.019347
+[LightGBM] [Info] Start training from score -2.973654
+[LightGBM] [Info] Start training from score -3.021948
+[LightGBM] [Info] Start training from score -3.001329
+[LightGBM] [Info] Start training from score -2.956434
+[LightGBM] [Info] Start training from score -2.997510
+[LightGBM] [Info] Start training from score -2.977383
+[LightGBM] [Info] Start training from score -2.973654
+[LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+[LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+[LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+[LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+[LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+[LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+[LightGBM] [Warning] No further splits with positive gain, best gain: -inf
+/usr/local/lib/python3.12/dist-packages/sklearn/utils/validation.py:2739: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+Model acc 0.9835150900329698
+</code></pre>
+<p>Notice that<br />
+-   It only took 57 sec to train<br />
+-   and its performance is comparable to XGBoost implementation</p>
+      </div>
+        <a class="viz-cta" href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/goss-one-side-sampling/" target="_blank" rel="noopener">
+          <span class="viz-cta-icon" aria-hidden="true">&#9654;</span>
+          <span class="viz-cta-copy">
+            <span class="viz-cta-label">Interactive visualization</span>
+            <span class="viz-cta-desc">Show the Implementation of Gradient-Based One-Sided Sampling</span>
+          </span>
+          <span class="viz-cta-arrow" aria-hidden="true">&#8599;</span>
+        </a>
+    </section>
+
+    <section class="card read-card" id="s24-wrap-up" data-nav="s24-wrap-up">
+      <div class="card-eyebrow"><span class="eyebrow-num">19</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Wrap-Up</span></h2>
+<p>In this lecture, we explored <strong>Boosting</strong>, an ensemble technique that builds models <strong>sequentially</strong>, with each new learner improving upon the mistakes made by its predecessors. We developed the intuition behind Boosting, understood how <strong>Gradient Boosting Decision Trees (GBDT)</strong> work, and examined how hyperparameters such as the <strong>number of estimators, tree depth</strong>, and <strong>learning rate</strong> influence model performance.</p>
+<p>We also applied Gradient Boosting to a real-world <strong>EMG signal classification</strong> problem, interpreted model predictions using <strong>feature importance</strong>, and discussed practical considerations such as the impact of outliers. Finally, we explored advanced Boosting algorithms including <strong>Stochastic Gradient Boosting</strong>, <strong>XGBoost</strong>, and <strong>LightGBM</strong>, understanding the key optimizations that make them powerful and efficient for real-world machine learning tasks.</p>
+<p>In the next lecture, we will explore <strong>Naive Bayes</strong>, a probabilistic classification algorithm based on <strong>Bayes' Theorem</strong>. We will understand the intuition behind conditional probability, learn the assumptions made by Naive Bayes, and see why it remains a simple yet effective classifier for many real-world applications.</p>
+      </div>
+    </section>
+
+    <div class="end-note">You've reached the end of the post-read. Next lecture: Naive Bayes, in depth.</div>
+  </main>
+</div>
+
+<script>
+(function(){
+  // ---- Sidebar mobile toggle ----
+  var sidebar = document.getElementById('sidebar');
+  var toggle = document.getElementById('sidebar-toggle');
+  var scrim = document.getElementById('sidebar-scrim');
+  function closeSidebar(){ sidebar.classList.remove('open'); scrim.classList.remove('show'); toggle.setAttribute('aria-expanded','false'); }
+  function openSidebar(){ sidebar.classList.add('open'); scrim.classList.add('show'); toggle.setAttribute('aria-expanded','true'); }
+  toggle.addEventListener('click', function(){
+    sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+  });
+  scrim.addEventListener('click', closeSidebar);
+  document.querySelectorAll('.nav-link').forEach(function(a){
+    a.addEventListener('click', function(){ if(window.innerWidth <= 960){ closeSidebar(); } });
+  });
+
+  // ---- Progress bar + active nav tracking ----
+  var fill = document.getElementById('progress-fill');
+  var metaProgress = document.getElementById('meta-progress');
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sections = navLinks.map(function(a){ return document.getElementById(a.dataset.target); }).filter(Boolean);
+
+  function onScroll(){
+    var doc = document.documentElement;
+    var scrollTop = doc.scrollTop || document.body.scrollTop;
+    var height = doc.scrollHeight - doc.clientHeight;
+    var pct = height > 0 ? Math.min(100, Math.max(0, (scrollTop / height) * 100)) : 0;
+    fill.style.width = pct + '%';
+    metaProgress.textContent = Math.round(pct) + '%';
+
+    var activeIdx = 0;
+    var probe = scrollTop + window.innerHeight * 0.28;
+    for(var i=0;i<sections.length;i++){
+      if(sections[i].offsetTop <= probe) activeIdx = i;
+    }
+    navLinks.forEach(function(a){ a.classList.remove('active'); });
+    if(navLinks[activeIdx]) navLinks[activeIdx].classList.add('active');
+  }
+  document.addEventListener('scroll', onScroll, { passive:true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+
+  // ---- Quiz interactivity ----
+  document.querySelectorAll('.quiz-card').forEach(function(card){
+    var group = card.querySelector('.choices');
+    var feedback = card.querySelector('[data-feedback]');
+    var explanation = card.querySelector('[data-explanation]');
+    var answered = false;
+
+    group.querySelectorAll('.choice').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(answered) return;
+        answered = true;
+        group.classList.add('answered');
+        var isCorrect = btn.dataset.correct === 'true';
+
+        group.querySelectorAll('.choice').forEach(function(b){
+          if(b.dataset.correct === 'true'){ b.classList.add('is-correct'); }
+          else if(b === btn){ b.classList.add('is-wrong'); }
+        });
+
+        feedback.classList.add('show');
+        if(isCorrect){
+          feedback.classList.add('correct');
+          feedback.textContent = '✓ Correct — the ensemble agrees with you.';
+        } else {
+          feedback.classList.add('wrong');
+          feedback.textContent = '✕ Not quite — the correct answer is highlighted above.';
+        }
+        if(explanation){ explanation.classList.add('show'); }
+      });
+    });
+  });
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/boosting" target="_blank" rel="noopener">github.com/scaler-content/boosting</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

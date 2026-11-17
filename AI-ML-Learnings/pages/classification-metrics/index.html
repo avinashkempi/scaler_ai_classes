@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classification Metrics — Lecture Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-page:      #111113;
+    --bg-card:      #1A1A1E;
+    --bg-card-alt:  #222228;
+    --bg-input:     #0E0E10;
+    --border:       #2E2E36;
+    --border-light: #3A3A44;
+    --sidebar-bg:   #0A0A0C;
+    --text-primary: #E8E8F0;
+    --text-muted:   #888898;
+    --text-dim:     #555565;
+    --accent:       #A0A8B8;   /* cool grey-blue accent */
+    --highlight:    #C8D0E0;
+    --glow:         #5A6478;
+    /* semantic colours — stay subtle */
+    --green:        #4CAF70;
+    --green-dim:    #1A3325;
+    --green-border: #2A5C3A;
+    --red:          #CF6679;
+    --red-dim:      #2D1520;
+    --red-border:   #5C2530;
+    --amber:        #C8A855;
+    --amber-dim:    #2A2010;
+    --amber-border: #5C480A;
+    --blue:         #6090CC;
+    --blue-dim:     #0E1E38;
+    --blue-border:  #1A3A6C;
+    --purple:       #9A80CC;
+    --purple-dim:   #1A1030;
+    --sidebar-w:    280px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    position: fixed; top: 0; left: 0;
+    height: 100vh; overflow-y: auto;
+    z-index: 100; display: flex; flex-direction: column;
+    transition: transform .3s ease;
+  }
+  #sidebar::-webkit-scrollbar { width: 3px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+  .sidebar-header {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+    background: var(--sidebar-bg); z-index: 1;
+  }
+  .sidebar-header .course-label {
+    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--text-dim); font-weight: 600; margin-bottom: 7px;
+  }
+  .sidebar-header h1 {
+    font-family: 'Lora', serif; font-size: 15px;
+    color: var(--highlight); font-weight: 600; line-height: 1.4;
+  }
+
+  .progress-bar-wrap { padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  .progress-label { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .progress-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--glow), var(--accent)); border-radius: 2px; transition: width .4s ease; width: 0%; }
+
+  .nav-list { list-style: none; padding: 10px 0 80px; }
+  .nav-item a {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 20px; text-decoration: none;
+    color: var(--text-dim); font-size: 12px; line-height: 1.4;
+    transition: all .2s; border-left: 2px solid transparent;
+  }
+  .nav-item a:hover { color: var(--text-primary); background: rgba(255,255,255,.03); }
+  .nav-item.active a { color: var(--highlight); border-left-color: var(--accent); background: rgba(255,255,255,.04); font-weight: 500; }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid currentColor; flex-shrink: 0; margin-top: 5px; transition: background .3s; }
+  .nav-item.visited .nav-dot { background: var(--accent); border-color: var(--accent); }
+  .nav-item .nav-type { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); margin-top: 2px; opacity: .6; }
+
+  /* ── MAIN ────────────────────────────────────────── */
+  #main { margin-left: var(--sidebar-w); flex: 1; max-width: 860px; padding: 48px 52px 120px; }
+
+  /* ── SECTION CARDS ───────────────────────────────── */
+  .section-card {
+    background: var(--bg-card); border-radius: 10px;
+    border: 1px solid var(--border); margin-bottom: 32px;
+    overflow: hidden; scroll-margin-top: 32px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.4);
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .section-card:hover { border-color: var(--border-light); box-shadow: 0 6px 32px rgba(0,0,0,.5); }
+
+  .card-header {
+    padding: 20px 26px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 14px;
+    background: var(--bg-card-alt);
+  }
+  .card-icon {
+    width: 34px; height: 34px; border-radius: 7px;
+    background: var(--border); display: flex;
+    align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 15px;
+    border: 1px solid var(--border-light);
+  }
+  .card-meta { flex: 1; }
+  .card-type { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); font-weight: 600; margin-bottom: 4px; }
+  .card-title { font-family: 'Lora', serif; font-size: 19px; font-weight: 700; color: var(--highlight); line-height: 1.3; }
+  .card-duration { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .card-body { padding: 22px 26px 26px; }
+
+  /* ── TYPOGRAPHY ──────────────────────────────────── */
+  .card-body h2 { font-family: 'Lora', serif; font-size: 17px; color: var(--accent); margin: 26px 0 11px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .card-body h3 { font-family: 'Lora', serif; font-size: 15px; color: var(--highlight); margin: 20px 0 9px; font-style: italic; }
+  .card-body h4 { font-size: 13.5px; color: var(--accent); margin: 14px 0 7px; font-weight: 600; letter-spacing: .02em; }
+  .card-body p { margin-bottom: 11px; font-size: 14px; color: var(--text-primary); }
+  .card-body ul, .card-body ol { margin: 8px 0 13px 20px; font-size: 14px; }
+  .card-body li { margin-bottom: 5px; color: var(--text-primary); }
+  .card-body strong { color: var(--highlight); font-weight: 600; }
+  .card-body em { color: var(--accent); }
+
+  /* ── CALLOUTS ────────────────────────────────────── */
+  .callout-ask {
+    background: rgba(160,168,184,.06); border-left: 2px solid var(--accent);
+    border-radius: 0 7px 7px 0; padding: 11px 14px;
+    margin: 14px 0; font-size: 13px; color: var(--text-primary);
+  }
+  .callout-ask .callout-label { font-weight: 600; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  .callout-note {
+    background: rgba(160,168,184,.04); border-left: 2px solid var(--glow);
+    border-radius: 0 7px 7px 0; padding: 11px 14px;
+    margin: 14px 0; font-size: 13px; color: var(--text-primary);
+  }
+  .callout-note .callout-label { font-weight: 600; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--glow); margin-bottom: 4px; }
+  .callout-viz {
+    background: rgba(90,100,120,.08); border: 1px dashed var(--border-light);
+    border-radius: 8px; padding: 13px 16px; margin: 14px 0;
+    font-size: 13px; color: var(--text-primary);
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .callout-viz .viz-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .callout-viz .viz-body { flex: 1; }
+  .callout-viz .viz-label { font-weight: 600; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  .callout-viz a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; }
+
+  /* ── TABLE ───────────────────────────────────────── */
+  .card-body table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 14px 0; border-radius: 7px; overflow: hidden; border: 1px solid var(--border); }
+  .card-body th { background: var(--border-light); color: var(--highlight); padding: 9px 12px; text-align: left; font-weight: 600; font-size: 11.5px; letter-spacing: .04em; }
+  .card-body td { padding: 8px 12px; border-top: 1px solid var(--border); color: var(--text-primary); }
+  .card-body tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+
+  /* ── CODE ────────────────────────────────────────── */
+  .card-body pre {
+    background: var(--bg-input); border: 1px solid var(--border);
+    color: #A8C8E8; border-radius: 7px; padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; overflow-x: auto; margin: 12px 0; line-height: 1.65;
+  }
+  .card-body code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg-input); border: 1px solid var(--border);
+    color: var(--accent); padding: 2px 6px; border-radius: 4px; font-size: 12px;
+  }
+  .card-body pre code { background: none; border: none; color: inherit; padding: 0; }
+
+  .output-wrap { margin: -4px 0 12px; }
+  .output-label { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); font-weight: 600; margin-bottom: 4px; }
+  .output-block {
+    background: rgba(0,0,0,.4); border: 1px solid var(--border);
+    border-radius: 7px; padding: 11px 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+    color: var(--text-muted); line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+  }
+
+  /* ── EQUATION ────────────────────────────────────── */
+  .equation {
+    background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 7px; padding: 13px 18px; margin: 13px 0;
+    text-align: center; font-family: 'Lora', serif;
+    font-size: 15.5px; font-style: italic; color: var(--highlight); letter-spacing: .02em;
+  }
+
+  /* ── QUIZ ────────────────────────────────────────── */
+  .quiz-card .card-icon { background: var(--border-light); }
+  .quiz-question { font-family: 'Lora', serif; font-size: 15.5px; font-weight: 600; color: var(--highlight); margin-bottom: 18px; line-height: 1.5; }
+  .quiz-options { list-style: none; margin: 0; }
+  .quiz-option {
+    display: flex; align-items: center; gap: 11px;
+    padding: 11px 14px; border: 1px solid var(--border);
+    border-radius: 7px; margin-bottom: 8px;
+    cursor: pointer; font-size: 13.5px;
+    transition: all .2s; user-select: none;
+    background: var(--bg-card-alt); color: var(--text-primary);
+  }
+  .quiz-option:hover { border-color: var(--border-light); background: rgba(255,255,255,.04); }
+  .quiz-option.selected-correct { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+  .quiz-option.selected-wrong   { border-color: var(--red);   background: var(--red-dim);   color: var(--red); }
+  .quiz-option.reveal-correct   { border-color: var(--green); background: var(--green-dim); }
+  .quiz-circle {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 1.5px solid var(--border-light); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; transition: all .2s;
+  }
+  .selected-correct .quiz-circle { border-color: var(--green); background: var(--green); color: #000; }
+  .selected-wrong .quiz-circle   { border-color: var(--red);   background: var(--red);   color: #000; }
+  .reveal-correct .quiz-circle   { border-color: var(--green); background: var(--green-dim); }
+  .quiz-feedback { margin-top: 12px; padding: 11px 14px; border-radius: 7px; font-size: 13px; font-weight: 500; display: none; }
+  .quiz-feedback.correct { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); display: block; }
+  .quiz-feedback.wrong   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-border);   display: block; }
+
+  /* ── CONFUSION MATRIX VIZ ────────────────────────── */
+  .cm-grid {
+    display: grid; grid-template-columns: auto 1fr 1fr;
+    gap: 2px; margin: 16px 0;
+    background: var(--border); border-radius: 8px; overflow: hidden;
+    max-width: 420px;
+  }
+  .cm-cell {
+    padding: 14px 16px; background: var(--bg-card-alt);
+    text-align: center; font-size: 12.5px; line-height: 1.4;
+  }
+  .cm-header { background: var(--border-light); color: var(--accent); font-weight: 600; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  .cm-axis { background: var(--bg-input); color: var(--text-dim); font-size: 11px; font-weight: 600; writing-mode: vertical-rl; transform: rotate(180deg); padding: 10px 6px; letter-spacing: .06em; text-transform: uppercase; }
+  .cm-tp { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); font-weight: 700; }
+  .cm-tn { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); font-weight: 700; }
+  .cm-fp { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-border); font-weight: 700; }
+  .cm-fn { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-border); font-weight: 700; }
+  .cm-label { font-size: 10.5px; display: block; font-weight: 400; margin-bottom: 2px; opacity: .7; }
+
+  /* ── METRIC CARDS ────────────────────────────────── */
+  .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .metric-card {
+    background: var(--bg-card-alt); border: 1px solid var(--border);
+    border-radius: 9px; padding: 16px;
+    transition: border-color .2s;
+  }
+  .metric-card:hover { border-color: var(--border-light); }
+  .metric-card .m-name { font-family: 'Lora', serif; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .metric-card .m-formula {
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+    background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 5px; padding: 5px 10px; display: inline-block;
+    margin: 6px 0; color: var(--accent);
+  }
+  .metric-card .m-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-top: 5px; }
+  .metric-card .m-focus { font-size: 11.5px; margin-top: 6px; font-weight: 600; }
+  .metric-card.precision .m-name  { color: var(--blue); }
+  .metric-card.precision .m-focus { color: var(--blue); }
+  .metric-card.recall    .m-name  { color: var(--green); }
+  .metric-card.recall    .m-focus { color: var(--green); }
+  .metric-card.f1        .m-name  { color: var(--purple); }
+  .metric-card.f1        .m-focus { color: var(--purple); }
+  .metric-card.accuracy  .m-name  { color: var(--amber); }
+  .metric-card.accuracy  .m-focus { color: var(--amber); }
+
+  /* ── WHEN TO USE GRID ────────────────────────────── */
+  .use-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+  .use-card {
+    background: var(--bg-card-alt); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px;
+  }
+  .use-card .use-scenario { font-size: 12.5px; font-weight: 600; color: var(--highlight); margin-bottom: 5px; }
+  .use-card .use-metric { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; margin-bottom: 5px; letter-spacing: .04em; text-transform: uppercase; }
+  .use-precision { background: var(--blue-dim);   color: var(--blue);   border: 1px solid var(--blue-border); }
+  .use-recall    { background: var(--green-dim);  color: var(--green);  border: 1px solid var(--green-border); }
+  .use-f1        { background: var(--purple-dim); color: var(--purple); border: 1px solid #3A2A60; }
+  .use-card .use-reason { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+  /* ── ROC TABLE ───────────────────────────────────── */
+  .roc-row-ideal td { color: var(--green); }
+  .roc-row-bad td   { color: var(--red); }
+
+  /* ── SUMMARY GRID ────────────────────────────────── */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 12px; }
+  .summary-item {
+    background: var(--bg-card-alt); border: 1px solid var(--border);
+    border-radius: 7px; padding: 9px 12px;
+    font-size: 12.5px; color: var(--text-primary);
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .summary-item::before { content: '▸'; color: var(--accent); font-size: 10px; margin-top: 3px; flex-shrink: 0; }
+
+  /* ── CLASS REPORT ────────────────────────────────── */
+  .report-block {
+    background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 7px; padding: 14px 16px; margin: 14px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--text-muted); line-height: 1.8;
+  }
+  .report-block .rh { color: var(--accent); font-weight: 600; }
+  .report-block .rv-good { color: var(--green); }
+  .report-block .rv-warn { color: var(--amber); }
+  .report-block .rv-bad  { color: var(--red); }
+
+  /* ── HAMBURGER ───────────────────────────────────── */
+  #hamburger {
+    display: none; position: fixed; top: 16px; left: 16px;
+    z-index: 200; background: var(--bg-card-alt);
+    border: 1px solid var(--border); border-radius: 7px;
+    padding: 8px 10px; cursor: pointer;
+    flex-direction: column; gap: 5px;
+  }
+  #hamburger span { display: block; width: 18px; height: 2px; background: var(--text-primary); border-radius: 1px; }
+  #overlay { display: none; }
+
+  @media (max-width: 768px) {
+    #hamburger { display: flex; }
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; padding: 24px 18px 80px; max-width: 100%; }
+    #overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 99; opacity: 0; pointer-events: none; transition: opacity .3s; }
+    #overlay.active { opacity: 1; pointer-events: all; }
+    .metric-grid, .use-grid, .summary-grid { grid-template-columns: 1fr; }
+    .card-body { padding: 16px 16px 20px; }
+    .card-header { padding: 16px 16px 13px; }
+  }
+
+  /* ── BACK TO TOP ─────────────────────────────────── */
+  #back-top {
+    position: fixed; bottom: 30px; right: 30px;
+    background: var(--bg-card-alt); color: var(--accent);
+    border: 1px solid var(--border-light); border-radius: 50%;
+    width: 42px; height: 42px; font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,.5);
+    opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 50;
+  }
+  #back-top.visible { opacity: 1; pointer-events: all; }
+  #back-top:hover { background: var(--border-light); }
+
+  .card-body a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; }
+  .card-body a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations 6 · Classification metrics</span><span class="pn"><a href="../ML-with-AI-workflows-9/" title="ML with AI 9 · Classification metrics beyond accuracy">← Prev</a><a href="../ML-with-AI-workflows-10/" title="ML with AI 10 · Imbalanced data, ROC and AUC">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><button id="hamburger" aria-label="Open menu" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</button>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="course-label">ML Foundations · Lecture 6</div>
+    <h1>Classification Metrics</h1>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-label"><span>Progress</span><span id="progress-pct">0%</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item" data-target="s-recap"><a href="#s-recap"><span class="nav-dot"></span><span><div>Recap</div><div class="nav-type">Review</div></span></a></li>
+    <li class="nav-item" data-target="s-multiclass"><a href="#s-multiclass"><span class="nav-dot"></span><span><div>Multiclass Classification</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="q1"><a href="#q1"><span class="nav-dot"></span><span><div>Quiz 1 — OvR Models</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="q2"><a href="#q2"><span class="nav-dot"></span><span><div>Quiz 2 — OvR Prediction</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-logodds"><a href="#s-logodds"><span class="nav-dot"></span><span><div>Log-Odds Interpretation</div><div class="nav-type">Math</div></span></a></li>
+    <li class="nav-item" data-target="q3"><a href="#q3"><span class="nav-dot"></span><span><div>Quiz 3 — LR Output</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="q4"><a href="#q4"><span class="nav-dot"></span><span><div>Quiz 4 — Negative Log-Odds</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-why-accuracy"><a href="#s-why-accuracy"><span class="nav-dot"></span><span><div>Why Not Accuracy Alone?</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-confmat"><a href="#s-confmat"><span class="nav-dot"></span><span><div>Confusion Matrix</div><div class="nav-type">Metric</div></span></a></li>
+    <li class="nav-item" data-target="s-precision"><a href="#s-precision"><span class="nav-dot"></span><span><div>Precision</div><div class="nav-type">Metric</div></span></a></li>
+    <li class="nav-item" data-target="s-recall"><a href="#s-recall"><span class="nav-dot"></span><span><div>Recall</div><div class="nav-type">Metric</div></span></a></li>
+    <li class="nav-item" data-target="q6"><a href="#q6"><span class="nav-dot"></span><span><div>Quiz 6 — Movie Recs</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-f1"><a href="#s-f1"><span class="nav-dot"></span><span><div>F1-Score</div><div class="nav-type">Metric</div></span></a></li>
+    <li class="nav-item" data-target="q7"><a href="#q7"><span class="nav-dot"></span><span><div>Quiz 7 — Harmonic Mean</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-casestudy"><a href="#s-casestudy"><span class="nav-dot"></span><span><div>Case Study: Bank Fraud</div><div class="nav-type">Case Study</div></span></a></li>
+    <li class="nav-item" data-target="s-report"><a href="#s-report"><span class="nav-dot"></span><span><div>Classification Report</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-roc"><a href="#s-roc"><span class="nav-dot"></span><span><div>ROC & AUC</div><div class="nav-type">Metric</div></span></a></li>
+    <li class="nav-item" data-target="s-wrap"><a href="#s-wrap"><span class="nav-dot"></span><span><div>Wrap Up</div><div class="nav-type">Summary</div></span></a></li>
+  </ul>
+</nav>
+
+<main id="main">
+
+  <!-- RECAP -->
+  <section class="section-card" id="s-recap">
+    <div class="card-header">
+      <div class="card-icon">🔁</div>
+      <div class="card-meta">
+        <div class="card-type">Review</div>
+        <div class="card-title">Recap from Last Lecture</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Previously we introduced classification and its core machinery:</p>
+      <ul>
+        <li>Classification predicts <strong>discrete categories</strong> rather than continuous values</li>
+        <li>Logistic Regression models the <em>probability</em> of belonging to a class</li>
+        <li>The <strong>sigmoid function</strong> converts raw model outputs into probabilities in [0, 1]</li>
+        <li>A <strong>decision threshold</strong> (default 0.5) assigns the final class label</li>
+      </ul>
+      <div class="callout-note">
+        <div class="callout-label">📌 Today's Focus</div>
+        Building a classifier is only half the job. How do we know whether it is actually performing well? Today we explore every major classification metric, understand when each one matters, and learn to read them together.
+      </div>
+    </div>
+  </section>
+
+  <!-- MULTICLASS -->
+  <section class="section-card" id="s-multiclass">
+    <div class="card-header">
+      <div class="card-icon">🏷️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Multiclass Classification — One-vs-Rest</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Standard logistic regression handles two classes. When we have K classes (e.g., Orange, Apple, Banana), we use the <strong>One-vs-Rest (OvR)</strong> strategy:</p>
+      <ul>
+        <li>Train <strong>K separate binary classifiers</strong> — one per class</li>
+        <li>For each classifier, relabel the target: that class = 1, all others = 0</li>
+        <li>At prediction time, run all K classifiers and pick the class with the <strong>highest predicted probability</strong> — regardless of whether it exceeds 0.5</li>
+      </ul>
+
+      <h3>Example: 3-Class Fruit Classifier</h3>
+      <table>
+        <tr><th>Model</th><th>Task</th><th>Relabelling</th></tr>
+        <tr><td>Model 1</td><td>Orange vs Rest</td><td>Orange = 1, Apple = 0, Banana = 0</td></tr>
+        <tr><td>Model 2</td><td>Apple vs Rest</td><td>Apple = 1, Orange = 0, Banana = 0</td></tr>
+        <tr><td>Model 3</td><td>Banana vs Rest</td><td>Banana = 1, Orange = 0, Apple = 0</td></tr>
+      </table>
+      <p>Given a new fruit, all three models produce a probability. The class corresponding to the highest score wins — even if the winning score is below 0.5.</p>
+
+      <div class="callout-note">
+        <div class="callout-label">💡 Sklearn Implementation</div>
+        Pass <code>multi_class='ovr'</code> to <code>LogisticRegression()</code>. Sklearn handles the K-model training and prediction automatically.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 1 -->
+  <section class="section-card quiz-card" id="q1">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 1</div>
+        <div class="card-title">Number of OvR Models for 20 Car Brands</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">We want to classify cars into <strong>20 different brands</strong> using Logistic Regression with One-vs-Rest. How many models are needed?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>10</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>20</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>21</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>19</li>
+      </ul>
+      <div class="quiz-feedback" id="q1-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        OvR creates one binary classifier per class. With K = 20 classes, we need exactly 20 models — each learns "is this brand X or not?"
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 2 -->
+  <section class="section-card quiz-card" id="q2">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 2</div>
+        <div class="card-title">OvR Prediction from Probabilities</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">A One-vs-Rest classifier produces: M1 = 0.34, M2 = 0.28, M3 = 0.35. Which class is predicted?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>M1</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>M2</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>M3</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>None, since no model has ŷ > 0.5</li>
+      </ul>
+      <div class="quiz-feedback" id="q2-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        In OvR, we always pick the class with the <em>highest</em> probability — the 0.5 threshold is irrelevant at the final decision step. M3 wins with 0.35.
+      </div>
+    </div>
+  </section>
+
+  <!-- LOG ODDS -->
+  <section class="section-card" id="s-logodds">
+    <div class="card-header">
+      <div class="card-icon">📐</div>
+      <div class="card-meta">
+        <div class="card-type">Math</div>
+        <div class="card-title">Log-Odds Interpretation of Logistic Regression</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Logistic Regression is called "linear" internally. Here's the mathematical reason.</p>
+
+      <h3>From Probability to Log-Odds</h3>
+      <p>If <code>p</code> is the probability of belonging to class 1:</p>
+      <div class="equation">odds = p / (1 − p)</div>
+      <div class="equation">log(odds) = log(p / (1 − p)) = z = w₀ + w₁x₁ + w₂x₂ + …</div>
+      <p>The log-odds is a <strong>linear function</strong> of the features. That's why logistic regression is "linear" — the linearity lives in log-odds space, not in probability space.</p>
+
+      <h3>Back to Probability</h3>
+      <p>Solving for p from the log-odds equation gives us the familiar sigmoid:</p>
+      <div class="equation">p = 1 / (1 + e⁻ᶻ)</div>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Sigmoid and Logit are Inverses</div>
+        The <strong>logit function</strong> (log-odds) maps probabilities to real numbers: logit(p) = log(p/1-p). The <strong>sigmoid function</strong> maps real numbers back to probabilities. They are exact inverses of each other.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 3 -->
+  <section class="section-card quiz-card" id="q3">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 3</div>
+        <div class="card-title">What Does Logistic Regression Predict?</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">The logistic regression model predicts:</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>Probabilities</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Class labels</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Continuous values</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Ordinal values</li>
+      </ul>
+      <div class="quiz-feedback" id="q3-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        Logistic regression outputs the <em>probability</em> of the target variable belonging to the positive class. The class label is then derived by applying a threshold (e.g., predict 1 if probability &gt; 0.5).
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 4 -->
+  <section class="section-card quiz-card" id="q4">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 4</div>
+        <div class="card-title">Interpreting a Negative Log-Odds</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">If <strong>log(odds)</strong> is negative, which of the following is true?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>1 − p &gt; p</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>p &gt; 1 − p</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>p = 1 − p</li>
+      </ul>
+      <div class="quiz-feedback" id="q4-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        log(odds) &lt; 0 means odds = p/(1−p) &lt; 1, so p &lt; 1−p. The probability of class 0 exceeds class 1 — we're in negative class territory. Geometrically, the point is on the class-0 side of the decision boundary.
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY NOT ACCURACY -->
+  <section class="section-card" id="s-why-accuracy">
+    <div class="card-header">
+      <div class="card-icon">⚠️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Why Accuracy Alone Is Not Enough</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>The Spam Detection Problem</h3>
+      <p>Imagine a dataset where only <strong>10%</strong> of emails are spam and <strong>90%</strong> are not. You build a model and it achieves <strong>90% accuracy</strong>.</p>
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Is this a good model?</div>
+        No. A completely dumb model that predicts <em>every single email as "not spam"</em> would also achieve exactly 90% accuracy — because 90% of the data actually is not spam. The model has learned nothing useful.
+      </div>
+      <p>Accuracy hides the important question: <em>what kinds of mistakes is the model making?</em> A model can be 90% accurate while completely failing to detect any spam at all.</p>
+      <p>This is the core problem with <strong>imbalanced datasets</strong> — we need metrics that look beyond the aggregate correct count.</p>
+    </div>
+  </section>
+
+  <!-- CONFUSION MATRIX -->
+  <section class="section-card" id="s-confmat">
+    <div class="card-header">
+      <div class="card-icon">🔲</div>
+      <div class="card-meta">
+        <div class="card-type">Metric</div>
+        <div class="card-title">Confusion Matrix</div>
+        <div class="card-duration">⏱ 10 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>The Confusion Matrix gives a granular breakdown of predictions. For binary classification, it's a 2×2 grid:</p>
+
+      <div class="cm-grid">
+        <div class="cm-cell cm-header" style="background:transparent;border:none"></div>
+        <div class="cm-cell cm-header">Predicted: 0</div>
+        <div class="cm-cell cm-header">Predicted: 1</div>
+        <div class="cm-cell cm-axis">Actual</div>
+        <div class="cm-cell cm-tn"><span class="cm-label">TN — True Negative</span>Predicted 0, Actually 0 ✓</div>
+        <div class="cm-cell cm-fp"><span class="cm-label">FP — False Positive (Type I)</span>Predicted 1, Actually 0 ✗</div>
+        <div class="cm-cell cm-axis">Actual</div>
+        <div class="cm-cell cm-fn"><span class="cm-label">FN — False Negative (Type II)</span>Predicted 0, Actually 1 ✗</div>
+        <div class="cm-cell cm-tp"><span class="cm-label">TP — True Positive</span>Predicted 1, Actually 1 ✓</div>
+      </div>
+
+      <p><strong>Diagonal cells (TN, TP)</strong> = correct predictions. <strong>Off-diagonal (FP, FN)</strong> = errors. An ideal model has FP = 0 and FN = 0.</p>
+
+      <h3>Dumb Model (Predicts Everything as 0)</h3>
+      <p>On 400 emails (360 non-spam, 40 spam), a model that predicts all as non-spam gets:</p>
+      <table>
+        <tr><th>Cell</th><th>Value</th><th>Why</th></tr>
+        <tr><td>TN</td><td>360</td><td>All 360 non-spam correctly predicted as non-spam</td></tr>
+        <tr><td>FP</td><td>0</td><td>No non-spam predicted as spam</td></tr>
+        <tr><td>FN</td><td>40</td><td>All 40 spam misclassified as non-spam</td></tr>
+        <tr><td>TP</td><td>0</td><td>Zero spam correctly detected</td></tr>
+      </table>
+      <p>Accuracy = (360 + 0) / 400 = <strong>90%</strong> — but TP = 0. The model catches zero spam.</p>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          Build and explore a confusion matrix interactively:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/building-confusion-matrix-interactively/" target="_blank">Building a Confusion Matrix Interactively →</a>
+        </div>
+      </div>
+
+      <h3>Code</h3>
+      <pre><code>from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import numpy as np
+
+data = pd.read_csv('pred_data.csv')
+data['y_pred'] = data['proba'].apply(lambda y_score: 0.0 if y_score &lt; 0.5 else 1.0)
+
+conf_matrix = confusion_matrix(data.y, data.y_pred)
+ConfusionMatrixDisplay(conf_matrix).plot()</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output — confusion matrix array</div>
+        <div class="output-block">array([[9761,  239],
+       [  45,   55]])</div>
+      </div>
+      <p>Interpretation: 9761 TN, 239 FP, 45 FN, 55 TP. Despite 97% accuracy the model only catches 55/100 spam emails (55% recall).</p>
+    </div>
+  </section>
+
+  <!-- PRECISION -->
+  <section class="section-card" id="s-precision">
+    <div class="card-header">
+      <div class="card-icon">🎯</div>
+      <div class="card-meta">
+        <div class="card-type">Metric</div>
+        <div class="card-title">Precision</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Fishing Analogy — Precision</h3>
+      <p>You're fishing in a lake with 100 fish and 100 turtles. You throw a net and catch 60 fish and 20 turtles. <strong>Precision</strong> asks: of everything I caught, what fraction was actually fish?</p>
+      <div class="equation">Precision = 60 / (60 + 20) = 75%</div>
+      <p>Turtles in the net <em>lower</em> your precision. Precision penalizes false positives.</p>
+
+      <h3>Formal Definition</h3>
+      <div class="equation">Precision = TP / (TP + FP) = True Positives / Predicted Positives</div>
+      <p>Precision tells us: of all the points the model called positive, how many actually were?</p>
+
+      <h3>When to Prioritize Precision</h3>
+      <div class="callout-ask">
+        <div class="callout-label">📧 Spam Detection Scenario</div>
+        <p>Which is worse: a spam email reaching your inbox (FN), or an important email from your manager going to spam (FP)?</p>
+        <p>The second — missing an important email is more costly. So we want <strong>low FP → high precision</strong>.</p>
+      </div>
+
+      <h3>Code</h3>
+      <pre><code>from sklearn.metrics import precision_score
+
+# Dumb model — all zeros
+y_pred_dumb = np.zeros(len(data.y))
+print("Dumb model precision:", precision_score(data.y, y_pred_dumb))   # 0.0
+
+# Random model
+print("Random model precision:", precision_score(data.y, data.y_pred)) # 0.187</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Dumb model precision:   0.0
+Random model precision: 0.1870748299319728</div>
+      </div>
+      <p>Even the random model (0.187) vastly outperforms the dumb model (0) on precision — confirming that accuracy was lying about the dumb model's quality.</p>
+    </div>
+  </section>
+
+  <!-- RECALL -->
+  <section class="section-card" id="s-recall">
+    <div class="card-header">
+      <div class="card-icon">🔄</div>
+      <div class="card-meta">
+        <div class="card-type">Metric</div>
+        <div class="card-title">Recall (Sensitivity)</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Fishing Analogy — Recall</h3>
+      <p>Same lake, 100 fish total. You caught 60. <strong>Recall</strong> asks: of all the fish in the lake, what fraction did I actually catch?</p>
+      <div class="equation">Recall = 60 / 100 = 60%</div>
+
+      <h3>Three Fishing Attempts — Precision-Recall Tradeoff</h3>
+      <table>
+        <tr><th>Net Size</th><th>Fish Caught</th><th>Turtles Caught</th><th>Precision</th><th>Recall</th></tr>
+        <tr><td>Normal</td><td>60</td><td>20</td><td>75%</td><td>60%</td></tr>
+        <tr><td>Bigger</td><td>80</td><td>80</td><td>50%</td><td>80%</td></tr>
+        <tr><td>Smaller</td><td>20</td><td>0</td><td>100%</td><td>20%</td></tr>
+      </table>
+      <p>As you try to catch more fish (higher recall), you inevitably catch more turtles (lower precision). This is the <strong>precision-recall tradeoff</strong>.</p>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          See the precision-recall seesaw in action with different net sizes:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/precision-recall-fishing-net-trade-off-dual-seesaw-meter/" target="_blank">Precision-Recall Fishing Net Tradeoff →</a>
+        </div>
+      </div>
+
+      <h3>Formal Definition</h3>
+      <div class="equation">Recall = TP / (TP + FN) = True Positives / Actual Positives</div>
+
+      <h3>When to Prioritize Recall</h3>
+      <div class="callout-ask">
+        <div class="callout-label">🏥 Cancer Detection Scenario</div>
+        <p>Which is worse: flagging a healthy person as potentially cancerous (FP → more tests), or missing a cancer patient entirely (FN → no treatment)?</p>
+        <p>Missing cancer is catastrophic. We want <strong>low FN → high recall</strong>.</p>
+      </div>
+
+      <h3>Code</h3>
+      <pre><code>from sklearn.metrics import recall_score
+
+print("Dumb model recall:  ", recall_score(data.y, y_pred_dumb))  # 0.0
+print("Random model recall:", recall_score(data.y, data.y_pred))  # 0.55</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Dumb model recall:   0.0
+Random model recall: 0.55</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 6 -->
+  <section class="section-card quiz-card" id="q6">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 6</div>
+        <div class="card-title">Movie Recommendation — What to Prioritize</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">You are building a movie recommendation model. What should you prioritize more?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>High recall</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>High precision</li>
+      </ul>
+      <div class="quiz-feedback" id="q6-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        Missing a good film is acceptable — the user can still scroll. But recommending bad films drives users away. False positives (bad recs) hurt engagement more than false negatives (missed gems). Prioritize <strong>precision</strong>.
+      </div>
+    </div>
+  </section>
+
+  <!-- F1 SCORE -->
+  <section class="section-card" id="s-f1">
+    <div class="card-header">
+      <div class="card-icon">⚡</div>
+      <div class="card-meta">
+        <div class="card-type">Metric</div>
+        <div class="card-title">F1-Score — Harmonic Mean of Precision & Recall</div>
+        <div class="card-duration">⏱ 10 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>When You Need Both</h3>
+      <p>A fintech company building a loan repayment predictor faces two types of mistakes:</p>
+      <ul>
+        <li>Give a loan to someone who can't repay (FP) — financial loss</li>
+        <li>Deny a loan to someone who could repay (FN) — missed revenue</li>
+      </ul>
+      <p>Both FP and FN matter equally. We need a <strong>single metric</strong> that captures both precision and recall.</p>
+
+      <h3>Why Not Arithmetic Mean?</h3>
+      <table>
+        <tr><th>Model</th><th>Precision</th><th>Recall</th><th>Arith. Mean</th><th>Harmonic Mean</th></tr>
+        <tr><td>Case 1</td><td>0.7</td><td>0.7</td><td>0.700</td><td>0.700</td></tr>
+        <tr><td>Case 2</td><td>0.9</td><td>0.5</td><td>0.700</td><td>0.642 ↓</td></tr>
+      </table>
+      <p>Arithmetic mean gives the same score to both — it fails to penalize Case 2's poor recall. The <strong>Harmonic Mean is the fix</strong>: it drops to 0.642, reflecting the imbalance.</p>
+
+      <h3>F1-Score Formula</h3>
+      <div class="equation">F1 = 2 · Precision · Recall / (Precision + Recall) = 2 / (1/P + 1/R)</div>
+      <p>The harmonic mean pulls the score toward the <em>lower</em> of the two values. A model with Precision = 1.0 and Recall = 0.01 gets F1 ≈ 0.02 — almost useless, as expected.</p>
+
+      <div class="callout-note">
+        <div class="callout-label">💡 Memory Hack</div>
+        We use the Harmonic Mean because we're trying to find <em>harmony</em> between precision and recall. The "H" in Harmonic stands for how Harshly it penalizes imbalance between the two.
+      </div>
+
+      <h3>Code</h3>
+      <pre><code>from sklearn.metrics import f1_score
+
+print("F1 (random model):", f1_score(data.y, data.y_pred))</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">F1 (random model): 0.27918781725888325</div>
+      </div>
+      <p>F1 = 0.279 — even though accuracy was 97%. Low precision (0.187) is dragging the F1 score down, which is exactly the right behaviour.</p>
+
+      <h3>All Metrics at a Glance</h3>
+      <div class="metric-grid">
+        <div class="metric-card precision">
+          <div class="m-name">Precision</div>
+          <div class="m-formula">TP / (TP + FP)</div>
+          <div class="m-desc">Of all predicted positives, how many are actually positive?</div>
+          <div class="m-focus">↓ FP matters most</div>
+        </div>
+        <div class="metric-card recall">
+          <div class="m-name">Recall</div>
+          <div class="m-formula">TP / (TP + FN)</div>
+          <div class="m-desc">Of all actual positives, how many did the model find?</div>
+          <div class="m-focus">↓ FN matters most</div>
+        </div>
+        <div class="metric-card f1">
+          <div class="m-name">F1-Score</div>
+          <div class="m-formula">2·P·R / (P + R)</div>
+          <div class="m-desc">Harmonic mean — balances precision and recall. Best when both FP and FN matter.</div>
+          <div class="m-focus">Both FP and FN matter</div>
+        </div>
+        <div class="metric-card accuracy">
+          <div class="m-name">Accuracy</div>
+          <div class="m-formula">(TP + TN) / Total</div>
+          <div class="m-desc">Overall correct rate. Misleading on imbalanced data.</div>
+          <div class="m-focus">Use only on balanced data</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 7 -->
+  <section class="section-card quiz-card" id="q7">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 7</div>
+        <div class="card-title">Why Harmonic Mean for F1?</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Why does the F1-score use the Harmonic Mean (HM) instead of the Arithmetic Mean (AM)?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>HM penalizes models the most when either Precision or Recall is low.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>AM penalizes models the most when either Precision or Recall is low.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>HM penalizes models the most when both Precision and Recall are high.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>AM penalizes models the most when both Precision and Recall are high.</li>
+      </ul>
+      <div class="quiz-feedback" id="q7-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        The Harmonic Mean is always ≤ the Arithmetic Mean, and the gap is largest when the two values are very different. A model with P=1.0, R=0.01 has AM=0.505 (looks okay!) but HM≈0.02 (correctly terrible).
+      </div>
+    </div>
+  </section>
+
+  <!-- CASE STUDY -->
+  <section class="section-card" id="s-casestudy">
+    <div class="card-header">
+      <div class="card-icon">🏦</div>
+      <div class="card-meta">
+        <div class="card-type">Case Study</div>
+        <div class="card-title">Bank Fraud Detection — Metrics in Action</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Dataset: 10,000 transactions — 300 fraud, 9,700 non-fraud.</p>
+
+      <h3>Model A — Our Classifier</h3>
+      <p>Confusion matrix: TP=100, FP=700, FN=200, TN=9000</p>
+      <table>
+        <tr><th>Metric</th><th>Formula</th><th>Value</th></tr>
+        <tr><td>Accuracy</td><td>(9000+100)/10000</td><td>0.91 (91%)</td></tr>
+        <tr><td>Recall</td><td>100/(100+200)</td><td>0.333</td></tr>
+        <tr><td>Precision</td><td>100/(700+100)</td><td>0.125</td></tr>
+        <tr><td>F1-score</td><td>2·0.125·0.333 / (0.125+0.333)</td><td>0.182</td></tr>
+        <tr><td>FPR</td><td>700/(700+9000)</td><td>0.072 (7.2%)</td></tr>
+      </table>
+      <p>7.2% of non-fraud transactions were incorrectly flagged. The model catches only 33% of actual fraud.</p>
+
+      <h3>Model B — The "Dumbo" Model (Predicts All as 0)</h3>
+      <p>Confusion matrix: TP=0, FP=0, FN=300, TN=9700</p>
+      <table>
+        <tr><th>Metric</th><th>Value</th><th>Verdict</th></tr>
+        <tr><td>Accuracy</td><td>97%</td><td>Looks great on paper</td></tr>
+        <tr><td>Precision</td><td>0</td><td>Detects nothing</td></tr>
+        <tr><td>Recall</td><td>0</td><td>Catches 0 fraud cases</td></tr>
+        <tr><td>F1-score</td><td>0</td><td>Complete failure</td></tr>
+      </table>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 The Lesson</div>
+        Model B has higher accuracy than Model A — yet precision, recall, and F1 are all zero. <strong>Never rely on accuracy alone for imbalanced classification problems.</strong> A single metric is almost never enough to judge a classifier.
+      </div>
+
+      <h3>When to Use Each Metric</h3>
+      <div class="use-grid">
+        <div class="use-card">
+          <div class="use-scenario">📧 Spam → Inbox Filter</div>
+          <span class="use-metric use-precision">Precision</span>
+          <div class="use-reason">Can't afford to block legitimate emails (FP). A spam email slipping through is less harmful.</div>
+        </div>
+        <div class="use-card">
+          <div class="use-scenario">🏥 Cancer / Disease Screening</div>
+          <span class="use-metric use-recall">Recall</span>
+          <div class="use-reason">Missing a sick patient (FN) is catastrophic. False alarms lead to more tests — acceptable.</div>
+        </div>
+        <div class="use-card">
+          <div class="use-scenario">🏦 Loan Approval / Fraud Detection</div>
+          <span class="use-metric use-f1">F1-Score</span>
+          <div class="use-reason">Both FP (giving bad loans) and FN (missing fraud) hurt the business. Balance both.</div>
+        </div>
+        <div class="use-card">
+          <div class="use-scenario">🎬 Movie Recommendations</div>
+          <span class="use-metric use-precision">Precision</span>
+          <div class="use-reason">Bad recommendations drive users away. Missing a good film is fine — there are plenty more.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLASSIFICATION REPORT -->
+  <section class="section-card" id="s-report">
+    <div class="card-header">
+      <div class="card-icon">📋</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Classification Report</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Instead of computing each metric separately, Sklearn's <code>classification_report</code> prints them all at once — per class and aggregated.</p>
+
+      <pre><code>from sklearn.metrics import classification_report
+print(classification_report(data.y, data.y_pred))</code></pre>
+
+      <div class="report-block">
+<span class="rh">              precision    recall  f1-score   support</span>
+
+<span class="rv-good">         0.0</span>       <span class="rv-good">1.00</span>      <span class="rv-good">0.98</span>      <span class="rv-good">0.99</span>     <span class="rh">10000</span>
+<span class="rv-warn">         1.0</span>       <span class="rv-bad">0.19</span>      <span class="rv-warn">0.55</span>      <span class="rv-bad">0.28</span>       <span class="rh">100</span>
+
+<span class="rh">    accuracy</span>                           <span class="rv-good">0.97</span>     <span class="rh">10100</span>
+<span class="rh">   macro avg</span>       <span class="rv-warn">0.59</span>      <span class="rv-warn">0.76</span>      <span class="rv-warn">0.63</span>     <span class="rh">10100</span>
+<span class="rh">weighted avg</span>       <span class="rv-good">0.99</span>      <span class="rv-good">0.97</span>      <span class="rv-good">0.98</span>     <span class="rh">10100</span>
+      </div>
+
+      <h3>How to Read This</h3>
+      <table>
+        <tr><th>Column</th><th>Meaning</th></tr>
+        <tr><td>support</td><td>Number of actual samples for that class in the test set</td></tr>
+        <tr><td>macro avg</td><td>Simple average across classes — treats all classes equally regardless of size</td></tr>
+        <tr><td>weighted avg</td><td>Average weighted by support — dominated by the majority class</td></tr>
+      </table>
+
+      <p>Example: macro avg precision = (1.00 + 0.19) / 2 = <strong>0.59</strong>. Weighted avg precision = (1.00×10000 + 0.19×100) / 10100 = <strong>0.99</strong> (dominated by class 0's size).</p>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Use Macro for Imbalanced Problems</div>
+        Weighted average looks great here (0.99) — but only because class 0 dominates. For imbalanced problems, use <strong>macro average</strong> or look at per-class metrics to get the true picture.
+      </div>
+    </div>
+  </section>
+
+  <!-- ROC -->
+  <section class="section-card" id="s-roc">
+    <div class="card-header">
+      <div class="card-icon">📈</div>
+      <div class="card-meta">
+        <div class="card-type">Metric</div>
+        <div class="card-title">ROC Curve & AUC</div>
+        <div class="card-duration">⏱ 10 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>So far we've used a fixed threshold (0.5) to make class predictions. But the threshold is a choice — and different thresholds give different tradeoffs. The <strong>ROC curve</strong> visualizes all these tradeoffs at once.</p>
+
+      <h3>Key Terms</h3>
+      <table>
+        <tr><th>Term</th><th>Formula</th><th>Meaning</th></tr>
+        <tr><td><strong>TPR</strong> (True Positive Rate / Recall)</td><td>TP / (TP + FN)</td><td>Fraction of actual positives caught</td></tr>
+        <tr><td><strong>FPR</strong> (False Positive Rate)</td><td>FP / (FP + TN)</td><td>Fraction of negatives incorrectly flagged</td></tr>
+      </table>
+
+      <h3>How the ROC Curve Is Built</h3>
+      <p>Sort all test points by predicted probability (descending). Sweep the threshold from 1.0 down to 0.0, recording (FPR, TPR) at each step. Plot TPR vs FPR:</p>
+
+      <table>
+        <tr><th>Threshold</th><th>Effect</th><th>FPR</th><th>TPR</th></tr>
+        <tr class="roc-row-bad"><td>1.0</td><td>Everything predicted as 0 — nothing detected</td><td>0</td><td>0</td></tr>
+        <tr><td>0.9</td><td>Only high-confidence positives flagged</td><td>Low</td><td>Low</td></tr>
+        <tr><td>0.5</td><td>Default operating point</td><td>Medium</td><td>Medium</td></tr>
+        <tr><td>0.1</td><td>Almost everything flagged as positive</td><td>High</td><td>High</td></tr>
+        <tr class="roc-row-bad"><td>0.0</td><td>Everything predicted as 1</td><td>1</td><td>1</td></tr>
+      </table>
+
+      <h3>Why Does the Curve Go from (0,0) to (1,1)?</h3>
+      <ul>
+        <li><strong>(0,0):</strong> Threshold = 1.0 — all predicted as 0 — TP=0, FP=0 → FPR=0, TPR=0</li>
+        <li><strong>(1,1):</strong> Threshold = 0.0 — all predicted as 1 — all positives found (TPR=1) but all negatives also flagged (FPR=1)</li>
+      </ul>
+
+      <h3>The Perfect and Random Model</h3>
+      <ul>
+        <li><strong>Perfect model:</strong> Curve goes straight up to (0,1) then right to (1,1). TPR=1 at FPR=0.</li>
+        <li><strong>Random model:</strong> Curve follows the diagonal (FPR = TPR at all thresholds).</li>
+        <li><strong>AUC (Area Under Curve):</strong> A single number [0, 1] summarizing the ROC. AUC=1.0 is perfect; AUC=0.5 is random.</li>
+      </ul>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 The Key Insight</div>
+        ROC and AUC are threshold-independent — they evaluate the model's <em>ranking ability</em> across all possible thresholds. A model with AUC=0.90 will correctly rank a random positive above a random negative 90% of the time.
+      </div>
+    </div>
+  </section>
+
+  <!-- WRAP UP -->
+  <section class="section-card" id="s-wrap">
+    <div class="card-header">
+      <div class="card-icon">✅</div>
+      <div class="card-meta">
+        <div class="card-type">Summary</div>
+        <div class="card-title">Wrapping Up</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Accuracy is the metric everyone starts with — and the first one you should learn to distrust when classes are imbalanced.</p>
+      <div class="summary-grid">
+        <div class="summary-item">OvR for K-class logistic regression</div>
+        <div class="summary-item">Log-odds = linear function of features</div>
+        <div class="summary-item">Sigmoid and Logit are inverses</div>
+        <div class="summary-item">Accuracy fails on imbalanced data</div>
+        <div class="summary-item">Confusion matrix: TP, TN, FP, FN</div>
+        <div class="summary-item">Precision = TP / (TP + FP)</div>
+        <div class="summary-item">Recall = TP / (TP + FN)</div>
+        <div class="summary-item">F1 = harmonic mean of P and R</div>
+        <div class="summary-item">classification_report — all metrics at once</div>
+        <div class="summary-item">ROC curve — TPR vs FPR across thresholds</div>
+        <div class="summary-item">AUC — single number for model ranking quality</div>
+        <div class="summary-item">Match metric to the cost of each error type</div>
+      </div>
+      <blockquote style="border-left:2px solid var(--accent); padding:10px 14px; margin:18px 0 0; background:rgba(160,168,184,.05); border-radius:0 7px 7px 0; font-family:'Lora',serif; font-style:italic; color:var(--highlight); font-size:14px;">
+        The choice of evaluation metric depends on the problem you're solving. Healthcare prioritizes Recall. Spam filters prioritize Precision. Loan approval needs both — use F1.
+      </blockquote>
+    </div>
+  </section>
+
+</main>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script>
+  // ── QUIZ ───────────────────────────────────────────
+  document.querySelectorAll('.quiz-options').forEach(list => {
+    list.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const card = list.closest('.section-card');
+        if (card.dataset.answered) return;
+        card.dataset.answered = '1';
+        const isCorrect = opt.dataset.correct === 'true';
+        const feedback = list.closest('.card-body').querySelector('.quiz-feedback');
+        list.querySelectorAll('.quiz-option').forEach(o => { o.style.cursor = 'default'; });
+        if (isCorrect) {
+          opt.classList.add('selected-correct');
+          opt.querySelector('.quiz-circle').textContent = '✓';
+          feedback.textContent = '✅ Correct.';
+          feedback.className = 'quiz-feedback correct';
+        } else {
+          opt.classList.add('selected-wrong');
+          opt.querySelector('.quiz-circle').textContent = '✗';
+          feedback.textContent = '❌ Not quite — check the explanation below.';
+          feedback.className = 'quiz-feedback wrong';
+          list.querySelectorAll('.quiz-option[data-correct="true"]').forEach(o => {
+            o.classList.add('reveal-correct');
+            o.querySelector('.quiz-circle').textContent = '✓';
+          });
+        }
+      });
+    });
+  });
+
+  // ── SCROLL / PROGRESS ─────────────────────────────
+  const sections    = document.querySelectorAll('.section-card');
+  const navItems    = document.querySelectorAll('.nav-item');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct  = document.getElementById('progress-pct');
+  const visited = new Set();
+
+  function onScroll() {
+    let current = '';
+    sections.forEach(sec => {
+      if (sec.getBoundingClientRect().top <= 120) { current = sec.id; visited.add(sec.id); }
+    });
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.target === current);
+      if (visited.has(item.dataset.target)) item.classList.add('visited');
+    });
+    const pct = Math.round((visited.size / sections.length) * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent  = pct + '%';
+    document.getElementById('back-top').classList.toggle('visible', window.scrollY > 400);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // ── MOBILE SIDEBAR ─────────────────────────────────
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('active');
+  }
+  document.querySelectorAll('.nav-item a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth <= 768) toggleSidebar(); });
+  });
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/classification-metrics" target="_blank" rel="noopener">github.com/scaler-content/classification-metrics</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

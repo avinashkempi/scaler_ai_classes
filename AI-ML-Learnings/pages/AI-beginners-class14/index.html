@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 14 · Tools, Memory &amp; MCP — Agent Building Blocks — Groundwire Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Manrope:wght@300..800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0f14;--bg2:#12161d;--card:#161b24;--card2:#1b212c;--line:#262e3b;--line2:#33405266;
+  --ink:#eef2f7;--ink2:#aab6c6;--ink3:#6d7a8c;
+  --orange:#ff8a2a;--orange2:#ffb066;--orange-dim:#ff8a2a22;
+  --teal:#3dd6c3;--teal-dim:#3dd6c31f;--violet:#a48bff;--violet-dim:#a48bff1f;
+  --gold:#ffd166;--rose:#ff6b8b;--green:#5fe08a;--red:#ff6161;
+  --mono:'JetBrains Mono',monospace;--serif:'Fraunces',serif;--sans:'Manrope',sans-serif;--r:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+::selection{background:var(--orange);color:#111}
+.wrap{max-width:1020px;margin:0 auto;padding:0 26px}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:600;line-height:1.22}
+a{color:var(--orange2)}
+strong{color:var(--ink)}
+em{color:var(--orange2);font-style:normal}
+p{color:var(--ink2)}
+p strong{color:var(--ink)}
+#progressBar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--orange),var(--gold));width:0;z-index:999;transition:width .1s linear}
+.topnav{position:sticky;top:0;background:#0c0f14e8;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);z-index:900}
+.topnav .wrap{display:flex;align-items:center;gap:14px;padding-top:12px;padding-bottom:12px;overflow-x:auto;scrollbar-width:none}
+.topnav .wrap::-webkit-scrollbar{display:none}
+.brand{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--orange);white-space:nowrap}
+.topnav a.nl{font-size:12.5px;font-weight:600;color:var(--ink3);text-decoration:none;white-space:nowrap;padding:5px 10px;border-radius:20px;transition:.2s}
+.topnav a.nl:hover{color:var(--orange);background:var(--orange-dim)}
+.hero{position:relative;padding:88px 0 70px;overflow:hidden;background:radial-gradient(1100px 480px at 78% -12%,#ff8a2a14,transparent 60%),radial-gradient(800px 400px at 8% 110%,#3dd6c30e,transparent 60%)}
+.hero .eyebrow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:26px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.06em;padding:6px 13px;border-radius:100px;border:1px solid var(--line);color:var(--ink2);background:var(--card)}
+.chip.hot{border-color:#ff8a2a55;color:var(--orange2);background:var(--orange-dim)}
+.chip.cool{border-color:#3dd6c355;color:var(--teal);background:var(--teal-dim)}
+.hero h1{font-size:clamp(38px,6vw,64px);font-weight:640;letter-spacing:-.01em;margin-bottom:8px}
+.hero h1 .amp{color:var(--orange);font-style:italic;font-weight:500}
+.hero .sub{font-size:clamp(17px,2.2vw,21px);color:var(--ink2);max-width:740px;margin-top:16px}
+.hero .sub b{color:var(--ink)}
+.heroStats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:44px}
+.hstat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.hstat .n{font-family:var(--serif);font-size:30px;font-weight:640;color:var(--orange)}
+.hstat .l{font-size:12px;color:var(--ink3);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+@media(max-width:760px){.heroStats{grid-template-columns:repeat(2,1fr)}}
+.agenda{margin-top:50px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px 28px}
+.agenda h3{font-size:14px;font-family:var(--sans);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:18px}
+.agRow{display:flex;align-items:center;flex-wrap:wrap;gap:14px;padding:11px 0;border-bottom:1px dashed var(--line)}
+.agRow:last-child{border-bottom:none}
+.agRow .t{font-family:var(--mono);font-size:12px;color:var(--orange);min-width:86px;font-weight:500}
+.agRow .name{font-weight:600;font-size:15px;color:var(--ink);flex:1;min-width:180px}
+.agRow .tag{margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--ink3);border:1px solid var(--line);padding:3px 10px;border-radius:100px;white-space:nowrap}
+.agRow .tag.simtag{color:var(--teal);border-color:#3dd6c344}
+section.blk{padding:74px 0 30px}
+.secHead{display:flex;align-items:baseline;gap:18px;margin-bottom:8px;flex-wrap:wrap}
+.secNum{font-family:var(--mono);font-size:13px;color:var(--orange);border:1px solid #ff8a2a55;background:var(--orange-dim);padding:5px 13px;border-radius:100px;font-weight:500;white-space:nowrap}
+.secHead h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.01em}
+.secTime{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-left:auto;white-space:nowrap}
+.secLede{font-size:18px;color:var(--ink2);max-width:800px;margin:12px 0 34px}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:44px 0 0}
+.say{position:relative;background:linear-gradient(180deg,#1a1410,#161b24);border:1px solid #ff8a2a33;border-left:3px solid var(--orange);border-radius:14px;padding:20px 24px 20px 26px;margin:22px 0}
+.say .who{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange);font-weight:700;margin-bottom:10px}
+.say p{color:#e8dccb;font-size:15.5px;margin-bottom:10px}
+.say p:last-child{margin-bottom:0}
+.say.ask{border-left-color:var(--teal);border-color:#3dd6c333;background:linear-gradient(180deg,#101a19,#161b24)}
+.say.ask .who{color:var(--teal)}
+.say.do{border-left-color:var(--violet);border-color:#a48bff33;background:linear-gradient(180deg,#141021,#161b24)}
+.say.do .who{color:var(--violet)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;margin:20px 0}
+.card h3{font-size:21px;margin-bottom:10px}
+.card h4{font-size:17px;margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:820px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+.defBox{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin:20px 0;position:relative}
+.defBox::before{content:'DEFINITION';position:absolute;top:-10px;left:20px;font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--gold);background:var(--bg);padding:2px 10px;border:1px solid #ffd16644;border-radius:100px}
+.defBox .term{font-family:var(--serif);font-size:19px;color:var(--gold);font-weight:600}
+.defBox p{margin-top:6px;font-size:15.5px}
+.useCase{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;transition:.25s;position:relative;overflow:hidden}
+.useCase:hover{border-color:#ff8a2a66;transform:translateY(-3px)}
+.useCase .ico{font-size:26px;margin-bottom:8px}
+.useCase .co{font-family:var(--mono);font-size:11px;color:var(--orange);letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.useCase h4{font-size:16px;margin:4px 0 6px;font-family:var(--sans);font-weight:700}
+.useCase p{font-size:13.5px;color:var(--ink2);line-height:1.55}
+.analogy{display:flex;gap:16px;background:linear-gradient(135deg,#1b1626,#161b24);border:1px solid #a48bff33;border-radius:14px;padding:20px 24px;margin:20px 0}
+.analogy .ic{font-size:30px;line-height:1}
+.analogy .tt{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--violet);font-weight:700;margin-bottom:6px}
+.analogy p{font-size:15px;color:var(--ink2)}
+.analogy p b{color:var(--ink)}
+.note{border-radius:12px;padding:14px 18px;margin:16px 0;font-size:14.5px;border:1px solid var(--line);background:var(--card2);color:var(--ink2)}
+.note b{color:var(--ink)}
+.note.beg{border-color:#5fe08a44}.note.beg b{color:var(--green)}
+.note.adv{border-color:#ff6b8b44}.note.adv b{color:var(--rose)}
+.note.pro{border-color:#ffd16644}.note.pro b{color:var(--gold)}
+table.tbl{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px}
+table.tbl th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--orange);text-align:left;padding:10px 14px;border-bottom:1px solid #ff8a2a44;font-weight:500}
+table.tbl td{padding:11px 14px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top}
+table.tbl tr:hover td{background:#ffffff05}
+table.tbl td:first-child{color:var(--ink);font-weight:600}
+code.k{font-family:var(--mono);font-size:.86em;background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--orange2)}
+pre.code{font-family:var(--mono);font-size:13px;line-height:1.7;background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px 22px;overflow-x:auto;margin:16px 0;color:#c7d2e0}
+pre.code .cm{color:#5b6b7f}
+pre.code .st{color:#8fd8a0}
+pre.code .fn{color:#7cc4ff}
+pre.code .kw{color:var(--orange2)}
+.sim{background:linear-gradient(180deg,#101620,#0e131b);border:1px solid #3dd6c344;border-radius:20px;padding:26px 28px;margin:30px 0;position:relative}
+.sim::before{content:'\26A1 INTERACTIVE SIMULATOR';position:absolute;top:-12px;left:22px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--teal);background:var(--bg);padding:3px 12px;border:1px solid #3dd6c355;border-radius:100px;font-weight:700}
+.sim h3{font-size:20px;margin-bottom:4px}
+.sim .simSub{font-size:14px;color:var(--ink3);margin-bottom:18px}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--sans);font-weight:700;font-size:13.5px;color:#161009;background:linear-gradient(180deg,var(--orange2),var(--orange));border:none;border-radius:100px;padding:10px 20px;cursor:pointer;transition:.2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px #ff8a2a44}
+.btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--orange);color:var(--orange);box-shadow:none}
+.btn.sm{padding:7px 15px;font-size:12.5px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.quiz{background:linear-gradient(180deg,#151021,#12161d);border:1px solid #a48bff44;border-radius:20px;padding:26px 28px;margin:34px 0;position:relative}
+.quiz::before{content:'\2726 CHECKPOINT QUIZ';position:absolute;top:-12px;left:22px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--violet);background:var(--bg);padding:3px 12px;border:1px solid #a48bff55;border-radius:100px;font-weight:700}
+.quiz .q{font-family:var(--serif);font-size:19px;font-weight:600;margin:6px 0 18px;color:var(--ink)}
+.opt{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 17px;margin:9px 0;cursor:pointer;transition:.2s;font-size:14.5px;color:var(--ink2)}
+.opt:hover{border-color:var(--violet)}
+.opt .ab{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--violet);border:1px solid #a48bff55;border-radius:8px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.opt.correct{border-color:var(--green);background:#5fe08a12;color:var(--ink)}
+.opt.correct .ab{color:var(--green);border-color:var(--green)}
+.opt.wrong{border-color:var(--red);background:#ff616112;opacity:.75}
+.opt.wrong .ab{color:var(--red);border-color:var(--red)}
+.opt.locked{pointer-events:none}
+.quizWhy{display:none;margin-top:16px;border-top:1px dashed #a48bff44;padding-top:16px;font-size:14.5px;color:var(--ink2)}
+.quizWhy.show{display:block;animation:fadeUp .4s ease}
+.quizWhy b{color:var(--violet)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+.svgWrap{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin:24px 0;overflow-x:auto}
+.svgWrap svg,.svgWrap img{display:block;margin:0 auto;max-width:100%;height:auto;border-radius:10px}
+.svgCap{text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-top:14px;letter-spacing:.04em}
+.bigQuote{font-family:var(--serif);font-size:clamp(21px,3vw,28px);font-weight:500;font-style:italic;color:var(--ink);text-align:center;max-width:780px;margin:50px auto;line-height:1.5}
+.bigQuote em{color:var(--orange);font-style:italic}
+.footer{border-top:1px solid var(--line);margin-top:80px;padding:44px 0 60px;text-align:center}
+.footer p{font-size:13px;color:var(--ink3)}
+.slackDrop{background:linear-gradient(120deg,#12201e,#0f1720);border:1px solid #3dd6c355;border-radius:14px;padding:16px 20px;margin:18px 0;display:flex;gap:14px;align-items:flex-start}
+.slackDrop .av{font-size:26px}
+.slackDrop .nm{font-weight:700;color:var(--teal);font-size:14px}
+.slackDrop .tm{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-left:8px}
+.slackDrop p{font-size:14px;color:var(--ink2);margin-top:4px}
+.msgPills{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px}
+.msgPill{font-family:var(--sans);font-size:12.5px;font-weight:600;text-align:left;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:100px;padding:9px 16px;cursor:pointer;transition:.2s;max-width:100%}
+.msgPill:hover{border-color:var(--teal);color:var(--teal)}
+.msgPill.sel{background:var(--teal-dim);border-color:var(--teal);color:var(--teal)}
+.pickRow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.pickBtn{font-family:var(--sans);font-weight:700;font-size:12.5px;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:9px;padding:9px 14px;cursor:pointer;transition:.2s;text-align:left}
+.pickBtn:hover{border-color:var(--orange)}
+.pickBtn.on{background:var(--orange-dim);border-color:var(--orange);color:var(--orange2)}
+.pickGroup{margin-bottom:14px}
+.pickGroup .pgl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px;display:block}
+.matchBtns{display:flex;flex-wrap:wrap;gap:10px}
+.matchBtn{font-family:var(--sans);font-weight:700;font-size:13px;border:1px solid var(--line);background:#141b26;color:var(--ink2);border-radius:10px;padding:10px 16px;cursor:pointer;transition:.2s;text-align:left}
+.matchBtn:hover{border-color:var(--orange)}
+.matchBtn.right{border-color:var(--green);background:#0f1f1c;color:var(--green)}
+.matchBtn.wrong{border-color:var(--red);background:#221214;color:var(--rose)}
+.matchWhy{margin-top:14px;font-size:14px;color:var(--ink2);min-height:24px}
+.matchWhy b{color:var(--teal)}
+.matchScore{font-family:var(--mono);font-size:12px;color:var(--gold);border:1px solid #ffd16655;background:#ffd16611;border-radius:100px;padding:6px 14px;display:inline-block;margin-top:6px}
+.runLog{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-family:var(--mono);font-size:11.5px;line-height:1.85;color:var(--ink2);min-height:120px;max-height:280px;overflow-y:auto;margin-top:12px}
+.runLog .lg{display:block}
+.runLog .lg.ok{color:var(--green)}.runLog .lg.err{color:var(--rose)}.runLog .lg.warn{color:var(--gold)}.runLog .lg.dim{color:var(--ink3)}
+.verdict{border-radius:12px;padding:14px 18px;margin-top:14px;font-size:14px;border:1px solid var(--line);background:var(--card2);color:var(--ink2)}
+.verdict b{color:var(--ink)}
+.verdict.good{border-color:#5fe08a55;background:#5fe08a0e}.verdict.good b{color:var(--green)}
+.verdict.bad{border-color:#ff616155;background:#ff61610e}.verdict.bad b{color:var(--rose)}
+.verdict.mid{border-color:#ffd16655;background:#ffd1660e}.verdict.mid b{color:var(--gold)}
+.gapCallout{background:#20160f;border:1px solid #ffd16655;border-radius:12px;padding:14px 18px;margin-top:16px;font-size:14px;color:var(--ink2)}
+.gapCallout b{color:var(--gold)}
+.twoCol{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
+@media(max-width:820px){.twoCol{grid-template-columns:1fr}}
+.colCard{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.colCard .ct{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+.colCard p{font-size:13.5px}
+.chalCard{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:18px 0;overflow:hidden;transition:.25s}
+.chalCard.open{border-color:#3dd6c366}
+.chalHead{display:flex;align-items:center;gap:14px;padding:18px 22px;cursor:pointer}
+.chalHead .cn{font-family:var(--mono);font-size:12px;color:var(--teal);border:1px solid #3dd6c355;border-radius:8px;padding:4px 10px;font-weight:700}
+.chalHead h4{font-family:var(--serif);font-size:19px;flex:1}
+.chalHead .chev{font-family:var(--mono);color:var(--ink3);transition:.3s}
+.chalCard.open .chev{transform:rotate(90deg);color:var(--teal)}
+.chalBody{display:none;padding:0 22px 22px}
+.chalCard.open .chalBody{display:block;animation:fadeUp .4s ease}
+.chalBody .cLabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin:16px 0 6px}
+.chalBody .mission{color:var(--ink2);font-size:14.5px}
+/* ---- Class 13 additions — agent-loop visual language (inherited, still used) ---- */
+.canvasStrip{display:flex;flex-wrap:wrap;align-items:center;gap:7px;background:#0a0d12;border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+.cNode{font-family:var(--sans);font-weight:700;font-size:12px;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 13px;cursor:pointer;transition:.25s;position:relative;white-space:nowrap}
+.cNode:hover{border-color:var(--orange)}
+.cNode .ci{font-size:14px;margin-right:5px}
+.cNode.sel{border-color:var(--orange);background:var(--orange-dim);color:var(--orange2)}
+.cNode.run{border-color:var(--gold);color:var(--gold);animation:pulse .8s infinite}
+.cNode.ok{border-color:#5fe08a88;color:var(--green);background:#5fe08a10}
+.cNode.err{border-color:var(--red);color:var(--red);background:#ff616112}
+.cNode.skip{opacity:.3}
+.switchRow{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:13px 17px;margin:9px 0}
+.switchRow .swl{font-size:13.5px;color:var(--ink2)}
+.switchRow .swl b{color:var(--ink);display:block;font-size:14.5px;margin-bottom:2px}
+.swBtn{font-family:var(--mono);font-weight:700;font-size:11.5px;letter-spacing:.06em;border:1px solid var(--line);background:#141b26;color:var(--ink3);border-radius:100px;padding:7px 16px;cursor:pointer;transition:.2s;min-width:64px;text-align:center}
+.swBtn.on{border-color:var(--green);background:#5fe08a1a;color:var(--green)}
+.transcriptCard{background:#0f141b;border:1px solid var(--line);border-radius:14px;padding:0;margin-top:16px;overflow:hidden}
+.transcriptCard .th{background:#141b26;border-bottom:1px solid var(--line);padding:10px 16px;font-family:var(--mono);font-size:11px;color:var(--ink3);display:flex;justify-content:space-between}
+.transcriptCard .tb{padding:16px 18px;font-size:13.5px;color:var(--ink2);line-height:1.7;white-space:pre-wrap;min-height:70px}
+.choiceRow{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+.choiceBtn{display:flex;gap:12px;align-items:flex-start;text-align:left;background:#141b26;border:1px solid var(--line);border-radius:12px;padding:12px 16px;cursor:pointer;transition:.2s;font-family:var(--sans);font-size:13.5px;color:var(--ink2)}
+.choiceBtn:hover{border-color:var(--orange)}
+.choiceBtn.good{border-color:var(--green);background:#5fe08a12;color:var(--ink)}
+.choiceBtn.bad{border-color:var(--rose);background:#ff6b8b12;color:var(--ink)}
+.choiceBtn .cico{font-size:16px;flex-shrink:0}
+.alarmMeter{background:#0a0d12;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:14px}
+.alarmBar{height:16px;border-radius:100px;background:#181f2b;overflow:hidden;margin:12px 0 8px;border:1px solid var(--line)}
+.alarmFill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--green),var(--gold),var(--red));width:0%;transition:width .25s linear}
+.alarmEnds{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.verifyHead{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+.verifySteps{list-style:none;counter-reset:vs;margin:0;padding:0}
+.verifySteps li{counter-increment:vs;position:relative;padding:0 0 0 34px;margin:0 0 12px;font-size:13.5px;color:var(--ink2);line-height:1.6}
+.verifySteps li:last-child{margin-bottom:0}
+.verifySteps li::before{content:counter(vs);position:absolute;left:0;top:1px;width:22px;height:22px;border-radius:100px;background:#141b26;border:1px solid var(--line);color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center}
+.verifySteps li b{color:var(--ink)}
+.verifySteps li code{background:#141b26;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px;color:var(--gold);white-space:nowrap}
+.realGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+@media(max-width:820px){.realGrid{grid-template-columns:1fr}}
+.realCard{background:linear-gradient(180deg,#1a1113,#161b24);border:1px solid #ff6b8b3a;border-radius:14px;padding:20px 22px}
+.realCard .rtag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--rose);font-weight:700;margin-bottom:10px}
+.realCard h4{font-size:16.5px;margin-bottom:8px;color:var(--ink)}
+.realCard p{font-size:14px;color:var(--ink2);line-height:1.65}
+.realCard p b{color:var(--ink)}
+/* ---- Class 14 additions — tools/memory/MCP visual language ---- */
+.trayRow{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.trayBtn{font-family:var(--sans);font-weight:700;font-size:13px;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:12px;padding:12px 18px;cursor:pointer;transition:.2s;flex:1;min-width:140px;text-align:center}
+.trayBtn:hover{border-color:var(--orange)}
+.trayBtn:disabled{opacity:.35;cursor:not-allowed}
+.queueStrip{display:flex;flex-wrap:wrap;gap:10px;min-height:56px;background:#0a0d12;border:1px solid var(--line);border-radius:14px;padding:14px;margin:14px 0}
+.queueCard{font-family:var(--sans);font-size:13px;font-weight:600;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;cursor:pointer;transition:.2s;max-width:260px;animation:popIn .3s ease}
+.queueCard:hover{border-color:var(--teal)}
+.queueCard.sel{border-color:var(--orange);background:var(--orange-dim);color:var(--orange2)}
+.ruleList{list-style:none;margin:16px 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ruleItem{display:flex;align-items:center;gap:12px;background:#141b26;border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.ruleItem .rn{font-family:var(--mono);font-size:11px;color:var(--ink3);min-width:18px}
+.ruleItem .rl{flex:1;font-size:13.5px;color:var(--ink2)}
+.ruleItem .rl b{color:var(--ink)}
+.ruleArrows{display:flex;flex-direction:column;gap:2px}
+.ruleArrows button{font-family:var(--mono);font-size:11px;background:#0a0d12;color:var(--ink3);border:1px solid var(--line);border-radius:6px;width:24px;height:20px;cursor:pointer}
+.ruleArrows button:hover:not(:disabled){border-color:var(--orange);color:var(--orange)}
+.ruleArrows button:disabled{opacity:.25;cursor:not-allowed}
+.memBank{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+@media(max-width:820px){.memBank{grid-template-columns:1fr}}
+.memLane{background:#0a0d12;border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-height:110px}
+.memLane .ml-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+.memFact{font-size:12.5px;color:var(--ink2);background:#141b26;border:1px solid var(--line);border-radius:8px;padding:7px 11px;margin-bottom:7px}
+.memFact.empty{color:var(--ink3);font-style:italic;background:transparent;border-style:dashed}
+.memFact b{color:var(--teal)}
+.mcpMatrix{display:grid;gap:6px;margin:16px 0;justify-content:start}
+.mcpCell{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#141b26;border:1px solid var(--rose);border-radius:8px;font-size:14px}
+.mcpHub{display:flex;align-items:center;justify-content:center;gap:22px;margin:20px 0;flex-wrap:wrap}
+.hubCol{display:flex;flex-direction:column;gap:8px}
+.hubChip{font-family:var(--sans);font-weight:700;font-size:12px;background:#141b26;border:1px solid #5fe08a55;color:var(--green);border-radius:9px;padding:8px 12px;white-space:nowrap}
+.hubCenter{font-family:var(--serif);font-weight:640;font-size:16px;color:var(--teal);background:var(--teal-dim);border:1px solid #3dd6c355;border-radius:16px;padding:16px 20px;text-align:center}
+.stepperRow{display:flex;gap:24px;flex-wrap:wrap;margin:16px 0}
+.stepperGroup{display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:var(--ink3)}
+.stepperGroup>div{display:flex;align-items:center;gap:10px}
+.stepperBtn{font-family:var(--mono);font-weight:700;font-size:15px;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:8px;width:30px;height:30px;cursor:pointer}
+.stepperBtn:hover{border-color:var(--orange);color:var(--orange)}
+.stepperVal{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--ink);min-width:20px;text-align:center}
+.consentCard{background:#0a0d12;border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin:16px 0}
+.consentCard .cc-h{font-family:var(--serif);font-size:16.5px;font-weight:600;color:var(--ink);margin-bottom:14px}
+.scopeRow{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.scopeRow:last-of-type{border-bottom:none}
+.scopeRow div{font-size:13px;color:var(--ink2)}
+.scopeRow div b{display:block;color:var(--ink);font-size:14px;margin-bottom:1px}
+.scopeCheck{width:22px;height:22px;flex-shrink:0;border-radius:6px;border:1px solid var(--line);background:#141b26;cursor:pointer;margin-top:2px;color:transparent}
+.scopeCheck.on{background:var(--green);border-color:var(--green);color:#0a0d12;font-weight:700;font-size:14px;line-height:20px}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/agents/">AI agents</a><span class="t">· AI Beginners 14 · Tools, memory and MCP</span><span class="p"><b>Class</b><a href="../beginner-14-post_read/">Post-read</a></span><span class="pn"><a href="../../../Learnings/Class-2-AI-infusion/" title="AI Engineering 2 · LangChain and your first agent">← Prev</a><a href="../AI-beginners-class16/" title="AI Beginners 16 · Personal agents and multi-agent systems">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progressBar"></div>
+<nav class="topnav"><div class="wrap">
+<span class="brand">🧭 Scaler AIML · Class 14</span>
+<a class="nl" href="#open">The Morning Seven</a>
+<a class="nl" href="#tooltypes">Tool Types</a>
+<a class="nl" href="#routing">Routing Logic</a>
+<a class="nl" href="#memory">Memory</a>
+<a class="nl" href="#mcp">What Is MCP?</a>
+<a class="nl" href="#mcpclaude">MCP In Claude</a>
+<a class="nl" href="#handson">Hands-On Build</a>
+<a class="nl" href="#n8n">MCP In n8n</a>
+<a class="nl" href="#takehome">Take-Home</a>
+<a class="nl" href="#wrap">Wrap-Up</a>
+</div></nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero"><div class="wrap">
+  <div class="eyebrow">
+    <span class="chip hot">CLASS 14 / SESSION SCRIPT</span>
+    <span class="chip">⏱ ~120 MINUTES</span>
+    <span class="chip cool">GROUNDWIRE CONTINUES</span>
+    <span class="chip">HANDS-ON BUILD RETURNS</span>
+    <span class="chip">TOOLS · MEMORY · MCP</span>
+  </div>
+  <h1>Tools, Memory &amp; MCP — <span class="amp">Agent Building Blocks</span></h1>
+  <p class="sub"><b>Last class you sent it out to check one thing. Today, seven things land at once.</b> The loop, the pillars, the failure modes — all of that still holds. What breaks is everything underneath it: which tool does it reach for, does it remember what it's already checked, and how does Zara — who isn't a developer — plug new tools in without writing custom code for each one. That last question has a name: <b>MCP</b>. By the end of today you'll have connected Claude to two real tools yourself and watched it run a genuine multi-step task.</p>
+
+  <div class="slackDrop" style="margin-top:32px">
+    <div class="av">📻</div>
+    <div><span class="nm">Advait → Groundwire newsroom</span><span class="tm">6:48 AM · Thursday</span>
+    <p>"Storm blew through overnight. I've already got seven different things people want confirmed before the 7am bulletin — a flooded underpass, a power-outage headcount, the mayor's briefing time, a shelter address, whether Route 9's flooded before... it's a lot at once. Whatever we built last class could check one tip carefully. Can it handle seven at the same time without getting confused, or calling the same number three times by accident?"</p></div>
+  </div>
+  <p style="font-family:var(--mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--orange2);margin-top:14px">🧩🔌🧠 Today's rule: the right hand for the job, and a place to put down what it's already found.</p>
+
+  <div class="heroStats">
+    <div class="hstat"><div class="n" data-count="4">0</div><div class="l">Tool Types</div></div>
+    <div class="hstat"><div class="n" data-count="5">0</div><div class="l">Live Simulators</div></div>
+    <div class="hstat"><div class="n" data-count="5">0</div><div class="l">Checkpoint Quizzes</div></div>
+    <div class="hstat"><div class="n" data-count="2">0</div><div class="l">MCP Tools Connected Live</div></div>
+  </div>
+  <div class="agenda">
+    <h3>Today's Flight Plan · ~120 Minutes</h3>
+    <div class="agRow"><span class="t">00:00–00:07</span><span class="name">The Morning Seven</span><span class="tag">SETUP</span></div>
+    <div class="agRow"><span class="t">00:07–00:21</span><span class="name">Tool Types — Search, Code, Browser, API</span><span class="tag simtag">SIM + QUIZ</span></div>
+    <div class="agRow"><span class="t">00:21–00:34</span><span class="name">Tool Selection &amp; Routing Logic</span><span class="tag simtag">SIM + QUIZ</span></div>
+    <div class="agRow"><span class="t">00:34–00:48</span><span class="name">Memory — Short-Term vs. Long-Term</span><span class="tag simtag">SIM + QUIZ</span></div>
+    <div class="agRow"><span class="t">00:48–00:54</span><span class="name">☕ Stretch break</span><span class="tag">BREAK</span></div>
+    <div class="agRow"><span class="t">00:54–01:08</span><span class="name">Model Context Protocol — The USB-C Idea</span><span class="tag simtag">SIM + QUIZ</span></div>
+    <div class="agRow"><span class="t">01:08–01:21</span><span class="name">MCP In Claude — Connecting Real Tools</span><span class="tag">SETUP</span></div>
+    <div class="agRow"><span class="t">01:21–01:37</span><span class="name">Hands-On — Two Tools, One Multi-Step Task</span><span class="tag simtag">BUILD + SIM + QUIZ</span></div>
+    <div class="agRow"><span class="t">01:37–01:47</span><span class="name">Same Idea, No-Code Canvas — n8n's MCP Node</span><span class="tag">BUILD</span></div>
+    <div class="agRow"><span class="t">01:47–01:54</span><span class="name">Take-Home — Build It Yourself</span><span class="tag simtag">3 CHALLENGES</span></div>
+    <div class="agRow"><span class="t">01:54–02:00</span><span class="name">Wrap-Up — Key Takeaways</span><span class="tag">NO SIM</span></div>
+  </div>
+</div></header>
+
+<!-- ============ SECTION: OPEN ============ -->
+<section class="blk" id="open"><div class="wrap">
+  <div class="secHead"><span class="secNum">SETUP</span><h2>The Morning Seven</h2><span class="secTime">⏱ 7 min</span></div>
+  <p class="secLede">Same newsroom, same cast, twelve hours later. A storm rolled through overnight, and the calm, one-tip-at-a-time world of last class is gone before 7am.</p>
+
+  <div class="card" style="border-color:#3dd6c344">
+    <h4 style="color:var(--teal)">Groundwire Newsroom · Thursday, 6:48 AM</h4>
+    <p style="font-size:14.5px;margin-bottom:14px">Zara built a working agent last class — it can take one tip, go check it properly, and hand back something printable. This morning it has seven waiting at once, all landing within a few minutes of each other.</p>
+    <table class="tbl">
+      <tr><th>#</th><th>What Advait needs confirmed</th></tr>
+      <tr><td>1</td><td>Is the Elm Street underpass flooded right now?</td></tr>
+      <tr><td>2</td><td>What time is the mayor's rescheduled briefing, per the city site?</td></tr>
+      <tr><td>3</td><td>Total outage counts across the Riverside and Oakdale zip codes</td></tr>
+      <tr><td>4</td><td>Do underpasses like this usually clear within a few hours after a storm this size?</td></tr>
+      <tr><td>5</td><td>What's DOT's live map showing for Route 9 right now?</td></tr>
+      <tr><td>6</td><td>This week's total storm-related 911 calls, from two spreadsheets Priya sent</td></tr>
+      <tr><td>7</td><td>Has Route 9 flooded before in past storms? Check the archive.</td></tr>
+    </table>
+  </div>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says — Cold Open</span>
+    <p>"Nothing you learned last class stopped being true. The loop is still Think, Act, Observe. The pillars are still Tools, Memory, Autonomy. What's new this morning is <b>scale</b> — and scale breaks things that one-tip-at-a-time politely hid from you."</p>
+    <p>"Watch what actually goes wrong first: not the reasoning, not the writing. It's <em>which hand to use</em>, and <em>remembering what the other hand already did</em>. That's today's whole class, in one sentence."</p>
+  </div>
+
+  <div class="transcriptCard">
+    <div class="th"><span>ZARA'S SCREEN — 6:51 AM</span><span>UNMODIFIED AGENT</span></div>
+    <div class="tb">The agent from last class opens the underpass tip, calls the fire department's line out of habit (that's what worked for the Kessler mill fire), gets "we don't track road flooding, try public works." Then it opens the mayor's-briefing tip — and calls the fire department again, because that's the one number it knows how to dial. Two tips in, zero answers, one very confused fire department.</div>
+  </div>
+
+  <div class="note beg"><b>Beginner Note:</b> the agent isn't "broken" — it's missing two specific things: a menu of <em>different kinds</em> of tools to reach for (it only ever learned "call someone"), and a way to keep straight what it's already tried, tip to tip. That's exactly Tools and Memory — today we open both up properly, then add MCP, which is how you actually plug new tools in without hand-building each connection yourself.</div>
+</div></section>
+
+<!-- ============ SECTION: TOOL TYPES ============ -->
+<section class="blk" id="tooltypes"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 1</span><h2>Tool Types — Search, Code, Browser, API</h2><span class="secTime">⏱ 14 min</span></div>
+  <p class="secLede">Four different kinds of hands. Every one of Advait's seven tips needs exactly one of them — the trick is knowing which.</p>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"Forget 'the AI uses a tool' as one vague idea. There are four genuinely different jobs hiding inside that phrase, and mixing them up is exactly how you get a stale answer that sounds confident."</p>
+  </div>
+
+  <div class="grid4">
+    <div class="useCase"><div class="ico">🔎</div><div class="co">TYPE ONE</div><h4>Search</h4><p>Ask the open web something general — not tied to one specific page. Good for background, patterns, "is this usually true."</p></div>
+    <div class="useCase"><div class="ico">🌐</div><div class="co">TYPE TWO</div><h4>Browser</h4><p>Go to one specific, known webpage and read exactly what's on it right now. Good for "what does <em>this</em> page say today."</p></div>
+    <div class="useCase"><div class="ico">🔌</div><div class="co">TYPE THREE</div><h4>API Call</h4><p>Ask another system directly for a live number or status, no page in between. Good for "what's true <em>right now</em>, precisely."</p></div>
+    <div class="useCase"><div class="ico">🧮</div><div class="co">TYPE FOUR</div><h4>Code</h4><p>Do math, counting, or combining numbers — the job a spreadsheet formula would do. Good for "add these up."</p></div>
+  </div>
+
+  <div class="analogy">
+    <div class="ic">🗞️</div>
+    <div><div class="tt">The One Analogy</div>
+    <p><b>Search</b> is asking a well-read colleague what they generally know. <b>Browser</b> is walking over to a specific noticeboard and reading today's posting. <b>API call</b> is calling a hotline that gives you the live number directly, no noticeboard involved. <b>Code</b> is doing the arithmetic on your own notepad once you have the numbers.</p></div>
+  </div>
+
+  <div class="note"><b>Intermediate Note:</b> Browser and API call get confused constantly, and the difference matters. A live DOT road-status feed answering "flooded: yes/no" in one clean value is an <b>API call</b> — precise, structured, built for machines to read. Loading the city's press page to see what it currently says about a briefing time is a <b>Browser</b> job — you're reading a page meant for humans, not a clean status feed. Search a live status page in general and you'll often get a cached, out-of-date copy — which is exactly the trap.</div>
+
+  <div class="sim">
+    <h3>🧺 SIM 1 · The Tip Tray</h3>
+    <p class="simSub">Tips keep arriving. Click a waiting card, then click the tray it belongs in. Let more than four pile up unsorted and the newsroom misses deadline — sort correctly, fast, and clear all eight.</p>
+    <div class="alarmMeter">
+      <div class="alarmEnds"><span>Calm</span><span>Busy</span><span>Overflow</span></div>
+      <div class="alarmBar"><div class="alarmFill" id="trayFill"></div></div>
+    </div>
+    <div class="queueStrip" id="trayQueue"></div>
+    <div class="trayRow" id="trayButtons"></div>
+    <div class="verdict" id="trayVerdict" style="display:none"></div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn" id="trayStart">▶ Start The Morning</button>
+      <button class="btn ghost sm" id="trayReset">Reset</button>
+      <span class="matchScore" id="trayScore" style="display:none"></span>
+    </div>
+  </div>
+
+  <div class="note pro"><b>⏱ Compression flag:</b> this sim runs itself once started — if the room is short on time, run it once as a class-wide "shout the tray" call instead of individual clicking, then move straight to routing.</div>
+
+  <div class="quiz">
+    <p class="q">Quiz 1 · Priya asks: "Add up this week's total storm-related 911 calls from the two spreadsheets I sent." Which tool type handles this?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span><span>Search — look up general 911-call statistics online</span></div>
+    <div class="opt" data-r="w"><span class="ab">B</span><span>Browser — open the city's emergency-services webpage</span></div>
+    <div class="opt" data-r="c"><span class="ab">C</span><span>Code — combine the numbers already sitting in two files</span></div>
+    <div class="opt" data-r="w"><span class="ab">D</span><span>API call — ask 911 dispatch for a live count</span></div>
+    <div class="quizWhy"><b>Why C?</b> The data already exists, sitting in two spreadsheets Priya sent — nothing needs to be looked up or fetched from anywhere. The job is purely arithmetic: open both, add the relevant numbers, report the total. That's Code's entire job description. The moment you catch yourself reaching for "look it up" when the numbers are already in hand, that's the tell you wanted Code, not Search or Browser.</div>
+  </div>
+</div></section>
+
+<!-- ============ SECTION: ROUTING ============ -->
+<section class="blk" id="routing"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 2</span><h2>Tool Selection &amp; Routing Logic</h2><span class="secTime">⏱ 13 min</span></div>
+  <p class="secLede">Four tools on the shelf doesn't mean the agent magically grabs the right one. Something has to decide — and that something is a set of plain rules, checked in order.</p>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"There's no mystery inside 'the agent decides which tool to use.' Under the hood it's closer to a checklist: check this condition first, and if it matches, use that tool — otherwise check the next condition. Nothing fancier than that. Which means the <b>order</b> you write those checks in actually changes the outcome."</p>
+  </div>
+
+  <div class="defBox">
+    <div class="term">Routing Logic</div>
+    <p>The set of rules an agent checks, in order, to decide which tool a given task needs. The first rule that matches wins — so a rule sitting higher up the list quietly overrides one sitting lower, even for tasks the lower rule was actually written for.</p>
+  </div>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"If this feels familiar, it should — this is Class 10's Condition node, doing the exact same job: check a rule, and if it matches, stop and act; if not, check the next one. 'Routing logic' is just what that same idea is called when the checks decide between multiple tools instead of one path."</p>
+  </div>
+
+  <div class="sim">
+    <h3>🧭 SIM 2 · Build The Router</h3>
+    <p class="simSub">Four rules, four incoming tips. Reorder the rules with the arrows, then run all four tips through and see which tool each one lands on — first matching rule wins.</p>
+    <ol class="ruleList" id="ruleList"></ol>
+    <div style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" id="routeRun">▶ Run All 4 Tips</button>
+      <button class="btn ghost sm" id="routeReset">Reset Order</button>
+    </div>
+    <div class="runLog" id="routeLog"></div>
+    <div class="verdict" id="routeVerdict" style="display:none"></div>
+  </div>
+
+  <div class="note adv"><b>Advanced Note:</b> the general principle the sim is teaching: put the rule that catches something <em>specific and live</em> above the rule that catches something <em>general</em>. "Needs a live status right now" should out-rank "could plausibly be found on some webpage," which should out-rank "is this generally true." Specific beats general, checked top to bottom.</div>
+
+  <div class="quiz">
+    <p class="q">Quiz 2 · A newsroom agent has two routing rules, checked in this order: Rule 1 — "If it could plausibly be answered with a general web search → Search." Rule 2 — "If it needs a live, specific status right now → API call." A new tip arrives: "Is the power back on in Zone 4 right now?" — which could plausibly match either rule. What happens with the rules in this order?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span><span>The task fails outright, since two rules both matched it</span></div>
+    <div class="opt" data-r="c"><span class="ab">B</span><span>It gets routed to Search first — possibly a stale, cached answer — even though a live API exists for exactly this question</span></div>
+    <div class="opt" data-r="w"><span class="ab">C</span><span>The agent automatically picks whichever tool would give the more accurate answer</span></div>
+    <div class="opt" data-r="w"><span class="ab">D</span><span>Rule order has no effect here — both rules lead to the same tool anyway</span></div>
+    <div class="quizWhy"><b>Why B?</b> First matching rule wins, top to bottom — nothing evaluates accuracy before picking. Rule 1 is broad enough to catch almost anything "look-up-able," including tasks a sharper, more specific rule was written for. Sitting a general rule above a specific one means the general rule quietly wins by default. The fix is ordering: the live/specific check should sit above the general one, so the sharper match wins on purpose instead of by accident of list position.</div>
+  </div>
+</div></section>
+
+<!-- ============ SECTION: MEMORY ============ -->
+<section class="blk" id="memory"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 3</span><h2>Memory — Short-Term vs. Long-Term</h2><span class="secTime">⏱ 14 min</span></div>
+  <p class="secLede">Seven tips at once isn't only a tools problem — it's just as much a memory problem, and it's worth separating two different kinds.</p>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"Last class, 'memory' meant one thing: don't call the same number twice in the same afternoon. Today we split it in two, because a newsroom doesn't reset every morning — some things are worth remembering <em>past</em> today."</p>
+  </div>
+
+  <div class="defBox">
+    <div class="term">Short-Term Memory</div>
+    <p>A scratchpad that lasts for this run only. Keeps track of what's already been checked <em>today</em>, so tip six doesn't repeat tip two's phone call. Gone the moment the session ends.</p>
+  </div>
+  <div class="defBox" style="margin-top:-8px">
+    <div class="term">Long-Term Memory</div>
+    <p>A notebook that survives past today. Facts worth keeping — a verified address, a source that turned out reliable, a number that rarely changes — so tomorrow morning doesn't start from zero on things that are already settled.</p>
+  </div>
+
+  <div class="analogy">
+    <div class="ic">📓</div>
+    <div><div class="tt">Or, Think Of It As Two Different Notebooks</div>
+    <p><b>Short-term</b> is today's page — torn out and binned at the end of the shift. <b>Long-term</b> is the newsroom's standing reference binder, added to over months, that any reporter can flip open instead of re-discovering the same fact from scratch.</p></div>
+  </div>
+
+  <div class="sim">
+    <h3>🗄️ SIM 3 · The Memory Bank</h3>
+    <p class="simSub">Same three tips from this morning. Flip either switch and watch what the agent actually does — and what ends up sitting in each notebook.</p>
+    <div class="switchRow"><div class="swl"><b>Short-Term Memory</b><span>Remembers within this morning's run</span></div><button class="swBtn on" id="memST" data-p="st">on</button></div>
+    <div class="switchRow"><div class="swl"><b>Long-Term Memory</b><span>Remembers across mornings, permanently</span></div><button class="swBtn on" id="memLT" data-p="lt">on</button></div>
+    <div class="transcriptCard"><div class="th"><span>WHAT HAPPENS THIS MORNING</span><span id="memComboTag">BOTH ON</span></div><div class="tb" id="memOut"></div></div>
+    <div class="memBank">
+      <div class="memLane"><div class="ml-h">📝 Today's Scratchpad (short-term)</div><div class="memFacts" id="memSTBank"></div></div>
+      <div class="memLane"><div class="ml-h">🗄️ Newsroom Notebook (long-term)</div><div class="memFacts" id="memLTBank"></div></div>
+    </div>
+  </div>
+
+  <div class="note pro"><b>Advanced Note — the odd combination:</b> long-term on, short-term off is a real and sneaky-broken shape. It might recall the shelter address instantly from a past morning, yet still lose track of what it already checked <em>within today's own run</em> — because that's exactly what short-term memory is for. Long-term memory is not a substitute for a working scratchpad; they do different jobs.</div>
+
+  <div class="quiz">
+    <p class="q">Quiz 3 · An agent re-verifies the exact same shelter address from scratch on three separate mornings, even though nothing about the shelter has changed. Which memory type is missing?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span><span>Short-term — it should remember more within a single run</span></div>
+    <div class="opt" data-r="w"><span class="ab">B</span><span>Tools — it clearly can look the address up</span></div>
+    <div class="opt" data-r="c"><span class="ab">C</span><span>Long-term — nothing persists past a single morning</span></div>
+    <div class="opt" data-r="w"><span class="ab">D</span><span>Autonomy — it decided to check on its own</span></div>
+    <div class="quizWhy"><b>Why C?</b> The pattern is specifically <em>across separate mornings</em>, not within one run — that rules out short-term, which was never meant to survive past a session anyway. The tool clearly works (it keeps successfully finding the address) and nobody's stopping it from deciding to check. What's missing is a notebook that carries a settled fact forward from one day into the next — that's long-term memory's entire job.</div>
+  </div>
+</div></section>
+
+<!-- ============ BREAK ============ -->
+<section class="blk"><div class="wrap">
+  <div class="card" style="text-align:center;border-color:#a48bff33">
+    <h4 style="color:var(--violet)">☕ Six-Minute Break</h4>
+    <p style="font-size:14px">When we're back: the idea that lets Zara plug new tools in herself, without writing a line of integration code.</p>
+  </div>
+</div></section>
+
+<!-- ============ SECTION: MCP CONCEPT ============ -->
+<section class="blk" id="mcp"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 4</span><h2>Model Context Protocol — The USB-C Idea</h2><span class="secTime">⏱ 14 min</span></div>
+  <p class="secLede">Four tool types, sensible routing, two kinds of memory — Zara still has to actually <em>connect</em> each tool. This section is about what makes that fast instead of painful.</p>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"Here's the problem nobody's said out loud yet: every one of those tools — Gmail, Drive, a DOT status feed, a shelter database — used to need its own custom-built connection to every single agent that wanted to use it. Three agents, four tools, and you're hand-building <b>twelve</b> separate connections. Zara isn't a developer. She was never going to build twelve of anything."</p>
+  </div>
+
+  <div class="defBox">
+    <div class="term">MCP — Model Context Protocol</div>
+    <p>One shared, standard way for any agent to plug into any outside tool — instead of a custom-built connection per tool, per agent. Think of it as the agreed shape of the plug, not the tool itself.</p>
+  </div>
+
+  <div class="analogy">
+    <div class="ic">🔌</div>
+    <div><div class="tt">The USB-C Analogy</div>
+    <p>Before USB-C, every phone, camera, and headphone had its <b>own</b> proprietary cable — a drawer full of tangled, incompatible cords. USB-C didn't make any single device better; it gave every device <b>the same plug</b>, so any cable worked with any device. MCP does exactly that for agents and tools: it's not a smarter model, it's a standard <em>port</em> — and once a tool speaks it, every agent that also speaks it can use it immediately, no custom cable required.</p></div>
+  </div>
+
+  <div class="note pro"><b>Here's the part that should actually surprise you:</b> Anthropic introduced MCP in November 2024. Within a year, OpenAI and Google DeepMind — Anthropic's most direct competitors — both adopted the exact same standard for their own tools. That basically never happens in this industry. When competitors agree on a shared plug, it's because everyone independently hit the same N×M wall you just watched in the sim.</div>
+
+  <div class="sim">
+    <h3>🔌 SIM 4 · Before &amp; After MCP</h3>
+    <p class="simSub">Set how many agents and how many tools Groundwire has. Toggle Before/After and watch how many connections someone actually has to build.</p>
+    <div class="pickRow">
+      <button class="pickBtn on" id="mcpBeforeBtn">😵 Before MCP</button>
+      <button class="pickBtn" id="mcpAfterBtn">✨ After MCP</button>
+    </div>
+    <div class="stepperRow">
+      <div class="stepperGroup"><span>Agents that need tools</span><div><button class="stepperBtn" id="agentsMinus">−</button><span class="stepperVal" id="agentsVal">3</span><button class="stepperBtn" id="agentsPlus">+</button></div></div>
+      <div class="stepperGroup"><span>Tools they need to reach</span><div><button class="stepperBtn" id="toolsMinus">−</button><span class="stepperVal" id="toolsVal">3</span><button class="stepperBtn" id="toolsPlus">+</button></div></div>
+    </div>
+    <div id="mcpVisual"></div>
+    <div class="verdict good" id="mcpCountLine"></div>
+  </div>
+
+  <div class="note beg"><b>Beginner Note — available connectors:</b> MCP is an open standard, not a Claude-only feature — that's the whole point of a shared plug. Anthropic's own connector directory lists hundreds of ready-made tools (Google Drive, Gmail, Slack, Notion, and far more), and other builders — including n8n, which you'll see again in a few minutes — speak the same protocol.</div>
+
+  <div class="card">
+    <h4>✏️ Sketch It Yourself — draw.io</h4>
+    <p style="font-size:14.5px">Quick two-minute activity: open <a href="https://app.diagrams.net" target="_blank" rel="noopener">draw.io</a> (free, no account needed to start a blank canvas) and sketch what the sim just showed you numerically — a tangle of boxes-and-arrows for "Before," a single hub with spokes for "After." Seeing the shape drawn by your own hand tends to stick differently than watching a counter change.</p>
+  </div>
+
+  <div class="quiz">
+    <p class="q">Quiz 4 · What problem does MCP mainly solve for someone like Zara, a no-code builder?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span><span>It makes the underlying AI model itself smarter</span></div>
+    <div class="opt" data-r="w"><span class="ab">B</span><span>It replaces the need for external tools entirely</span></div>
+    <div class="opt" data-r="c"><span class="ab">C</span><span>It gives every agent one shared, standard way to plug into outside apps, instead of a custom connection per app per agent</span></div>
+    <div class="opt" data-r="w"><span class="ab">D</span><span>It only works if you already know how to build an integration yourself</span></div>
+    <div class="quizWhy"><b>Why C?</b> Nothing about the model's intelligence changed — MCP is purely about the <em>connection</em>, not the reasoning. And it's the opposite of D: the entire appeal for a no-code builder is that you connect a tool once, through a shared standard, without writing an integration at all. That's what turns "twelve custom connections" into "seven total, and every new tool works with every agent immediately."</div>
+  </div>
+</div></section>
+
+<!-- ============ SECTION: MCP IN CLAUDE ============ -->
+<section class="blk" id="mcpclaude"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 5</span><h2>MCP In Claude — Connecting Real Tools</h2><span class="secTime">⏱ 13 min</span></div>
+  <p class="secLede">From concept to the actual settings screen. Every learner does this on their own account, live.</p>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"Two things before we click anything: these are pre-built, Anthropic-verified connectors from a directory — not something you're wiring up from scratch — and every single one of them is on the free plan. Nobody needs to pay for anything today."</p>
+  </div>
+
+  <div class="note beg"><b>Beginner Note — this is genuinely free:</b> Claude's directory connectors (Google Drive, Gmail, Notion, and hundreds more) are unlimited on the free plan — connect as many as you want. The "only one connector" limit you may have read about online applies to a completely different thing: custom, self-hosted MCP servers you'd point Claude at yourself. We're not touching that today.</div>
+
+  <div class="card">
+    <h4>Connecting Google Drive &amp; Gmail</h4>
+    <p style="font-size:14.5px">These two power today's hands-on task, and most learners already have both under one Google login — no new account needed.</p>
+    <div class="verifyHead">▸ Do this live, together</div>
+    <ol class="verifySteps">
+      <li>On <b>claude.ai</b>, open <b>Settings → Connectors</b>.</li>
+      <li>Click <b>Browse connectors</b> to open the directory, then search <code>Google Drive</code>.</li>
+      <li>Click <b>Connect</b> and sign in with your Google account when prompted, then approve the requested access.</li>
+      <li>Repeat the same three steps, searching <code>Gmail</code> this time — it's a separate connector even though it's the same Google account.</li>
+      <li>Back in a chat, click the <b>+</b> icon and confirm both now appear under <b>Connectors</b> — a small toggle switch next to each means it's live and available to this conversation.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h4>Optional Third — Notion</h4>
+    <p style="font-size:14.5px">If your newsroom keeps notes in Notion instead of Drive, the same three steps apply: <b>Browse connectors → search "Notion" → Connect</b>, then approve access to the specific pages or workspace you want Claude to read. Free account, roughly 60 seconds to set up if you don't already have one.</p>
+  </div>
+
+  <div class="note pro"><b>What about Slack?</b> It's in the same free directory and technically works the same way — but it only has something useful to search once your workspace already has real message history in it, which most learners' fresh accounts won't. We're covering it conceptually today rather than connecting it live, the same call made about Telegram back in Class 11: reliability for forty people clicking at once beats completeness.</div>
+</div></section>
+
+<!-- ============ SECTION: HANDS-ON ============ -->
+<section class="blk" id="handson"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 6</span><h2>Hands-On — Two Tools, One Multi-Step Task</h2><span class="secTime">⏱ 16 min</span></div>
+  <p class="secLede">First real build since Class 12. Everything today has been leading to this one prompt.</p>
+
+  <div class="card">
+    <h4>Today's Task</h4>
+    <p style="font-size:14.5px">Ask Claude, in one message: <em>"Check my Gmail for Advait's tip about the flooded underpass. Then check the 'Verified Sources' doc in my Drive to see if that road has flooded before. Draft a two-line note back to me with what you find."</em></p>
+    <div class="verifyHead">▸ Watch for this while it runs</div>
+    <ol class="verifySteps">
+      <li>Claude names the <b>first</b> tool it's about to use (Gmail) before calling it — that's Think, out loud.</li>
+      <li>It shows you the actual email it found, then <b>asks your approval</b> before reading it — every connector action needs your explicit okay, every time.</li>
+      <li>Once it has the tip, it decides on its own to check Drive next — nobody told it that second step; that's the routing and autonomy from earlier sections, now running for real.</li>
+      <li>It reads the Verified Sources doc, cross-references the road name, and only <em>then</em> drafts the two-line note — Observe feeding back into what it writes.</li>
+    </ol>
+  </div>
+
+  <div class="note adv"><b>Why the approval clicks matter:</b> that "approve this action" prompt isn't friction for its own sake. Below are two real 2025 incidents where an agent's connection to a tool was used to reach further than anyone intended.</div>
+
+  <div class="realGrid">
+    <div class="realCard">
+      <div class="rtag">🗞️ Real Incident, May 2025</div>
+      <h4>A single GitHub issue exfiltrated private repo data through an MCP connector</h4>
+      <p>Researchers at Invariant Labs showed that a free GitHub account and one maliciously worded public issue were enough to redirect an AI agent connected via GitHub's MCP server — the developer did nothing unusual beyond asking their assistant to review open issues. Hidden instructions in the issue text told the agent to pull private repository contents, including personal data, and post them publicly. <b>Nothing was "hacked" — the agent just followed instructions it found while doing its job, with more access than that task needed.</b></p>
+    </div>
+    <div class="realCard">
+      <div class="rtag">🗞️ Real Vulnerability, Nov 2025</div>
+      <h4>A flaw in a WhatsApp MCP integration exposed entire message histories</h4>
+      <p>Security researchers found that a WhatsApp MCP integration could be made to hand over full conversation histories — far more than any single task should have needed to touch. Like the GitHub case, the danger wasn't a dramatic break-in; it was a connection that had been granted broader reach than the job in front of it required.</p>
+    </div>
+  </div>
+
+  <div class="sim">
+    <h3>🔐 SIM 5 · Grant The Permissions</h3>
+    <p class="simSub">This is the real consent screen you'll click through above, made interactive. Toggle only what today's task actually needs, then run it.</p>
+    <div class="consentCard">
+      <div class="cc-h">Claude wants to connect to your Google Account</div>
+      <div class="scopeRow"><button class="scopeCheck" data-k="gmail"></button><div><b>Read Gmail</b><span>See messages in your inbox</span></div></div>
+      <div class="scopeRow"><button class="scopeCheck" data-k="drive"></button><div><b>Read Google Drive</b><span>See files and docs you have access to</span></div></div>
+      <div class="scopeRow"><button class="scopeCheck" data-k="send"></button><div><b>Send email on your behalf</b><span>Compose and send from your address</span></div></div>
+      <div class="scopeRow"><button class="scopeCheck" data-k="cal"></button><div><b>Read Google Calendar</b><span>See your events and schedule</span></div></div>
+      <button class="btn sm" id="consentGo" style="margin-top:14px">Connect &amp; Run Today's Task</button>
+    </div>
+    <div class="transcriptCard"><div class="th"><span>TASK RUN</span><span id="consentTag">NOT STARTED</span></div><div class="tb" id="consentOut">Toggle the scopes above, then run the task.</div></div>
+    <div class="verdict" id="consentVerdict" style="display:none"></div>
+  </div>
+
+  <div class="quiz">
+    <p class="q">Quiz 5 · Zara's Claude was granted "Send email on your behalf," but today's task never sent anything. What's the actual risk in granting it anyway?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span><span>None — a permission that's never used can't cause any problem</span></div>
+    <div class="opt" data-r="w"><span class="ab">B</span><span>It will definitely send a spam email at some point</span></div>
+    <div class="opt" data-r="c"><span class="ab">C</span><span>Every permission granted is a capability something could misuse later — only granting what a task actually needs limits what a bad prompt or a flawed connector can reach</span></div>
+    <div class="opt" data-r="w"><span class="ab">D</span><span>It means the connector itself is broken and needs reinstalling</span></div>
+    <div class="quizWhy"><b>Why C?</b> Nothing needs to go wrong immediately for unused access to be a real risk — it's exactly the shape of both real incidents above: reach that was granted but not needed by the actual task, later used for something else. "It hasn't caused a problem yet" and "it can't cause a problem" are different claims. Least privilege means granting only what today's specific task needs, not everything a connector is capable of.</div>
+  </div>
+</div></section>
+
+<!-- ============ SECTION: N8N ============ -->
+<section class="blk" id="n8n"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 7</span><h2>Same Idea, No-Code Canvas — n8n's MCP Client Tool</h2><span class="secTime">⏱ 10 min</span></div>
+  <p class="secLede">One more place the exact same idea shows up — drawn as boxes on a canvas instead of hidden inside a chat window.</p>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"You've seen this shape before — Class 13's AI Agent node, with a Tool port and a Model port. Today it gets a Memory port too, and instead of hand-building an HTTP Request Tool node for every single external service, one <b>MCP Client Tool</b> node can plug into any MCP server that's already speaking the standard. Same USB-C idea, same canvas you already know how to read."</p>
+  </div>
+
+  <div class="canvasStrip" id="n8nDemoStrip"></div>
+
+  <div class="verifyHead">▸ Verify this the night before, not live</div>
+  <ol class="verifySteps">
+    <li><b>Add a Chat Trigger node</b> as the first node (press <code>N</code> or "Add first step" and search "Chat Trigger"). Same no-account-needed hosted chat window from Class 13.</li>
+    <li><b>Add an AI Agent node</b> connected to it, and attach a <b>Chat Model</b> to its Model port as before.</li>
+    <li><b>Attach a Simple Memory node</b> to the Agent's Memory port — this is the short-term scratchpad from Section 3, now wired into a real build so the Agent doesn't lose track of the conversation turn to turn.</li>
+    <li><b>Add an MCP Client Tool node</b> and connect it to the Agent's Tool port. In its settings, set the <b>Endpoint URL</b> to the MCP server you want to reach (an SSE endpoint — just a specific kind of live web address the server keeps open for streaming responses; you don't need to understand the mechanism, just paste the URL the server gives you) and pick an <b>Authentication</b> method — Bearer, header, OAuth2, or None for a public server (most public MCP servers use "None" — treat Bearer/OAuth2 as settings you'll only need once you're connecting to something that requires a login). For today's build, use Exa's public search server: <code>https://mcp.exa.ai/mcp?tools=web_search_exa,web_search_advanced_exa,web_fetch_exa</code> — no account or key needed, so Authentication stays on "None."</li>
+    <li>In the node's <b>Tools to Include</b> dropdown, choose <b>"Selected"</b> rather than "All," then pick just <code>web_search_exa</code> from the list — this is where you limit which of the server's tools the Agent is actually allowed to call, same least-privilege instinct as the consent screen in Section 5.</li>
+    <li><b>Open the test chat</b> and ask something that needs one of those tools. Watch the MCP Client Tool node light up — that's the exact same Act step from the loop, just reached through the standard plug instead of a bespoke HTTP node.</li>
+  </ol>
+
+  <div class="note beg"><b>Beginner Note:</b> notice this is the exact N×M problem from Sim 4, live in a tool you already know. Without MCP, adding a fifth external service means hand-building a fifth HTTP Request Tool node, one field at a time. With the MCP Client Tool node, it's one node pointed at one URL — and if that server later adds a sixth tool, this canvas gets it for free, with zero new nodes.</div>
+</div></section>
+
+<!-- ============ SECTION: TAKE-HOME ============ -->
+<section class="blk" id="takehome"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 8</span><h2>Take-Home — Build It Yourself</h2><span class="secTime">⏱ 7 min</span></div>
+  <p class="secLede">Three ways to practice what today actually built. Pick any one, or do all three.</p>
+
+  <div class="chalCard">
+    <div class="chalHead"><span class="cn">01</span><h4>Connect A Third Tool</h4><span class="chev">▸</span></div>
+    <div class="chalBody">
+      <div class="cLabel">MISSION</div>
+      <p class="mission">Connect one more directory connector to your own Claude account (Notion, Calendar, or anything from the directory) and run a real multi-step task on your own data — something that genuinely needs two connectors talking together, not just one.</p>
+      <div class="cLabel">WATCH FOR</div>
+      <p class="mission">Which permissions the consent screen actually asks for, and whether you'd grant all of them if you were being careful about least privilege.</p>
+    </div>
+  </div>
+  <div class="chalCard">
+    <div class="chalHead"><span class="cn">02</span><h4>Add MCP To An n8n Build</h4><span class="chev">▸</span></div>
+    <div class="chalBody">
+      <div class="cLabel">MISSION</div>
+      <p class="mission">Take an AI Agent build you already have (or start fresh: Chat Trigger → AI Agent → Simple Memory) and add an MCP Client Tool node pointed at one public MCP server.</p>
+      <div class="cLabel">WATCH FOR</div>
+      <p class="mission">How much faster this is than hand-building an HTTP Request Tool node for the same service would have been.</p>
+    </div>
+  </div>
+  <div class="chalCard">
+    <div class="chalHead"><span class="cn">03</span><h4>Sketch Your Own Stack</h4><span class="chev">▸</span></div>
+    <div class="chalBody">
+      <div class="cLabel">MISSION</div>
+      <p class="mission">In draw.io, sketch the before/after MCP diagram for apps you personally use daily — not Groundwire's. How many custom connections would "before" actually take for your own stack?</p>
+      <div class="cLabel">WATCH FOR</div>
+      <p class="mission">Bring it to the next class — worth comparing how differently everyone's "before" tangle looks depending on which tools they use.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============ SECTION: WRAP ============ -->
+<section class="blk" id="wrap"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 9</span><h2>Wrap-Up — Key Takeaways</h2><span class="secTime">⏱ 6 min</span></div>
+  <p class="secLede">Seven tips, four tool types, two kinds of memory, and one standard plug tying it all together.</p>
+
+  <div class="card">
+    <h4>Six Things You Can Now Do</h4>
+    <table class="tbl">
+      <tr><th>Skill</th><th>What you can now do</th></tr>
+      <tr><td>Tool types</td><td>Tell Search, Browser, API call, and Code apart by what job each actually does</td></tr>
+      <tr><td>Routing logic</td><td>Explain why rule order changes which tool a task gets sent to</td></tr>
+      <tr><td>Short vs. long-term memory</td><td>Diagnose which one's missing when an agent repeats itself, today or across days</td></tr>
+      <tr><td>MCP, the concept</td><td>Explain the USB-C idea to someone who's never heard of it</td></tr>
+      <tr><td>MCP In Claude</td><td>Connect a real directory connector yourself and read a consent screen critically</td></tr>
+      <tr><td>MCP In n8n</td><td>Wire an MCP Client Tool node into an Agent build instead of hand-building one HTTP node per service</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Key Takeaways</h3>
+    <p><b>Tools aren't one thing.</b> Search, Browser, API call, and Code are four different jobs — reaching for the wrong one gets you a confident, stale, or flatly wrong answer.</p>
+    <p><b>Routing is just an ordered checklist.</b> First matching rule wins — so put the specific, live check above the general one, on purpose.</p>
+    <p><b>Memory splits into two.</b> Short-term keeps today from repeating itself; long-term keeps tomorrow from starting at zero. Neither substitutes for the other.</p>
+    <p><b>MCP is a plug, not a brain upgrade.</b> It doesn't make the model smarter — it makes connecting a new tool a one-time job instead of a per-agent, per-tool rebuild.</p>
+    <p><b>Every granted permission is a capability, used or not.</b> The two real incidents today happened through access that was granted but not needed — least privilege isn't paranoia, it's just matching access to the task in front of you.</p>
+    <p><b>Building came back today.</b> You connected real tools, watched real approval prompts, and ran a real multi-step task — not just watched one, like last class.</p>
+  </div>
+
+  <div class="card" style="border-color:#3dd6c344">
+    <h4 style="color:var(--teal)">Groundwire — Thursday, 7:52 AM</h4>
+    <p style="font-size:14.5px">All seven tips cleared before the 7am bulletin — sorted to the right tool, none repeated, two of them pulling straight from a Drive doc that already had the answer from a previous storm. The 911-call total, done in Code, landed to the digit. Nobody called the fire department by mistake.</p>
+    <p style="font-size:14.5px;margin-top:12px">Imran, watching the tracker clear in real time: <em>"That's the first morning like this that didn't feel like triage. I want to know what's actually reading all this before it goes out, though — Priya can't personally eyeball everything if this becomes every storm morning."</em></p>
+    <p style="font-size:13.5px;color:var(--ink3);margin-top:10px">Seven tips, sorted and remembered, in one morning. The open question for the newsroom now: <b>speed and memory solved today's problem.</b> What happens when the volume outpaces what one person can still check by eye?</p>
+  </div>
+
+  <div class="bigQuote">"The right hand for the job. A place to put down what it already found. And a plug that doesn't need rebuilding <em>every single time.</em>"</div>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says — Closing</span>
+    <p>"Last class you learned to recognise an agent. Today you actually built with one — connected real tools to a real account, watched it choose between them, and caught it (safely, in a sim) reaching further than a task needed. That combination — building fast <em>and</em> staying suspicious of your own permissions — is the entire skill this unit is trying to hand you."</p>
+    <p>"One habit on the way out: next time you click 'Connect' on anything, actually read what it's asking for. You now know exactly what each of those permissions really means."</p>
+  </div>
+</div></section>
+
+<div class="footer"><div class="wrap">
+  <p>Scaler AIML · Class 14 — Tools, Memory &amp; MCP: Agent Building Blocks · Groundwire Edition</p>
+  <p style="margin-top:8px">Claude Connectors (Google Drive, Gmail, Notion) · n8n MCP Client Tool node · draw.io — interface details verified August 2026 · <b>these features and menu labels change frequently across all tools; re-verify before teaching</b></p>
+</div></div>
+
+<script>
+/* progress bar + hero counters */
+addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%'});
+document.querySelectorAll('.hstat .n').forEach(el=>{const t=+el.dataset.count;let c=0;const step=()=>{c+=Math.max(1,Math.round(t/30));if(c>=t)c=t;el.textContent=c;if(c<t)requestAnimationFrame(step)};setTimeout(step,300)});
+
+/* quizzes */
+document.querySelectorAll('.quiz').forEach(q=>{const opts=q.querySelectorAll('.opt');
+ opts.forEach(o=>o.addEventListener('click',()=>{opts.forEach(x=>{x.classList.add('locked');if(x.dataset.r==='c')x.classList.add('correct')});
+  if(o.dataset.r!=='c')o.classList.add('wrong');q.querySelector('.quizWhy').classList.add('show');}));});
+
+/* challenge accordion cards */
+document.querySelectorAll('.chalHead').forEach(h=>h.addEventListener('click',()=>h.closest('.chalCard').classList.toggle('open')));
+
+/* ===== SIM 1: The Tip Tray ===== */
+(()=>{
+const TIPS=[
+ {t:'Is the Elm Street underpass flooded right now?',tool:'api'},
+ {t:"What time is the mayor's rescheduled briefing, per the city site?",tool:'browser'},
+ {t:'Add up outage counts for Riverside and Oakdale.',tool:'code'},
+ {t:'Do flooded underpasses like this usually clear within a few hours?',tool:'search'},
+ {t:"What's DOT's live map showing for Route 9 right now?",tool:'api'},
+ {t:"Total this week's storm-related 911 calls from the two spreadsheets Priya sent.",tool:'code'},
+ {t:'Has Route 9 flooded before in past storms? Check the archive.',tool:'search'},
+ {t:'What does the Red Cross shelter page list for tonight?',tool:'browser'}
+];
+const TOOLS=[{k:'search',l:'🔎 Search'},{k:'browser',l:'🌐 Browser'},{k:'api',l:'🔌 API Call'},{k:'code',l:'🧮 Code'}];
+const OVERFLOW=4;
+const fill=document.getElementById('trayFill'),queueEl=document.getElementById('trayQueue'),btnEl=document.getElementById('trayButtons'),
+      vd=document.getElementById('trayVerdict'),startBtn=document.getElementById('trayStart'),resetBtn=document.getElementById('trayReset'),
+      scoreEl=document.getElementById('trayScore');
+let queue=[],nextIdx=0,sel=null,timer=null,correct=0,mistakes=0,running=false;
+const renderTrays=()=>{btnEl.innerHTML='';TOOLS.forEach(t=>{const b=document.createElement('button');b.className='trayBtn';b.textContent=t.l;
+  b.onclick=()=>{if(sel===null||!running)return;const tip=TIPS[sel];
+    if(tip.tool===t.k){correct++;queue=queue.filter(i=>i!==sel);sel=null;renderQueue();updateScore();
+      if(nextIdx>=TIPS.length&&queue.length===0)stop(true);
+    }else{mistakes++;vd.style.display='block';vd.className='verdict bad';vd.innerHTML='<b>Not that tray.</b> "'+tip.t+'" needs a different tool — try again.';updateScore();}
+  };btnEl.appendChild(b);});};
+const renderQueue=()=>{queueEl.innerHTML='';queue.forEach(i=>{const c=document.createElement('div');c.className='queueCard'+(sel===i?' sel':'');c.textContent=TIPS[i].t;
+  c.onclick=()=>{if(!running)return;sel=(sel===i?null:i);vd.style.display='none';renderQueue();};queueEl.appendChild(c);});
+  fill.style.width=Math.min(100,(queue.length/OVERFLOW)*100)+'%';};
+const updateScore=()=>{scoreEl.style.display='inline-block';scoreEl.textContent=correct+'/'+TIPS.length+' sorted · '+mistakes+' misfires';};
+const stop=(success)=>{running=false;clearInterval(timer);timer=null;startBtn.disabled=false;
+  vd.style.display='block';
+  if(success){vd.className='verdict good';vd.innerHTML='<b>Morning cleared.</b> All eight tips sorted to the right tool, '+mistakes+' misfire'+(mistakes===1?'':'s')+' along the way. That’s the tray a real busy morning needs.';}
+  else{vd.className='verdict bad';vd.innerHTML='<b>Queue overflow.</b> More than '+OVERFLOW+' tips piled up unsorted at once — on a real deadline, that’s a missed bulletin. Reset and try sorting faster.';}
+};
+startBtn.onclick=()=>{
+  if(running)return;
+  queue=[];nextIdx=0;sel=null;correct=0;mistakes=0;running=true;vd.style.display='none';
+  startBtn.disabled=true;updateScore();renderQueue();renderTrays();
+  timer=setInterval(()=>{
+    if(nextIdx<TIPS.length){queue.push(nextIdx);nextIdx++;renderQueue();
+      if(queue.length>OVERFLOW){stop(false);return;}
+    }else if(queue.length===0){stop(true);}
+  },2600);
+};
+resetBtn.onclick=()=>{running=false;clearInterval(timer);timer=null;queue=[];nextIdx=0;sel=null;correct=0;mistakes=0;
+  vd.style.display='none';scoreEl.style.display='none';startBtn.disabled=false;renderQueue();renderTrays();};
+renderTrays();renderQueue();
+})();
+
+/* ===== SIM 2: Build The Router ===== */
+(()=>{
+const RULES={
+ search:{l:'If it needs general background knowledge → <b>🔎 Search</b>',tool:'search'},
+ browser:{l:"If it needs today's specific page on a known website → <b>🌐 Browser</b>",tool:'browser'},
+ api:{l:'If it needs a live number or status right now → <b>🔌 API Call</b>',tool:'api'},
+ code:{l:'If it needs adding, counting, or combining numbers → <b>🧮 Code</b>',tool:'code'}
+};
+const DEFAULT_ORDER=['search','browser','api','code'];
+const TIPS=[
+ {t:'Is Route 9 underpass flooded right now?',applies:{api:true,browser:true},correct:'api'},
+ {t:"What time is the mayor's 9am press conference, per the city site?",applies:{browser:true,search:true},correct:'browser'},
+ {t:'How many households are without power across Riverside and Oakdale?',applies:{code:true},correct:'code'},
+ {t:'Do flooded underpasses like this typically clear within a few hours?',applies:{search:true},correct:'search'}
+];
+let order=DEFAULT_ORDER.slice();
+const listEl=document.getElementById('ruleList'),runBtn=document.getElementById('routeRun'),resetBtn=document.getElementById('routeReset'),
+      log=document.getElementById('routeLog'),vd=document.getElementById('routeVerdict');
+const renderList=()=>{
+  listEl.innerHTML='';
+  order.forEach((id,i)=>{
+    const li=document.createElement('li');li.className='ruleItem';
+    li.innerHTML='<span class="rn">'+(i+1)+'</span><span class="rl">'+RULES[id].l+'</span>';
+    const arrows=document.createElement('div');arrows.className='ruleArrows';
+    const up=document.createElement('button');up.textContent='▲';up.disabled=i===0;
+    up.onclick=()=>{[order[i-1],order[i]]=[order[i],order[i-1]];renderList();};
+    const down=document.createElement('button');down.textContent='▼';down.disabled=i===order.length-1;
+    down.onclick=()=>{[order[i+1],order[i]]=[order[i],order[i+1]];renderList();};
+    arrows.appendChild(up);arrows.appendChild(down);li.appendChild(arrows);
+    listEl.appendChild(li);
+  });
+};
+runBtn.onclick=()=>{
+  let lines=[],right=0;
+  TIPS.forEach(tip=>{
+    const chosen=order.find(id=>tip.applies[id]);
+    const ok=chosen===tip.correct;if(ok)right++;
+    lines.push('<span class="lg '+(ok?'ok':'err')+'">'+(ok?'✓':'✗')+' "'+tip.t+'" → routed to '+RULES[chosen].tool.toUpperCase()+(ok?'':' (should be '+tip.correct.toUpperCase()+')')+'</span>');
+  });
+  log.innerHTML=lines.join('');
+  vd.style.display='block';
+  if(right===TIPS.length){vd.className='verdict good';vd.innerHTML='<b>4/4 routed correctly.</b> The specific-and-live checks are sitting above the general ones — that’s the whole trick.';}
+  else{vd.className='verdict mid';vd.innerHTML='<b>'+right+'/4 routed correctly.</b> Reorder so a rule that catches something specific and live sits above a rule that catches something general, then run again.';}
+};
+resetBtn.onclick=()=>{order=DEFAULT_ORDER.slice();renderList();log.innerHTML='';vd.style.display='none';};
+renderList();
+})();
+
+/* ===== SIM 3: The Memory Bank ===== */
+(()=>{
+const st={st:true,lt:true};
+const btnST=document.getElementById('memST'),btnLT=document.getElementById('memLT'),
+      out=document.getElementById('memOut'),tag=document.getElementById('memComboTag'),
+      stBank=document.getElementById('memSTBank'),ltBank=document.getElementById('memLTBank');
+const render=()=>{
+  btnST.classList.toggle('on',st.st);btnST.textContent=st.st?'ON':'OFF';
+  btnLT.classList.toggle('on',st.lt);btnLT.textContent=st.lt?'ON':'OFF';
+  tag.textContent=(st.st&&st.lt)?'BOTH ON':(!st.st&&!st.lt)?'BOTH OFF':st.st?'SHORT-TERM ONLY':'LONG-TERM ONLY';
+  let msg;
+  if(st.st&&st.lt){
+    msg='The shelter address is already sitting in the notebook from three weeks ago — no need to re-check it. It confirms the underpass status, then the briefing time, tracking both within today’s run so neither gets re-checked by accident. Fast, and nothing repeated.';
+  }else if(st.st&&!st.lt){
+    msg='It correctly avoids repeating itself across today’s three tips — no double-checking the underpass. But the shelter address, confirmed just three weeks ago, means nothing to it this morning. It re-verifies the address from scratch, as if today were the first time anyone had ever asked.';
+  }else if(!st.st&&st.lt){
+    msg='It recalls the shelter address instantly from the notebook — that part’s fine. But partway through today’s three tips, it loses track of what it already checked this morning and re-confirms the underpass status a second time, moments after the first check.';
+  }else{
+    msg='Nothing survives, in either direction. It re-verifies the shelter address as if for the first time, then loses track of that check by the very next tip and repeats it too. Every morning starts from zero, and every few minutes does too.';
+  }
+  out.textContent=msg;
+  stBank.innerHTML=st.st?['Checked: underpass status','Checked: briefing time','Checked: shelter address'].map(f=>'<div class="memFact">'+f+'</div>').join(''):'<div class="memFact empty">(forgotten instantly — nothing tracked)</div>';
+  ltBank.innerHTML=st.lt?'<div class="memFact"><b>Known:</b> Red Cross shelter — 400 Oak Ave (confirmed 3 weeks ago)</div>':'<div class="memFact empty">(not remembered — re-verified from scratch this morning)</div>';
+};
+btnST.onclick=()=>{st.st=!st.st;render();};
+btnLT.onclick=()=>{st.lt=!st.lt;render();};
+render();
+})();
+
+/* ===== SIM 4: Before & After MCP ===== */
+(()=>{
+let mode='before',agents=3,tools=3;
+const beforeBtn=document.getElementById('mcpBeforeBtn'),afterBtn=document.getElementById('mcpAfterBtn'),
+      agentsVal=document.getElementById('agentsVal'),toolsVal=document.getElementById('toolsVal'),
+      visual=document.getElementById('mcpVisual'),countLine=document.getElementById('mcpCountLine');
+const render=()=>{
+  beforeBtn.classList.toggle('on',mode==='before');afterBtn.classList.toggle('on',mode==='after');
+  agentsVal.textContent=agents;toolsVal.textContent=tools;
+  if(mode==='before'){
+    const n=agents*tools;
+    let grid='<div class="mcpMatrix" style="grid-template-columns:repeat('+tools+',34px)">';
+    for(let i=0;i<n;i++)grid+='<div class="mcpCell">🔌</div>';
+    grid+='</div>';
+    visual.innerHTML=grid;
+    countLine.className='verdict bad';
+    countLine.innerHTML='<b>'+n+' custom integrations</b> = '+agents+' agents × '+tools+' tools — each one hand-built and hand-maintained, one at a time.';
+  }else{
+    const n=agents+tools;
+    let h='<div class="mcpHub"><div class="hubCol">';
+    for(let i=0;i<agents;i++)h+='<div class="hubChip">🧭 Agent '+(i+1)+'</div>';
+    h+='</div><div class="hubCenter">🔌<br>MCP</div><div class="hubCol">';
+    for(let i=0;i<tools;i++)h+='<div class="hubChip">🧰 Tool '+(i+1)+'</div>';
+    h+='</div></div>';
+    visual.innerHTML=h;
+    countLine.className='verdict good';
+    countLine.innerHTML='<b>'+n+' total connections</b> = '+agents+' agents + '+tools+' tools, through one shared standard — add a new tool and every agent gets it instantly, no rebuild.';
+  }
+};
+beforeBtn.onclick=()=>{mode='before';render();};
+afterBtn.onclick=()=>{mode='after';render();};
+document.getElementById('agentsMinus').onclick=()=>{agents=Math.max(1,agents-1);render();};
+document.getElementById('agentsPlus').onclick=()=>{agents=Math.min(4,agents+1);render();};
+document.getElementById('toolsMinus').onclick=()=>{tools=Math.max(1,tools-1);render();};
+document.getElementById('toolsPlus').onclick=()=>{tools=Math.min(4,tools+1);render();};
+render();
+})();
+
+/* ===== SIM 5: Grant The Permissions ===== */
+(()=>{
+const scopes={gmail:false,drive:false,send:false,cal:false};
+const out=document.getElementById('consentOut'),tag=document.getElementById('consentTag'),vd=document.getElementById('consentVerdict');
+document.querySelectorAll('.scopeCheck').forEach(b=>{
+  b.onclick=()=>{const k=b.dataset.k;scopes[k]=!scopes[k];b.classList.toggle('on',scopes[k]);if(scopes[k])b.textContent='✓';else b.textContent='';};
+});
+document.getElementById('consentGo').onclick=()=>{
+  let lines=[];
+  if(!scopes.gmail){
+    lines.push('❌ Couldn’t check Gmail — permission not granted. The task stops here.');
+    tag.textContent='BLOCKED';vd.style.display='block';vd.className='verdict bad';
+    vd.innerHTML='<b>Task blocked.</b> Without Gmail access, it can’t even find Advait’s tip — nothing else can happen yet.';
+  }else{
+    lines.push('✅ Checked Gmail — found Advait’s tip about the flooded underpass.');
+    if(!scopes.drive){
+      lines.push('❌ Couldn’t check Drive — permission not granted. Can’t cross-check the tip against past records.');
+      tag.textContent='PARTIAL';vd.style.display='block';vd.className='verdict mid';
+      vd.innerHTML='<b>Partially blocked.</b> It found the tip but can’t verify it against the Verified Sources doc without Drive access.';
+    }else{
+      lines.push('✅ Checked the ‘Verified Sources’ doc in Drive — Route 9 has flooded twice before in the past two years.');
+      lines.push('📝 Draft ready: “Route 9 underpass has flooded twice in two years per our records — worth flagging in the 7am bulletin.”');
+      tag.textContent='COMPLETE';vd.style.display='block';vd.className='verdict good';
+      vd.innerHTML='<b>Task complete.</b> Exactly two permissions were needed — Gmail and Drive — and that’s all this task actually used.';
+    }
+  }
+  if(scopes.send)lines.push('⚠️ ‘Send email’ was granted but never used by this task — that’s exposure nobody asked for.');
+  if(scopes.cal)lines.push('⚠️ ‘Read Calendar’ was granted but never used by this task — same story.');
+  out.innerHTML=lines.join('<br>');
+};
+})();
+
+/* ===== n8n canvas strip (static illustration) ===== */
+(()=>{
+const strip=document.getElementById('n8nDemoStrip');
+const NODES=[
+ {i:'💬',n:'Chat Trigger'},
+ {i:'🧭',n:'AI Agent'},
+ {i:'📝',n:'Simple Memory'},
+ {i:'🔌',n:'MCP Client Tool'}
+];
+strip.innerHTML=NODES.map(n=>'<div class="cNode"><span class="ci">'+n.i+'</span>'+n.n+'</div>').join('<span style="color:var(--ink3);font-family:monospace">→</span>');
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/AI-beginners-class14" target="_blank" rel="noopener">github.com/scaler-content/AI-beginners-class14</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

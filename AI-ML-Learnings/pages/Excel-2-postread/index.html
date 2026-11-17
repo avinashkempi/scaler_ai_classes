@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sheets 02 — Core Formulas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --paper:#FAFAF8;
+    --paper-dim:#F1F2ED;
+    --ink:#1B1F23;
+    --ink-soft:#5F6368;
+    --grid:#D7DBDD;
+    --grid-strong:#B8BEC2;
+    --sheet-green:#0F9D58;
+    --sheet-green-dark:#0B7A44;
+    --sheet-green-pale:#E6F4EA;
+    --formula-blue:#1A73E8;
+    --formula-blue-pale:#E8F0FE;
+    --bad-red:#D93025;
+    --bad-red-pale:#FCE8E6;
+    --amber:#E8710A;
+    --amber-pale:#FEF3E0;
+    --violet:#7C4DFF;
+    --violet-pale:#EDE7F6;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--sheet-green); color:#fff;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  .colframe{
+    position:sticky; top:0; z-index:50;
+    display:flex;
+    background:var(--paper-dim);
+    border-bottom:1px solid var(--grid);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    letter-spacing:0.04em;
+  }
+  .colframe > div{flex:1; text-align:center; padding:6px 0; border-right:1px solid var(--grid);}
+  .colframe .corner{flex:0 0 46px; background:var(--paper-dim);}
+
+  .wrap{max-width:980px; margin:0 auto; padding:0 24px;}
+
+  .hero{padding:56px 0 40px; border-bottom:1px solid var(--grid);}
+  .fbar{
+    display:flex; align-items:center;
+    border:1px solid var(--grid-strong);
+    background:#fff; border-radius:4px; overflow:hidden;
+    margin-bottom:28px; box-shadow:0 1px 2px rgba(0,0,0,0.04);
+  }
+  .fbar .cellref{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600;
+    color:var(--ink-soft); padding:9px 14px; border-right:1px solid var(--grid);
+    background:var(--paper-dim); white-space:nowrap;
+  }
+  .fbar .fx{font-style:italic; color:var(--ink-soft); padding:9px 10px; font-family:Georgia,serif; border-right:1px solid var(--grid);}
+  .fbar .formula{padding:9px 14px; font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--formula-blue); white-space:nowrap; overflow:hidden;}
+  .fbar .formula .typed::after{content:''; display:inline-block; width:2px; height:14px; background:var(--formula-blue); margin-left:2px; vertical-align:-2px; animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--sheet-green-dark);
+    background:var(--sheet-green-pale); padding:5px 10px; border-radius:3px; margin-bottom:18px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--sheet-green);}
+
+  h1.title{font-size:clamp(32px,5vw,48px); font-weight:800; letter-spacing:-0.02em; margin:0 0 14px; color:var(--ink);}
+  .subtitle{font-size:17px; color:var(--ink-soft); max-width:660px; margin:0;}
+
+  .pipeline{display:grid; grid-template-columns:1fr auto 1fr auto 1fr; align-items:center; gap:8px; margin-top:36px;}
+  .pipeline .stage{border:1px solid var(--grid); background:#fff; border-radius:6px; padding:14px 12px; text-align:center;}
+  .pipeline .stage.active{border-color:var(--sheet-green); background:var(--sheet-green-pale);}
+  .pipeline .stage .label{font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft);}
+  .pipeline .stage.active .label{color:var(--sheet-green-dark); font-weight:700;}
+  .pipeline .arrow{color:var(--grid-strong); font-size:18px;}
+
+  section{padding:52px 0; border-bottom:1px solid var(--grid);}
+  .kicker{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink-soft); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:8px;}
+  h2.h{font-size:26px; font-weight:700; letter-spacing:-0.01em; margin:0 0 10px; display:flex; align-items:baseline; gap:10px;}
+  h2.h .rowno{font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; color:#fff; background:var(--sheet-green); padding:2px 8px; border-radius:3px;}
+  .lede{color:var(--ink-soft); font-size:15.5px; max-width:700px; margin:0 0 28px;}
+
+  table.sheet{width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:12.5px;}
+  table.sheet th{background:var(--paper-dim); text-align:left; padding:7px 10px; border:1px solid var(--grid); font-weight:600; color:var(--ink-soft); font-size:11px; text-transform:uppercase; letter-spacing:0.03em;}
+  table.sheet td{padding:7px 10px; border:1px solid var(--grid); white-space:nowrap;}
+  table.sheet td[contenteditable="true"]{background:#FFFDF5; cursor:text;}
+  table.sheet td[contenteditable="true"]:focus{outline:2px solid var(--formula-blue); outline-offset:-2px; background:#fff;}
+  .flag{font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:2px 6px; border-radius:3px; background:var(--bad-red-pale); color:var(--bad-red);}
+  .flag.ok{background:var(--sheet-green-pale); color:var(--sheet-green-dark);}
+  .flag.neutral{background:#E8EAED; color:#3C4043;}
+  .flag.warn{background:var(--amber-pale); color:#8A4300;}
+
+  .impact{margin-top:12px; font-size:13px; background:var(--amber-pale); border-left:3px solid var(--amber); padding:10px 12px; border-radius:0 5px 5px 0;}
+  .impact b{color:#8A4300;}
+  .impact.green{background:var(--sheet-green-pale); border-left-color:var(--sheet-green);}
+  .impact.green b{color:var(--sheet-green-dark);}
+
+  .card{border:1px solid var(--grid); border-radius:8px; background:#fff; padding:18px;}
+  .card + .card{margin-top:16px;}
+
+  .pg-input, .pg-select{
+    font-family:'IBM Plex Mono',monospace; font-size:14px; padding:9px 12px;
+    border:1.5px solid var(--grid-strong); border-radius:6px; color:var(--formula-blue); font-weight:600;
+  }
+  .pg-input{width:100%;}
+  .pg-hint{font-size:12px; color:var(--ink-soft); margin:6px 0 0;}
+  .pg-hint code{background:var(--paper-dim); padding:1px 5px; border-radius:3px;}
+
+  .btnrow{display:flex; gap:8px; flex-wrap:wrap; margin:14px 0;}
+  .pill-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:600;
+    padding:8px 14px; border-radius:20px; border:1px solid var(--grid-strong);
+    background:#fff; cursor:pointer;
+  }
+  .pill-btn.active{background:var(--formula-blue-pale); border-color:var(--formula-blue); color:var(--formula-blue);}
+  .pill-btn:hover{border-color:var(--ink);}
+
+  /* ---- referencing simulator ---- */
+  .refgrid{display:grid; grid-template-columns:60px repeat(2,1fr); gap:1px; background:var(--grid); border:1px solid var(--grid); border-radius:6px; overflow:hidden;}
+  .refgrid .rc{background:#fff; padding:9px 12px; font-family:'IBM Plex Mono',monospace; font-size:12.5px;}
+  .refgrid .rh{background:var(--paper-dim); font-weight:700; color:var(--ink-soft); font-size:11px; text-align:center;}
+  .refgrid .rn{background:var(--paper-dim); font-weight:700; color:var(--ink-soft); text-align:center;}
+  .refgrid .rf{color:var(--formula-blue); font-weight:600;}
+  .refgrid .rf .frozen{color:var(--bad-red);}
+
+  /* ---- aggregation calc ---- */
+  .agggrid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px;}
+  @media(max-width:700px){.agggrid{grid-template-columns:repeat(2,1fr);}}
+  .agg-cell{border:1px solid var(--grid); border-radius:6px; padding:12px; background:var(--paper-dim); text-align:center;}
+  .agg-cell .fname{display:block; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--formula-blue); font-weight:700; margin-bottom:4px;}
+  .agg-cell .fresult{font-family:'IBM Plex Mono',monospace; font-size:17px; font-weight:700;}
+
+  /* ---- concat builder ---- */
+  .concat-row{display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:end;}
+  .concat-row label{font-size:12px; color:var(--ink-soft); display:block; margin-bottom:4px;}
+  .sep-input{width:70px; text-align:center;}
+  .concat-out{
+    margin-top:14px; font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600;
+    background:var(--sheet-green-pale); color:var(--sheet-green-dark); border-radius:6px; padding:12px 16px;
+  }
+
+  /* ---- quiz ---- */
+  .quiz{border:1px solid var(--grid); border-radius:8px; background:#fff; padding:18px 20px; margin-bottom:14px;}
+  .quiz .q-head{font-weight:700; font-size:14.5px; margin-bottom:12px;}
+  .qopt{display:block; width:100%; text-align:left; border:1px solid var(--grid-strong); background:#fff; padding:10px 12px; border-radius:6px; margin-bottom:8px; cursor:pointer; font-size:13.5px; font-family:'Inter',sans-serif;}
+  .qopt:hover{border-color:var(--ink);}
+  .qopt.correct{background:var(--sheet-green-pale); border-color:var(--sheet-green); color:var(--sheet-green-dark); font-weight:600;}
+  .qopt.wrong{background:var(--bad-red-pale); border-color:var(--bad-red); color:var(--bad-red);}
+  .qexplain{font-size:13px; color:var(--ink-soft); background:var(--paper-dim); padding:10px 12px; border-radius:6px; margin-top:8px; display:none;}
+  .qexplain.show{display:block;}
+
+  /* ---- syntax cards ---- */
+  .syntax-card{border:1px solid var(--grid-strong); border-radius:8px; padding:14px 16px; background:var(--formula-blue-pale); margin-bottom:14px;}
+  .syntax-card .stitle{font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:13px; color:var(--formula-blue); margin-bottom:6px;}
+  .syntax-card code{font-family:'IBM Plex Mono',monospace; font-size:13px;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr;}}
+
+  .gate{border:1px solid var(--grid); border-radius:8px; padding:16px; background:#fff;}
+  .gate h4{margin:0 0 4px; font-size:14.5px;}
+  .gate p{margin:0 0 10px; font-size:12.5px; color:var(--ink-soft);}
+  .truth{width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:12px;}
+  .truth th,.truth td{border:1px solid var(--grid); padding:5px 8px; text-align:center;}
+  .truth th{background:var(--paper-dim); font-size:10.5px; text-transform:uppercase; color:var(--ink-soft);}
+  .truth td.true{color:var(--sheet-green-dark); font-weight:700; background:var(--sheet-green-pale);}
+  .truth td.false{color:var(--bad-red); font-weight:700; background:var(--bad-red-pale);}
+
+  .report-table{width:100%; border-collapse:collapse; font-size:14px;}
+  .report-table th{text-align:left; background:var(--paper-dim); padding:10px 14px; border:1px solid var(--grid); font-size:12px; text-transform:uppercase; color:var(--ink-soft);}
+  .report-table td{padding:10px 14px; border:1px solid var(--grid);}
+  .report-table td.metric{font-weight:600;}
+  .report-table td.value{font-family:'IBM Plex Mono',monospace; font-weight:700; color:var(--sheet-green-dark); font-size:15px;}
+
+  .helper-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  .helper-table th{text-align:left; padding:8px 12px; background:var(--paper-dim); border:1px solid var(--grid); font-size:12px; text-transform:uppercase; color:var(--ink-soft);}
+  .helper-table td{padding:8px 12px; border:1px solid var(--grid);}
+  .helper-table code{font-family:'IBM Plex Mono',monospace; color:var(--formula-blue); font-size:12.5px;}
+
+  .ai-card{border:1px dashed var(--violet); background:var(--violet-pale); border-radius:8px; padding:16px 18px; margin-top:16px;}
+  .ai-card .atitle{font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:12.5px; color:var(--violet); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;}
+  .ai-card p{margin:0 0 8px; font-size:13.5px; color:#4a3b7a;}
+  .ai-card ul{margin:0; padding-left:18px; font-size:13px; color:#4a3b7a;}
+
+  footer{padding:40px 0 60px; text-align:center;}
+  footer .next{display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--ink-soft); border:1px dashed var(--grid-strong); padding:10px 16px; border-radius:20px;}
+
+  .addrow-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--sheet-green-dark);
+    background:var(--sheet-green-pale); border:1px solid var(--sheet-green); border-radius:5px; padding:7px 12px; cursor:pointer; margin-top:10px;
+  }
+  .addrow-btn:hover{background:var(--sheet-green); color:#fff;}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important;}}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· Excel 2 · Core formulas</span><span class="pn"><a href="../Excel-1-postread/" title="Excel 1 · Data cleanup and structure">← Prev</a><a href="../Excel-3-postread/" title="Excel 3 · Lookups and reporting">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="colframe">
+  <div class="corner"></div>
+  <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div><div>G</div><div>H</div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <div class="hero">
+    <div class="eyebrow"><span class="dot"></span> Sheets · Lecture 02 · Post-Read</div>
+    <h1 class="title">Core Formulas</h1>
+    <p class="subtitle">Last lecture the sheet got clean. This lecture it gets a brain. One shared dataset below — editable end to end — carries you through referencing, aggregation, conditional logic, and multi-condition math, ending in a five-cell report a manager could act on.</p>
+
+    <div class="fbar">
+      <div class="cellref">O2</div>
+      <div class="fx"><i>fx</i></div>
+      <div class="formula mono"><span id="typedFormula" class="typed"></span></div>
+    </div>
+
+    <div class="pipeline">
+      <div class="stage" id="pstage1"><div class="label">Storage Layer</div></div>
+      <div class="arrow">→</div>
+      <div class="stage active" id="pstage2"><div class="label">Logic Layer</div></div>
+      <div class="arrow">→</div>
+      <div class="stage" id="pstage3"><div class="label">Business Answers</div></div>
+    </div>
+  </div>
+
+  <!-- ============ GEMINI ============ -->
+  <section id="gemini">
+    <div class="kicker">Before The Formulas</div>
+    <h2 class="h"><span class="rowno">00</span> AI in Sheets — Gemini</h2>
+    <p class="lede">Gemini lives inside Google Sheets — no separate tab, no separate app. It reads your data and executes plain-English instructions. It's fast at "doing." It is not a substitute for "thinking" or for verifying its own output.</p>
+    <div class="ai-card">
+      <div class="atitle">What Gemini can and can't do</div>
+      <ul>
+        <li>✅ Clean/standardize data, remove duplicates, fix formatting, write formulas, summarize a sheet</li>
+        <li>❌ Make the business decision for you, or verify its own errors — that stays your job</li>
+      </ul>
+      <p style="margin-top:10px;"><b>The responsible-analyst rule:</b> spot-check ~5 rows before/after, check the row count didn't silently shrink, never run it on your only copy of the raw data, and remember — your name goes on the report, not Gemini's.</p>
+    </div>
+  </section>
+
+  <!-- ============ CELL REFERENCING ============ -->
+  <section id="referencing">
+    <div class="kicker">Foundations</div>
+    <h2 class="h"><span class="rowno">01</span> Cell referencing</h2>
+    <p class="lede">Dragging a formula down asks one question per reference: "should this move too?" Pick a reference style below and watch what row 2's formula becomes by row 5.</p>
+    <div class="impact" style="margin-bottom:20px;"><b>Think of GSheets as a copy machine.</b> When you drag a formula down, it doesn't just duplicate the text — for every reference inside it, it asks "should I move one row down too?" A plain reference like <code class="mono">A1</code> says yes, so <code class="mono">=A1+B1</code> in row 2 becomes <code class="mono">=A2+B2</code> in row 3, <code class="mono">=A3+B3</code> in row 4, and so on. The small blue square at the bottom-right of a selected cell is the <b>Fill Handle</b> — dragging it copies the formula while adjusting references based on which type they are. Double-clicking the Fill Handle (instead of dragging it) auto-fills all the way down to the last row that has adjacent data, which is faster for large datasets.</div>
+
+    <div class="card">
+      <div class="btnrow" id="refPicker">
+        <button class="pill-btn active" data-mode="rel">Relative — G2</button>
+        <button class="pill-btn" data-mode="abs">Absolute — $G$2</button>
+        <button class="pill-btn" data-mode="mixcol">Mixed (lock column) — $G2</button>
+        <button class="pill-btn" data-mode="mixrow">Mixed (lock row) — G$2</button>
+      </div>
+      <div class="refgrid" id="refGrid"></div>
+      <div class="impact" id="refImpact"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h4 style="margin:0 0 10px;">Try it: build your own reference</h4>
+      <p style="font-size:13px;color:var(--ink-soft); margin:0 0 12px;">Column to divide/multiply by row (relative), and a fixed cell to lock. Toggle the $ signs and see the row-3 and row-4 result.</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <span class="mono" style="font-size:14px;">=I2 *</span>
+        <button class="pill-btn" id="dollarCol" data-locked="false">$</button><span class="mono">L</span>
+        <button class="pill-btn" id="dollarRow" data-locked="false">$</button><span class="mono">1</span>
+      </div>
+      <table class="sheet" style="margin-top:12px;">
+        <thead><tr><th>Row</th><th>Formula</th></tr></thead>
+        <tbody id="customRefBody"></tbody>
+      </table>
+      <p class="pg-hint">The question to ask every time you drag a formula: "which part should move, and which part should stay?" Answer that, and the $ placement becomes obvious — you don't need to memorize the rule, just the question.</p>
+    </div>
+  </section>
+
+  <!-- ============ SHARED DATASET ============ -->
+  <section id="dataset">
+    <div class="kicker">The Working Sheet</div>
+    <h2 class="h"><span class="rowno">02</span> Your live dataset</h2>
+    <p class="lede">Every demo below reads from this table. Edit any Region, Sales, or Quantity cell and watch Order Value, Order Type, Inspection Status, and Priority Status recompute automatically — exactly like a real spreadsheet.</p>
+    <div class="card">
+      <table class="sheet" id="liveTable">
+        <thead>
+          <tr>
+            <th>Order ID</th><th>Region (F)</th><th>Sales (I)</th><th>Qty (J)</th>
+            <th>Order Value</th><th>Order Type</th><th>Inspection</th><th>Priority</th>
+          </tr>
+        </thead>
+        <tbody id="liveTableBody"></tbody>
+      </table>
+      <button class="addrow-btn" id="addRowBtn">+ Add row</button>
+      <p class="pg-hint">Order Value: <code>=IF(I2&gt;500,"Large Order","Standard")</code> · Order Type: <code>=IFS(J2&lt;=2,"Retail",J2&lt;=5,"Small Batch",TRUE,"Bulk")</code> · Inspection: <code>=IF(AND(F2="South",I2&lt;100),"Flag for Inspection","Clear")</code> · Priority: <code>=IF(OR(OrderValue="Large Order",OrderType="Bulk"),"Attention Needed","Normal")</code></p>
+    </div>
+  </section>
+
+  <!-- ============ AGGREGATION ============ -->
+  <section id="aggregation">
+    <div class="kicker">Pulse Check</div>
+    <h2 class="h"><span class="rowno">03</span> Basic aggregation</h2>
+    <p class="lede">Before any deep analysis, an analyst checks the scale of the data — total revenue, count of orders, highest value. These "pulse-check" formulas take seconds but give critical context. SUM, COUNT, COUNTA, MAX, MIN, AVERAGE — computed live from the Sales column of your dataset above.</p>
+    <div class="card">
+      <div class="agggrid" id="aggOut"></div>
+      <p class="pg-hint">COUNT only counts numeric cells. COUNTA counts everything non-empty — use it for text columns like Order ID.</p>
+    </div>
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>Function</th><th>Real-world use case</th></tr></thead>
+      <tbody>
+        <tr><td><code>SUM</code></td><td>Monthly revenue reports, budget tracking</td></tr>
+        <tr><td><code>COUNTA</code></td><td>Checking if all records are populated — a quick data-quality audit</td></tr>
+        <tr><td><code>MAX / MIN</code></td><td>Finding outlier transactions for fraud detection</td></tr>
+        <tr><td><code>AVERAGE</code></td><td>Benchmarking current performance against historical means</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ CONCAT ============ -->
+  <section id="concat">
+    <div class="kicker">String Building</div>
+    <h2 class="h"><span class="rowno">04</span> Joining text with &amp;</h2>
+    <p class="lede">In advertising, logistics, and reporting, you often need to merge data into a unique key or a readable label. The <code class="mono">&amp;</code> operator is the fastest way to join text in GSheets — the literal string in the middle (a space, dash, comma, or nothing at all) becomes your separator. Type any two values and a separator below — see the joined "Shipping Label" the way <code class="mono">=A2 &amp; " - " &amp; F2</code> would build it.</p>
+    <div class="card">
+      <div class="concat-row">
+        <div><label>First value (e.g. Order ID)</label><input id="concatA" class="pg-input" value="CA-2016-152156"></div>
+        <div><label>Separator</label><input id="concatSep" class="pg-input sep-input" value=" - "></div>
+        <div><label>Second value (e.g. Region)</label><input id="concatB" class="pg-input" value="South"></div>
+      </div>
+      <div class="concat-out" id="concatOut"></div>
+      <p class="pg-hint">Same result either way: <code>=A2 &amp; " - " &amp; F2</code> or <code>=CONCATENATE(A2," - ",F2)</code></p>
+    </div>
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>Domain</th><th>Real-world use case</th></tr></thead>
+      <tbody>
+        <tr><td>Logistics</td><td>Combine Order ID + Region for a tracking label</td></tr>
+        <tr><td>HR</td><td>Merge First Name + Last Name into a Full Name column</td></tr>
+        <tr><td>Finance</td><td>Combine Department + Cost Centre into a unique budget key</td></tr>
+        <tr><td>Marketing</td><td>Build campaign tags by joining Channel + Region + Month</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ IF / IFS ============ -->
+  <section id="iflogic">
+    <div class="kicker">Conditional Logic</div>
+    <h2 class="h"><span class="rowno">05</span> IF — the yes/no machine</h2>
+    <p class="lede">One condition, one fork in the road. In SQL you'd reach for <code class="mono">CASE WHEN Sales &gt; 500 THEN 'Large Order' ELSE 'Standard' END</code> — IF is GSheets' version of exactly that. Test your own Sales value against the Large Order threshold.</p>
+    <div class="syntax-card">
+      <div class="stitle">SYNTAX</div>
+      <code>=IF( condition , value_if_true , value_if_false )</code>
+    </div>
+    <div class="card">
+      <label style="font-size:12px;color:var(--ink-soft);">Sales value</label>
+      <input id="ifInput" type="number" class="pg-input" value="731.94" style="max-width:220px; margin-top:4px;">
+      <div class="impact green" id="ifResult" style="margin-top:14px;"></div>
+    </div>
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>Domain</th><th>Real-world use case</th></tr></thead>
+      <tbody>
+        <tr><td>E-commerce</td><td>Flag orders above a threshold for same-day shipping</td></tr>
+        <tr><td>Finance</td><td>Mark transactions above a limit for compliance review</td></tr>
+        <tr><td>HR</td><td>Classify employees as "Senior" or "Junior" based on years of experience</td></tr>
+        <tr><td>Inventory</td><td>Flag items with stock &lt; 10 as "Reorder Required"</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="h" style="margin-top:36px;"><span class="rowno">06</span> IFS — multi-bucket logic</h2>
+    <p class="lede">Real business conditions are rarely binary — "is this a retail order, a small batch, or a bulk order?" is three buckets in one column, which nested IFs handle clumsily. IFS checks conditions left to right, returns the first match, and mirrors SQL's multiple <code class="mono">WHEN</code> clauses inside one <code class="mono">CASE</code>. <code class="mono">TRUE</code> as the last condition acts as the catch-all, like SQL's <code class="mono">ELSE</code>.</p>
+    <div class="syntax-card">
+      <div class="stitle">SYNTAX</div>
+      <code>=IFS( cond1, val1, cond2, val2, ... , TRUE, fallback )</code>
+    </div>
+    <div class="card">
+      <label style="font-size:12px;color:var(--ink-soft);">Quantity value</label>
+      <input id="ifsInput" type="number" class="pg-input" value="4" style="max-width:220px; margin-top:4px;">
+      <div class="impact green" id="ifsResult" style="margin-top:14px;"></div>
+    </div>
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>Domain</th><th>Real-world use case</th></tr></thead>
+      <tbody>
+        <tr><td>Logistics</td><td>Classify shipments into Parcel / Pallet / Container based on weight</td></tr>
+        <tr><td>Sales</td><td>Categorize customers as Bronze / Silver / Gold / Platinum by annual spend</td></tr>
+        <tr><td>Education</td><td>Assign letter grades (A/B/C/D/F) from numeric scores</td></tr>
+        <tr><td>Banking</td><td>Tier loan applicants by credit score range</td></tr>
+      </tbody>
+    </table>
+    <div class="impact" style="margin-top:12px;"><b>Order matters:</b> IFS evaluates left to right and stops at the first TRUE condition — arrange conditions from most specific to least specific, or a broader condition earlier in the list can capture values before a more specific one ever gets checked.</div>
+  </section>
+
+  <!-- ============ AND / OR ============ -->
+  <section id="andor">
+    <div class="kicker">Logical Functions</div>
+    <h2 class="h"><span class="rowno">07</span> AND vs. OR</h2>
+    <p class="lede">Some business conditions depend on two things happening simultaneously (AND) or at least one of several things being true (OR) — almost always combined with IF. In SQL you'd write <code class="mono">WHERE Region = 'South' AND Sales &lt; 100</code>; in GSheets that becomes <code class="mono">=IF(AND(F2="South", I2&lt;100), "Flag", "Clear")</code>. AND is a vault door — every lock must open. OR is a keypad — any one key works. Flip the two switches below and watch both results update.</p>
+    <div class="card">
+      <div class="btnrow">
+        <button class="pill-btn" id="condA" data-on="false">Condition 1: FALSE</button>
+        <button class="pill-btn" id="condB" data-on="false">Condition 2: FALSE</button>
+      </div>
+      <div class="grid2">
+        <div class="gate">
+          <h4>=AND(cond1, cond2)</h4>
+          <p>Returns TRUE only if both are TRUE.</p>
+          <div class="impact" id="andOut" style="margin-top:0;"></div>
+        </div>
+        <div class="gate">
+          <h4>=OR(cond1, cond2)</h4>
+          <p>Returns TRUE if at least one is TRUE.</p>
+          <div class="impact" id="orOut" style="margin-top:0;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h4 style="margin:0 0 10px;">Applied to your dataset</h4>
+      <p style="font-size:13px;color:var(--ink-soft); margin:0;">Inspection Status (<code class="mono">AND</code>) and Priority Status (<code class="mono">OR</code>) in the live table above are computed with exactly this logic — edit Region/Sales/Order Type there and come back to see the gate react.</p>
+    </div>
+
+    <div class="grid2" style="margin-top:16px;">
+      <table class="helper-table">
+        <thead><tr><th>AND — real-world use case</th></tr></thead>
+        <tbody>
+          <tr><td>Risk management: flag transactions that are both high-value AND from a new account</td></tr>
+          <tr><td>HR: identify employees due for promotion (tenure &gt; 3 years AND performance = "Excellent")</td></tr>
+          <tr><td>Compliance: flag orders that are large AND from a restricted region</td></tr>
+        </tbody>
+      </table>
+      <table class="helper-table">
+        <thead><tr><th>OR — real-world use case</th></tr></thead>
+        <tbody>
+          <tr><td>E-commerce: notify customers if an order is delayed OR the item is out of stock</td></tr>
+          <tr><td>Support: escalate tickets that are high-priority OR unresolved for &gt; 48 hours</td></tr>
+          <tr><td>Sales: identify a lead as "Hot" if they visited the site OR opened the email</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ SUMIF / COUNTIF FAMILY ============ -->
+  <section id="sumifs">
+    <div class="kicker">Arithmetic Aggregation</div>
+    <h2 class="h"><span class="rowno">08</span> SUMIF · COUNTIF · SUMIFS · COUNTIFS</h2>
+    <p class="lede">In SQL: <code class="mono">SELECT SUM(Sales) FROM superstore WHERE Region = 'South'</code>. In GSheets: <code class="mono">=SUMIF(F2:F20, "South", I2:I20)</code> — a targeted calculator that sums a range only where a condition is met. Build a query against your live dataset — one condition or two — and see the exact formula plus the live answer.</p>
+
+    <div class="card">
+      <h4 style="margin:0 0 10px;">Single condition</h4>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
+        <div><label style="font-size:12px;color:var(--ink-soft); display:block;">Region equals</label>
+          <select id="sumifRegion" class="pg-select"></select>
+        </div>
+      </div>
+      <table class="sheet" style="margin-top:14px;">
+        <tbody>
+          <tr><td style="width:34%">=SUMIF(F2:F,region,I2:I)</td><td id="sumifOut"></td></tr>
+          <tr><td>=COUNTIF(F2:F,region)</td><td id="countifOut"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h4 style="margin:0 0 10px;">Two conditions — the "S" versions</h4>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
+        <div><label style="font-size:12px;color:var(--ink-soft); display:block;">Region equals</label>
+          <select id="sumifsRegion" class="pg-select"></select>
+        </div>
+        <div><label style="font-size:12px;color:var(--ink-soft); display:block;">Quantity</label>
+          <select id="sumifsOp" class="pg-select">
+            <option value=">=">&gt;=</option>
+            <option value="<=">&lt;=</option>
+            <option value="=">=</option>
+          </select>
+        </div>
+        <div><input id="sumifsVal" type="number" class="pg-input" value="5" style="max-width:100px;"></div>
+      </div>
+      <table class="sheet" style="margin-top:14px;">
+        <tbody>
+          <tr><td style="width:34%" class="mono">=SUMIFS(I2:I,F2:F,region,J2:J,op&amp;val)</td><td id="sumifsOut"></td></tr>
+          <tr><td class="mono">=COUNTIFS(F2:F,region,J2:J,op&amp;val)</td><td id="countifsOut"></td></tr>
+        </tbody>
+      </table>
+      <div class="impact" style="margin-top:12px;"><b>Watch the order:</b> in <code class="mono">SUMIF</code> the sum range is LAST. In <code class="mono">SUMIFS</code> it moves to FIRST. Mixing these up is the single most common formula bug in this lecture.</div>
+    </div>
+
+    <table class="helper-table" style="margin-top:16px;">
+      <thead><tr><th>Function</th><th>Real-world use case</th></tr></thead>
+      <tbody>
+        <tr><td><code>SUMIF</code></td><td>Total revenue per category, per region, or per salesperson</td></tr>
+        <tr><td><code>COUNTIF</code></td><td>Count how many orders are classified as "Retail" or "Bulk"</td></tr>
+        <tr><td><code>SUMIFS</code></td><td>Revenue from a specific region AND product category at the same time</td></tr>
+        <tr><td><code>COUNTIFS</code></td><td>Count high-value orders from a specific region AND time period</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ MINI CASE ============ -->
+  <section id="minicase">
+    <div class="kicker">Mini Case</div>
+    <h2 class="h"><span class="rowno">09</span> Logic performance report</h2>
+    <p class="lede">Five management questions, five cells, computed live from your dataset above. Edit a row anywhere on this page and this table updates.</p>
+    <div class="card">
+      <table class="report-table">
+        <thead><tr><th>Metric</th><th>Value</th><th>Formula</th></tr></thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ REFERENCE TABLE ============ -->
+  <section id="reference">
+    <div class="kicker">Reference</div>
+    <h2 class="h"><span class="rowno">10</span> Function cheat sheet</h2>
+    <table class="helper-table">
+      <thead><tr><th>Function</th><th>Conditions</th><th>Syntax note</th></tr></thead>
+      <tbody>
+        <tr><td><code>SUMIF</code></td><td>1</td><td>sum_range is LAST</td></tr>
+        <tr><td><code>COUNTIF</code></td><td>1</td><td>no sum_range needed</td></tr>
+        <tr><td><code>SUMIFS</code></td><td>2+</td><td>sum_range is FIRST ⚠️</td></tr>
+        <tr><td><code>COUNTIFS</code></td><td>2+</td><td>all pairs: range, criterion</td></tr>
+        <tr><td><code>IF</code></td><td>1</td><td>condition, true, false</td></tr>
+        <tr><td><code>IFS</code></td><td>2+</td><td>use TRUE as final catch-all</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section id="quiz">
+    <div class="kicker">Check Yourself</div>
+    <h2 class="h"><span class="rowno">11</span> Quick quiz</h2>
+
+    <div class="quiz" data-answer="C">
+      <div class="q-head">1. You stored a discount rate in K1 and want Discounted Sales for all rows using Sales from column I. Which formula correctly uses an absolute reference?</div>
+      <button class="qopt" data-v="A">=I2*K1</button>
+      <button class="qopt" data-v="B">=$I$2*K1</button>
+      <button class="qopt" data-v="C">=I2*$K$1</button>
+      <button class="qopt" data-v="D">=$I2*K$1</button>
+      <div class="qexplain">I2 should change row-by-row (relative), while $K$1 must stay fixed because the discount rate lives in one constant cell.</div>
+    </div>
+
+    <div class="quiz" data-answer="C">
+      <div class="q-head">2. What is the difference between AND and OR functions in Google Sheets?</div>
+      <button class="qopt" data-v="A">AND works only with numbers</button>
+      <button class="qopt" data-v="B">OR requires all conditions to be TRUE</button>
+      <button class="qopt" data-v="C">AND requires all conditions TRUE, while OR requires at least one TRUE</button>
+      <button class="qopt" data-v="D">Both functions behave exactly the same</button>
+      <div class="qexplain">AND() needs every condition to pass. OR() needs just one matching condition.</div>
+    </div>
+
+    <div class="quiz" data-answer="C">
+      <div class="q-head">3. You want total Sales only for the West region AND Quantity &gt;= 5. Which function is most appropriate?</div>
+      <button class="qopt" data-v="A">SUM()</button>
+      <button class="qopt" data-v="B">SUMIF()</button>
+      <button class="qopt" data-v="C">SUMIFS()</button>
+      <button class="qopt" data-v="D">COUNTIFS()</button>
+      <div class="qexplain">SUMIFS() is used when the aggregation depends on two or more conditions at once.</div>
+    </div>
+
+    <div class="quiz" data-answer="C">
+      <div class="q-head">4. What is the difference between COUNT and COUNTA?</div>
+      <button class="qopt" data-v="A">Both work the same way</button>
+      <button class="qopt" data-v="B">COUNT counts text, COUNTA counts numbers</button>
+      <button class="qopt" data-v="C">COUNT counts numeric cells, COUNTA counts non-empty cells</button>
+      <button class="qopt" data-v="D">COUNTA only counts dates</button>
+      <div class="qexplain">COUNT only looks at numeric cells. COUNTA counts every non-empty cell, text included.</div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="next mono">Next lecture → VLOOKUP, XLOOKUP, and the QUERY function — SQL-like statements inside Sheets</div>
+  </footer>
+
+</div>
+
+<script>
+// =====================================================================
+// Hero typewriter
+// =====================================================================
+const formulas = ['=IF(I2>500,"Large Order","Standard")', '=SUMIFS(I2:I,F2:F,"West",J2:J,">=5")', '=IFS(J2<=2,"Retail",J2<=5,"Small Batch",TRUE,"Bulk")'];
+let fIdx = 0, cIdx = 0, typingEl = document.getElementById('typedFormula');
+function typeLoop(){
+  const word = formulas[fIdx];
+  if(cIdx <= word.length){ typingEl.textContent = word.slice(0,cIdx); cIdx++; setTimeout(typeLoop,45); }
+  else { setTimeout(()=>{ cIdx=0; fIdx=(fIdx+1)%formulas.length; typeLoop(); }, 1500); }
+}
+typeLoop();
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// =====================================================================
+// Cell referencing simulator
+// =====================================================================
+const refModes = {
+  rel:  {label:'Relative', build: r => `=G${r}/H${r}`, note:'Everything shifts. Perfect when every row needs its own independent calculation.'},
+  abs:  {label:'Absolute', build: r => `=G${r}*$K$1`, note:'K1 never moves. Use this for one fixed constant — a tax rate, a commission %, a single lookup cell.'},
+  mixcol: {label:'Mixed (column locked)', build: r => `=$G${r}`, note:'Column G is frozen, the row still shifts as you drag down. Useful when dragging across columns but always reading from one column.'},
+  mixrow: {label:'Mixed (row locked)', build: r => `=G$2`, note:'Row 2 is frozen, the column would shift if you dragged sideways — dragging straight down leaves it unchanged.'}
+};
+let currentRefMode = 'rel';
+function renderRefGrid(){
+  const grid = document.getElementById('refGrid');
+  const cfg = refModes[currentRefMode];
+  let html = `<div class="rc rh">Row</div><div class="rc rh">Formula in Row 2</div><div class="rc rh">Result after dragging down</div>`;
+  for(let r=2; r<=5; r++){
+    const f = cfg.build(r);
+    html += `<div class="rc rn">${r}</div><div class="rc rf">${r===2? f : ''}</div><div class="rc rf">${f}</div>`;
+  }
+  grid.innerHTML = html;
+  document.getElementById('refImpact').innerHTML = `<b>${cfg.label}:</b> ${cfg.note}`;
+}
+document.querySelectorAll('#refPicker .pill-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#refPicker .pill-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRefMode = btn.dataset.mode;
+    renderRefGrid();
+  });
+});
+renderRefGrid();
+
+// custom reference builder
+let colLocked = false, rowLocked = false;
+function renderCustomRef(){
+  const colSign = colLocked ? '$' : '';
+  const rowSign = rowLocked ? '$' : '';
+  document.getElementById('dollarCol').textContent = colSign ? '$' : '—';
+  document.getElementById('dollarRow').textContent = rowSign ? '$' : '—';
+  document.getElementById('dollarCol').classList.toggle('active', colLocked);
+  document.getElementById('dollarRow').classList.toggle('active', rowLocked);
+  const body = document.getElementById('customRefBody');
+  let html = '';
+  for(let r=2; r<=4; r++){
+    const rowNum = rowLocked ? 1 : (r - 1);
+    html += `<tr><td>${r}</td><td class="mono">=I${r} * ${colSign}L${rowSign}${rowNum}</td></tr>`;
+  }
+  body.innerHTML = html;
+}
+document.getElementById('dollarCol').addEventListener('click', () => { colLocked = !colLocked; renderCustomRef(); });
+document.getElementById('dollarRow').addEventListener('click', () => { rowLocked = !rowLocked; renderCustomRef(); });
+renderCustomRef();
+
+// =====================================================================
+// Shared live dataset
+// =====================================================================
+let dataset = [
+  {id:'CA-2016-152156', region:'South', sales:731.94, qty:3},
+  {id:'CA-2014-115812', region:'West',  sales:48.86,  qty:9},
+  {id:'CA-2017-141077', region:'South', sales:2.52,   qty:1},
+  {id:'US-2015-108504', region:'West',  sales:957.57, qty:6},
+  {id:'CA-2016-100090', region:'East',  sales:120.00, qty:2},
+  {id:'US-2014-127180', region:'South', sales:85.40,  qty:4},
+];
+
+function computeRow(row){
+  const orderValue = row.sales > 500 ? 'Large Order' : 'Standard';
+  let orderType;
+  if(row.qty <= 2) orderType = 'Retail';
+  else if(row.qty <= 5) orderType = 'Small Batch';
+  else orderType = 'Bulk';
+  const inspection = (row.region === 'South' && row.sales < 100) ? 'Flag for Inspection' : 'Clear';
+  const priority = (orderValue === 'Large Order' || orderType === 'Bulk') ? 'Attention Needed' : 'Normal';
+  return {orderValue, orderType, inspection, priority};
+}
+
+function renderLiveTable(){
+  const body = document.getElementById('liveTableBody');
+  body.innerHTML = dataset.map((row, i) => {
+    const c = computeRow(row);
+    return `<tr data-idx="${i}">
+      <td contenteditable="true" data-field="id">${escapeHtml(row.id)}</td>
+      <td contenteditable="true" data-field="region">${escapeHtml(row.region)}</td>
+      <td contenteditable="true" data-field="sales">${row.sales}</td>
+      <td contenteditable="true" data-field="qty">${row.qty}</td>
+      <td><span class="flag ${c.orderValue==='Large Order'?'warn':'neutral'}">${c.orderValue}</span></td>
+      <td><span class="flag ${c.orderType==='Bulk'?'warn':'neutral'}">${c.orderType}</span></td>
+      <td><span class="flag ${c.inspection==='Flag for Inspection'?'':'ok'}">${c.inspection}</span></td>
+      <td><span class="flag ${c.priority==='Attention Needed'?'warn':'ok'}">${c.priority}</span></td>
+    </tr>`;
+  }).join('');
+
+  body.querySelectorAll('td[contenteditable]').forEach(td => {
+    td.addEventListener('blur', onCellEdit);
+    td.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); td.blur(); } });
+  });
+
+  refreshAllDerived();
+}
+
+function onCellEdit(e){
+  const td = e.target;
+  const tr = td.closest('tr');
+  const idx = parseInt(tr.dataset.idx, 10);
+  const field = td.dataset.field;
+  let val = td.textContent.trim();
+  if(field === 'sales' || field === 'qty'){
+    const num = parseFloat(val.replace(/[^0-9.\-]/g,''));
+    val = isNaN(num) ? 0 : num;
+  }
+  dataset[idx][field] = val;
+  renderLiveTable();
+}
+
+document.getElementById('addRowBtn').addEventListener('click', () => {
+  dataset.push({id:'NEW-ORDER-'+(dataset.length+1), region:'West', sales:100, qty:1});
+  renderLiveTable();
+});
+
+// =====================================================================
+// Aggregation (reads dataset.sales)
+// =====================================================================
+function renderAgg(){
+  const sales = dataset.map(r => r.sales);
+  const ids = dataset.map(r => r.id);
+  const sum = sales.reduce((a,b)=>a+b,0);
+  const max = Math.max(...sales);
+  const min = Math.min(...sales);
+  const avg = sum / sales.length;
+  const out = document.getElementById('aggOut');
+  const cells = [
+    ['=SUM(I2:I)', sum.toFixed(2)],
+    ['=COUNT(I2:I)', sales.length],
+    ['=COUNTA(A2:A)', ids.length],
+    ['=MAX(I2:I)', max.toFixed(2)],
+    ['=MIN(I2:I)', min.toFixed(2)],
+    ['=AVERAGE(I2:I)', avg.toFixed(2)],
+  ];
+  out.innerHTML = cells.map(([f,v]) => `<div class="agg-cell"><span class="fname">${f}</span><span class="fresult">${v}</span></div>`).join('');
+}
+
+// =====================================================================
+// SUMIF / COUNTIF / SUMIFS / COUNTIFS
+// =====================================================================
+function populateRegionSelectors(){
+  const regions = [...new Set(dataset.map(r=>r.region))];
+  ['sumifRegion','sumifsRegion'].forEach(id => {
+    const sel = document.getElementById(id);
+    const current = sel.value;
+    sel.innerHTML = regions.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+    if(regions.includes(current)) sel.value = current;
+  });
+}
+
+function renderSumifs(){
+  const region = document.getElementById('sumifRegion').value;
+  const matching = dataset.filter(r => r.region === region);
+  const sum = matching.reduce((a,r)=>a+r.sales,0);
+  document.getElementById('sumifOut').textContent = sum.toFixed(2) + '  (from ' + matching.length + ' matching row' + (matching.length===1?'':'s') + ')';
+  document.getElementById('countifOut').textContent = matching.length;
+
+  const region2 = document.getElementById('sumifsRegion').value;
+  const op = document.getElementById('sumifsOp').value;
+  const val = parseFloat(document.getElementById('sumifsVal').value) || 0;
+  const test = qty => op === '>=' ? qty >= val : op === '<=' ? qty <= val : qty === val;
+  const matching2 = dataset.filter(r => r.region === region2 && test(r.qty));
+  const sum2 = matching2.reduce((a,r)=>a+r.sales,0);
+  document.getElementById('sumifsOut').textContent = sum2.toFixed(2) + '  (from ' + matching2.length + ' matching row' + (matching2.length===1?'':'s') + ')';
+  document.getElementById('countifsOut').textContent = matching2.length;
+}
+
+// =====================================================================
+// IF / IFS live testers
+// =====================================================================
+function renderIf(){
+  const v = parseFloat(document.getElementById('ifInput').value) || 0;
+  const result = v > 500 ? 'Large Order' : 'Standard';
+  document.getElementById('ifResult').innerHTML = `<b>=IF(${v}&gt;500,"Large Order","Standard")</b> → <b>${result}</b>`;
+}
+function renderIfs(){
+  const v = parseFloat(document.getElementById('ifsInput').value) || 0;
+  let result;
+  if(v<=2) result='Retail'; else if(v<=5) result='Small Batch'; else result='Bulk';
+  document.getElementById('ifsResult').innerHTML = `<b>=IFS(${v}&lt;=2,"Retail",${v}&lt;=5,"Small Batch",TRUE,"Bulk")</b> → <b>${result}</b>`;
+}
+document.getElementById('ifInput').addEventListener('input', renderIf);
+document.getElementById('ifsInput').addEventListener('input', renderIfs);
+
+// =====================================================================
+// AND / OR toggles
+// =====================================================================
+function renderAndOr(){
+  const a = document.getElementById('condA').dataset.on === 'true';
+  const b = document.getElementById('condB').dataset.on === 'true';
+  document.getElementById('condA').textContent = 'Condition 1: ' + (a ? 'TRUE' : 'FALSE');
+  document.getElementById('condB').textContent = 'Condition 2: ' + (b ? 'TRUE' : 'FALSE');
+  document.getElementById('condA').classList.toggle('active', a);
+  document.getElementById('condB').classList.toggle('active', b);
+  const andRes = a && b, orRes = a || b;
+  document.getElementById('andOut').innerHTML = `Result: <b style="color:${andRes?'var(--sheet-green-dark)':'var(--bad-red)'}">${andRes}</b>`;
+  document.getElementById('orOut').innerHTML = `Result: <b style="color:${orRes?'var(--sheet-green-dark)':'var(--bad-red)'}">${orRes}</b>`;
+}
+document.getElementById('condA').addEventListener('click', function(){ this.dataset.on = this.dataset.on === 'true' ? 'false' : 'true'; renderAndOr(); });
+document.getElementById('condB').addEventListener('click', function(){ this.dataset.on = this.dataset.on === 'true' ? 'false' : 'true'; renderAndOr(); });
+
+// =====================================================================
+// CONCAT
+// =====================================================================
+function renderConcat(){
+  const a = document.getElementById('concatA').value;
+  const sep = document.getElementById('concatSep').value;
+  const b = document.getElementById('concatB').value;
+  document.getElementById('concatOut').textContent = a + sep + b;
+}
+['concatA','concatSep','concatB'].forEach(id => document.getElementById(id).addEventListener('input', renderConcat));
+
+// =====================================================================
+// Mini case report (all derived from dataset)
+// =====================================================================
+function renderReport(){
+  const computed = dataset.map(computeRow);
+  const largeCount = computed.filter(c=>c.orderValue==='Large Order').length;
+  const bulkCount = computed.filter(c=>c.orderType==='Bulk').length;
+  const riskyCount = dataset.filter(r=>r.region==='South' && r.sales<100).length;
+  const largeRevenue = dataset.filter((r,i)=>computed[i].orderValue==='Large Order').reduce((a,r)=>a+r.sales,0);
+  const westBulkRevenue = dataset.filter((r,i)=>r.region==='West' && computed[i].orderType==='Bulk').reduce((a,r)=>a+r.sales,0);
+
+  const rows = [
+    ['Large Orders', largeCount, '=COUNTIF(O2:O,"Large Order")'],
+    ['Bulk Orders', bulkCount, '=COUNTIF(S2:S,"Bulk")'],
+    ['Risky Orders', riskyCount, '=COUNTIFS(F2:F,"South",I2:I,"<100")'],
+    ['Revenue from Large Orders', '₹'+largeRevenue.toFixed(2), '=SUMIF(O2:O,"Large Order",I2:I)'],
+    ['West Bulk Revenue', '₹'+westBulkRevenue.toFixed(2), '=SUMIFS(I2:I,F2:F,"West",S2:S,"Bulk")'],
+  ];
+  document.getElementById('reportBody').innerHTML = rows.map(([m,v,f]) =>
+    `<tr><td class="metric">${m}</td><td class="value">${v}</td><td class="mono" style="font-size:12px;color:var(--ink-soft);">${f}</td></tr>`
+  ).join('');
+}
+
+// =====================================================================
+// Master refresh — everything downstream of the dataset
+// =====================================================================
+function refreshAllDerived(){
+  populateRegionSelectors();
+  renderAgg();
+  renderSumifs();
+  renderReport();
+}
+['sumifRegion','sumifsRegion','sumifsOp','sumifsVal'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderSumifs);
+  document.getElementById(id).addEventListener('change', renderSumifs);
+});
+
+// =====================================================================
+// Init
+// =====================================================================
+renderLiveTable();
+renderIf();
+renderIfs();
+renderAndOr();
+renderConcat();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Excel-2-postread" target="_blank" rel="noopener">github.com/scaler-content/Excel-2-postread</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCA post read</title>
+<style>
+:root{
+  --p-900:#2e1065;
+  --p-800:#4c1d95;
+  --p-700:#6d28d9;
+  --p-600:#7c3aed;
+  --p-500:#9333ea;
+  --p-400:#a855f7;
+  --p-300:#c084fc;
+  --p-200:#e9d5ff;
+  --p-100:#f3e8ff;
+  --white:#ffffff;
+  --ink:#1e1033;
+  --ink-soft:#4a3a66;
+  --line:#e4d4fb;
+  --bg:#ffffff;
+  --card:#ffffff;
+  --shadow: 0 10px 30px -12px rgba(109,40,217,.25);
+  --radius:16px;
+  --maxw:880px;
+  --code-bg:#2b1458;
+  --code-ink:#f3e8ff;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family: "Source Serif Pro","Iowan Old Style", Georgia, "Times New Roman", serif;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.sans{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;}
+h1,h2,h3,h4{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  font-weight:800;
+  color:var(--ink);
+  letter-spacing:-0.01em;
+  line-height:1.2;
+}
+a{color:var(--p-600);}
+
+/* ---------- Top bar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:rgba(255,255,255,.85);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 20px;
+}
+.topbar .brand{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  font-weight:800; font-size:14px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--p-700);
+  display:flex; align-items:center; gap:8px;
+}
+.topbar .brand .dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--p-500),var(--p-300));}
+.progress-track{
+  position:fixed; top:0; left:0; height:3px; width:0%;
+  background:linear-gradient(90deg,var(--p-700),var(--p-400));
+  z-index:60; transition:width .1s linear;
+}
+button:focus-visible, [tabindex]:focus-visible, a:focus-visible, input:focus-visible{
+  outline:3px solid var(--p-400); outline-offset:2px;
+}
+
+/* ---------- Hero ---------- */
+.hero{
+  padding:72px 20px 56px;
+  background:
+    radial-gradient(1100px 420px at 50% -10%, var(--p-200), transparent 60%),
+    linear-gradient(180deg,var(--p-100),var(--bg));
+  text-align:center;
+  border-bottom:1px solid var(--line);
+}
+.hero .eyebrow{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  font-size:13px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--p-600); margin-bottom:14px;
+}
+.hero h1{
+  font-size:clamp(2.1rem,5vw,3.4rem);
+  margin:0 auto 18px; max-width:760px;
+  background:linear-gradient(135deg,var(--p-800),var(--p-500));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.hero p.sub{
+  max-width:620px; margin:0 auto; color:var(--ink-soft); font-size:1.08rem;
+  font-family:inherit;
+}
+.hero .chips{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:26px;}
+.chip{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  font-size:12.5px; font-weight:700; color:var(--p-700);
+  background:var(--white); border:1px solid var(--p-200);
+  padding:6px 12px; border-radius:999px;
+}
+
+/* ---------- Layout ---------- */
+main{max-width:var(--maxw); margin:0 auto; padding:10px 20px 100px;}
+section.block{margin:64px 0;}
+section.block > h2{
+  font-size:clamp(1.5rem,3vw,1.9rem);
+  margin:0 0 6px;
+  display:flex; align-items:center; gap:12px;
+}
+section.block > h2 .num{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:34px;height:34px;border-radius:10px; flex:none;
+  background:linear-gradient(135deg,var(--p-600),var(--p-400));
+  color:#fff; font-size:15px; font-weight:800;
+}
+.kicker{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--p-500); margin:0 0 10px 46px;
+}
+section.block > p, section.block > ul, section.block > ol{ margin-left:0; }
+h3{font-size:1.2rem; margin:28px 0 10px;}
+p{margin:0 0 14px;}
+ul,ol{padding-left:22px; margin:0 0 14px;}
+li{margin-bottom:6px;}
+strong{color:var(--p-700); font-weight:700;}
+
+/* ---------- Cards / callouts ---------- */
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:22px 24px; box-shadow:var(--shadow); margin:22px 0;
+}
+.story{
+  background:linear-gradient(160deg,var(--p-800),var(--p-600));
+  color:#fff; border-radius:20px; padding:30px 28px; box-shadow:var(--shadow);
+  position:relative; overflow:hidden;
+}
+.story::before{
+  content:""; position:absolute; inset:0;
+  background:radial-gradient(500px 220px at 90% -20%, rgba(255,255,255,.18), transparent 60%);
+}
+.story h3{color:#fff; margin-top:0;}
+.story strong{color:#fff; text-decoration:underline; text-decoration-color:var(--p-300); text-underline-offset:3px;}
+.story p{position:relative;}
+.callout{
+  border-left:4px solid var(--p-500);
+  background:var(--p-100); border-radius:0 12px 12px 0;
+  padding:16px 18px; margin:18px 0;
+}
+.callout .label{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  font-size:11.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--p-600); margin-bottom:6px; display:block;
+}
+.callout.ai{ border-left-color:var(--p-700); }
+.callout.rule{ border-left-color:var(--p-400); }
+.callout p:last-child{margin-bottom:0;}
+blockquote.manager{
+  margin:18px 0; padding:14px 18px; font-style:italic; color:var(--ink-soft);
+  border-left:3px solid var(--p-300); background:transparent;
+}
+
+/* ---------- Tables ---------- */
+.table-wrap{overflow-x:auto; margin:18px 0; border-radius:12px; border:1px solid var(--line);}
+table{border-collapse:collapse; width:100%; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; font-size:14.5px;}
+th,td{padding:11px 14px; text-align:left; border-bottom:1px solid var(--line);}
+th{background:var(--p-100); color:var(--p-800); font-weight:800; font-size:13px;}
+tr:last-child td{border-bottom:none;}
+
+/* ---------- Images ---------- */
+figure{margin:22px 0; text-align:center;}
+figure img{max-width:100%; border-radius:14px; border:1px solid var(--line); box-shadow:var(--shadow);}
+figcaption{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  font-size:13px; color:var(--ink-soft); margin-top:10px;
+}
+
+/* ---------- Code ---------- */
+pre{
+  background:var(--code-bg); color:var(--code-ink); border-radius:12px;
+  padding:16px 18px; overflow-x:auto; font-size:13.3px; line-height:1.55;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  margin:16px 0;
+}
+code{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
+.out-label{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--p-500); margin:14px 0 -6px;
+}
+details.codebox{
+  border:1px solid var(--line); border-radius:12px; margin:16px 0; background:var(--card);
+}
+details.codebox summary{
+  cursor:pointer; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  font-weight:700; font-size:13.5px; color:var(--p-700); list-style:none; display:flex; align-items:center; gap:8px;
+}
+details.codebox summary::-webkit-details-marker{display:none;}
+details.codebox summary::before{content:"▸"; color:var(--p-500); transition:transform .15s;}
+details.codebox[open] summary::before{transform:rotate(90deg);}
+details.codebox > div{padding:0 16px 16px;}
+
+/* ---------- Tabs ---------- */
+.tabs{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+.tab-btn{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  font-weight:700; font-size:13.5px; padding:9px 16px; border-radius:999px;
+  border:1px solid var(--p-300); background:var(--white); color:var(--p-700); cursor:pointer;
+}
+.tab-btn[aria-selected="true"]{background:linear-gradient(135deg,var(--p-600),var(--p-400)); color:#fff; border-color:transparent;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block; animation:fade .25s ease;}
+@keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+/* ---------- Accordion ---------- */
+.accordion-item{border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden; background:var(--card);}
+.accordion-head{
+  width:100%; text-align:left; background:none; border:none; cursor:pointer;
+  padding:14px 18px; display:flex; justify-content:space-between; align-items:center; gap:12px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; font-weight:700; color:var(--p-700); font-size:14.5px;
+}
+.accordion-head .chevron{transition:transform .2s; color:var(--p-500); flex:none;}
+.accordion-item.open .chevron{transform:rotate(180deg);}
+.accordion-body{max-height:0; overflow:hidden; transition:max-height .25s ease;}
+.accordion-body > div{padding:0 18px 16px; font-size:14.5px; color:var(--ink-soft);}
+.accordion-body strong{color:var(--p-700);}
+
+/* ---------- Interactive widget shell ---------- */
+.widget{
+  border:1px solid var(--line); border-radius:var(--radius); background:var(--card);
+  padding:20px; margin:20px 0; box-shadow:var(--shadow);
+}
+.widget h4{
+  margin:0 0 4px; font-size:15px; color:var(--p-700); display:flex; align-items:center; gap:8px;
+}
+.widget h4 .tag{
+  font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+  background:var(--p-100); color:var(--p-600); padding:2px 8px; border-radius:999px;
+}
+.widget .hint{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; font-size:13px; color:var(--ink-soft); margin-bottom:14px;}
+.widget-grid{display:grid; grid-template-columns:1.1fr .9fr; gap:18px; align-items:start;}
+@media(max-width:640px){.widget-grid{grid-template-columns:1fr;}}
+.control-row{display:flex; align-items:center; gap:12px; margin:10px 0; flex-wrap:wrap; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; font-size:13.5px;}
+input[type=range]{
+  flex:1; min-width:120px; accent-color:var(--p-600); height:6px; cursor:pointer;
+}
+.readout{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background:var(--p-100); color:var(--p-700); border-radius:8px; padding:4px 10px; font-size:13px; font-weight:700;
+  min-width:70px; text-align:center;
+}
+.btn-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+.btn{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; font-weight:700; font-size:13px;
+  background:var(--white); border:1px solid var(--p-300); color:var(--p-700);
+  padding:8px 14px; border-radius:10px; cursor:pointer;
+}
+.btn.active, .btn:hover{background:linear-gradient(135deg,var(--p-600),var(--p-400)); color:#fff; border-color:transparent;}
+svg.viz{width:100%; height:auto; display:block; background:var(--p-100); border-radius:12px;}
+.stat-mini{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;}
+.stat-pill{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; font-size:12.5px;
+  background:var(--p-100); color:var(--p-700); padding:6px 12px; border-radius:10px; font-weight:700;
+}
+
+/* ---------- Quiz ---------- */
+.quiz{background:linear-gradient(160deg,var(--p-700),var(--p-500)); color:#fff; border-radius:18px; padding:24px 26px; margin:26px 0; box-shadow:var(--shadow);}
+.quiz .qlabel{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; font-size:11.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; opacity:.85; margin-bottom:8px;}
+.quiz h4{color:#fff; font-size:1.05rem; margin:0 0 16px;}
+.quiz .opt{
+  display:block; width:100%; text-align:left; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.35); color:#fff;
+  padding:12px 16px; border-radius:10px; margin-bottom:9px; cursor:pointer; font-size:14px;
+}
+.quiz .opt:hover{background:rgba(255,255,255,.2);}
+.quiz .opt.correct{background:#22c55e; border-color:#22c55e;}
+.quiz .opt.wrong{background:#ef4444; border-color:#ef4444;}
+.quiz .feedback{
+  margin-top:14px; background:rgba(255,255,255,.12); border-radius:10px; padding:14px 16px;
+  font-size:14px; display:none;
+}
+.quiz .feedback.show{display:block; animation:fade .3s ease;}
+.openq{background:var(--p-100); border-radius:14px; padding:20px 22px; margin:22px 0;}
+.openq .qlabel{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; font-size:11.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--p-600); margin-bottom:8px;}
+.reveal-btn{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; font-weight:700; font-size:13px;
+  background:var(--p-700); color:#fff; border:none; padding:9px 16px; border-radius:999px; cursor:pointer; margin-top:4px;
+}
+.answer-box{display:none; margin-top:14px; padding-top:14px; border-top:1px dashed var(--p-300);}
+.answer-box.show{display:block; animation:fade .3s ease;}
+
+/* ---------- Recipe stepper ---------- */
+.stepper{display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap;}
+.step-dot{
+  flex:1; min-width:30px; height:6px; border-radius:4px; background:var(--p-200); cursor:pointer; border:none;
+}
+.step-dot.active{background:linear-gradient(90deg,var(--p-600),var(--p-400));}
+.step-view{min-height:150px;}
+.step-num{
+  display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%;
+  background:var(--p-600); color:#fff; font-weight:800; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  margin-bottom:10px; font-size:14px;
+}
+
+/* ---------- Cards grid ---------- */
+.grid-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin:20px 0;}
+.mini-card{
+  background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+}
+.mini-card .mc-title{font-weight:800; color:var(--p-700); font-size:14px; margin-bottom:6px;}
+.mini-card p{font-size:13.3px; color:var(--ink-soft); margin:0;}
+
+/* ---------- Takeaway box ---------- */
+.takeaways{
+  background:var(--p-100); border:1px solid var(--p-200); border-radius:16px; padding:24px 26px; margin:26px 0;
+}
+.takeaways h3{margin-top:0;}
+.takeaways ul{margin-bottom:0;}
+
+footer{
+  text-align:center; padding:40px 20px 60px; color:var(--ink-soft);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; font-size:13px;
+  border-top:1px solid var(--line); margin-top:40px;
+}
+footer .fname{color:var(--p-600); font-weight:800;}
+
+@media(max-width:480px){
+  .hero{padding:56px 16px 44px;}
+  section.block{margin:48px 0;}
+  .kicker{margin-left:0;}
+  section.block > h2{flex-wrap:wrap;}
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· DSML Unsupervised 1 · PCA for high-dimensional data</span><span class="pn"><a href="../Anomaly-Detection/" title="Anomaly detection · Four unsupervised methods">← Prev</a><a href="../DSML-UnSL-2/" title="DSML Unsupervised 2 · t-SNE for visualising data">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="progress-track" id="progressTrack"></div>
+<div class="topbar">
+  <div class="brand"><span class="dot"></span>PCA post read</div>
+</div>
+
+<header class="hero">
+  <div class="eyebrow">Unsupervised Learning · Interactive Read</div>
+  <h1>PCA: Finding Structure in High‑Dimensional Data</h1>
+  <p class="sub">How a logistics company's 784‑pixel scanning problem leads to the single most useful idea in dimensionality reduction: find the directions where the data varies most.</p>
+  <div class="chips">
+    <span class="chip">Variance & eigenvectors</span>
+    <span class="chip">Build PCA from scratch</span>
+    <span class="chip">MNIST case study</span>
+    <span class="chip">Pitfalls & scaling</span>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ OPENING STORY ============ -->
+<section class="block">
+  <div class="story">
+    <h3>The Parcel That Never Arrived</h3>
+    <p><strong>SwiftParcel</strong> handles 2 million parcels a day across 40 sorting hubs. Most addresses are typed, but a large share of parcels from small shops and villages still carry handwritten PIN codes.</p>
+    <p>Every parcel is photographed at the hub and the scan goes to the cloud so a machine can read the PIN and route the parcel. Meera, the lead data scientist, has a problem on her desk:</p>
+    <ul>
+      <li>Each scanned digit is a 28×28 image — <strong>784 numbers per digit</strong>. Millions of digits a day means terabytes of storage and slow pipelines.</li>
+      <li>The routing team wants a quick visual check of whether digit images from different hubs "look alike." Nobody can plot 784 dimensions.</li>
+      <li>Labelled data is expensive — most scans have <strong>no label at all</strong>.</li>
+    </ul>
+    <blockquote class="manager" style="color:#f3e8ff; border-color:rgba(255,255,255,.4);">"Can we shrink these images to a handful of numbers without losing what makes a '3' look like a '3'? And can you show me what the data looks like?"</blockquote>
+    <p>Meera has no labels, so she can't use supervised learning. She needs a technique that looks only at the structure of the data itself. That technique is <strong>PCA</strong> — our first step into unsupervised learning.</p>
+  </div>
+</section>
+
+<!-- ============ 1. SUPERVISED VS UNSUPERVISED ============ -->
+<section class="block" id="sec1">
+  <div class="kicker">Section 1</div>
+  <h2><span class="num">1</span>Supervised vs. Unsupervised: What Changed?</h2>
+  <p>Until now, every problem looked the same: observations <em>x</em><sub>i</sub> paired with correct answers <em>y</em><sub>i</sub>. Meera's situation is different — she has only <em>x</em><sub>i</sub>, with no <em>y</em><sub>i</sub>. The algorithm must discover hidden structure on its own.</p>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th></th><th>Supervised</th><th>Unsupervised</th></tr>
+      <tr><td>Data</td><td>(x<sub>i</sub>, y<sub>i</sub>)</td><td>only x<sub>i</sub></td></tr>
+      <tr><td>Goal</td><td>predict y</td><td>find structure / patterns</td></tr>
+      <tr><td>Evaluation</td><td>accuracy, RMSE… (compare with truth)</td><td>no ground truth — metrics are indirect</td></tr>
+      <tr><td>Example</td><td>"Is this image a cat or a dog?"</td><td>"Which images look alike? Can I summarise them?"</td></tr>
+    </table>
+  </div>
+
+  <h3>Why is unsupervised learning harder?</h3>
+  <ul>
+    <li><strong>No labels</strong> — we don't know how many groups exist, or which point belongs where.</li>
+    <li><strong>No obvious scorecard</strong> — with no truth to compare against, "was the result correct?" has no simple answer.</li>
+  </ul>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/244/564/original/ChatGPT_Image_Oct_6__2026__01_43_55_PM.png?1791274451" alt="Illustration contrasting supervised learning (labelled data, predicting an answer) with unsupervised learning (unlabelled data, discovering structure)" loading="lazy">
+    <figcaption>Supervised learning predicts an answer; unsupervised learning looks for structure with no answer key at all.</figcaption>
+  </figure>
+
+  <p class="hint" style="font-family:inherit; color:var(--ink-soft);">The two unsupervised families this course covers: <strong>dimensionality reduction</strong> (today) and <strong>clustering</strong> (next).</p>
+</section>
+
+<!-- ============ 2. MEET THE DATA ============ -->
+<section class="block" id="sec2">
+  <div class="kicker">Section 2</div>
+  <h2><span class="num">2</span>Meet the Data: A Digit Is Just 784 Numbers</h2>
+  <p>We'll use <strong>MNIST</strong>, a classic dataset of handwritten digits — a stand-in for SwiftParcel's PIN-code scans.</p>
+  <ul>
+    <li>Each image is a 28 × 28 grid of pixels, each with a darkness value from 0 (black) to 255 (white).</li>
+    <li>Flatten the grid row by row and you get a vector with 28 × 28 = <strong>784 numbers</strong>.</li>
+    <li>So every digit is a <strong>point in a 784-dimensional space</strong>.</li>
+  </ul>
+
+  <div class="callout rule">
+    <span class="label">Pretend-play rule</span>
+    <p>The dataset also contains labels. To act like Meera, we will <strong>not use labels for learning</strong> — only at the end, to colour plots and sanity-check whether PCA found sensible structure.</p>
+  </div>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/247/146/original/Screenshot_2026-10-15_180156.png?1792067531" alt="Grid of sixteen MNIST digit images, each labelled with its digit, showing the raw handwritten scans" loading="lazy">
+    <figcaption>What Meera sees: 784 numbers per image, reshaped back to a 28×28 picture.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 3. WHY SHRINK + CURSE DEMO ============ -->
+<section class="block" id="sec3">
+  <div class="kicker">Section 3</div>
+  <h2><span class="num">3</span>Why Shrink the Data? The Group‑Photo Problem</h2>
+  <p>Imagine a party where the photo booth only captures a flat 2D picture, but your friends live in 3D. You squeeze 3D into 2D and lose some information — how far back someone stood — but keep the most important thing: <strong>who is at the party and roughly where</strong>.</p>
+  <p><strong>Dimensionality reduction does the same to data</strong>: it reduces the number of features while trying to keep the information that matters.</p>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/244/565/original/ChatGPT_Image_Oct_6__2026__01_45_24_PM.png?1791274532" alt="Illustration of a 3D group of people being compressed into a flat 2D photo, analogous to dimensionality reduction" loading="lazy">
+  </figure>
+
+  <h3>Two big reasons to do this</h3>
+  <ol>
+    <li><strong>The curse of dimensionality</strong> — as features grow, data becomes sparse and distances become less meaningful, so many algorithms struggle to learn.</li>
+    <li><strong>Visualisation and interpretation</strong> — we can't plot 784 axes. A 2D or 3D "shadow" lets us spot patterns.</li>
+  </ol>
+  <p>Other benefits: lossy <strong>compression</strong> (storage and speed), <strong>noise reduction</strong>, and <strong>feature extraction</strong>. All of these matter to SwiftParcel.</p>
+
+  <div class="widget">
+    <h4>Seeing the curse of dimensionality <span class="tag">interactive</span></h4>
+    <p class="hint">500 random points were sampled in dimension <em>d</em>, and the farthest point was compared to the nearest point (relative to the nearest distance). Drag the slider to see how "near" and "far" blur together as <em>d</em> grows.</p>
+    <div class="control-row">
+      <label for="curseSlider" class="sans" style="font-weight:700; color:var(--p-700);">Dimensions (d):</label>
+      <input type="range" id="curseSlider" min="0" max="3" step="1" value="0">
+      <span class="readout" id="curseReadout">d = 2</span>
+    </div>
+    <svg class="viz" id="curseSvg" viewBox="0 0 640 220" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Bar showing contrast between nearest and farthest neighbour distance"></svg>
+    <div class="stat-mini">
+      <span class="stat-pill" id="curseStat">Farthest vs nearest differ by 23.07× the nearest distance</span>
+    </div>
+    <p class="hint" style="margin-top:12px;">As <em>d</em> grows, the gap between nearest and farthest neighbour shrinks relative to the distance itself. When "near" and "far" blur together, distance-based methods (kNN, clustering) lose their power.</p>
+  </div>
+
+  <div class="callout ai">
+    <span class="label">AI exploration · try it yourself</span>
+    <p><em>"I ran an experiment where I sampled 500 random points in d = 2, 10, 100 and 784 dimensions and compared the nearest and farthest distance from one point. The contrast shrank as d grew. Explain intuitively why this happens, then suggest one more small Python experiment (numpy only) that shows another symptom of the curse of dimensionality, such as how much of a unit cube's volume lies near its surface."</em></p>
+    <p style="margin-bottom:0;">Then run the code the AI gives you. Does the result match its explanation? Where would this problem hurt a kNN classifier on pixel data?</p>
+  </div>
+</section>
+
+<!-- ============ 4. VARIANCE AS INFORMATION ============ -->
+<section class="block" id="sec4">
+  <div class="kicker">Section 4</div>
+  <h2><span class="num">4</span>Variance as Information: The Key Idea of PCA</h2>
+  <p><strong>A toy question.</strong> We have patients' age and weight, and want to tell diabetic from non-diabetic.</p>
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/244/568/original/ChatGPT_Image_Oct_6__2026__01_47_49_PM.png?1791274674" alt="Scatter plot showing age tightly clustered (little spread) versus weight widely spread across patients" loading="lazy">
+  </figure>
+  <p>Which feature carries more information? Age is almost constant — everyone is roughly the same age, so it <strong>can't separate</strong> anyone. Weight is spread out, so it <strong>can</strong>.</p>
+  <p class="callout" style="margin:18px 0;"><strong>The pattern: the feature along which the data varies most holds the most information.</strong></p>
+  <p>Now take <em>weight and height</em>. They move together — taller people tend to weigh more. The most informative direction is neither axis alone; it's a <strong>diagonal combination of height and weight</strong>.</p>
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/244/569/original/ChatGPT_Image_Oct_6__2026__01_49_25_PM.png?1791274770" alt="Scatter plot of correlated height and weight data with a diagonal line showing the direction of maximum spread" loading="lazy">
+  </figure>
+
+  <h3>The core idea</h3>
+  <ul>
+    <li>Instead of the original features, find <strong>new axes</strong> (combinations of old ones) so the <strong>first axis captures the most variance</strong>, the second captures most of what's left, and so on.</li>
+    <li>These new axes are <strong>principal components (PCs)</strong> — each perpendicular (orthogonal) to the others.</li>
+    <li>With <em>D</em> original features you get <em>D</em> principal components. If the first few already carry ~90% of the variance, keep only those: <strong>fewer features, small information loss</strong>.</li>
+  </ul>
+
+  <div class="widget">
+    <h4>Finding the direction of maximum variance <span class="tag">interactive</span></h4>
+    <p class="hint">This mirrors the height/weight demo: rotate a direction through 180° and watch how the variance of the data's projection onto it changes. The best direction is where the shadow of the points is most spread out.</p>
+    <div class="widget-grid">
+      <svg class="viz" id="varScatterSvg" viewBox="0 0 320 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Scatter plot of correlated synthetic data with a rotating direction line"></svg>
+      <svg class="viz" id="varCurveSvg" viewBox="0 0 320 220" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Line chart of projected variance versus rotation angle"></svg>
+    </div>
+    <div class="control-row">
+      <label for="angleSlider" class="sans" style="font-weight:700; color:var(--p-700);">Direction angle:</label>
+      <input type="range" id="angleSlider" min="0" max="180" step="1" value="90">
+      <span class="readout" id="angleReadout">90°</span>
+      <button class="btn" id="snapBest">Snap to best direction</button>
+    </div>
+    <div class="stat-mini">
+      <span class="stat-pill" id="varStat">Projected variance: —</span>
+      <span class="stat-pill" id="bestStat">Best direction ≈ —</span>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--p-100); border:none;">
+    <p style="margin:0;"><strong>This is exactly the goal of PCA: find the direction with maximum variance.</strong> An equivalent view — the <em>minimum-error formulation</em> — says the max-variance direction is also the line that gives the smallest reconstruction error when points are projected onto it and mapped back. We'll see this when rebuilding digits later.</p>
+  </div>
+</section>
+
+<!-- QUIZ 1 -->
+<div class="quiz" data-quiz>
+  <div class="qlabel">Quick check</div>
+  <h4>How does PCA keep the most information when reducing dimensions?</h4>
+  <button class="opt" data-correct="false">By discarding the components with the highest variance</button>
+  <button class="opt" data-correct="false">By picking components that are orthogonal to each other</button>
+  <button class="opt" data-correct="true">By choosing directions that capture the maximum variance</button>
+  <button class="opt" data-correct="false">By maximising the number of components used</button>
+  <div class="feedback"><strong>Correct: capturing maximum variance.</strong> Orthogonality is a property PCs happen to have, but it isn't what retains information — maximum variance is. Dropping high-variance components would discard the most information, not the least.</div>
+</div>
+
+<!-- ============ 5. MATHS ============ -->
+<section class="block" id="sec5">
+  <div class="kicker">Section 5</div>
+  <h2><span class="num">5</span>The Maths in Plain Words</h2>
+  <p><strong>Setup.</strong> Data matrix <em>X</em> with <em>N</em> points and <em>D</em> features. We want a lower dimension <em>M</em> &lt; <em>D</em>. Start with <em>M</em> = 1.</p>
+
+  <div class="stepper" id="mathStepper"></div>
+  <div class="step-view" id="mathStepView"></div>
+
+  <div class="card" style="background:var(--p-100); border:none;">
+    <p style="margin:0;"><strong>The variance along an eigenvector of S equals its eigenvalue.</strong> So the max-variance direction is the eigenvector with the largest eigenvalue. The second PC is the eigenvector with the second-largest eigenvalue, and so on.</p>
+  </div>
+
+  <h3>Points to remember</h3>
+  <ul>
+    <li>Bigger eigenvalue → more variance → more information kept.</li>
+    <li>To go from 10 dimensions to 2, keep the eigenvectors of the <strong>top 2 eigenvalues</strong>.</li>
+    <li>Because S is symmetric, its eigenvectors are automatically <strong>orthogonal</strong>.</li>
+  </ul>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/244/578/original/PCA_Workflow_Infographic__From_Data_to_Projection.png?1791275119" alt="Infographic summarising the PCA workflow from raw data to projected components" loading="lazy">
+  </figure>
+</section>
+
+<!-- ============ 6. EIGENVECTORS/EIGENVALUES ============ -->
+<section class="block" id="sec6">
+  <div class="kicker">Section 6</div>
+  <h2><span class="num">6</span>Eigenvalues and Eigenvectors: A Hands‑On Feel</h2>
+  <p>Multiply a matrix <em>A</em> by most vectors and the vector gets rotated <em>and</em> stretched. But for special vectors, <em>A</em> only stretches or shrinks them — the direction stays the same:</p>
+  <p style="text-align:center; font-size:1.3rem; font-family:ui-monospace,monospace; color:var(--p-700);">A·x = λ·x</p>
+  <ul>
+    <li><strong>x</strong> (non-zero) is an <strong>eigenvector</strong> of A.</li>
+    <li><strong>λ</strong> is the corresponding <strong>eigenvalue</strong> (the stretch factor).</li>
+  </ul>
+
+  <div class="widget">
+    <h4>A matrix transforming vectors <span class="tag">interactive</span></h4>
+    <p class="hint">A = [[2, 1], [1, 2]]. Pick a vector and watch what A does to it. Only two directions — the eigenvectors — stay on their own line.</p>
+    <svg class="viz" id="eigenSvg" viewBox="0 0 320 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Unit circle and vectors transformed by matrix A, showing eigenvectors preserving direction"></svg>
+    <div class="btn-row">
+      <button class="btn active" data-eig="generic1">Generic vector</button>
+      <button class="btn" data-eig="generic2">Another generic vector</button>
+      <button class="btn" data-eig="v1">Eigenvector [1, 1] (λ=3)</button>
+      <button class="btn" data-eig="v2">Eigenvector [1, -1] (λ=1)</button>
+    </div>
+    <div class="stat-mini">
+      <span class="stat-pill" id="eigStat">Direction preserved? —</span>
+    </div>
+  </div>
+
+  <h3>How to find them</h3>
+  <p>Start from A<strong>x</strong> = λ<strong>x</strong>, so (A − λI)<strong>x</strong> = 0. For a non-zero <strong>x</strong> to exist, (A − λI) must be singular: det(A − λI) = 0. Solve for λ, then plug each λ back in to get its eigenvector.</p>
+
+  <h3>Worked example</h3>
+  <p>Let A = [[2, 1], [1, 2]]. Solving det(A − λI) = 0 gives (2−λ)² − 1 = 0, so <strong>λ = 3 or λ = 1</strong>.</p>
+  <ul>
+    <li>For λ = 3: eigenvector ∝ [1, 1]</li>
+    <li>For λ = 1: eigenvector ∝ [1, −1]</li>
+  </ul>
+  <p>Notice the two eigenvectors are <strong>perpendicular</strong> — exactly as expected for a symmetric matrix.</p>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/244/579/original/Unit_Circle_to_Transformed_Ellipse.png?1791275302" alt="Diagram showing a unit circle transformed into an ellipse by a matrix, with eigenvector directions marked along the ellipse's axes" loading="lazy">
+  </figure>
+
+  <div class="card">
+    <h3 style="margin-top:0;">Your turn</h3>
+    <p>Pen and paper first: find the eigenvalues and eigenvectors of B = [[1, 2], [2, 1]]. One eigenvalue is negative. Then verify with code (<code>np.linalg.eigh</code>, which is built for symmetric matrices like covariance matrices).</p>
+    <details class="codebox">
+      <summary>Show verification code &amp; output</summary>
+      <div>
+<pre>A = np.array([[2, 1],
+              [1, 2]])
+vals, vecs = np.linalg.eigh(A)
+print("Eigenvalues:", vals)
+print("Eigenvectors (as columns):\n", vecs)
+
+for i in range(2):
+    x = vecs[:, i]
+    print(f"lambda = {vals[i]:.1f}")
+    print("  A @ x      =", A @ x)
+    print("  lambda * x =", vals[i] * x)
+
+print("Orthogonal? dot product =", round(vecs[:, 0] @ vecs[:, 1], 10))
+
+B = np.array([[1, 2], [2, 1]])
+print("Eigenvalues of B:", np.linalg.eigh(B)[0])</pre>
+        <div class="out-label">Output</div>
+<pre>Eigenvalues: [1. 3.]
+Eigenvectors (as columns):
+ [[-0.70710678  0.70710678]
+ [ 0.70710678  0.70710678]]
+
+lambda = 1.0  →  A @ x = lambda * x  (same direction, only stretched)
+lambda = 3.0  →  A @ x = lambda * x  (same direction, only stretched)
+
+Orthogonal? dot product of the two eigenvectors = 0.0
+
+Eigenvalues of B: [-1.  3.]</pre>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- QUIZ 2 -->
+<div class="quiz" data-quiz>
+  <div class="qlabel">Quick check</div>
+  <h4>An eigenvector x of matrix A satisfies Ax = λx. What does multiplying by A do to it?</h4>
+  <button class="opt" data-correct="false">Changes both its magnitude and direction</button>
+  <button class="opt" data-correct="false">Changes its direction but not its magnitude</button>
+  <button class="opt" data-correct="true">Changes its magnitude (by λ) but not its direction</button>
+  <button class="opt" data-correct="false">Nothing — eigenvectors are unrelated to A</button>
+  <div class="feedback"><strong>Correct.</strong> An eigenvector stays on its own line; it's only scaled by the eigenvalue λ. If λ is negative, it flips to point the opposite way along the same line, but it's still on the same line.</div>
+</div>
+
+<div class="openq">
+  <div class="qlabel">Open question</div>
+  <h4 style="margin:0 0 10px; font-size:1.05rem;">You compute the covariance matrix of a 10-feature dataset and find its eigenvalues. (a) How many eigenvectors do you get? (b) Which one preserves the most variance, and what does its eigenvalue tell you?</h4>
+  <button class="reveal-btn" data-reveal>Reveal answer</button>
+  <div class="answer-box">
+    <p><strong>(a)</strong> 10 — one per feature, since the covariance matrix is 10 × 10.</p>
+    <p style="margin-bottom:0;"><strong>(b)</strong> The eigenvector with the largest eigenvalue. That eigenvalue <em>is</em> the variance of the data along that direction — the "explained variance" of that PC.</p>
+  </div>
+</div>
+
+<!-- ============ 7. PCA FROM SCRATCH ============ -->
+<section class="block" id="sec7">
+  <div class="kicker">Section 7</div>
+  <h2><span class="num">7</span>Building PCA From Scratch (Then Checking sklearn)</h2>
+  <p>The maths turns into five lines of NumPy, using the height/weight data from earlier.</p>
+
+  <h3>Recipe</h3>
+  <ol>
+    <li>Centre the data</li>
+    <li>Compute the covariance matrix</li>
+    <li>Compute eigenvalues and eigenvectors</li>
+    <li>Sort by eigenvalue, largest first</li>
+    <li>Project the data onto the top M eigenvectors</li>
+  </ol>
+
+  <details class="codebox">
+    <summary>Show code &amp; output</summary>
+    <div>
+<pre>def pca_from_scratch(X, n_components):
+    Xc = X - X.mean(axis=0)                       # 1. centre
+    S = np.cov(Xc, rowvar=False)                  # 2. covariance matrix (D x D)
+    eigvals, eigvecs = np.linalg.eigh(S)          # 3. eigen-decomposition
+    order = np.argsort(eigvals)[::-1]             # 4. sort largest -> smallest
+    eigvals, eigvecs = eigvals[order], eigvecs[:, order]
+    W = eigvecs[:, :n_components]                 # keep top-M eigenvectors
+    Z = Xc @ W                                    # 5. project
+    return Z, W, eigvals
+
+Z_mine, W_mine, eigvals = pca_from_scratch(data2d, n_components=1)
+print("Explained variance ratio:", (eigvals / eigvals.sum()).round(3))
+
+pca_sk = PCA(n_components=1).fit(data2d)
+print("My PC1     :", W_mine[:, 0].round(4))
+print("sklearn PC1:", pca_sk.components_[0].round(4), "(sign may be flipped)")</pre>
+      <div class="out-label">Output</div>
+<pre>Eigenvalues (variance along each PC): [157.43  14.45]
+Explained variance ratio: [0.916 0.084]
+
+My PC1     : [-0.894  -0.4482]
+sklearn PC1: [0.894  0.4482] (sign may be flipped, which is fine)
+sklearn explained variance ratio: [0.916]</pre>
+    </div>
+  </details>
+
+  <h3>What to notice</h3>
+  <ul>
+    <li>Our version and sklearn agree, up to a ± sign — an eigenvector and its negative point along the same line.</li>
+    <li>The first PC holds most of the variance (91.6%). Dropping PC2 compresses 2 features into 1 with a small loss.</li>
+    <li>PCA has a <strong>closed-form solution</strong>: the components come straight from the eigenvectors of the covariance matrix. There's nothing to initialise and no step-by-step search, so PCA can't get stuck in a local minimum.</li>
+    <li>With no random starting point, PCA gives the <strong>same answer every time</strong> on the same data (up to sign flips) — unlike iterative algorithms such as K-Means, which depend on random starting centroids.</li>
+  </ul>
+  <p class="hint" style="font-family:inherit; color:var(--ink-soft);">sklearn uses the SVD internally for speed and stability, but it's mathematically equivalent to the eigen-decomposition derived above.</p>
+</section>
+
+<!-- ============ 8. PCA ON REAL DATA ============ -->
+<section class="block" id="sec8">
+  <div class="kicker">Section 8</div>
+  <h2><span class="num">8</span>PCA on Real Data: Meera's Digits</h2>
+  <p>Two questions to answer: can we draw a useful 2D map of the digits, and how many components do we really need?</p>
+
+  <div class="callout rule">
+    <span class="label">A note on scaling</span>
+    <p style="margin-bottom:0;">In many datasets (income in lakhs next to age in years), features sit on different scales and must be standardised first. Here all 784 pixels share the same 0–1 scale, so we don't standardise. Standardising MNIST would blow up nearly-empty border pixels that are almost always 0. The scaling problem is demonstrated properly in Section 9.</p>
+  </div>
+
+  <h3>2D map of 10,000 digits</h3>
+  <details class="codebox">
+    <summary>Show code &amp; output</summary>
+    <div>
+<pre>pca2 = PCA(n_components=2)
+Z2 = pca2.fit_transform(X)
+print("Variance kept by the 2 PCs:", pca2.explained_variance_ratio_.sum().round(3))
+
+plt.scatter(Z2[:, 0], Z2[:, 1], c=y, cmap="tab10", s=4, alpha=0.6)</pre>
+      <div class="out-label">Output</div>
+<pre>Shape after PCA: (10000, 2)
+Variance kept by the 2 PCs: 0.17</pre>
+    </div>
+  </details>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/247/148/original/Screenshot_2026-10-15_180525.png?1792067904" alt="Scatter plot of MNIST digits reduced to two principal components, coloured by digit label, showing 0s and 1s separating clearly while other digits overlap" loading="lazy">
+    <figcaption>MNIST squeezed from 784 dimensions to 2 — labels used only to colour the points after the fact.</figcaption>
+  </figure>
+
+  <ul>
+    <li>PCA never saw the labels, yet <strong>similar digits sit near each other</strong> — 0s and 1s separate clearly.</li>
+    <li>Many digits overlap. Only ~17% of the variance is in these 2 PCs, so a lot is lost — two numbers can't capture everything about a handwritten digit.</li>
+    <li>This is <strong>unsupervised structure discovery</strong>: patterns emerged without any answer key.</li>
+  </ul>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/244/607/original/Annotated_MNIST_PCA_Scatter_Plot.png?1791278503" alt="Annotated version of the MNIST PCA scatter plot highlighting clusters of similar digits" loading="lazy">
+  </figure>
+
+  <h3>What does a principal component actually look like?</h3>
+  <p>Each PC is a vector of 784 weights, so it can be displayed as an image.</p>
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/247/149/original/Screenshot_2026-10-15_180854.png?1792067946" alt="Row of nine images: the mean MNIST digit followed by the first eight principal components rendered as red-blue stroke patterns" loading="lazy">
+    <figcaption>The "average digit" and the first 8 principal components (red/blue = positive/negative weights).</figcaption>
+  </figure>
+  <p>Each PC is a <strong>pattern of strokes</strong> — a template. Any digit can be approximated as <em>the average digit + some amount of PC1 + some amount of PC2 + …</em>. This is why PCA works as compression: we store only the <strong>amounts</strong>, not 784 pixels.</p>
+
+  <h3>How many components to keep?</h3>
+  <p>Each PC's eigenvalue tells us the variance it explains. Summing the ratios gives the <strong>cumulative explained variance</strong> — how much information survives when keeping the top <em>k</em> components. Keep all <em>D</em> components and nothing is lost (you've only rotated the axes); drop components and you lose exactly their variance.</p>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/247/150/original/Screenshot_2026-10-15_180941.png?1792067999" alt="Scree plot of the first 50 principal components alongside a cumulative explained variance curve across all 784 components" loading="lazy">
+  </figure>
+
+  <div class="widget">
+    <h4>How many components for a target variance? <span class="tag">interactive</span></h4>
+    <p class="hint">Click a target to see how many of the 784 components were needed to reach it on Meera's 10,000-digit sample.</p>
+    <div class="btn-row" id="varianceTargets">
+      <button class="btn active" data-k="43" data-pct="80">80% variance</button>
+      <button class="btn" data-k="86" data-pct="90">90% variance</button>
+      <button class="btn" data-k="151" data-pct="95">95% variance</button>
+    </div>
+    <svg class="viz" id="targetSvg" viewBox="0 0 640 140" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Bar comparing number of components needed out of 784 for the selected variance target"></svg>
+    <div class="stat-mini">
+      <span class="stat-pill" id="targetStat">43 components out of 784 (≈5% of the original size) keep 80% of the variance</span>
+    </div>
+  </div>
+
+  <ul>
+    <li>The scree plot drops quickly: a handful of PCs carry a large share of variance, and the long tail adds little.</li>
+    <li>Roughly <strong>~90 components</strong> capture 90% of the variance, and <strong>~150</strong> capture 95%, out of 784 — about a <strong>5× reduction</strong> with 5–10% of variance dropped.</li>
+    <li>The steep rise exists because MNIST pixels are strongly correlated, so a few directions carry most of the variance. PCA gains nothing when this is missing.</li>
+    <li>If all eigenvalues were equal, the cumulative curve would be a straight line, and dropping any component would lose just as much as dropping any other — PCA would run but compress nothing. Equal eigenvalues also make the principal directions non-unique, because any rotation of the axes is equally valid.</li>
+  </ul>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/244/609/original/PCA_Variance_Explained_Guide.png?1791278554" alt="Guide illustrating how explained variance ratio and cumulative variance are used to choose the number of components" loading="lazy">
+  </figure>
+</section>
+
+<!-- QUIZ 4 (open) -->
+<div class="openq">
+  <div class="qlabel">Open question</div>
+  <h4 style="margin:0 0 10px; font-size:1.05rem;">Meera's cumulative explained-variance curve reaches 95% at 150 components. Her manager says, "Great, so 95% of the information about <em>which digit it is</em> is preserved." Is that statement correct?</h4>
+  <button class="reveal-btn" data-reveal>Reveal answer</button>
+  <div class="answer-box">
+    <p style="margin-bottom:0;"><strong>Not necessarily.</strong> 95% refers to <strong>variance</strong> (spread of pixel intensities), not to label-relevant information. PCA never sees labels. The 5% dropped could contain a subtle stroke that distinguishes a 4 from a 9. Variance is a <em>proxy</em> for information — to know whether digit identity survives, test a downstream task (e.g. classify digits on the reduced features).</p>
+  </div>
+</div>
+
+<section class="block" id="sec8b">
+  <h3>Seeing information loss: rebuilding digits from fewer numbers</h3>
+  <p>If we keep <em>k</em> components, we can map back to 784 pixels (<code>inverse_transform</code>) and compare with the original. This is the minimum-error view of PCA: the max-variance directions are the ones that give the best reconstruction.</p>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/247/151/original/Screenshot_2026-10-15_181049.png?1792068065" alt="Rows of reconstructed MNIST digits at increasing numbers of components, from blurry blobs at k=2 to near-perfect reconstructions at k=784" loading="lazy">
+    <figcaption>Each row rebuilds the same 8 digits from k principal components.</figcaption>
+  </figure>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>k (components)</th><th>% of original 784 numbers</th><th>Reconstruction MSE</th><th>What it looks like</th></tr>
+      <tr><td>2</td><td>0.3%</td><td>highest</td><td>Blurry blobs — plottable, not readable</td></tr>
+      <tr><td>10</td><td>1%</td><td>high</td><td>Rough digit shape emerging</td></tr>
+      <tr><td>50</td><td>6%</td><td>moderate</td><td>Clearly recognisable</td></tr>
+      <tr><td>150</td><td>19%</td><td>low</td><td>Nearly indistinguishable from the original</td></tr>
+      <tr><td>784</td><td>100%</td><td>0 (perfect)</td><td>Only the axes were rotated — nothing dropped</td></tr>
+    </table>
+  </div>
+
+  <div class="card" style="background:var(--p-100); border:none;">
+    <p style="margin:0;">This is the trade-off Meera needs to present: <strong>fewer numbers per image ↔ more reconstruction error</strong>. Storage drops by ~5× at k = 150 while the images stay readable.</p>
+  </div>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/244/614/original/PCA_Compression__From_Pixels_to_Fidelity.png?1791279056" alt="Diagram illustrating PCA as a compression trade-off between number of components and image fidelity" loading="lazy">
+  </figure>
+
+  <div class="callout ai">
+    <span class="label">AI exploration · does PCA hurt a classifier?</span>
+    <p><em>"I have MNIST pixel data X (10,000 × 784, scaled 0–1) and labels y, and I've already imported PCA from sklearn. Write Python code that, for k in [2, 5, 10, 20, 50, 100, 150, 784], fits PCA on a training split only, transforms both splits, trains a kNN classifier, and plots test accuracy and training time against k. Explain why the PCA must be fit on the training data only."</em></p>
+    <p style="margin-bottom:0;">Then answer: at what k does accuracy stop improving? Is it close to the 90%/95% variance points found earlier? How much faster is kNN on 50 features than on 784?</p>
+  </div>
+</section>
+
+<!-- ============ 9. LIMITATIONS ============ -->
+<section class="block" id="sec9">
+  <div class="kicker">Section 9</div>
+  <h2><span class="num">9</span>When PCA Misleads: Limitations and Pitfalls</h2>
+  <p>PCA is powerful, but it follows its assumptions blindly.</p>
+
+  <div id="limitationsAccordion"></div>
+</section>
+
+<!-- WINE SCALE DEMO -->
+<section class="block" id="sec9b">
+  <h3>Seeing the scale problem on the Wine dataset</h3>
+  <p>Features in very different units — <code>proline</code> ranges into the hundreds while most chemical measurements sit near 0–5. Without standardising, PCA chases the raw numbers, not meaning.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab-btn" role="tab" aria-selected="true" data-tab="noscale">Without scaling</button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-tab="scale">With scaling (standardised)</button>
+  </div>
+  <div class="tab-panel active" data-panel="noscale">
+    <div class="table-wrap">
+      <table>
+        <tr><th>Metric</th><th>Value</th></tr>
+        <tr><td>PC1 explained variance</td><td><strong>99.8%</strong></td></tr>
+        <tr><td>Feature dominating PC1</td><td><code>proline</code> (std. dev. ≈ 314)</td></tr>
+      </table>
+    </div>
+    <p>One feature with values in the hundreds or thousands hogs PC1 and "explains" almost all the variance — purely because of its <strong>units</strong>, not because it's the most informative.</p>
+  </div>
+  <div class="tab-panel" data-panel="scale">
+    <div class="table-wrap">
+      <table>
+        <tr><th>Metric</th><th>Value</th></tr>
+        <tr><td>PC1 explained variance</td><td><strong>36.2%</strong></td></tr>
+        <tr><td>Top loadings</td><td>flavanoids (0.42), total_phenols (0.39), od280/od315 (0.38)</td></tr>
+      </table>
+    </div>
+    <p>After standardising, variance spreads more sensibly across features and PC1 becomes a real mix of several chemical measurements.</p>
+  </div>
+
+  <figure>
+    <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/244/615/original/Wine_PCA_Loadings__Scaling_Comparison.png?1791279126" alt="Comparison chart of wine dataset PCA loadings with and without feature standardisation" loading="lazy">
+  </figure>
+</section>
+
+<div class="openq">
+  <div class="qlabel">Open question</div>
+  <h4 style="margin:0 0 10px; font-size:1.05rem;">SwiftParcel's data team runs PCA on a table with "parcel weight in grams" (0–30,000) and "delivery attempts" (1–5), without preprocessing. What will PC1 mostly represent, and what's the fix?</h4>
+  <button class="reveal-btn" data-reveal>Reveal answer</button>
+  <div class="answer-box">
+    <p style="margin-bottom:0;">PC1 will be almost entirely <strong>parcel weight</strong>, because its variance is millions of times larger than that of delivery attempts — an artefact of units, not importance. <strong>Fix:</strong> standardise both features (z-score) before PCA so each starts with variance 1.</p>
+  </div>
+</div>
+
+<div class="callout ai">
+  <span class="label">AI exploration · PCA vs. a non-linear method</span>
+  <p><em>"Write Python code using sklearn that generates the Swiss Roll dataset (make_swiss_roll, 1500 points), applies PCA to 2 components and t-SNE (or Isomap) to 2 components, and plots the three views side by side coloured by position along the roll. Then explain in simple terms why PCA fails to 'unroll' the data while a non-linear method succeeds, and when I should still prefer PCA."</em></p>
+  <p style="margin-bottom:0;">Then answer: when would you choose PCA over t-SNE for SwiftParcel's pipeline? (Hint: speed, reuse on new data, and whether the transform needs to be reversible.)</p>
+</div>
+
+<!-- ============ 10. REAL WORLD ============ -->
+<section class="block" id="sec10">
+  <div class="kicker">Section 10</div>
+  <h2><span class="num">10</span>PCA in the Real World</h2>
+
+  <div class="grid-cards">
+    <div class="mini-card"><div class="mc-title">Visualisation</div><p>2D/3D maps of high-dimensional data, like Meera's digit map.</p></div>
+    <div class="mini-card"><div class="mc-title">Compression</div><p>Storing images and signals with fewer numbers — e.g. face recognition "eigenfaces."</p></div>
+    <div class="mini-card"><div class="mc-title">Preprocessing</div><p>Fewer, decorrelated features often make downstream training faster and more stable. Whether it improves accuracy depends on the data — always test it.</p></div>
+    <div class="mini-card"><div class="mc-title">Finance & risk</div><p>Portfolios of hundreds of instruments summarised by a few "factors" — interest-rate level, slope, curvature.</p></div>
+    <div class="mini-card"><div class="mc-title">Science</div><p>Untangling many interacting measurements, for example in neuroscience.</p></div>
+  </div>
+
+  <h3>Choosing k is also a form of regularisation</h3>
+  <p>A small k gives the model fewer features, so it has less freedom to memorise noise, which can reduce overfitting. A large k gives more freedom, so regularisation is weaker. At k = all components, nothing is dropped and there's no regularisation effect. Treat k as a setting to tune: too small and the model underfits (useful information thrown away), too large and it may overfit. Compare train and test accuracy for different values of k.</p>
+
+  <h3>When the dataset is too big for memory</h3>
+  <p>With, say, 1 million rows and 1000 features, PCA is one of several options:</p>
+  <ul>
+    <li><strong>Sample the rows</strong> — train on a random subset with fewer rows and all columns. For classification, use a stratified sample so rare classes aren't lost.</li>
+    <li><strong>Drop redundant columns</strong> — highly correlated features carry almost the same information, so remove one from each pair (correlation for numerical features, chi-square for categorical). This is feature selection: it keeps a subset of original columns, unlike PCA, which creates new ones.</li>
+    <li><strong>Use a model that learns in small batches</strong> — an SGD-based linear model updates on one sample or mini-batch at a time, so the full dataset never needs to sit in memory.</li>
+  </ul>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>Strengths</th><th>Price</th></tr>
+      <tr><td>Fast and deterministic, based on linear algebra, easy to apply, a good first look at any numeric dataset</td><td>Components are harder to interpret, sensitive to scale and outliers, only captures linear structure</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ WRAP-UP ============ -->
+<section class="block" id="sec11">
+  <div class="story">
+    <h3>Wrap-Up: Back to Meera's Desk</h3>
+    <p>Meera walks into her manager's office with three results:</p>
+    <ol>
+      <li><strong>Storage</strong> — each digit scan drops from 784 numbers to ~150 with only a small loss of variance, and reconstructed digits stay readable. Roughly a <strong>5× saving</strong> across millions of daily scans.</li>
+      <li><strong>Visibility</strong> — a 2D PCA map shows similar digits clustering together, even though no labels were used.</li>
+      <li><strong>Honest caveats</strong> — 2 components are far too few for accuracy. Variance isn't the same as label-relevant information, and scaling must be handled carefully on other data.</li>
+    </ol>
+  </div>
+
+  <div class="takeaways">
+    <h3>Key takeaways</h3>
+    <ul>
+      <li><strong>Unsupervised learning</strong> finds structure without labels, and is harder to evaluate.</li>
+      <li><strong>PCA</strong> finds new orthogonal axes, ranked by how much variance they capture.</li>
+      <li>Principal components are the <strong>eigenvectors of the covariance matrix</strong>; the <strong>eigenvalues are the variances</strong> along them.</li>
+      <li><strong>Recipe:</strong> centre → covariance → eigen-decomposition → sort → keep top <em>k</em> → project.</li>
+      <li>Keeping all components loses nothing. Dropping components loses exactly their variance. Use the <strong>cumulative explained variance</strong> curve to choose <em>k</em>.</li>
+      <li>Always <strong>standardise</strong> when features have different units, and watch for outliers and non-linear structure.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="fname">PCA post read</div>
+  <div>An interactive learning article · built from course content on Principal Component Analysis</div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Reading progress ---------- */
+  var track = document.getElementById('progressTrack');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrollTop = h.scrollTop || document.body.scrollTop;
+    var scrollH = (h.scrollHeight || document.body.scrollHeight) - h.clientHeight;
+    var pct = scrollH > 0 ? (scrollTop/scrollH)*100 : 0;
+    track.style.width = pct + '%';
+  }
+  document.addEventListener('scroll', updateProgress, {passive:true});
+  updateProgress();
+
+  /* ---------- Tabs ---------- */
+  document.querySelectorAll('.tabs').forEach(function(tabGroup){
+    var btns = tabGroup.querySelectorAll('.tab-btn');
+    var container = tabGroup.parentElement;
+    btns.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        btns.forEach(function(b){ b.setAttribute('aria-selected','false'); });
+        btn.setAttribute('aria-selected','true');
+        container.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+        var target = container.querySelector('.tab-panel[data-panel="'+btn.dataset.tab+'"]');
+        if(target) target.classList.add('active');
+      });
+    });
+  });
+
+  /* ---------- Quizzes ---------- */
+  document.querySelectorAll('[data-quiz]').forEach(function(quiz){
+    var opts = quiz.querySelectorAll('.opt');
+    var fb = quiz.querySelector('.feedback');
+    var answered = false;
+    opts.forEach(function(opt){
+      opt.addEventListener('click', function(){
+        if(answered) return;
+        answered = true;
+        opts.forEach(function(o){
+          if(o.dataset.correct === 'true'){ o.classList.add('correct'); }
+          else if(o === opt){ o.classList.add('wrong'); }
+        });
+        fb.classList.add('show');
+      });
+    });
+  });
+
+  /* ---------- Reveal answers ---------- */
+  document.querySelectorAll('[data-reveal]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var box = btn.nextElementSibling;
+      var open = box.classList.toggle('show');
+      btn.textContent = open ? 'Hide answer' : 'Reveal answer';
+    });
+  });
+
+  /* ---------- Accordion builder (limitations) ---------- */
+  var limitations = [
+    {t:"Sensitive to feature scale", w:"PCA chases variance, so a feature measured in big numbers dominates.", f:"Standardise features first (mean 0, std 1) when units differ."},
+    {t:"Sensitive to outliers", w:"A few extreme points can drag a principal component toward themselves.", f:"Detect and handle outliers before PCA."},
+    {t:"Only linear structure", w:"PCs are straight lines/planes, so curved structure is missed.", f:"Try non-linear methods (t-SNE, UMAP, kernel PCA) for visualisation."},
+    {t:"Assumes correlated features", w:"If features are uncorrelated, there is nothing to compress.", f:"Check the correlation matrix first."},
+    {t:"Hard to interpret", w:"Each PC is a mix of all original features.", f:"Inspect the loadings (components_), and accept that PCs are less readable than raw features."},
+    {t:"Variance ≠ relevance", w:"The largest-variance direction may be irrelevant to your goal.", f:"Test on the downstream task."},
+    {t:"Needs complete data", w:"Standard PCA can't handle missing values.", f:"Impute or drop missing values first."}
+  ];
+  var accWrap = document.getElementById('limitationsAccordion');
+  limitations.forEach(function(item){
+    var el = document.createElement('div');
+    el.className = 'accordion-item';
+    el.innerHTML =
+      '<button class="accordion-head" aria-expanded="false">'+
+        '<span>'+item.t+'</span><span class="chevron">▾</span>'+
+      '</button>'+
+      '<div class="accordion-body"><div><p><strong>Why it happens:</strong> '+item.w+'</p>'+
+      '<p style="margin-bottom:0;"><strong>What to do:</strong> '+item.f+'</p></div></div>';
+    accWrap.appendChild(el);
+    var head = el.querySelector('.accordion-head');
+    var body = el.querySelector('.accordion-body');
+    head.addEventListener('click', function(){
+      var isOpen = el.classList.toggle('open');
+      head.setAttribute('aria-expanded', isOpen);
+      body.style.maxHeight = isOpen ? body.scrollHeight + 'px' : 0;
+    });
+  });
+
+  /* ---------- Curse of dimensionality widget ---------- */
+  var curseData = [
+    {d:2, c:23.07}, {d:10, c:1.71}, {d:100, c:0.41}, {d:784, c:0.15}
+  ];
+  var curseSlider = document.getElementById('curseSlider');
+  var curseReadout = document.getElementById('curseReadout');
+  var curseStat = document.getElementById('curseStat');
+  var curseSvg = document.getElementById('curseSvg');
+  function drawCurse(idx){
+    var maxC = 23.07;
+    var w=640,h=220, padL=70, padB=36, padT=20, padR=20;
+    var barAreaW = w-padL-padR, barAreaH = h-padT-padB;
+    var n = curseData.length;
+    var gap = 28;
+    var barW = (barAreaW - gap*(n-1))/n;
+    var svgParts = [];
+    svgParts.push('<line x1="'+padL+'" y1="'+(h-padB)+'" x2="'+(w-padR)+'" y2="'+(h-padB)+'" stroke="var(--line)" stroke-width="1.5"/>');
+    curseData.forEach(function(item,i){
+      var x = padL + i*(barW+gap);
+      var barH = (item.c/maxC) * barAreaH;
+      var y = (h-padB) - barH;
+      var active = (i === idx);
+      var fill = active ? 'url(#curseGrad)' : 'var(--p-200)';
+      svgParts.push('<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+barH+'" rx="6" fill="'+fill+'" />');
+      svgParts.push('<text x="'+(x+barW/2)+'" y="'+(y-8)+'" text-anchor="middle" font-size="13" font-weight="700" fill="var(--p-700)" font-family="sans-serif">'+item.c.toFixed(2)+'×</text>');
+      svgParts.push('<text x="'+(x+barW/2)+'" y="'+(h-padB+20)+'" text-anchor="middle" font-size="12" fill="var(--ink-soft)" font-family="sans-serif">d='+item.d+'</text>');
+    });
+    curseSvg.innerHTML =
+      '<defs><linearGradient id="curseGrad" x1="0" y1="1" x2="0" y2="0">'+
+      '<stop offset="0%" stop-color="var(--p-700)"/><stop offset="100%" stop-color="var(--p-400)"/>'+
+      '</linearGradient></defs>' + svgParts.join('');
+  }
+  function updateCurse(){
+    var idx = +curseSlider.value;
+    var item = curseData[idx];
+    curseReadout.textContent = 'd = ' + item.d;
+    curseStat.textContent = 'Farthest vs nearest differ by ' + item.c.toFixed(2) + '× the nearest distance';
+    drawCurse(idx);
+  }
+  curseSlider.addEventListener('input', updateCurse);
+  updateCurse();
+
+  /* ---------- Variance direction widget ---------- */
+  (function(){
+    // deterministic synthetic correlated data (illustrative, mirrors the height/weight demo)
+    function mulberry32(a){
+      return function(){
+        var t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t>>>15, t | 1);
+        t ^= t + Math.imul(t ^ t>>>7, t | 61);
+        return ((t ^ t>>>14) >>> 0) / 4294967296;
+      };
+    }
+    var rand = mulberry32(42);
+    function gaussian(){
+      var u=0,v=0;
+      while(u===0) u=rand();
+      while(v===0) v=rand();
+      return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+    }
+    var N = 160;
+    var pts = [];
+    for(var i=0;i<N;i++){
+      var wgt = gaussian()*12;
+      var hgt = 0.78*wgt + gaussian()*5.5;
+      pts.push([wgt,hgt]);
+    }
+    // centre
+    var mx=0,my=0;
+    pts.forEach(function(p){ mx+=p[0]; my+=p[1]; });
+    mx/=N; my/=N;
+    pts = pts.map(function(p){ return [p[0]-mx, p[1]-my]; });
+
+    var angles = [];
+    var variances = [];
+    for(var a=0; a<=180; a++){
+      var rad = a*Math.PI/180;
+      var ux = Math.cos(rad), uy = Math.sin(rad);
+      var mean=0, sum=0;
+      pts.forEach(function(p){ sum += p[0]*ux + p[1]*uy; });
+      mean = sum/N;
+      var vs=0;
+      pts.forEach(function(p){ var proj = p[0]*ux + p[1]*uy; vs += (proj-mean)*(proj-mean); });
+      vs/=N;
+      angles.push(a); variances.push(vs);
+    }
+    var maxVarIdx = 0;
+    for(var k=1;k<variances.length;k++){ if(variances[k]>variances[maxVarIdx]) maxVarIdx=k; }
+    var bestAngle = angles[maxVarIdx];
+    var maxVarVal = variances[maxVarIdx];
+
+    var scatterSvg = document.getElementById('varScatterSvg');
+    var curveSvg = document.getElementById('varCurveSvg');
+    var angleSlider = document.getElementById('angleSlider');
+    var angleReadout = document.getElementById('angleReadout');
+    var varStat = document.getElementById('varStat');
+    var bestStat = document.getElementById('bestStat');
+
+    var extent = 0;
+    pts.forEach(function(p){ extent = Math.max(extent, Math.abs(p[0]), Math.abs(p[1])); });
+    extent *= 1.25;
+    var S = 320, C = S/2;
+    function toSvgX(x){ return C + (x/extent)*(C-24); }
+    function toSvgY(y){ return C - (y/extent)*(C-24); }
+
+    function drawScatter(angle){
+      var rad = angle*Math.PI/180;
+      var ux=Math.cos(rad), uy=Math.sin(rad);
+      var parts = [];
+      parts.push('<line x1="0" y1="'+C+'" x2="'+S+'" y2="'+C+'" stroke="var(--line)" stroke-width="1"/>');
+      parts.push('<line x1="'+C+'" y1="0" x2="'+C+'" y2="'+S+'" stroke="var(--line)" stroke-width="1"/>');
+      pts.forEach(function(p){
+        parts.push('<circle cx="'+toSvgX(p[0]).toFixed(1)+'" cy="'+toSvgY(p[1]).toFixed(1)+'" r="3" fill="var(--p-500)" opacity="0.55"/>');
+      });
+      var lx1 = toSvgX(-extent*ux*0.92), ly1 = toSvgY(-extent*uy*0.92);
+      var lx2 = toSvgX(extent*ux*0.92), ly2 = toSvgY(extent*uy*0.92);
+      parts.push('<line x1="'+lx1.toFixed(1)+'" y1="'+ly1.toFixed(1)+'" x2="'+lx2.toFixed(1)+'" y2="'+ly2.toFixed(1)+'" stroke="var(--p-800)" stroke-width="3" stroke-linecap="round"/>');
+      parts.push('<text x="10" y="18" font-size="11" fill="var(--ink-soft)" font-family="sans-serif">weight (centred) →</text>');
+      parts.push('<text x="10" y="'+(S-10)+'" font-size="11" fill="var(--ink-soft)" font-family="sans-serif">↑ height (centred)</text>');
+      scatterSvg.innerHTML = parts.join('');
+    }
+
+    function drawCurve(angle){
+      var w=320,h=220, padL=38, padB=28, padT=14, padR=12;
+      var areaW = w-padL-padR, areaH = h-padT-padB;
+      var maxV = Math.max.apply(null, variances);
+      function px(a){ return padL + (a/180)*areaW; }
+      function py(v){ return (h-padB) - (v/maxV)*areaH; }
+      var d = 'M ' + px(0) + ' ' + py(variances[0]).toFixed(1);
+      for(var i=1;i<angles.length;i++){ d += ' L ' + px(angles[i]).toFixed(1) + ' ' + py(variances[i]).toFixed(1); }
+      var parts = [];
+      parts.push('<line x1="'+padL+'" y1="'+(h-padB)+'" x2="'+(w-padR)+'" y2="'+(h-padB)+'" stroke="var(--line)"/>');
+      parts.push('<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(h-padB)+'" stroke="var(--line)"/>');
+      parts.push('<path d="'+d+'" fill="none" stroke="var(--p-400)" stroke-width="2"/>');
+      var bx = px(bestAngle), by = py(maxVarVal);
+      parts.push('<line x1="'+bx.toFixed(1)+'" y1="'+padT+'" x2="'+bx.toFixed(1)+'" y2="'+(h-padB)+'" stroke="var(--p-300)" stroke-dasharray="4 3"/>');
+      var cx = px(angle), cy = py(variances[angle]);
+      parts.push('<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="5.5" fill="var(--p-800)"/>');
+      parts.push('<text x="'+padL+'" y="'+(h-6)+'" font-size="10" fill="var(--ink-soft)" font-family="sans-serif">0°</text>');
+      parts.push('<text x="'+(w-padR-18)+'" y="'+(h-6)+'" font-size="10" fill="var(--ink-soft)" font-family="sans-serif">180°</text>');
+      parts.push('<text x="'+(padL+4)+'" y="'+(padT+10)+'" font-size="10" fill="var(--ink-soft)" font-family="sans-serif">variance of projection</text>');
+      curveSvg.innerHTML = parts.join('');
+    }
+
+    function update(angle){
+      angle = +angle;
+      angleReadout.textContent = angle + '°';
+      drawScatter(angle);
+      drawCurve(angle);
+      varStat.textContent = 'Projected variance: ' + variances[angle].toFixed(1);
+      bestStat.textContent = 'Best direction ≈ ' + bestAngle + '° (variance ' + maxVarVal.toFixed(1) + ')';
+    }
+    angleSlider.addEventListener('input', function(){ update(this.value); });
+    document.getElementById('snapBest').addEventListener('click', function(){
+      angleSlider.value = bestAngle; update(bestAngle);
+    });
+    update(90);
+  })();
+
+  /* ---------- Eigenvector transform widget ---------- */
+  (function(){
+    var svg = document.getElementById('eigenSvg');
+    var stat = document.getElementById('eigStat');
+    var buttons = document.querySelectorAll('[data-eig]');
+    var A = [[2,1],[1,2]];
+    var vectors = {
+      generic1: [1, 0.3],
+      generic2: [-0.6, 1],
+      v1: [1,1],
+      v2: [1,-1]
+    };
+    var S=320,C=S/2, scale=60;
+    function toX(x){ return C + x*scale; }
+    function toY(y){ return C - y*scale; }
+    function norm(v){ var m=Math.sqrt(v[0]*v[0]+v[1]*v[1]); return [v[0]/m, v[1]/m]; }
+    function mul(A,v){ return [A[0][0]*v[0]+A[0][1]*v[1], A[1][0]*v[0]+A[1][1]*v[1]]; }
+
+    function draw(key){
+      var v = norm(vectors[key]);
+      var Av = mul(A, v);
+      var parts = [];
+      // axes
+      parts.push('<line x1="0" y1="'+C+'" x2="'+S+'" y2="'+C+'" stroke="var(--line)"/>');
+      parts.push('<line x1="'+C+'" y1="0" x2="'+C+'" y2="'+S+'" stroke="var(--line)"/>');
+      // unit circle
+      parts.push('<circle cx="'+C+'" cy="'+C+'" r="'+scale+'" fill="none" stroke="var(--p-200)" stroke-width="1.5" stroke-dasharray="3 3"/>');
+      // original vector (purple-300)
+      parts.push(arrow(C,C, toX(v[0]), toY(v[1]), 'var(--p-400)', 'x'));
+      // transformed vector (deep purple)
+      parts.push(arrow(C,C, toX(Av[0]), toY(Av[1]), 'var(--p-800)', 'Ax'));
+      svg.innerHTML = '<defs>'+
+        '<marker id="arrA" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--p-400)"/></marker>'+
+        '<marker id="arrB" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--p-800)"/></marker>'+
+        '</defs>' + parts.join('');
+
+      function arrow(x1,y1,x2,y2,color,label){
+        var marker = color==='var(--p-400)' ? 'url(#arrA)' : 'url(#arrB)';
+        var lx = x2 + (x2>x1?10:-24);
+        var ly = y2 + (y2>y1?16:-8);
+        return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+color+'" stroke-width="3.5" marker-end="'+marker+'"/>'+
+          '<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="13" font-weight="800" fill="'+color+'" font-family="sans-serif">'+label+'</text>';
+      }
+
+      var same = Math.abs(v[0]*Av[1]-v[1]*Av[0]) < 0.02;
+      stat.textContent = 'Direction preserved? ' + (same ? 'Yes — this is an eigenvector of A.' : 'No — A rotates this vector away from its original line.');
+    }
+    buttons.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        buttons.forEach(function(b){ b.classList.remove('active'); });
+        btn.classList.add('active');
+        draw(btn.dataset.eig);
+      });
+    });
+    draw('generic1');
+  })();
+
+  /* ---------- Variance target widget ---------- */
+  (function(){
+    var svg = document.getElementById('targetSvg');
+    var stat = document.getElementById('targetStat');
+    var btns = document.querySelectorAll('#varianceTargets .btn');
+    function draw(k, pct){
+      var w=640,h=140, padL=40, padR=40, padT=20, padB=30;
+      var barAreaW = w-padL-padR;
+      var fullW = barAreaW;
+      var keptW = (k/784)*barAreaW;
+      var y = 55, barH = 34;
+      var parts = [];
+      parts.push('<rect x="'+padL+'" y="'+y+'" width="'+fullW+'" height="'+barH+'" rx="8" fill="var(--p-200)"/>');
+      parts.push('<rect x="'+padL+'" y="'+y+'" width="'+keptW+'" height="'+barH+'" rx="8" fill="url(#tgtGrad)"/>');
+      parts.push('<text x="'+padL+'" y="'+(y-10)+'" font-size="12" fill="var(--ink-soft)" font-family="sans-serif">0 components</text>');
+      parts.push('<text x="'+(padL+fullW-70)+'" y="'+(y-10)+'" font-size="12" fill="var(--ink-soft)" font-family="sans-serif">784 components</text>');
+      parts.push('<text x="'+(padL+keptW/2)+'" y="'+(y+barH/2+5)+'" text-anchor="middle" font-size="14" font-weight="800" fill="#fff" font-family="sans-serif">k='+k+'</text>');
+      svg.innerHTML = '<defs><linearGradient id="tgtGrad" x1="0" y1="0" x2="1" y2="0">'+
+        '<stop offset="0%" stop-color="var(--p-700)"/><stop offset="100%" stop-color="var(--p-400)"/></linearGradient></defs>'+parts.join('');
+      var saving = Math.round((1-k/784)*100);
+      stat.textContent = k + ' components out of 784 (≈' + Math.round(k/784*100) + '% of the original size, a ' + saving + '% reduction) keep ' + pct + '% of the variance';
+    }
+    btns.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        btns.forEach(function(b){ b.classList.remove('active'); });
+        btn.classList.add('active');
+        draw(+btn.dataset.k, +btn.dataset.pct);
+      });
+    });
+    draw(43,80);
+  })();
+
+  /* ---------- Maths stepper (Section 5) ---------- */
+  (function(){
+    var steps = [
+      {title:"Centre the data", body:"Subtract each feature's mean so the cloud sits at the origin: x̃ᵢ = xᵢ − x̄. Variance measures spread around the mean, so the mean must be at zero first."},
+      {title:"Pick a direction", body:"Let u₁ be a unit vector (u₁ᵀu₁ = 1). Only direction matters here, not length."},
+      {title:"Project the data", body:"The 1-D shadow of a point on u₁ is u₁ᵀx̃ᵢ — this is what we measured in the interactive widget above."},
+      {title:"Variance of the shadow", body:"Because the data is centred, the mean of the projections is 0, so Var = (1/N)Σ(u₁ᵀx̃ᵢ)² = u₁ᵀSu₁, where S = (1/N)Σx̃ᵢx̃ᵢᵀ is the D×D covariance matrix — a table of how features vary together."},
+      {title:"Maximise under the unit-length constraint", body:"Using a Lagrange multiplier λ₁: L = u₁ᵀSu₁ + λ₁(1 − u₁ᵀu₁). Setting the derivative with respect to u₁ to zero gives Su₁ = λ₁u₁ — the eigenvector equation. Multiplying both sides by u₁ᵀ shows u₁ᵀSu₁ = λ₁."}
+    ];
+    var dotsWrap = document.getElementById('mathStepper');
+    var view = document.getElementById('mathStepView');
+    steps.forEach(function(s,i){
+      var dot = document.createElement('button');
+      dot.className = 'step-dot' + (i===0?' active':'');
+      dot.setAttribute('aria-label','Step '+(i+1));
+      dot.addEventListener('click', function(){ show(i); });
+      dotsWrap.appendChild(dot);
+    });
+    function show(i){
+      Array.from(dotsWrap.children).forEach(function(d,idx){ d.classList.toggle('active', idx===i); });
+      view.innerHTML = '<div class="step-num">'+(i+1)+'</div><h4 style="margin:0 0 8px;">'+steps[i].title+'</h4><p style="margin:0; color:var(--ink-soft);" class="sans">'+steps[i].body+'</p>';
+    }
+    show(0);
+  })();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-UnSL-1" target="_blank" rel="noopener">github.com/scaler-content/DSML-UnSL-1</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear Regression — Lecture Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brown-deep:    #2E1A0E;
+    --brown-mid:     #5C3317;
+    --brown-soft:    #8B5A2B;
+    --brown-pale:    #C49A6C;
+    --brown-mist:    #E8D5B7;
+    --amber:         #B8791A;
+    --amber-light:   #E0A84A;
+    --cream:         #FBF6EE;
+    --cream-mid:     #F2E8D6;
+    --charcoal:      #1E1410;
+    --text-body:     #3A2510;
+    --text-muted:    #7D5C3A;
+    --white:         #FFFFFF;
+    --sidebar-w:     280px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--cream);
+    color: var(--text-body);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--brown-deep);
+    position: fixed;
+    top: 0; left: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transition: transform .3s ease;
+  }
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--brown-soft); border-radius: 4px; }
+
+  .sidebar-header {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    position: sticky; top: 0;
+    background: var(--brown-deep);
+    z-index: 1;
+  }
+  .sidebar-header .course-label {
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--brown-pale);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .sidebar-header h1 {
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    color: var(--white);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .progress-bar-wrap {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .progress-label {
+    font-size: 11px;
+    color: var(--brown-pale);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .progress-track {
+    height: 4px;
+    background: rgba(255,255,255,.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--brown-pale), var(--amber-light));
+    border-radius: 2px;
+    transition: width .4s ease;
+    width: 0%;
+  }
+
+  .nav-list { list-style: none; padding: 12px 0 80px; }
+  .nav-item a {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 20px;
+    text-decoration: none;
+    color: rgba(255,255,255,.6);
+    font-size: 12.5px;
+    line-height: 1.4;
+    transition: all .2s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item a:hover { color: var(--white); background: rgba(255,255,255,.05); }
+  .nav-item.active a {
+    color: var(--amber-light);
+    border-left-color: var(--amber);
+    background: rgba(255,255,255,.07);
+    font-weight: 500;
+  }
+  .nav-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    flex-shrink: 0;
+    margin-top: 5px;
+    transition: background .3s;
+  }
+  .nav-item.visited .nav-dot { background: var(--amber-light); border-color: var(--amber-light); }
+  .nav-item .nav-type {
+    font-size: 9.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--brown-pale);
+    margin-top: 2px;
+    opacity: .7;
+  }
+
+  /* ── MAIN ────────────────────────────────────────── */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    max-width: 860px;
+    padding: 48px 52px 120px;
+  }
+
+  /* ── SECTION CARDS ───────────────────────────────── */
+  .section-card {
+    background: var(--white);
+    border-radius: 12px;
+    border: 1px solid var(--brown-mist);
+    margin-bottom: 36px;
+    overflow: hidden;
+    scroll-margin-top: 32px;
+    box-shadow: 0 2px 8px rgba(46,26,14,.06);
+    transition: box-shadow .2s;
+  }
+  .section-card:hover { box-shadow: 0 4px 20px rgba(46,26,14,.1); }
+
+  .card-header {
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--cream-mid);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .card-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: var(--brown-mist);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+  .card-meta { flex: 1; }
+  .card-type {
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--brown-soft);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .card-title {
+    font-family: 'Lora', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--brown-deep);
+    line-height: 1.3;
+  }
+  .card-duration {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .card-body { padding: 24px 28px 28px; }
+
+  /* ── TYPOGRAPHY ──────────────────────────────────── */
+  .card-body h2 {
+    font-family: 'Lora', serif;
+    font-size: 18px;
+    color: var(--brown-mid);
+    margin: 28px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1.5px solid var(--brown-mist);
+  }
+  .card-body h3 {
+    font-family: 'Lora', serif;
+    font-size: 15.5px;
+    color: var(--brown-deep);
+    margin: 22px 0 10px;
+    font-style: italic;
+  }
+  .card-body h4 {
+    font-family: 'Lora', serif;
+    font-size: 14px;
+    color: var(--brown-mid);
+    margin: 16px 0 8px;
+    font-weight: 700;
+  }
+  .card-body p { margin-bottom: 12px; font-size: 14.5px; }
+  .card-body ul, .card-body ol { margin: 8px 0 14px 20px; font-size: 14.5px; }
+  .card-body li { margin-bottom: 5px; }
+  .card-body strong { color: var(--brown-deep); font-weight: 600; }
+  .card-body em { color: var(--brown-soft); }
+
+  /* ── CALLOUTS ────────────────────────────────────── */
+  .callout-ask {
+    background: #FEF6E4;
+    border-left: 3px solid var(--amber);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: #5C3A0A;
+  }
+  .callout-ask .callout-label {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 4px;
+  }
+  .callout-note {
+    background: #F5EDE0;
+    border-left: 3px solid var(--brown-soft);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: var(--brown-deep);
+  }
+  .callout-note .callout-label {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--brown-soft);
+    margin-bottom: 4px;
+  }
+
+  /* ── TABLE ───────────────────────────────────────── */
+  .card-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 16px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--brown-mist);
+  }
+  .card-body th {
+    background: var(--brown-mid);
+    color: var(--white);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: .04em;
+  }
+  .card-body td { padding: 9px 14px; border-top: 1px solid var(--cream-mid); }
+  .card-body tr:nth-child(even) td { background: var(--cream); }
+
+  /* ── CODE ────────────────────────────────────────── */
+  .card-body pre {
+    background: var(--charcoal);
+    color: #F0D9B0;
+    border-radius: 8px;
+    padding: 16px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    overflow-x: auto;
+    margin: 14px 0;
+    line-height: 1.6;
+  }
+  .card-body code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--cream-mid);
+    color: var(--brown-mid);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+  }
+  .card-body pre code { background: none; color: inherit; padding: 0; }
+
+  /* code output block */
+  .output-block {
+    background: #F9F4EC;
+    border: 1px solid var(--brown-mist);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-body);
+    margin: 6px 0 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .output-label {
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--brown-pale);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  /* ── QUIZ ────────────────────────────────────────── */
+  .quiz-card .card-icon { background: #FDEFD3; }
+  .quiz-question {
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--brown-deep);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .quiz-options { list-style: none; margin: 0; }
+  .quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1.5px solid var(--brown-mist);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all .2s;
+    user-select: none;
+    background: var(--white);
+  }
+  .quiz-option:hover { border-color: var(--brown-soft); background: #F8F0E4; }
+  .quiz-option.selected-correct { border-color: var(--brown-soft); background: #F0E8D8; color: var(--brown-deep); }
+  .quiz-option.selected-wrong { border-color: #C0392B; background: #FDECEA; color: #922B21; }
+  .quiz-option.reveal-correct { border-color: var(--brown-soft); background: #F0E8D8; color: var(--brown-deep); }
+  .quiz-circle {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--brown-mist);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    transition: all .2s;
+    font-weight: 700;
+  }
+  .selected-correct .quiz-circle { border-color: var(--brown-soft); background: var(--brown-soft); color: #fff; }
+  .selected-wrong .quiz-circle { border-color: #C0392B; background: #C0392B; color: #fff; }
+  .reveal-correct .quiz-circle { border-color: var(--brown-soft); background: var(--brown-mist); }
+  .quiz-feedback {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 500;
+    display: none;
+  }
+  .quiz-feedback.correct { background: #F0E8D8; color: var(--brown-deep); display: block; }
+  .quiz-feedback.wrong { background: #FDECEA; color: #922B21; display: block; }
+
+  /* ── SUMMARY GRID ────────────────────────────────── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .summary-item {
+    background: var(--cream);
+    border: 1px solid var(--brown-mist);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--brown-deep);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .summary-item::before {
+    content: '▸';
+    color: var(--brown-soft);
+    font-size: 11px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── EQUATION BLOCK ──────────────────────────────── */
+  .equation {
+    background: var(--cream-mid);
+    border: 1.5px solid var(--brown-mist);
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin: 14px 0;
+    text-align: center;
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    font-style: italic;
+    color: var(--brown-deep);
+    letter-spacing: .03em;
+  }
+
+  /* ── ML COMPONENTS GRID ──────────────────────────── */
+  .components-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .component-card {
+    background: var(--cream);
+    border: 1.5px solid var(--brown-mist);
+    border-radius: 10px;
+    padding: 18px 16px;
+    text-align: center;
+    transition: all .2s;
+  }
+  .component-card:hover { border-color: var(--brown-soft); background: #F0E4D0; transform: translateY(-2px); }
+  .component-icon { font-size: 26px; margin-bottom: 10px; }
+  .component-name {
+    font-family: 'Lora', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--brown-deep);
+    margin-bottom: 5px;
+  }
+  .component-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+  /* ── FLOW STEPS ──────────────────────────────────── */
+  .flow-steps { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px dashed var(--brown-mist);
+    position: relative;
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-arrow {
+    width: 30px; height: 30px;
+    background: var(--brown-mid);
+    border-radius: 50%;
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+  .flow-content h4 {
+    font-family: 'Lora', serif;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--brown-deep);
+    margin-bottom: 3px;
+  }
+  .flow-content p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  /* ── HAMBURGER ───────────────────────────────────── */
+  #hamburger {
+    display: none;
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 200;
+    background: var(--brown-deep);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    flex-direction: column;
+    gap: 5px;
+  }
+  #hamburger span { display: block; width: 20px; height: 2px; background: #fff; border-radius: 1px; transition: all .2s; }
+  #overlay { display: none; }
+
+  @media (max-width: 768px) {
+    #hamburger { display: flex; }
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; padding: 24px 18px 80px; max-width: 100%; }
+    #overlay {
+      display: block; position: fixed; inset: 0;
+      background: rgba(0,0,0,.4); z-index: 99;
+      opacity: 0; pointer-events: none; transition: opacity .3s;
+    }
+    #overlay.active { opacity: 1; pointer-events: all; }
+    .components-grid { grid-template-columns: 1fr 1fr; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .card-body { padding: 18px 18px 22px; }
+    .card-header { padding: 18px 18px 14px; }
+  }
+
+  /* ── BACK TO TOP ─────────────────────────────────── */
+  #back-top {
+    position: fixed; bottom: 32px; right: 32px;
+    background: var(--brown-mid); color: #fff;
+    border: none; border-radius: 50%;
+    width: 44px; height: 44px; font-size: 18px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(46,26,14,.3);
+    opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 50;
+  }
+  #back-top.visible { opacity: 1; pointer-events: all; }
+  #back-top:hover { background: var(--brown-deep); }
+
+  .card-body a { color: var(--brown-soft); text-decoration: underline; text-underline-offset: 3px; }
+  .card-body a:hover { color: var(--brown-deep); }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform: none; } }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations 2 · Linear regression</span><span class="pn"><a href="../ML-with-AI-workflows-6/" title="ML with AI 6 · Polynomial regression and overfitting">← Prev</a><a href="../Linear-Regression-3/" title="ML Foundations 3 · Multivariate linear regression">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><button id="hamburger" aria-label="Open menu" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</button>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="course-label">ML Foundations · Lecture 2</div>
+    <h1>Linear Regression</h1>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-label">
+      <span>Progress</span><span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item" data-target="s-recap"><a href="#s-recap"><span class="nav-dot"></span><span><div>Recap</div><div class="nav-type">Review</div></span></a></li>
+    <li class="nav-item" data-target="s-formulation"><a href="#s-formulation"><span class="nav-dot"></span><span><div>Data to Prediction</div><div class="nav-type">Problem Setup</div></span></a></li>
+    <li class="nav-item" data-target="s-line"><a href="#s-line"><span class="nav-dot"></span><span><div>Line Equation & Intuition</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="q1"><a href="#q1"><span class="nav-dot"></span><span><div>Quiz 1</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-bestfit"><a href="#s-bestfit"><span class="nav-dot"></span><span><div>Best Fit Line & Errors</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-code1"><a href="#s-code1"><span class="nav-dot"></span><span><div>Code: Manual Fitting</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-mse"><a href="#s-mse"><span class="nav-dot"></span><span><div>MSE & Gradient Descent</div><div class="nav-type">Optimization</div></span></a></li>
+    <li class="nav-item" data-target="s-code2"><a href="#s-code2"><span class="nav-dot"></span><span><div>Code: Scikit-Learn</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-r2"><a href="#s-r2"><span class="nav-dot"></span><span><div>R² Score</div><div class="nav-type">Metric</div></span></a></li>
+    <li class="nav-item" data-target="s-wrap"><a href="#s-wrap"><span class="nav-dot"></span><span><div>Wrap Up</div><div class="nav-type">Summary</div></span></a></li>
+  </ul>
+</nav>
+
+<!-- MAIN -->
+<main id="main">
+
+  <!-- RECAP -->
+  <section class="section-card" id="s-recap">
+    <div class="card-header">
+      <div class="card-icon">🔁</div>
+      <div class="card-meta">
+        <div class="card-type">Review</div>
+        <div class="card-title">Recap from Lecture 1</div>
+        <div class="card-duration">⏱ 1.5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>In the previous lecture, we covered:</p>
+      <ul>
+        <li>What is Machine Learning and how it differs from traditional programming</li>
+        <li>The full ML pipeline and lifecycle</li>
+        <li>Types of learning: Supervised, Unsupervised, Reinforcement</li>
+        <li>ML task types: Regression, Classification, Clustering, Recommendation, Time Series</li>
+        <li>Introduction to the used car price prediction problem using the Cars24 dataset</li>
+      </ul>
+      <div class="callout-note">
+        <div class="callout-label">📌 Key Takeaways</div>
+        ML learns patterns from data instead of hard-coded rules. <strong>Regression</strong> is the right tool when the target is a continuous numeric value — like a car's selling price.
+      </div>
+      <h3>Today's Focus</h3>
+      <p>How can a machine learn the relationship between input features and a car's selling price? We answer this by building our first <strong>Linear Regression model</strong>.</p>
+    </div>
+  </section>
+
+  <!-- DATA TO PREDICTION -->
+  <section class="section-card" id="s-formulation">
+    <div class="card-header">
+      <div class="card-icon">📐</div>
+      <div class="card-meta">
+        <div class="card-type">Problem Setup</div>
+        <div class="card-title">From Data to Prediction: Problem Formulation</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Data Notation</h3>
+      <p>Assume we are given <code>n</code> car data points as historical data, each with <code>d</code> features:</p>
+      <ul>
+        <li><code>f1, f2, ..., fd</code> — features of each car (e.g., engine size, mileage, year)</li>
+        <li><code>xi</code> — the <code>d</code>-dimensional feature vector for car <code>i</code></li>
+        <li><code>yi</code> — the actual selling price for car <code>i</code></li>
+      </ul>
+      <p>Our goal: find a <strong>Model</strong> that maps any input <code>x</code> → output <code>y</code> (a real number).</p>
+
+      <h3>Making Predictions</h3>
+      <p>Once the model is trained on historical data, we pass a new query car <code>xq</code> to it. The model outputs a predicted price <code>ŷq</code> (read: "y-hat"). The closer <code>ŷq</code> is to the real price <code>yq</code>, the better our model.</p>
+
+      <h3>A Worked Example</h3>
+      <table>
+        <tr><th>x1</th><th>x2</th><th>y</th></tr>
+        <tr><td>1</td><td>2</td><td>4</td></tr>
+        <tr><td>2</td><td>2</td><td>6</td></tr>
+        <tr><td>2</td><td>3</td><td>7</td></tr>
+        <tr><td>3</td><td>4</td><td>10</td></tr>
+      </table>
+      <p>The model discovers the pattern: <code>y = 2x1 + x2</code>. Given a new query point, it uses this learned formula to predict.</p>
+
+      <h3>Train-Test Split</h3>
+      <p>To verify model quality, we split the data:</p>
+      <ul>
+        <li><strong>Training set:</strong> used to learn the model's parameters</li>
+        <li><strong>Test set:</strong> held out, used only to evaluate how well the model generalizes</li>
+      </ul>
+      <div class="callout-note">
+        <div class="callout-label">⚠️ Golden Rule</div>
+        Never train on test data. The test set must remain "unseen" throughout training — otherwise your evaluation is meaningless.
+      </div>
+
+      <h3>The Workflow</h3>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-arrow">1</div>
+          <div class="flow-content"><h4>Historical Data → Split</h4><p>Divide into Train and Test sets</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-arrow">2</div>
+          <div class="flow-content"><h4>Train Data → Model Building</h4><p>Algorithm learns patterns and produces a Model</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-arrow">3</div>
+          <div class="flow-content"><h4>Test Data → Predictions</h4><p>Feed unseen inputs to the trained Model</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-arrow">4</div>
+          <div class="flow-content"><h4>Predicted vs Actual → Evaluation</h4><p>Measure how close our predictions are to the true values</p></div>
+        </div>
+      </div>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Regression or Classification?</div>
+        Since we're predicting a continuous numeric value (car price), this is a <strong>regression</strong> task. The approach: check how Y depends on X and fit a <em>trend line</em>.
+      </div>
+    </div>
+  </section>
+
+  <!-- LINE EQUATION -->
+  <section class="section-card" id="s-line">
+    <div class="card-header">
+      <div class="card-icon">📏</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Linear Regression Intuition & Line Equation</div>
+        <div class="card-duration">⏱ 10 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>The Equation of a Line</h3>
+      <p>Every straight line on an X-Y plane is described by:</p>
+      <div class="equation">y = mx + c</div>
+      <ul>
+        <li><strong>m</strong> = slope — how steeply the line rises or falls</li>
+        <li><strong>c</strong> = y-intercept — where the line crosses the Y-axis (when <code>x = 0</code>)</li>
+      </ul>
+      <p>The slope <strong>m</strong> is calculated as:</p>
+      <div class="equation">m = tan θ = Δy / Δx</div>
+      <p>That is, the ratio of vertical change to horizontal change between any two points on the line.</p>
+
+      <h3>Simple Examples</h3>
+      <table>
+        <tr><th>Equation</th><th>Slope (m)</th><th>Intercept (c)</th><th>Passes through origin?</th></tr>
+        <tr><td>y = x</td><td>1</td><td>0</td><td>Yes</td></tr>
+        <tr><td>y = 2x</td><td>2</td><td>0</td><td>Yes</td></tr>
+        <tr><td>y = 2x + 3</td><td>2</td><td>3</td><td>No</td></tr>
+        <tr><td>y = 0.5x − 1</td><td>0.5</td><td>−1</td><td>No</td></tr>
+      </table>
+
+      <h3>Connecting to Linear Regression</h3>
+      <p>In Linear Regression, we use exactly this line equation to model the relationship between one feature and the target. For our car dataset:</p>
+      <div class="equation">price = w × max_power + b</div>
+      <p>where <strong>w</strong> (weight/slope) and <strong>b</strong> (bias/intercept) are what the model <em>learns</em> from data.</p>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Terminology Map</div>
+        In ML, the line parameters are called <strong>weights</strong> (w) and <strong>bias</strong> (b). The feature column values are <strong>inputs</strong>, and the target column values are <strong>targets</strong> or <strong>labels</strong>.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 1 -->
+  <section class="section-card quiz-card" id="q1">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 1</div>
+        <div class="card-title">Parameters in Simple Linear Regression</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">How many parameters do you need to estimate in a simple linear regression model (with one independent variable)?</div>
+      <ul class="quiz-options" id="quiz-1-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>1</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>2</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Can't say</li>
+      </ul>
+      <div class="quiz-feedback" id="q1-feedback"></div>
+      <div class="callout-note" style="margin-top:16px">
+        <div class="callout-label">💡 Explanation</div>
+        In simple linear regression with one independent variable, the model is <strong>Y = a + bx</strong> — two parameters: the intercept <em>a</em> and the slope <em>b</em>.
+      </div>
+    </div>
+  </section>
+
+  <!-- BEST FIT LINE -->
+  <section class="section-card" id="s-bestfit">
+    <div class="card-header">
+      <div class="card-icon">🎯</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Finding the Best Fit Line & Errors</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Geometric Intuition</h3>
+      <p>Imagine plotting salary vs. years of experience. When a new data point arrives, we don't know what salary to predict from all the existing values. So we draw a <em>line</em> through the points and use that line.</p>
+      <p>But many lines can pass through (or near) a cloud of points. Which one should we pick?</p>
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Which line is "best"?</div>
+        The best fit line is the one where most data points are <em>closest</em> to it. Lines that are far from most points are poor fits.
+      </div>
+
+      <h3>Errors / Residuals</h3>
+      <p>The <strong>error</strong> (or <strong>residual</strong>) for a data point is:</p>
+      <div class="equation">error = y_actual − y_predicted</div>
+      <p>A positive error means our prediction was too low; negative means too high.</p>
+
+      <h3>Problem with Summing Raw Errors</h3>
+      <p>You might think: just minimize the sum of all errors. But there's a catch — positive and negative errors cancel each other out. A model could have large individual errors that sum to zero, falsely looking "perfect."</p>
+
+      <h3>The Solution: Ordinary Least Squares (OLS)</h3>
+      <p>We <strong>square</strong> each error before summing. Squaring:</p>
+      <ul>
+        <li>Eliminates sign cancellation (all squared errors are ≥ 0)</li>
+        <li>Penalizes large errors more heavily than small ones</li>
+      </ul>
+      <p>The method of minimizing the <strong>sum of squared errors</strong> is called <strong>Ordinary Least Squares (OLS)</strong> — the foundation of Linear Regression.</p>
+      <div class="equation">Minimize: Σ (y_i − ŷ_i)²</div>
+    </div>
+  </section>
+
+  <!-- CODE PART 1 -->
+  <section class="section-card" id="s-code1">
+    <div class="card-header">
+      <div class="card-icon">💻</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Code: Manual Parameter Fitting</div>
+        <div class="card-duration">⏱ 12 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>We'll use the raw Cars24 dataset (without pre-processing) to predict <code>selling_price</code> from <code>max_power</code>, so the geometric intuition is clear.</p>
+
+      <h3>Load the Data</h3>
+      <pre><code>import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+data = pd.read_csv('train-cars24-car-price.csv')
+data.head()</code></pre>
+      <div class="output-label">Output</div>
+      <div class="output-block">   selling_price  year  seller_type  km_driven    fuel  ...  max_power
+0         450000  2019   Individual      40000  Petrol  ...      81.86
+1         370000  2018   Individual      20000  Petrol  ...      81.86
+2         300000  2017   Individual      30000  Petrol  ...      81.86</div>
+
+      <h3>Scatter Plot: max_power vs selling_price</h3>
+      <pre><code>plt.figure(figsize=(10,6))
+plt.title('MaxPower vs. Price')
+sns.scatterplot(data=data, x='max_power', y='selling_price')</code></pre>
+      <p>Apart from a few outliers, the scatter roughly follows a linear trend — a good sign that a line can model this relationship.</p>
+
+      <h3>A Helper Function: <code>estimate_charges</code></h3>
+      <p>This is our very first model — a simple linear equation:</p>
+      <pre><code>def estimate_charges(maxpower, w, b):
+    return w * maxpower + b</code></pre>
+
+      <h3>Guessing Initial Parameters</h3>
+      <pre><code>w = 50
+b = 100
+maxpower = data.max_power
+estimated_charges = estimate_charges(maxpower, w, b)</code></pre>
+      <p>With <code>w=50, b=100</code> the line is wildly off — clearly our guesses need improvement.</p>
+
+      <h3>Trying Better Parameters</h3>
+      <pre><code>def try_parameters(w, b):
+    maxpower = data.max_power
+    target = data.selling_price
+    estimated_charges = estimate_charges(maxpower, w, b)
+    plt.figure(figsize=(10,6))
+    plt.plot(maxpower, estimated_charges, 'r', alpha=0.9)
+    plt.scatter(maxpower, target, s=8, alpha=0.8)
+    plt.xlabel('MaxPower'); plt.ylabel('Price')
+    plt.legend(['Estimate', 'Actual'])
+    plt.show()
+
+try_parameters(0.5, 1)   # getting closer...
+try_parameters(0.08, 0.5) # closer still...</code></pre>
+
+      <div class="callout-note">
+        <div class="callout-label">💡 The Problem with Manual Tuning</div>
+        Changing <code>w</code> and <code>b</code> by hand is tedious and imprecise. We need a systematic way to:
+        <ol style="margin-top:8px; margin-left:20px">
+          <li>Measure <em>how well</em> the line fits (numerically)</li>
+          <li>Automatically adjust <code>w</code> and <code>b</code> to improve the fit</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- MSE + GRADIENT DESCENT -->
+  <section class="section-card" id="s-mse">
+    <div class="card-header">
+      <div class="card-icon">⚡</div>
+      <div class="card-meta">
+        <div class="card-type">Optimization</div>
+        <div class="card-title">MSE & Gradient Descent</div>
+        <div class="card-duration">⏱ 6 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Cost Function</h3>
+      <p>A <strong>Cost Function</strong> quantifies the error between predicted and actual values as a single number. For Linear Regression, we use <strong>Mean Squared Error (MSE)</strong>:</p>
+      <div class="equation">MSE = (1/n) × Σ (y_i − ŷ_i)²</div>
+      <ul>
+        <li><code>n</code> = number of training examples</li>
+        <li><code>y_i</code> = actual value</li>
+        <li><code>ŷ_i</code> = predicted value</li>
+      </ul>
+      <p>Our goal: find the values of <code>w</code> and <code>b</code> that <strong>minimize</strong> the MSE.</p>
+
+      <h3>Gradient Descent</h3>
+      <p>Instead of trying values randomly, <strong>Gradient Descent</strong> is a principled algorithm that moves <code>w</code> and <code>b</code> in the direction that reduces the cost function, step by step.</p>
+      <p>Think of it like being blindfolded on a hilly landscape and always taking a step downhill. Eventually you reach the valley — the minimum of the cost function.</p>
+
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-arrow">1</div>
+          <div class="flow-content"><h4>Start</h4><p>Initialize <code>w</code> and <code>b</code> with random values</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-arrow">2</div>
+          <div class="flow-content"><h4>Compute Gradient</h4><p>Calculate the slope of the cost function at the current <code>w, b</code></p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-arrow">3</div>
+          <div class="flow-content"><h4>Update Parameters</h4><p>Nudge <code>w</code> and <code>b</code> in the opposite direction of the gradient (downhill)</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-arrow">4</div>
+          <div class="flow-content"><h4>Repeat</h4><p>Iterate until the cost stops improving — we've found the minimum</p></div>
+        </div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Learning Rate</div>
+        The <strong>step size</strong> (or learning rate) controls how large each update is. Too large → overshoots the minimum. Too small → takes forever to converge.
+      </div>
+    </div>
+  </section>
+
+  <!-- CODE PART 2 -->
+  <section class="section-card" id="s-code2">
+    <div class="card-header">
+      <div class="card-icon">🔬</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Code: Univariate Linear Regression with Scikit-Learn</div>
+        <div class="card-duration">⏱ 15 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Scikit-learn handles all the OLS/Gradient Descent internals for us with a clean, consistent API.</p>
+
+      <h3>Load the Pre-processed Data</h3>
+      <pre><code>import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df = pd.read_csv('cars24-car-price-clean.csv')
+df.head()</code></pre>
+
+      <h3>Define X and Y</h3>
+      <p>We use <code>model</code> (car model encoding) as our single input feature and <code>selling_price</code> as the target:</p>
+      <pre><code>X = df["model"].values
+Y = df["selling_price"].values</code></pre>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Independent vs Dependent Columns</div>
+        <strong>Independent columns</strong> (features): everything except <code>selling_price</code> — they are the inputs. <strong>Dependent column</strong> (target): <code>selling_price</code> — it depends on all the others.
+      </div>
+
+      <h3>Initialize and Train the Model</h3>
+      <pre><code>from sklearn.linear_model import LinearRegression
+model = LinearRegression()
+model.fit(X, Y)   # ← this will throw a ValueError!</code></pre>
+      <div class="output-label">Error</div>
+      <div class="output-block">ValueError: Expected 2D array, got 1D array instead.
+Reshape your data either using array.reshape(-1, 1) if your data
+has a single feature...</div>
+
+      <p>Scikit-learn's <code>fit</code> expects <code>X</code> to be 2D — shape <code>(n_samples, n_features)</code>. Fix it:</p>
+      <pre><code>X = X.reshape(X.size, 1)
+Y = Y.reshape(Y.size, 1)
+print(X.shape, Y.shape)   # → (19820, 1) (19820, 1)
+
+model.fit(X, Y)   # now works!</code></pre>
+
+      <h3>Make Predictions</h3>
+      <pre><code>y_hat = model.predict(X)
+
+print('Predicted:', y_hat[:3])
+print('Actual:', Y[:3])</code></pre>
+      <div class="output-label">Output</div>
+      <div class="output-block">Predicted: [[-1.08634131] [-0.32158118] [-0.76220457]]
+Actual:    [[-1.11104589] [-0.22394353] [-0.91505816]]</div>
+
+      <h3>Retrieve the Learned Parameters</h3>
+      <pre><code>c = model.intercept_
+m = model.coef_
+print(c, m)</code></pre>
+      <div class="output-label">Output</div>
+      <div class="output-block">[-1.18731936e-16] [[0.96505112]]</div>
+
+      <p>The final learned equation:</p>
+      <div class="equation">selling_price = 0.965 × model − 1.187×10⁻¹⁶</div>
+      <p>The intercept is essentially <strong>0</strong> (the data was normalized). The slope <code>m = 0.965</code> means a one-unit increase in the model encoding corresponds to a ~0.965-unit increase in normalized selling price.</div>
+
+      <h3>Visualize the Fit</h3>
+      <pre><code>fig = plt.figure()
+plt.scatter(X, Y, label='data')
+plt.scatter(X, y_hat, color='orange', label='prediction')
+plt.legend()
+plt.show()</code></pre>
+    </div>
+  </section>
+
+  <!-- R2 -->
+  <section class="section-card" id="s-r2">
+    <div class="card-header">
+      <div class="card-icon">📊</div>
+      <div class="card-meta">
+        <div class="card-type">Metric</div>
+        <div class="card-title">Coefficient of Determination — R² Score</div>
+        <div class="card-duration">⏱ 12 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Why Not Just Use Sum of Squared Errors?</h3>
+      <p>SSE is scale-dependent. If one model predicts house prices in dollars and another in rupees, the SSE values are incomparable even if both models are equally accurate. We need a <strong>scale-independent</strong> metric.</p>
+
+      <h3>The Baseline: Mean Model</h3>
+      <p>The worst viable model is one that simply predicts the <strong>mean of y</strong> for every input, ignoring features entirely. This is our baseline to beat.</p>
+
+      <h3>Two Key Quantities</h3>
+      <table>
+        <tr><th>Term</th><th>Formula</th><th>Meaning</th></tr>
+        <tr><td><strong>SS_residual</strong></td><td>Σ(y_i − ŷ_i)²</td><td>Error of our model</td></tr>
+        <tr><td><strong>SS_total</strong></td><td>Σ(y_i − ȳ)²</td><td>Error of the mean model (total variance in Y)</td></tr>
+      </table>
+
+      <h3>The R² Formula</h3>
+      <div class="equation">R² = 1 − (SS_residual / SS_total)</div>
+      <p>R² measures how much better our model is compared to simply predicting the mean every time.</p>
+
+      <h3>Interpreting R²</h3>
+      <table>
+        <tr><th>R² Value</th><th>Meaning</th></tr>
+        <tr><td><strong>1.0</strong></td><td>Perfect model — zero residual error</td></tr>
+        <tr><td><strong>0.0</strong></td><td>No better than the mean model</td></tr>
+        <tr><td><strong>&lt; 0</strong></td><td>Worse than the mean model (possible but rare)</td></tr>
+        <tr><td><strong>−∞</strong></td><td>Theoretical minimum (model is catastrophically wrong)</td></tr>
+      </table>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Intuition</div>
+        R² tells you what <em>fraction of the total variance in Y</em> is explained by your model. R² = 0.93 means the model explains 93% of the variance — the remaining 7% is unexplained noise or missing features.
+      </div>
+
+      <h3>Getting R² in Scikit-Learn</h3>
+      <pre><code>model.score(X, Y)</code></pre>
+      <div class="output-label">Output</div>
+      <div class="output-block">0.9313236629576508</div>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Is R² = 0.93 good?</div>
+        Yes — our univariate model (using just one feature) explains 93.13% of the variance in selling price. But relying on a single feature leaves room for improvement. Next, we'll bring in multiple features.
+      </div>
+    </div>
+  </section>
+
+  <!-- WRAP UP -->
+  <section class="section-card" id="s-wrap">
+    <div class="card-header">
+      <div class="card-icon">✅</div>
+      <div class="card-meta">
+        <div class="card-type">Summary</div>
+        <div class="card-title">Wrapping Up</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Every ML algorithm — no matter how complex — is built from three fundamental components:</p>
+      <div class="components-grid">
+        <div class="component-card">
+          <div class="component-icon">🏗️</div>
+          <div class="component-name">Model</div>
+          <div class="component-desc">Makes predictions from input features (e.g., y = wx + b)</div>
+        </div>
+        <div class="component-card">
+          <div class="component-icon">📉</div>
+          <div class="component-name">Cost Function</div>
+          <div class="component-desc">Measures how wrong predictions are (e.g., MSE)</div>
+        </div>
+        <div class="component-card">
+          <div class="component-icon">🔄</div>
+          <div class="component-name">Optimizer</div>
+          <div class="component-desc">Minimizes the cost by adjusting parameters (e.g., Gradient Descent)</div>
+        </div>
+      </div>
+
+      <h3>What We Covered Today</h3>
+      <div class="summary-grid">
+        <div class="summary-item">Data notation and problem formulation</div>
+        <div class="summary-item">Train-test split and evaluation workflow</div>
+        <div class="summary-item">Line equation: y = mx + c</div>
+        <div class="summary-item">Residuals and Ordinary Least Squares</div>
+        <div class="summary-item">Mean Squared Error (MSE)</div>
+        <div class="summary-item">Gradient Descent intuition</div>
+        <div class="summary-item">Scikit-Learn LinearRegression API</div>
+        <div class="summary-item">R² score and its interpretation</div>
+      </div>
+
+      <div class="callout-note" style="margin-top:20px">
+        <div class="callout-label">🔮 Coming Up Next</div>
+        We'll move beyond a single feature and explore <strong>Multivariate Linear Regression</strong> — using all available features to build more accurate and practical models, along with a deeper look at model evaluation.
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script>
+  // ── QUIZ LOGIC ─────────────────────────────────────
+  const quizAnswered = {};
+  document.querySelectorAll('.quiz-options').forEach(list => {
+    list.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const qid = list.closest('.section-card').id;
+        if (quizAnswered[qid]) return;
+        quizAnswered[qid] = true;
+        const isCorrect = opt.dataset.correct === 'true';
+        const feedback = list.closest('.card-body').querySelector('.quiz-feedback');
+        list.querySelectorAll('.quiz-option').forEach(o => {
+          o.style.cursor = 'default';
+          o.onclick = null;
+        });
+        if (isCorrect) {
+          opt.classList.add('selected-correct');
+          opt.querySelector('.quiz-circle').textContent = '✓';
+          feedback.textContent = '✅ Correct!';
+          feedback.className = 'quiz-feedback correct';
+        } else {
+          opt.classList.add('selected-wrong');
+          opt.querySelector('.quiz-circle').textContent = '✗';
+          feedback.textContent = '❌ Not quite — check the explanation below.';
+          feedback.className = 'quiz-feedback wrong';
+          list.querySelectorAll('.quiz-option[data-correct="true"]').forEach(o => {
+            o.classList.add('reveal-correct');
+            o.querySelector('.quiz-circle').textContent = '✓';
+          });
+        }
+      });
+    });
+  });
+
+  // ── SCROLL TRACKING ────────────────────────────────
+  const sections = document.querySelectorAll('.section-card');
+  const navItems = document.querySelectorAll('.nav-item');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct = document.getElementById('progress-pct');
+  const visited = new Set();
+
+  function onScroll() {
+    let current = '';
+    sections.forEach(sec => {
+      if (sec.getBoundingClientRect().top <= 120) {
+        current = sec.id;
+        visited.add(sec.id);
+      }
+    });
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.target === current);
+      if (visited.has(item.dataset.target)) item.classList.add('visited');
+    });
+    const pct = Math.round((visited.size / sections.length) * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent = pct + '%';
+    document.getElementById('back-top').classList.toggle('visible', window.scrollY > 400);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // ── MOBILE SIDEBAR ─────────────────────────────────
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('active');
+  }
+  document.querySelectorAll('.nav-item a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth <= 768) toggleSidebar(); });
+  });
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Linear-Regression-2" target="_blank" rel="noopener">github.com/scaler-content/Linear-Regression-2</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

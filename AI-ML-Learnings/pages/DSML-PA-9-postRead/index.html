@@ -1,0 +1,693 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· Product Analytics 9 · Customer segmentation in BigQuery</span><span class="p"><a href="../DSML-PA-9-preRead/">Pre-read</a><b>Post-read</b></span><span class="pn"><a href="../DSML-PA-8-preRead/" title="Product Analytics 8 · CRM analytics and RFM segmentation">← Prev</a><a href="../DSML-PA-10-preRead/" title="Product Analytics 10 · A/B testing and launch decisions">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Segmentation – BigQuery RFM Pipeline</title>
+<style>
+  :root {
+    --primary: #6366F1;
+    --primary-dark: #4F46E5;
+    --primary-light: #EEF2FF;
+    --surface: #FFFFFF;
+    --surface-2: #F8FAFC;
+    --surface-3: #F1F5F9;
+    --border: #E2E8F0;
+    --text: #0F172A;
+    --text-2: #475569;
+    --text-3: #94A3B8;
+    --green: #10B981;
+    --green-bg: #ECFDF5;
+    --amber: #F59E0B;
+    --amber-bg: #FFFBEB;
+    --red: #EF4444;
+    --red-bg: #FEF2F2;
+    --blue: #3B82F6;
+    --blue-bg: #EFF6FF;
+    --purple: #8B5CF6;
+    --purple-bg: #F5F3FF;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.1);
+    --transition: all .2s ease;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.7; color: var(--text); background: var(--surface-2); }
+
+  nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); padding: 0 clamp(16px, 4vw, 48px); }
+  .nav-inner { max-width: 1440px; margin: 0 auto; display: flex; align-items: center; gap: 4px; overflow-x: auto; height: 52px; }
+  .nav-inner::-webkit-scrollbar { display: none; }
+  nav a { font-size: 13px; font-weight: 500; color: var(--text-2); text-decoration: none; white-space: nowrap; padding: 6px 12px; border-radius: 20px; transition: var(--transition); }
+  nav a:hover, nav a.active { color: var(--primary); background: var(--primary-light); }
+  .nav-logo { font-weight: 700; font-size: 14px; color: var(--primary); margin-right: 8px; white-space: nowrap; }
+
+  .hero { background: linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #1D4ED8 100%); color: white; padding: clamp(48px, 8vw, 96px) clamp(16px, 4vw, 48px); }
+  .hero-inner { max-width: 1440px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 16px; }
+  .hero h1 { font-size: clamp(28px, 4vw, 52px); font-weight: 800; line-height: 1.15; margin-bottom: 16px; }
+  .hero p { font-size: clamp(15px, 1.5vw, 18px); opacity: .88; max-width: 640px; }
+  .hero-stat { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); border-radius: var(--radius); padding: 24px 32px; text-align: center; min-width: 160px; }
+  .hero-stat .num { font-size: 36px; font-weight: 800; }
+  .hero-stat .lbl { font-size: 12px; opacity: .8; margin-top: 4px; }
+
+  main { max-width: 1440px; margin: 0 auto; padding: clamp(32px, 5vw, 64px) clamp(16px, 4vw, 48px); }
+  section { margin-bottom: 72px; scroll-margin-top: 64px; }
+  h2 { font-size: clamp(20px, 2.5vw, 28px); font-weight: 700; margin-bottom: 8px; }
+  h3 { font-size: clamp(16px, 1.8vw, 20px); font-weight: 600; margin-bottom: 12px; }
+  p { color: var(--text-2); margin-bottom: 16px; }
+  .section-intro { font-size: 17px; color: var(--text-2); max-width: 800px; margin-bottom: 32px; }
+
+  .context-box { background: linear-gradient(135deg, #EEF2FF, #EFF6FF); border: 1px solid #C7D2FE; border-radius: var(--radius); padding: 28px 32px; margin-bottom: 32px; position: relative; overflow: hidden; }
+  .context-box::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--primary); }
+  .context-box h3 { color: var(--primary-dark); margin-bottom: 8px; }
+  .context-box p { color: #3730A3; margin: 0; }
+
+  /* BQ code block */
+  .bq-block { background: #0F172A; color: #E2E8F0; border-radius: var(--radius); padding: 20px 24px; font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace; font-size: 13px; line-height: 1.85; overflow-x: auto; margin-bottom: 16px; }
+  .bq-kw { color: #60A5FA; } /* keyword: SELECT, FROM, WHERE */
+  .bq-fn { color: #A78BFA; } /* function */
+  .bq-str { color: #34D399; } /* string/identifier */
+  .bq-num { color: #FB923C; } /* numbers */
+  .bq-cm { color: #64748B; }  /* comment */
+  .bq-alias { color: #FBBF24; } /* aliases */
+
+  /* Pipeline steps */
+  .pipeline-v { display: flex; flex-direction: column; gap: 0; }
+  .pipe-row { display: grid; grid-template-columns: 56px 1fr; gap: 0; align-items: stretch; }
+  .pipe-left { display: flex; flex-direction: column; align-items: center; }
+  .pipe-dot { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 1; }
+  .pipe-line { flex: 1; width: 2px; background: #C7D2FE; margin: 0 auto; min-height: 24px; }
+  .pipe-content { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; margin-left: 12px; }
+  .pipe-content h4 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .pipe-content p { font-size: 13px; color: var(--text-2); margin: 0; }
+  .pipe-content code { font-size: 12px; background: var(--surface-3); padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--primary); }
+
+  /* Grid grid */
+  .rfm-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; font-size: 12px; text-align: center; }
+  .rfm-grid-header { background: var(--primary); color: white; font-weight: 700; padding: 10px 6px; }
+  .rfm-grid-row-label { background: var(--surface-3); font-weight: 700; padding: 10px 8px; display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); color: var(--text); }
+  .rfm-grid-cell { padding: 8px 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .cell-champ { background: #EEF2FF; color: #4338CA; }
+  .cell-loyal { background: #ECFDF5; color: #065F46; }
+  .cell-potential { background: #DBEAFE; color: #1D4ED8; }
+  .cell-need { background: #FFFBEB; color: #92400E; }
+  .cell-promise { background: #F5F3FF; color: #6D28D9; }
+  .cell-sleep { background: #F1F5F9; color: #475569; }
+  .cell-risk { background: #FEF3C7; color: #B45309; }
+  .cell-cantlose { background: #FEE2E2; color: #B91C1C; }
+  .cell-lost { background: #F1F5F9; color: #64748B; }
+  .cell-recent { background: #EFF6FF; color: #1D4ED8; }
+  .cell-hiber { background: #F9FAFB; color: #6B7280; }
+
+  /* Info cards */
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+  .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; box-shadow: var(--shadow); }
+  .info-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .info-card p { font-size: 13px; color: var(--text-2); margin: 0; }
+  .info-card .ic-icon { font-size: 28px; margin-bottom: 10px; }
+
+  /* Scoring CASE table */
+  .score-compare { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .score-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .score-box h4 { font-size: 13px; font-weight: 700; margin-bottom: 8px; text-align: center; }
+  .score-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .score-row:last-child { border-bottom: none; }
+  .score-row .band { color: var(--text-2); }
+  .score-row .score { font-weight: 700; }
+
+  /* Quiz */
+  .quiz-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+  .quiz-question { font-size: 16px; font-weight: 600; margin-bottom: 18px; }
+  .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+  .quiz-opt { border: 2px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; cursor: pointer; font-size: 14px; color: var(--text-2); transition: var(--transition); display: flex; align-items: flex-start; gap: 10px; }
+  .quiz-opt:hover { border-color: var(--primary); color: var(--primary); }
+  .quiz-opt .opt-key { font-weight: 700; min-width: 20px; }
+  .quiz-opt.correct { border-color: var(--green); background: var(--green-bg); color: #065F46; }
+  .quiz-opt.wrong { border-color: var(--red); background: var(--red-bg); color: #991B1B; }
+  .quiz-explanation { margin-top: 16px; padding: 14px 18px; background: var(--surface-2); border-radius: var(--radius-sm); font-size: 14px; color: var(--text-2); display: none; border-left: 3px solid var(--primary); }
+  .quiz-explanation.show { display: block; }
+
+  .takeaway { background: var(--amber-bg); border: 1px solid #FDE68A; border-radius: var(--radius); padding: 20px 24px; }
+  .takeaway h4 { font-size: 14px; font-weight: 700; color: #92400E; margin-bottom: 6px; }
+  .takeaway p { font-size: 14px; color: #78350F; margin: 0; }
+
+  .viz-link { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: var(--primary); color: white; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; text-decoration: none; transition: var(--transition); }
+  .viz-link:hover { background: var(--primary-dark); }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .summary-card .s-num { font-size: 32px; font-weight: 800; color: var(--primary); line-height: 1; margin-bottom: 6px; }
+  .summary-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .summary-card p { font-size: 13px; color: var(--text-2); margin: 0; }
+
+  img.section-img { width: 100%; max-width: 720px; border-radius: var(--radius); border: 1px solid var(--border); display: block; margin: 20px 0; }
+
+  @media (max-width: 700px) {
+    .hero-inner { grid-template-columns: 1fr; }
+    .hero-stat { display: none; }
+    .score-compare { grid-template-columns: 1fr; }
+    .rfm-grid { grid-template-columns: repeat(3, 1fr); font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <span class="nav-logo">Lecture 9</span>
+    <a href="#scene">Scene</a>
+    <a href="#rfmscore">RFM Score</a>
+    <a href="#data">Data</a>
+      <a href="#pipeline">Pipeline</a>
+    <a href="#dataproc">Data Processing</a>
+    <a href="#quintiles">Quintiles</a>
+    <a href="#scoring">Scoring</a>
+    <a href="#segments">Segments</a>
+    <a href="#other">Other Rules</a>
+    <a href="#summary">Summary</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-badge">🗄️ Lecture 9 · Customer Segmentation</div>
+      <h1>RFM in BigQuery SQL —<br>Production at Any Scale</h1>
+      <p>Last class: 2,000 customers in a spreadsheet. Today: the same RFM pipeline in BigQuery SQL, refreshing automatically, feeding directly into marketing tools — with 5 bands and 11 DMA segments instead of 3 and 9.</p>
+    </div>
+    <div class="hero-stat">
+      <div class="num">125 → 11</div>
+      <div class="lbl">permutations → segments</div>
+    </div>
+  </div>
+</div>
+
+<main>
+
+<!-- Scene -->
+<section id="scene">
+  <h2>Setting the Scene</h2>
+  <div class="context-box">
+    <h3>🏭 The Production Requirement</h3>
+    <p>The retail client is blunt: <em>"We can't keep re-running a spreadsheet every quarter. We need this segmentation living in BigQuery, refreshing automatically, feeding straight into our marketing tools."</em><br><br>
+    Aditi faces the same three questions as before — who bought recently, who buys often, who spends the most — but now she must answer them in SQL, joining tables, computing quantiles across the full customer base, and encoding segment logic as a query anyone on the team can re-run.</p>
+  </div>
+</section>
+
+<!-- RFM Score -->
+<section id="rfmscore">
+  <h2>Why Three Dimensions, and Why 125 Permutations</h2>
+  <p class="section-intro">Before the SQL, the reason RFM uses three signals rather than one. Valuing customers on a single parameter is flawed — and at 5 bands per metric the scoring space gets large fast.</p>
+
+  <div class="takeaway" style="margin-bottom:24px;">
+    <h4>⚠️ One Parameter Is Never Enough</h4>
+    <p>The biggest-value customer may have only purchased once or twice in a year. The most frequent purchaser may have a value so low it is almost not profitable to service them. One parameter will never give you an accurate view of your customer base — and you'll ignore customer lifetime value entirely. RFM scores all three together: a customer earns more points if they bought in the recent past, bought many times, or spent more.</p>
+  </div>
+
+  <img class="section-img" src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/241/992/original/ChatGPT_Image_Sep_23__2026__05_46_47_PM.png?1790165813" alt="RFM Score Scale">
+
+  <p style="margin-top:24px;">With 5 bands per metric, there are 5 × 5 × 5 = <strong>125 possible RFM score combinations</strong>. Managing 125 individual marketing responses is impractical — so similar permutations are grouped into the UK Data &amp; Marketing Association's (DMA) 11 named segments, each with a prescribed marketing strategy.</p>
+
+  <img class="section-img" src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/055/222/original/a.png?1698637202" alt="The 11 DMA customer segments and their recommended marketing actions" style="margin-top:16px;">
+  <p style="font-size:13px;color:var(--text-2);text-align:center;margin-top:-8px;">The DMA's 11 segments and the marketing action recommended for each</p>
+
+  <div class="info-grid" style="margin-top:24px;">
+    <div class="info-card">
+      <div class="ic-icon">📊</div>
+      <h4>5 Bands per Metric</h4>
+      <p>5 R bands × 5 F bands × 5 M bands = 125 permutations. More resolution than last week's 3×3×3 = 27.</p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">🗜️</div>
+      <h4>F + M Combined</h4>
+      <p>Frequency and Monetary are averaged into a single FM score, reducing from 125 to 25 (5 R × 5 FM) combinations to work with.</p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">🎯</div>
+      <h4>11 DMA Segments</h4>
+      <p>The DMA model groups the 25 R×FM combinations into 11 named, actionable segments with prescribed marketing strategies.</p>
+    </div>
+  </div>
+
+  <div class="quiz-wrap" style="margin-top:32px;">
+    <div class="quiz-question">Q1 · With 5 bands each for R, F and M, there are 125 possible permutations. Why does the DMA model group these into just 11 named segments instead of 125 individual responses?</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="handleQuiz(this, false, 'q1')"><span class="opt-key">A</span> Because BigQuery cannot handle more than 11 categories</div>
+      <div class="quiz-opt" onclick="handleQuiz(this, true, 'q1')"><span class="opt-key">B</span> Because many permutations call for very similar marketing responses, so grouping into 11 segments keeps the strategy actionable without losing meaningful distinctions</div>
+      <div class="quiz-opt" onclick="handleQuiz(this, false, 'q1')"><span class="opt-key">C</span> Because only 11 permutations are mathematically possible</div>
+      <div class="quiz-opt" onclick="handleQuiz(this, false, 'q1')"><span class="opt-key">D</span> Because customers cannot be scored higher than 3 in any metric</div>
+    </div>
+    <div class="quiz-explanation" id="q1-exp">
+      <strong>✓ Correct!</strong> 125 individual permutations is too granular to manage — a customer scoring (5,5,4) and one scoring (5,5,5) don't need fundamentally different campaigns. Grouping into 11 segments keeps the model both statistically grounded and operationally usable.
+    </div>
+  </div>
+</section>
+
+<!-- Pipeline Overview -->
+<section id="data">
+  <h2>The Data: sales.csv</h2>
+  <p class="section-intro">A retail transaction log, one row per line item. Uploaded to BigQuery as a table named <code>sales</code> in a dataset named <code>retail</code>, inside a project called <code>customer-segmentation</code>.</p>
+
+  <div style="margin-bottom:20px;">
+    <a class="viz-link" href="https://drive.google.com/file/d/1txmInRNwgPH6itjJORWg4CC0Rbna8wMc/view?usp=sharing" target="_blank">📄 Dataset: sales.csv</a>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="ic-icon">🧾</div>
+      <h4>InvoiceNo</h4>
+      <p>6-digit number uniquely assigned to each transaction. <strong>If the code starts with the letter 'c', it indicates a cancellation.</strong></p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">🏷️</div>
+      <h4>StockCode &amp; Description</h4>
+      <p>5-digit product code uniquely assigned to each distinct product, plus the product name.</p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">🔢</div>
+      <h4>Quantity &amp; UnitPrice</h4>
+      <p>Units of each product per transaction, and the price per unit in sterling. Multiply them to get the line amount.</p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">📅</div>
+      <h4>InvoiceDate</h4>
+      <p>Date and time when each transaction was generated — the raw material for Recency.</p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">👤</div>
+      <h4>CustomerID</h4>
+      <p>5-digit number uniquely assigned to each customer. Everything gets grouped by this in the end.</p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">🌍</div>
+      <h4>Country</h4>
+      <p>Name of the country where each customer resides.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Pipeline Overview -->
+<section id="pipeline">
+  <h2>The 5-Step SQL Pipeline</h2>
+  <p class="section-intro">The BigQuery RFM pipeline runs in 5 sequential steps, each saving its output as a new table for the next step:</p>
+
+  <img class="section-img" src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/242/007/original/ChatGPT_Image_Sep_23__2026__05_57_59_PM.png?1790166487" alt="5-Step Pipeline">
+
+  <div class="pipeline-v" style="margin-top:24px;">
+    <div class="pipe-row">
+      <div class="pipe-left"><div class="pipe-dot">1</div><div class="pipe-line"></div></div>
+      <div class="pipe-content">
+        <h4>Data Processing</h4>
+        <p>Calculate total cost per line item (Quantity × UnitPrice), then aggregate to total bill per invoice using a CTE + GROUP BY. Save as <code>bill</code> table.</p>
+      </div>
+    </div>
+    <div class="pipe-row">
+      <div class="pipe-left"><div class="pipe-dot">2</div><div class="pipe-line"></div></div>
+      <div class="pipe-content">
+        <h4>Compute R / F / M per Customer</h4>
+        <p>Join sales + bill tables. Get <code>last_purchase_date</code>, <code>first_purchase_date</code>, <code>num_purchases</code> and <code>monetary</code> per customer. Then compute <code>recency</code> (days from reference date) and <code>frequency</code> (purchases ÷ months active). Save as <code>RFM</code> table.</p>
+      </div>
+    </div>
+    <div class="pipe-row">
+      <div class="pipe-left"><div class="pipe-dot">3</div><div class="pipe-line"></div></div>
+      <div class="pipe-content">
+        <h4>Determine Quintiles</h4>
+        <p>Use <code>APPROX_QUANTILES(col, 100)</code> to get the 20th, 40th, 60th, 80th and 100th percentile cut-offs for M, F and R. Save as <code>quintiles</code> table.</p>
+      </div>
+    </div>
+    <div class="pipe-row">
+      <div class="pipe-left"><div class="pipe-dot">4</div><div class="pipe-line"></div></div>
+      <div class="pipe-content">
+        <h4>Assign Scores 1–5</h4>
+        <p>CASE statements map each customer's raw value to a score. <strong>Recency is reversed</strong> (low days → score 5). F and M go low-to-high. Average F and M scores into <code>fm_score</code>. Save as <code>score</code> table.</p>
+      </div>
+    </div>
+    <div class="pipe-row">
+      <div class="pipe-left"><div class="pipe-dot">5</div></div>
+      <div class="pipe-content">
+        <h4>Define Segments (R × FM Grid)</h4>
+        <p>A final CASE statement maps every (r_score, fm_score) pair to one of the 11 DMA segments — from Champions down to Lost.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Data Processing -->
+<section id="dataproc">
+  <h2>Step 1–2: Data Processing & R/F/M Values</h2>
+  <h3>Total Bill per Invoice</h3>
+  <div class="bq-block">
+<span class="bq-cm">-- CTE: compute amount per line item</span>
+<span class="bq-kw">WITH</span> <span class="bq-alias">bills</span> <span class="bq-kw">AS</span> (
+  <span class="bq-kw">SELECT</span>
+    <span class="bq-str">InvoiceNo</span>,
+    (<span class="bq-str">Quantity</span> * <span class="bq-str">UnitPrice</span>) <span class="bq-kw">AS</span> <span class="bq-alias">amount</span>
+  <span class="bq-kw">FROM</span> <span class="bq-str">`customer-segmentation.retail.sales`</span>
+)
+<span class="bq-kw">SELECT</span>
+  <span class="bq-str">InvoiceNo</span>,
+  <span class="bq-fn">SUM</span>(<span class="bq-str">amount</span>) <span class="bq-kw">AS</span> <span class="bq-alias">total</span>
+<span class="bq-kw">FROM</span> <span class="bq-alias">bills</span>
+<span class="bq-kw">GROUP BY</span> <span class="bq-str">InvoiceNo</span>
+  </div>
+
+  <h3 style="margin-top:24px;">Compute R / F / M per Customer</h3>
+  <div class="bq-block">
+<span class="bq-cm">-- Step A: first/last purchase, purchase count, monetary total per customer</span>
+<span class="bq-kw">SELECT</span>
+  <span class="bq-str">CustomerID</span>,
+  <span class="bq-fn">DATE</span>(<span class="bq-fn">MAX</span>(<span class="bq-str">InvoiceDate</span>)) <span class="bq-kw">AS</span> <span class="bq-alias">last_purchase_date</span>,
+  <span class="bq-fn">DATE</span>(<span class="bq-fn">MIN</span>(<span class="bq-str">InvoiceDate</span>)) <span class="bq-kw">AS</span> <span class="bq-alias">first_purchase_date</span>,
+  <span class="bq-fn">COUNT</span>(<span class="bq-kw">DISTINCT</span> <span class="bq-str">InvoiceNo</span>) <span class="bq-kw">AS</span> <span class="bq-alias">num_purchases</span>,
+  <span class="bq-fn">SUM</span>(<span class="bq-str">total</span>) <span class="bq-kw">AS</span> <span class="bq-alias">monetary</span>
+<span class="bq-kw">FROM</span> (
+  <span class="bq-cm">-- one row per invoice, so SUM(total) doesn't double-count the bill</span>
+  <span class="bq-kw">SELECT</span>
+    s.<span class="bq-str">CustomerID</span>, s.<span class="bq-str">InvoiceDate</span>, s.<span class="bq-str">InvoiceNo</span>, b.<span class="bq-str">total</span>,
+    <span class="bq-fn">ROW_NUMBER</span>() <span class="bq-kw">OVER</span>(<span class="bq-kw">PARTITION BY</span> s.<span class="bq-str">InvoiceNo</span> <span class="bq-kw">ORDER BY</span> s.<span class="bq-str">InvoiceNo</span>) <span class="bq-kw">AS</span> <span class="bq-alias">RN</span>
+  <span class="bq-kw">FROM</span> <span class="bq-str">`customer-segmentation.retail.sales`</span> s
+  <span class="bq-kw">LEFT JOIN</span> <span class="bq-str">`customer-segmentation.retail.bill`</span> b
+    <span class="bq-kw">ON</span> s.<span class="bq-str">InvoiceNo</span> = b.<span class="bq-str">InvoiceNo</span>
+) <span class="bq-alias">A</span>
+<span class="bq-kw">WHERE</span> A.<span class="bq-str">RN</span> = <span class="bq-num">1</span>
+<span class="bq-kw">GROUP BY</span> <span class="bq-str">CustomerID</span>
+
+<span class="bq-cm">-- Step B: recency & frequency</span>
+<span class="bq-kw">SELECT</span> *,
+  <span class="bq-fn">DATE_DIFF</span>(<span class="bq-str">reference_date</span>, <span class="bq-str">last_purchase_date</span>, <span class="bq-kw">DAY</span>) <span class="bq-kw">AS</span> <span class="bq-alias">recency</span>,
+  <span class="bq-str">num_purchases</span> / (<span class="bq-str">months_cust</span>) <span class="bq-kw">AS</span> <span class="bq-alias">frequency</span>
+<span class="bq-kw">FROM</span> (
+  <span class="bq-kw">SELECT</span> *,
+    <span class="bq-fn">MAX</span>(<span class="bq-str">last_purchase_date</span>) <span class="bq-kw">OVER</span> () + <span class="bq-num">1</span> <span class="bq-kw">AS</span> <span class="bq-alias">reference_date</span>,
+    <span class="bq-fn">DATE_DIFF</span>(<span class="bq-str">last_purchase_date</span>, <span class="bq-str">first_purchase_date</span>, <span class="bq-kw">month</span>) + <span class="bq-num">1</span> <span class="bq-kw">AS</span> <span class="bq-alias">months_cust</span>
+  <span class="bq-kw">FROM</span> <span class="bq-str">`customer-segmentation.retail.monetary`</span>
+)
+<span class="bq-kw">ORDER BY</span> <span class="bq-str">CustomerID</span>
+  </div>
+
+  <div class="quiz-wrap" style="margin-top:24px;">
+    <div class="quiz-question">Q2 · Frequency here is calculated as num_purchases / months_cust, not just the raw count. Why divide by the number of months the customer has been active?</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="handleQuiz(this, false, 'q2')"><span class="opt-key">A</span> Division is only used to make the numbers smaller</div>
+      <div class="quiz-opt" onclick="handleQuiz(this, true, 'q2')"><span class="opt-key">B</span> It normalises for how long the customer has been around — 10 purchases in 2 months is a much more frequent buyer than 10 purchases in 24 months, and raw counts alone can't tell them apart</div>
+      <div class="quiz-opt" onclick="handleQuiz(this, false, 'q2')"><span class="opt-key">C</span> BigQuery requires all metrics to be fractions</div>
+      <div class="quiz-opt" onclick="handleQuiz(this, false, 'q2')"><span class="opt-key">D</span> months_cust is always equal to 1, so it has no real effect</div>
+    </div>
+    <div class="quiz-explanation" id="q2-exp">
+      <strong>✓ Correct!</strong> A raw purchase count rewards long-tenured customers even if they buy rarely. Dividing by months_cust converts the count into a genuine rate — purchases per month — so a newer, highly active customer and an older, sporadic one are compared fairly on how often they actually buy.
+    </div>
+  </div>
+</section>
+
+<!-- Quintiles -->
+<section id="quintiles">
+  <h2>Step 3: Quintile Boundaries with APPROX_QUANTILES()</h2>
+  <p class="section-intro">Instead of hardcoding cut-off values (which would change each quarter), BigQuery computes them dynamically from the actual data distribution — so the model works for any dataset automatically.</p>
+
+  <img class="section-img" src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/242/010/original/ChatGPT_Image_Sep_23__2026__06_05_01_PM.png?1790166933" alt="Quintile Splitting">
+
+  <div style="margin-bottom:16px; display:flex; gap:12px; flex-wrap:wrap;">
+    <a class="viz-link" href="https://dsml-vizs.vercel.app/pa-10/quintile-boundary-splitting-draggable-cut-point-histogram/" target="_blank">🔗 Interactive: Quintile Histogram</a>
+  </div>
+
+  <div class="bq-block">
+<span class="bq-cm">-- Get the 20th, 40th, 60th, 80th and 100th percentile cut-offs for M, F and R</span>
+<span class="bq-kw">SELECT</span>
+  a.*,
+  <span class="bq-cm">-- Monetary percentiles</span>
+  b.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">20</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">m20</span>, b.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">40</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">m40</span>,
+  b.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">60</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">m60</span>, b.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">80</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">m80</span>,
+  b.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">100</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">m100</span>,
+  <span class="bq-cm">-- Frequency percentiles</span>
+  c.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">20</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">f20</span>, c.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">40</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">f40</span>,
+  c.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">60</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">f60</span>, c.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">80</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">f80</span>,
+  c.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">100</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">f100</span>,
+  <span class="bq-cm">-- Recency percentiles</span>
+  d.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">20</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">r20</span>, d.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">40</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">r40</span>,
+  d.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">60</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">r60</span>, d.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">80</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">r80</span>,
+  d.percentiles[<span class="bq-fn">offset</span>(<span class="bq-num">100</span>)] <span class="bq-kw">AS</span> <span class="bq-alias">r100</span>
+<span class="bq-kw">FROM</span> <span class="bq-str">`customer-segmentation.retail.RFM`</span> a,
+  (<span class="bq-kw">SELECT</span> <span class="bq-fn">APPROX_QUANTILES</span>(<span class="bq-str">monetary</span>, <span class="bq-num">100</span>) <span class="bq-alias">percentiles</span>
+   <span class="bq-kw">FROM</span> <span class="bq-str">`customer-segmentation.retail.RFM`</span>) b,
+  (<span class="bq-kw">SELECT</span> <span class="bq-fn">APPROX_QUANTILES</span>(<span class="bq-str">frequency</span>, <span class="bq-num">100</span>) <span class="bq-alias">percentiles</span>
+   <span class="bq-kw">FROM</span> <span class="bq-str">`customer-segmentation.retail.RFM`</span>) c,
+  (<span class="bq-kw">SELECT</span> <span class="bq-fn">APPROX_QUANTILES</span>(<span class="bq-str">recency</span>, <span class="bq-num">100</span>) <span class="bq-alias">percentiles</span>
+   <span class="bq-kw">FROM</span> <span class="bq-str">`customer-segmentation.retail.RFM`</span>) d
+<span class="bq-kw">ORDER BY</span> <span class="bq-str">CustomerID</span>
+  </div>
+
+  <div class="takeaway">
+    <h4>💡 Why APPROX_QUANTILES?</h4>
+    <p>APPROX_QUANTILES(col, 100) returns an array of 101 elements — the first is the approximate minimum, the last the approximate maximum — and OFFSET() picks an element out by position. The trade-off is real: approximate aggregate functions are scalable in terms of memory usage and time, <strong>but they produce approximate results instead of exact ones</strong>. For quintile cut-offs that is an acceptable trade — a customer sitting right on a boundary shifting one band does not change the marketing strategy.</p>
+  </div>
+</section>
+
+<!-- Scoring -->
+<section id="scoring">
+  <h2>Step 4: Score 1–5 with CASE Statements</h2>
+  <p class="section-intro">Each customer is assigned a score from 1 (lowest) to 5 (highest) for each metric — with Recency running in <strong>reverse</strong>:</p>
+
+  <div class="score-compare">
+    <div class="score-box">
+      <h4 style="color:#F59E0B;">M Score (normal)</h4>
+      <div class="score-row"><span class="band">≤ m20</span><span class="score" style="color:#EF4444;">1</span></div>
+      <div class="score-row"><span class="band">m20–m40</span><span class="score" style="color:#F97316;">2</span></div>
+      <div class="score-row"><span class="band">m40–m60</span><span class="score" style="color:#F59E0B;">3</span></div>
+      <div class="score-row"><span class="band">m60–m80</span><span class="score" style="color:#22C55E;">4</span></div>
+      <div class="score-row"><span class="band">> m80</span><span class="score" style="color:#10B981;">5</span></div>
+    </div>
+    <div class="score-box">
+      <h4 style="color:#10B981;">F Score (normal)</h4>
+      <div class="score-row"><span class="band">≤ f20</span><span class="score" style="color:#EF4444;">1</span></div>
+      <div class="score-row"><span class="band">f20–f40</span><span class="score" style="color:#F97316;">2</span></div>
+      <div class="score-row"><span class="band">f40–f60</span><span class="score" style="color:#F59E0B;">3</span></div>
+      <div class="score-row"><span class="band">f60–f80</span><span class="score" style="color:#22C55E;">4</span></div>
+      <div class="score-row"><span class="band">> f80</span><span class="score" style="color:#10B981;">5</span></div>
+    </div>
+    <div class="score-box" style="border-color:#FCA5A5;">
+      <h4 style="color:#EF4444;">R Score ⚠️ INVERTED</h4>
+      <div class="score-row"><span class="band">≤ r20 (most recent!)</span><span class="score" style="color:#10B981;">5</span></div>
+      <div class="score-row"><span class="band">r20–r40</span><span class="score" style="color:#22C55E;">4</span></div>
+      <div class="score-row"><span class="band">r40–r60</span><span class="score" style="color:#F59E0B;">3</span></div>
+      <div class="score-row"><span class="band">r60–r80</span><span class="score" style="color:#F97316;">2</span></div>
+      <div class="score-row"><span class="band">> r80 (oldest!)</span><span class="score" style="color:#EF4444;">1</span></div>
+    </div>
+  </div>
+
+  <div class="bq-block" style="margin-top:24px;">
+<span class="bq-cm">-- Assign 1–5 per metric; combine F+M into fm_score</span>
+<span class="bq-kw">SELECT</span> <span class="bq-str">CustomerID</span>, <span class="bq-str">m_score</span>, <span class="bq-str">f_score</span>, <span class="bq-str">r_score</span>,
+  <span class="bq-fn">CAST</span>(<span class="bq-fn">ROUND</span>((<span class="bq-str">f_score</span> + <span class="bq-str">m_score</span>) / <span class="bq-num">2</span>, <span class="bq-num">0</span>) <span class="bq-kw">AS</span> <span class="bq-fn">INT64</span>) <span class="bq-kw">AS</span> <span class="bq-alias">fm_score</span>
+<span class="bq-kw">FROM</span> (
+  <span class="bq-kw">SELECT</span> *,
+    <span class="bq-kw">CASE</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">monetary</span> &lt;= <span class="bq-alias">m20</span> <span class="bq-kw">THEN</span> <span class="bq-num">1</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">monetary</span> &lt;= <span class="bq-alias">m40</span> <span class="bq-kw">AND</span> <span class="bq-str">monetary</span> &gt; <span class="bq-alias">m20</span> <span class="bq-kw">THEN</span> <span class="bq-num">2</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">monetary</span> &lt;= <span class="bq-alias">m60</span> <span class="bq-kw">AND</span> <span class="bq-str">monetary</span> &gt; <span class="bq-alias">m40</span> <span class="bq-kw">THEN</span> <span class="bq-num">3</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">monetary</span> &lt;= <span class="bq-alias">m80</span> <span class="bq-kw">AND</span> <span class="bq-str">monetary</span> &gt; <span class="bq-alias">m60</span> <span class="bq-kw">THEN</span> <span class="bq-num">4</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">monetary</span> &lt;= <span class="bq-alias">m100</span> <span class="bq-kw">AND</span> <span class="bq-str">monetary</span> &gt; <span class="bq-alias">m80</span> <span class="bq-kw">THEN</span> <span class="bq-num">5</span>
+    <span class="bq-kw">END</span> <span class="bq-kw">AS</span> <span class="bq-alias">m_score</span>,
+    <span class="bq-cm">-- f_score: same direction as m_score</span>
+    <span class="bq-kw">CASE</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">frequency</span> &lt;= <span class="bq-alias">f20</span> <span class="bq-kw">THEN</span> <span class="bq-num">1</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">frequency</span> &lt;= <span class="bq-alias">f40</span> <span class="bq-kw">AND</span> <span class="bq-str">frequency</span> &gt; <span class="bq-alias">f20</span> <span class="bq-kw">THEN</span> <span class="bq-num">2</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">frequency</span> &lt;= <span class="bq-alias">f60</span> <span class="bq-kw">AND</span> <span class="bq-str">frequency</span> &gt; <span class="bq-alias">f40</span> <span class="bq-kw">THEN</span> <span class="bq-num">3</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">frequency</span> &lt;= <span class="bq-alias">f80</span> <span class="bq-kw">AND</span> <span class="bq-str">frequency</span> &gt; <span class="bq-alias">f60</span> <span class="bq-kw">THEN</span> <span class="bq-num">4</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">frequency</span> &lt;= <span class="bq-alias">f100</span> <span class="bq-kw">AND</span> <span class="bq-str">frequency</span> &gt; <span class="bq-alias">f80</span> <span class="bq-kw">THEN</span> <span class="bq-num">5</span>
+    <span class="bq-kw">END</span> <span class="bq-kw">AS</span> <span class="bq-alias">f_score</span>,
+    <span class="bq-cm">-- r_score: REVERSED (low recency days = high score)</span>
+    <span class="bq-kw">CASE</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">recency</span> &lt;= <span class="bq-alias">r20</span> <span class="bq-kw">THEN</span> <span class="bq-num">5</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">recency</span> &lt;= <span class="bq-alias">r40</span> <span class="bq-kw">AND</span> <span class="bq-str">recency</span> &gt; <span class="bq-alias">r20</span> <span class="bq-kw">THEN</span> <span class="bq-num">4</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">recency</span> &lt;= <span class="bq-alias">r60</span> <span class="bq-kw">AND</span> <span class="bq-str">recency</span> &gt; <span class="bq-alias">r40</span> <span class="bq-kw">THEN</span> <span class="bq-num">3</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">recency</span> &lt;= <span class="bq-alias">r80</span> <span class="bq-kw">AND</span> <span class="bq-str">recency</span> &gt; <span class="bq-alias">r60</span> <span class="bq-kw">THEN</span> <span class="bq-num">2</span>
+      <span class="bq-kw">WHEN</span> <span class="bq-str">recency</span> &lt;= <span class="bq-alias">r100</span> <span class="bq-kw">AND</span> <span class="bq-str">recency</span> &gt; <span class="bq-alias">r80</span> <span class="bq-kw">THEN</span> <span class="bq-num">1</span>
+    <span class="bq-kw">END</span> <span class="bq-kw">AS</span> <span class="bq-alias">r_score</span>
+  <span class="bq-kw">FROM</span> <span class="bq-str">`customer-segmentation.retail.quintiles`</span>
+)
+  </div>
+
+  <img class="section-img" src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/242/014/original/ChatGPT_Image_Sep_23__2026__06_08_32_PM.png?1790167121" alt="Score Table">
+</section>
+
+<!-- Segments -->
+<section id="segments">
+  <h2>Step 5: The R × FM Grid — 11 DMA Segments</h2>
+  <p class="section-intro">The final CASE statement maps every (r_score, fm_score) pair to one of 11 named segments. The full 5×5 grid is shown below:</p>
+
+  <div style="margin-bottom:16px; display:flex; gap:12px; flex-wrap:wrap;">
+    <a class="viz-link" href="https://dsml-vizs.vercel.app/pa-10/r-vs-fm-score-segment-grid-clickable-segment-heatmap-grid/" target="_blank">🔗 Interactive: R vs FM Grid Heatmap</a>
+  </div>
+
+  <!-- Grid -->
+  <div style="overflow-x:auto; margin-bottom:24px;">
+    <div class="rfm-grid" style="min-width:560px;">
+      <div class="rfm-grid-header" style="grid-column:1;"></div>
+      <div class="rfm-grid-header">FM=1</div>
+      <div class="rfm-grid-header">FM=2</div>
+      <div class="rfm-grid-header">FM=3</div>
+      <div class="rfm-grid-header">FM=4</div>
+      <div class="rfm-grid-header">FM=5</div>
+      <!-- R=5 -->
+      <div class="rfm-grid-row-label">R=5</div>
+      <div class="rfm-grid-cell cell-recent">Recent Customers</div>
+      <div class="rfm-grid-cell cell-potential">Potential Loyalists</div>
+      <div class="rfm-grid-cell cell-loyal">Loyal Customers</div>
+      <div class="rfm-grid-cell cell-champ">Champions</div>
+      <div class="rfm-grid-cell cell-champ">Champions</div>
+      <!-- R=4 -->
+      <div class="rfm-grid-row-label">R=4</div>
+      <div class="rfm-grid-cell cell-promise">Promising</div>
+      <div class="rfm-grid-cell cell-potential">Potential Loyalists</div>
+      <div class="rfm-grid-cell cell-potential">Potential Loyalists</div>
+      <div class="rfm-grid-cell cell-loyal">Loyal Customers</div>
+      <div class="rfm-grid-cell cell-champ">Champions</div>
+      <!-- R=3 -->
+      <div class="rfm-grid-row-label">R=3</div>
+      <div class="rfm-grid-cell cell-promise">Promising</div>
+      <div class="rfm-grid-cell cell-need">Customers Needing Attention</div>
+      <div class="rfm-grid-cell cell-potential">Potential Loyalists</div>
+      <div class="rfm-grid-cell cell-loyal">Loyal Customers</div>
+      <div class="rfm-grid-cell cell-loyal">Loyal Customers</div>
+      <!-- R=2 -->
+      <div class="rfm-grid-row-label">R=2</div>
+      <div class="rfm-grid-cell cell-sleep">About to Sleep</div>
+      <div class="rfm-grid-cell cell-need">Customers Needing Attention</div>
+      <div class="rfm-grid-cell cell-need">Customers Needing Attention</div>
+      <div class="rfm-grid-cell cell-risk">At Risk</div>
+      <div class="rfm-grid-cell cell-risk">At Risk</div>
+      <!-- R=1 -->
+      <div class="rfm-grid-row-label">R=1</div>
+      <div class="rfm-grid-cell cell-lost">Lost</div>
+      <div class="rfm-grid-cell cell-hiber">Hibernating</div>
+      <div class="rfm-grid-cell cell-risk">At Risk</div>
+      <div class="rfm-grid-cell cell-cantlose">Can't Lose Them</div>
+      <div class="rfm-grid-cell cell-cantlose">Can't Lose Them</div>
+    </div>
+  </div>
+
+  <div class="quiz-wrap" style="margin-top:24px;">
+    <div class="quiz-question">Q3 · A customer has r_score = 1 and fm_score = 5. Which segment does the SQL CASE statement assign them to, and why does that make business sense?</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="handleQuiz(this, false, 'q3')"><span class="opt-key">A</span> Champions — because their FM score is maximum</div>
+      <div class="quiz-opt" onclick="handleQuiz(this, true, 'q3')"><span class="opt-key">B</span> Can't Lose Them — they historically bought a lot and often (high FM), but haven't purchased in a very long time (lowest R), so they're a high-value customer at real risk of being lost</div>
+      <div class="quiz-opt" onclick="handleQuiz(this, false, 'q3')"><span class="opt-key">C</span> Lost — because their recency score is the lowest possible</div>
+      <div class="quiz-opt" onclick="handleQuiz(this, false, 'q3')"><span class="opt-key">D</span> Recent Customers — because they are still active</div>
+    </div>
+    <div class="quiz-explanation" id="q3-exp">
+      <strong>✓ Correct!</strong> r_score=1 means it's been a very long time since their last purchase. fm_score=5 means, historically, they bought often and spent a lot. The CASE statement's "r_score=1 AND fm_score=5 → Can't Lose Them" branch captures exactly this: don't let a high-value customer quietly churn.
+    </div>
+  </div>
+
+  <div class="context-box" style="margin-top:28px;">
+    <h3>⚖️ What RFM Does Not See</h3>
+    <p>This type of segmentation focuses on <strong>actual buying behaviour</strong> and ignores the differences in motivations, intentions and lifestyles of consumers. It will tell you that a customer went quiet; it will not tell you why. RFM is nonetheless a useful starting point, and because of its simplicity it can be executed fast and in an automated way — giving companies the power to act and decide on business strategies swiftly.</p>
+  </div>
+</section>
+
+<!-- Other segmentation -->
+<section id="other">
+  <h2>Other Segmentation Models</h2>
+  <p class="section-intro">RFM is one of four main customer segmentation approaches — it's the most automatable, which is why it runs so well as a SQL pipeline:</p>
+
+  <img class="section-img" src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/242/016/original/ChatGPT_Image_Sep_23__2026__06_11_13_PM.png?1790167281" alt="Other Segmentation Models">
+
+  <div class="info-grid" style="margin-top:20px;">
+    <div class="info-card">
+      <div class="ic-icon">💻</div>
+      <h4>Technographic</h4>
+      <p>Segment by technology usage — device type, software, online services subscribed to.</p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">🛒</div>
+      <h4>Behavioral (RFM)</h4>
+      <p>Divide by buying habits, likes, and wants. Price-focused vs quality-focused vs brand-focused. RFM lives here.</p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">❤️</div>
+      <h4>Needs-Based</h4>
+      <p>Segment by financial, emotional, and physical needs — budget gift-seeker vs comfort-seeker, etc.</p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">🔄</div>
+      <h4>Customer Status / Lifecycle</h4>
+      <p>Leads, new customers, loyal, at-risk, churned. RFM is the data-driven method to achieve this automatically.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Summary -->
+<section id="summary">
+  <h2>Today's Journey</h2>
+  <img class="section-img" src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/242/027/original/ChatGPT_Image_Sep_23__2026__06_16_26_PM.png?1790167593" alt="Customer Segmentation Summary">
+
+  <div class="summary-grid" style="margin-top:28px;">
+    <div class="summary-card">
+      <div class="s-num">01</div>
+      <h4>Scale Problem</h4>
+      <p>5 bands × 5 × 5 = 125 permutations → grouped into 11 DMA segments. F+M averaged into fm_score to reduce to 25 cells.</p>
+    </div>
+    <div class="summary-card">
+      <div class="s-num">02</div>
+      <h4>Data Processing</h4>
+      <p>CTE collapses line items → bill-per-invoice. Same instinct as a Sheets Pivot Table, just in SQL.</p>
+    </div>
+    <div class="summary-card">
+      <div class="s-num">03</div>
+      <h4>Frequency as Rate</h4>
+      <p>num_purchases ÷ months_cust = purchases per month. Prevents long-tenured-but-inactive customers being over-scored.</p>
+    </div>
+    <div class="summary-card">
+      <div class="s-num">04</div>
+      <h4>APPROX_QUANTILES</h4>
+      <p>Computes quintile cut-offs from the data itself — no hardcoded thresholds. Scales to any dataset automatically.</p>
+    </div>
+    <div class="summary-card">
+      <div class="s-num">05</div>
+      <h4>Recency Inversion</h4>
+      <p>Recency CASE runs backwards: low days (recent) → score 5; high days (old) → score 1. Same rule as Sheets, different SQL direction.</p>
+    </div>
+    <div class="summary-card">
+      <div class="s-num">06</div>
+      <h4>11 DMA Segments</h4>
+      <p>Champions, Loyal Customers, Potential Loyalists, Promising, Customers Needing Attention, Recent Customers, About to Sleep, At Risk, Can't Lose Them, Hibernating, Lost.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav a[href^="#"]');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`nav a[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  sections.forEach(s => obs.observe(s));
+
+  function handleQuiz(el, isCorrect, qId) {
+    const container = el.closest('.quiz-options');
+    if (container.dataset.answered) return;
+    container.dataset.answered = '1';
+    container.querySelectorAll('.quiz-opt').forEach(o => {
+      const fn = o.onclick?.toString() || '';
+      if (fn.includes('true')) o.classList.add('correct');
+      else if (o === el && !isCorrect) o.classList.add('wrong');
+      o.style.pointerEvents = 'none';
+    });
+    const exp = document.getElementById(qId + '-exp');
+    if (exp) exp.classList.add('show');
+  }
+</script>
+</body>
+</html><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-PA-9-postRead" target="_blank" rel="noopener">github.com/scaler-content/DSML-PA-9-postRead</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body></html>

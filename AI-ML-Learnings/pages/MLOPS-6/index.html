@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ML-Flow 2 post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0a0b;
+    --panel:#17181b;
+    --panel-2:#1f2125;
+    --steel:#2d3036;
+    --steel-soft:#1c1e22;
+    --silver:#a7acb4;
+    --silver-dim:#6f747c;
+    --paper:#e8e8ea;
+    --gold:#c9a227;
+    --gold-bright:#e8c468;
+    --gold-dim:#8a6f2c;
+    --rust:#b9633f;
+    --rust-bg:#241813;
+    --good:#7a9b6e;
+    --good-bg:#141c12;
+    --code-bg:#0d0e10;
+    --font-display:'Space Grotesk','Segoe UI',sans-serif;
+    --font-body:'Source Serif 4',Georgia,serif;
+    --font-mono:'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
+    --max-w:44rem;
+    color-scheme: dark;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth; scroll-padding-top:5.5rem;}
+
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--font-body);
+    font-size:17px;
+    line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    background-image:
+      linear-gradient(var(--steel-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--steel-soft) 1px, transparent 1px);
+    background-size: 48px 48px;
+    background-attachment: fixed;
+    background-position: -1px -1px;
+  }
+
+  ::selection{ background:var(--gold-dim); color:var(--ink); }
+
+  a{ color:var(--gold-bright); text-decoration-color:var(--gold-dim); text-underline-offset:3px; }
+  a:hover{ color:var(--gold); }
+  a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--gold-bright);
+    outline-offset:3px;
+    border-radius:2px;
+  }
+
+  img, svg{ max-width:100%; height:auto; display:block; }
+
+  h1,h2,h3,h4{
+    font-family:var(--font-display);
+    font-weight:600;
+    color:var(--paper);
+    line-height:1.2;
+    margin:0 0 .6em;
+    letter-spacing:-.01em;
+  }
+
+  p{ margin:0 0 1.15em; }
+  p:last-child{ margin-bottom:0; }
+
+  code, pre{ font-family:var(--font-mono); }
+
+  /* ---------- layout shell ---------- */
+
+  .progress-rail{
+    position:fixed;
+    top:0; left:0;
+    width:3px;
+    height:100vh;
+    background:var(--steel-soft);
+    z-index:60;
+  }
+  .progress-rail__fill{
+    width:100%;
+    height:0%;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold-dim));
+    transition:height .08s linear;
+  }
+
+  .topbar{
+    position:sticky; top:0; left:0; right:0;
+    z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:1rem;
+    padding:.85rem 1.5rem;
+    background:rgba(10,10,11,.88);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--steel-soft);
+  }
+  .topbar__mark{
+    font-family:var(--font-mono);
+    font-weight:500;
+    font-size:.85rem;
+    letter-spacing:.02em;
+    color:var(--paper);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    display:flex; align-items:center; gap:.55em;
+  }
+  .topbar__mark .box{
+    width:.55em; height:.55em;
+    border:1px solid var(--gold);
+    display:inline-block;
+    flex:none;
+  }
+  .topbar__mark .dot{ color:var(--gold); }
+
+  .shell{
+    max-width:78rem;
+    margin:0 auto;
+    padding:0 1.5rem;
+    display:grid;
+    grid-template-columns:14rem minmax(0,1fr);
+    gap:3rem;
+    align-items:start;
+  }
+
+  /* ---------- desktop side nav ---------- */
+
+  .toc{
+    position:sticky;
+    top:5rem;
+    padding-top:3.5rem;
+    font-size:.85rem;
+  }
+  .toc__label{
+    font-family:var(--font-mono);
+    font-size:.68rem;
+    letter-spacing:.08em;
+    color:var(--silver-dim);
+    margin-bottom:.9rem;
+    text-transform:uppercase;
+  }
+  .toc ol{
+    list-style:none;
+    margin:0; padding:0;
+    border-left:1px solid var(--steel);
+  }
+  .toc li{ margin:0; }
+  .toc a{
+    display:block;
+    padding:.4rem .9rem;
+    margin-left:-1px;
+    border-left:1px solid transparent;
+    color:var(--silver);
+    text-decoration:none;
+    line-height:1.35;
+    font-family:var(--font-mono);
+    font-size:.82rem;
+  }
+  .toc a:hover{ color:var(--paper); }
+  .toc a[aria-current="true"]{
+    color:var(--gold-bright);
+    border-left-color:var(--gold);
+  }
+  .toc .toc-num{
+    color:var(--silver-dim);
+    margin-right:.5em;
+    font-size:.9em;
+  }
+  .toc a[aria-current="true"] .toc-num{ color:var(--gold-dim); }
+
+  .toc-mobile{ display:none; }
+
+  main{ min-width:0; padding-bottom:6rem; }
+
+  .article{
+    max-width:var(--max-w);
+    margin:0 auto;
+  }
+
+  /* ---------- hero ---------- */
+
+  .hero{
+    padding:5.5rem 1.5rem 4rem;
+    max-width:56rem;
+    margin:0 auto;
+  }
+  .hero__kicker{
+    font-family:var(--font-mono);
+    font-size:.8rem;
+    color:var(--gold);
+    margin-bottom:1.1rem;
+    display:flex; align-items:center; gap:.6em;
+  }
+  .hero__kicker .rule{ display:inline-block; width:2.2rem; height:1px; background:var(--gold-dim); }
+  .hero h1{
+    font-size:clamp(2.1rem,4.4vw + .6rem,3.4rem);
+    max-width:22ch;
+  }
+  .hero__tag{
+    font-family:var(--font-body);
+    font-style:italic;
+    font-size:1.18rem;
+    color:var(--silver);
+    max-width:40ch;
+    line-height:1.55;
+    margin-top:1.4rem;
+  }
+  .hero__meta{
+    margin-top:2.4rem;
+    display:flex; gap:1.6rem; flex-wrap:wrap;
+    font-family:var(--font-mono);
+    font-size:.76rem;
+    color:var(--silver-dim);
+  }
+  .hero__meta span b{ color:var(--silver); font-weight:500; }
+
+  .hero-diagram{
+    margin-top:3.2rem;
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    gap:1.4rem;
+    align-items:center;
+  }
+  .hero-diagram__arrow{ font-family:var(--font-mono); color:var(--gold-dim); font-size:1.3rem; }
+  .hero-card{
+    border:1px solid var(--steel);
+    background:var(--panel);
+    border-radius:4px;
+    padding:1.1rem 1.2rem;
+  }
+  .hero-card h4{
+    font-family:var(--font-mono);
+    font-size:.7rem;
+    font-weight:500;
+    color:var(--silver-dim);
+    margin-bottom:.75rem;
+    letter-spacing:.03em;
+  }
+  .hero-card .file-row{
+    font-family:var(--font-mono);
+    font-size:.77rem;
+    color:var(--silver);
+    padding:.3rem 0;
+    border-bottom:1px dashed var(--steel-soft);
+    display:flex; justify-content:space-between; gap:.5rem;
+  }
+  .hero-card .file-row:last-child{ border-bottom:none; }
+  .hero-card.crate .file-row span:last-child{ color:var(--gold-dim); }
+  .hero-card.crate{ border-color:var(--gold-dim); background:linear-gradient(180deg,var(--panel-2),var(--panel)); }
+
+  @media (max-width:640px){
+    .hero-diagram{ grid-template-columns:1fr; }
+    .hero-diagram__arrow{ transform:rotate(90deg); justify-self:center; }
+  }
+
+  /* ---------- article sections ---------- */
+
+  .section{
+    padding:3.4rem 1.5rem 0;
+    scroll-margin-top:5.5rem;
+    border-top:1px solid var(--steel-soft);
+    margin-top:3.4rem;
+  }
+  .section:first-child{ border-top:none; margin-top:0; }
+  .section--plain{ border-top:none; }
+
+  .section__head{
+    display:flex;
+    align-items:baseline;
+    gap:.9rem;
+    margin-bottom:1.6rem;
+  }
+  .section__num{
+    font-family:var(--font-mono);
+    color:var(--gold-dim);
+    font-size:.95rem;
+    flex:none;
+    padding-top:.15em;
+  }
+  .section h2{ font-size:clamp(1.45rem,2.5vw,1.85rem); }
+
+  .lede{ font-size:1.1rem; color:var(--paper); }
+
+  .section h3{
+    font-family:var(--font-display);
+    font-size:1.1rem;
+    margin-top:2.1rem;
+    color:var(--gold-bright);
+    font-weight:600;
+  }
+
+  .section ul, .section ol{ padding-left:1.3rem; margin:0 0 1.15em; }
+  .section li{ margin-bottom:.45em; }
+  .section li:last-child{ margin-bottom:0; }
+
+  strong{ color:var(--paper); font-weight:600; }
+  em{ color:var(--paper); }
+  .muted{ color:var(--silver); }
+
+  :not(pre) > code{
+    background:var(--panel-2);
+    border:1px solid var(--steel-soft);
+    border-radius:4px;
+    padding:.12em .4em;
+    font-size:.86em;
+    color:var(--gold-bright);
+    white-space:nowrap;
+  }
+
+  /* ---------- callouts ---------- */
+
+  .callout{
+    margin:1.6rem 0;
+    padding:1.1rem 1.3rem;
+    background:var(--panel);
+    border-left:3px solid var(--gold);
+    border-radius:0 4px 4px 0;
+    font-size:.97rem;
+  }
+  .callout__label{
+    font-family:var(--font-mono);
+    font-size:.7rem;
+    color:var(--gold);
+    letter-spacing:.04em;
+    margin-bottom:.5rem;
+    display:block;
+    text-transform:uppercase;
+  }
+  .callout--warn{ border-left-color:var(--rust); background:var(--rust-bg); }
+  .callout--warn .callout__label{ color:var(--rust); }
+  .callout p:last-child{ margin-bottom:0; }
+
+  /* ---------- code blocks ---------- */
+
+  .code{
+    position:relative;
+    margin:1.4rem 0;
+    background:var(--code-bg);
+    border:1px solid var(--steel);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .code__bar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:.55rem .9rem;
+    background:var(--panel-2);
+    border-bottom:1px solid var(--steel);
+    font-family:var(--font-mono);
+    font-size:.7rem;
+    color:var(--silver-dim);
+  }
+  .code__bar .pill{
+    display:inline-block;
+    padding:.1em .55em;
+    border:1px solid var(--steel);
+    border-radius:3px;
+    margin-right:.6em;
+    color:var(--silver);
+    font-size:.9em;
+  }
+  .code__copy{
+    font-family:var(--font-mono);
+    font-size:.68rem;
+    color:var(--silver);
+    background:transparent;
+    border:1px solid var(--steel);
+    border-radius:4px;
+    padding:.28rem .6rem;
+    cursor:pointer;
+    transition:color .15s, border-color .15s;
+  }
+  .code__copy:hover{ color:var(--gold-bright); border-color:var(--gold-dim); }
+  .code pre{ margin:0; padding:1rem 1.1rem 1.2rem; overflow-x:auto; font-size:.81rem; line-height:1.6; color:var(--paper); }
+  .code code{ font-family:var(--font-mono); }
+  .code .c-kw{ color:var(--gold-bright); }
+  .code .c-str{ color:#9db97f; }
+  .code .c-com{ color:var(--silver-dim); font-style:italic; }
+  .code .c-fn{ color:#d9b25f; }
+  .code .c-num{ color:#c18a63; }
+
+  /* ---------- tables ---------- */
+
+  .tbl-wrap{ overflow-x:auto; margin:1.6rem 0; }
+  table{ width:100%; border-collapse:collapse; font-size:.9rem; }
+  caption{
+    caption-side:top; text-align:left;
+    font-family:var(--font-mono); font-size:.7rem; color:var(--silver-dim);
+    margin-bottom:.6rem; letter-spacing:.03em; text-transform:uppercase;
+  }
+  th, td{ text-align:left; padding:.7rem .9rem; border-bottom:1px solid var(--steel-soft); vertical-align:top; }
+  th{
+    font-family:var(--font-mono); font-size:.7rem; color:var(--gold-dim);
+    font-weight:500; letter-spacing:.03em; border-bottom:1px solid var(--steel); text-transform:uppercase;
+  }
+  tbody tr:hover{ background:var(--panel); }
+  td code, th code{ white-space:nowrap; }
+
+  .chip{
+    display:inline-block; font-family:var(--font-mono); font-size:.7rem;
+    padding:.15em .55em; border-radius:3px; border:1px solid var(--steel); color:var(--silver);
+  }
+  .chip--gold{ color:var(--ink); background:var(--gold); border-color:var(--gold); font-weight:600; }
+  .chip--outline{ color:var(--gold-bright); border-color:var(--gold-dim); }
+  .chip--bad{ color:var(--rust); border-color:var(--rust); }
+  .chip--good{ color:var(--good); border-color:var(--good); }
+
+  /* ---------- diagram wrapper ---------- */
+
+  .diagram{
+    margin:2rem 0; padding:1.4rem;
+    background:var(--panel); border:1px solid var(--steel); border-radius:6px;
+  }
+  .diagram__caption{
+    font-family:var(--font-mono); font-size:.72rem; color:var(--silver-dim);
+    margin-top:1rem; text-align:center;
+  }
+
+  /* ---------- demo widgets ---------- */
+
+  .demo{
+    margin:1.8rem 0; padding:1.4rem 1.4rem 1.6rem;
+    background:var(--panel); border:1px solid var(--steel); border-radius:6px;
+  }
+  .demo__title{
+    font-family:var(--font-mono); font-size:.72rem; color:var(--silver-dim);
+    margin-bottom:1rem; letter-spacing:.03em; text-transform:uppercase;
+  }
+  .demo__toggle{
+    display:inline-flex; flex-wrap:wrap; border:1px solid var(--steel); border-radius:4px;
+    padding:3px; margin-bottom:1.3rem; gap:2px;
+  }
+  .demo__btn{
+    font-family:var(--font-mono); font-size:.78rem; color:var(--silver);
+    background:transparent; border:none; border-radius:2px; padding:.5rem .9rem; cursor:pointer;
+  }
+  .demo__btn[aria-pressed="true"]{ background:var(--gold); color:var(--ink); font-weight:600; }
+  .demo__note{ margin-top:1.1rem; font-size:.9rem; color:var(--silver); }
+  .demo__note b{ color:var(--gold-bright); font-weight:600; }
+
+  /* pipeline / catch-stage demo */
+  .pipeline{ display:flex; gap:.5rem; align-items:stretch; flex-wrap:wrap; }
+  .pipeline__stage{
+    flex:1 1 8rem;
+    border:1px solid var(--steel); border-radius:4px; padding:.8rem .9rem;
+    background:var(--panel-2); text-align:center;
+  }
+  .pipeline__stage .stage-name{ font-family:var(--font-mono); font-size:.72rem; color:var(--silver-dim); margin-bottom:.4rem; text-transform:uppercase;}
+  .pipeline__stage .stage-verdict{ font-family:var(--font-mono); font-size:.82rem; color:var(--silver); }
+  .pipeline__stage.is-catch{ border-color:var(--rust); background:var(--rust-bg); }
+  .pipeline__stage.is-catch .stage-verdict{ color:var(--rust); font-weight:600; }
+  .pipeline__stage.is-pass .stage-verdict{ color:var(--good); }
+  .pipeline__arrow{ display:flex; align-items:center; color:var(--silver-dim); font-family:var(--font-mono); padding:0 .2rem; }
+
+  /* signature refusal grid */
+  .sig-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(11.5rem,1fr)); gap:.6rem; margin-bottom:1.2rem; }
+  .sig-item{
+    text-align:left; font-family:var(--font-mono); font-size:.78rem;
+    border:1px solid var(--steel); background:var(--panel-2); border-radius:4px;
+    padding:.65rem .8rem; color:var(--silver); cursor:pointer;
+  }
+  .sig-item:hover{ border-color:var(--gold-dim); }
+  .sig-item.is-active{ border-color:var(--gold); background:var(--panel); color:var(--paper); }
+  .sig-item .sig-badge{ display:block; margin-top:.35rem; font-size:.7rem; letter-spacing:.03em; }
+  .sig-item .sig-badge.bad{ color:var(--rust); }
+  .sig-item .sig-badge.good{ color:var(--good); }
+  .sig-detail{
+    border:1px solid var(--steel); border-radius:4px; padding:1rem 1.1rem;
+    background:var(--panel-2); font-size:.92rem; color:var(--silver); min-height:5.5rem;
+  }
+  .sig-detail b{ color:var(--paper); }
+
+  /* two-server comparison */
+  .compare2{ display:grid; grid-template-columns:1fr 1fr; gap:.9rem; margin:1.4rem 0; }
+  @media (max-width:600px){ .compare2{ grid-template-columns:1fr; } }
+  .server-card{ border:1px solid var(--steel); background:var(--panel); border-radius:6px; padding:1rem 1.1rem; }
+  .server-card h4{ font-family:var(--font-mono); font-size:.78rem; color:var(--gold); margin-bottom:.6rem; }
+  .server-card .line{ font-family:var(--font-mono); font-size:.78rem; color:var(--silver); padding:.25rem 0; border-bottom:1px dashed var(--steel-soft); display:flex; justify-content:space-between; gap:.5rem;}
+  .server-card .line:last-child{ border-bottom:none; }
+  .server-card .line .status{ color:var(--good); }
+  .server-card .line .status.bad{ color:var(--rust); }
+  .server-card.is-astronaut .line .status{ color:var(--rust); }
+
+  /* ---------- vocabulary / definition cards ---------- */
+
+  details.vocab-card{ background:var(--panel); border:1px solid var(--steel); border-radius:6px; margin-bottom:.7rem; }
+  details.vocab-card summary{
+    list-style:none; cursor:pointer; padding:.9rem 1.1rem;
+    display:flex; align-items:center; justify-content:space-between; gap:.6rem;
+    font-family:var(--font-display); font-weight:600; color:var(--gold-bright); font-size:1rem;
+  }
+  details.vocab-card summary::-webkit-details-marker{ display:none; }
+  details.vocab-card summary::after{ content:"+"; font-family:var(--font-mono); color:var(--silver-dim); font-size:1rem; flex:none; }
+  details.vocab-card[open] summary::after{ content:"\2212"; }
+  details.vocab-card .vocab-body{ padding:0 1.1rem 1.05rem; color:var(--silver); font-size:.94rem; }
+  details.vocab-card .vocab-body p{ margin-bottom:.7em; }
+  details.vocab-card .vocab-body p:last-child{ margin-bottom:0; }
+
+  /* ---------- accordion (quiet failures) ---------- */
+
+  details.failure{ background:var(--panel); border:1px solid var(--steel); border-radius:6px; margin-bottom:.8rem; }
+  details.failure summary{
+    list-style:none; cursor:pointer; padding:1rem 1.2rem;
+    display:flex; align-items:center; gap:.8rem; font-weight:500; color:var(--paper); font-family:var(--font-display);
+  }
+  details.failure summary::-webkit-details-marker{ display:none; }
+  details.failure .f-icon{
+    flex:none; width:1.8rem; height:1.8rem; border-radius:3px;
+    background:var(--rust-bg); border:1px solid var(--rust); color:var(--rust);
+    display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:.85rem;
+  }
+  details.failure summary .f-chevron{ margin-left:auto; color:var(--silver-dim); font-family:var(--font-mono); transition:transform .2s; }
+  details.failure[open] summary .f-chevron{ transform:rotate(90deg); }
+  details.failure .f-body{ padding:0 1.2rem 1.15rem 3.4rem; color:var(--silver); font-size:.95rem; }
+
+  /* ---------- boundary grid ---------- */
+
+  .boundary-grid{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:1.8rem 0; }
+  @media (max-width:640px){ .boundary-grid{ grid-template-columns:1fr; } }
+  .boundary-card{ background:var(--panel); border:1px solid var(--steel); border-radius:6px; padding:1.1rem 1.2rem; }
+  .boundary-card h4{ font-family:var(--font-mono); font-size:.76rem; color:var(--gold); margin-bottom:.5rem; font-weight:500; text-transform:uppercase; }
+  .boundary-card p{ font-size:.92rem; color:var(--silver); margin-bottom:0; }
+
+  /* ---------- files folder list ---------- */
+
+  .file-list{ margin:1.6rem 0; border:1px solid var(--steel); border-radius:6px; overflow:hidden; }
+  .file-list__row{
+    display:grid; grid-template-columns:9rem 1fr; gap:1rem; align-items:baseline;
+    padding:.7rem 1rem; border-bottom:1px solid var(--steel-soft); font-size:.88rem;
+  }
+  .file-list__row:last-child{ border-bottom:none; }
+  .file-list__row:nth-child(odd){ background:var(--panel); }
+  .file-list__name{ font-family:var(--font-mono); color:var(--gold-bright); font-size:.83rem; }
+  .file-list__desc{ color:var(--silver); }
+
+  /* ---------- footer ---------- */
+
+  footer.site-footer{
+    border-top:1px solid var(--steel-soft);
+    margin-top:5rem; padding:2.6rem 1.5rem 3rem; text-align:center;
+  }
+  footer.site-footer .mark{
+    font-family:var(--font-display); font-weight:600; color:var(--silver); font-size:1rem;
+  }
+  footer.site-footer .mark .dot{ color:var(--gold-dim); }
+  footer.site-footer p{ color:var(--silver-dim); font-size:.82rem; margin-top:.6rem; font-family:var(--font-mono); }
+
+  /* ---------- responsive shell ---------- */
+
+  @media (max-width:900px){
+    .shell{ grid-template-columns:1fr; }
+    .toc{ display:none; }
+    .toc-mobile{
+      display:block; margin:0 1.5rem 2rem; background:var(--panel);
+      border:1px solid var(--steel); border-radius:6px; padding:.2rem 1rem;
+    }
+    .toc-mobile summary{ cursor:pointer; padding:.8rem 0; font-family:var(--font-mono); font-size:.78rem; color:var(--gold); list-style:none; }
+    .toc-mobile summary::-webkit-details-marker{ display:none; }
+    .toc-mobile ol{ list-style:none; margin:0; padding:0 0 .9rem; }
+    .toc-mobile a{ display:block; padding:.45rem 0; color:var(--silver); text-decoration:none; font-size:.86rem; font-family:var(--font-mono); border-top:1px solid var(--steel-soft); }
+    .toc-mobile .toc-num{ color:var(--silver-dim); margin-right:.5em; }
+  }
+
+  @media (max-width:640px){
+    body{ font-size:16px; }
+    .hero{ padding:3.6rem 1.25rem 2.6rem; }
+    .section{ padding:2.6rem 1.25rem 0; }
+    .topbar{ padding:.75rem 1.1rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ scroll-behavior:auto !important; transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/mlops/">MLOps</a><span class="t">· MLOps 6 · MLflow Projects and Models</span><span class="pn"><a href="../MLOPS-5/" title="MLOps 5 · Experiment tracking with MLflow">← Prev</a><a href="../MLOPS-7/" title="MLOps 7 · Docker for ML services">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="progress-rail" aria-hidden="true"><div class="progress-rail__fill" id="progressFill"></div></div>
+
+<header class="topbar">
+  <span class="topbar__mark"><span class="box"></span>ML-Flow 2 <span class="dot">&middot;</span> post read</span>
+</header>
+
+<div class="shell">
+
+  <nav class="toc" aria-label="On this page">
+    <div class="toc__label">On this page</div>
+    <ol id="tocList">
+      <li><a href="#intro"><span class="toc-num">&mdash;</span>Why this session exists</a></li>
+      <li><a href="#why"><span class="toc-num">00</span>What a teammate can't do</a></li>
+      <li><a href="#manifest"><span class="toc-num">01</span>A folder with a manifest</a></li>
+      <li><a href="#entrypoints"><span class="toc-num">02</span>Entry points &amp; the search</a></li>
+      <li><a href="#wherecode"><span class="toc-num">03</span>Where the code runs</a></li>
+      <li><a href="#logmodel"><span class="toc-num">04</span>What log_model wrote</a></li>
+      <li><a href="#signature"><span class="toc-num">05</span>What the signature checks</a></li>
+      <li><a href="#serving"><span class="toc-num">06</span>Serving the logged model</a></li>
+      <li><a href="#boundaries"><span class="toc-num">07</span>Where this stops</a></li>
+      <li><a href="#summary"><span class="toc-num">08</span>Summary</a></li>
+      <li><a href="#reading"><span class="toc-num">09</span>Further reading</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <details class="toc-mobile" id="tocMobile">
+      <summary>On this page</summary>
+      <ol id="tocListMobile"></ol>
+    </details>
+
+    <section class="hero">
+      <p class="hero__kicker"><span class="rule"></span>Experiment tracking with MLflow &middot; Part 2</p>
+      <h1>Packaging the training run, and the model it produces</h1>
+      <p class="hero__tag">So a teammate can rerun the one, and load the other, without reading your code first.</p>
+      <div class="hero__meta">
+        <span><b>Adds:</b> MLflow Projects &amp; MLflow Models</span>
+        <span><b>Library:</b> MLflow 3.16.1</span>
+        <span><b>Read time:</b> ~20 min</span>
+      </div>
+
+      <div class="hero-diagram" role="img" aria-label="Diagram: before packaging, a tracked run knows what happened but a teammate must guess how to rerun it and how to load the model. After packaging, an MLproject manifest names the exact command, and an MLmodel folder names exactly how to load it.">
+        <div class="hero-card">
+          <h4>Before &mdash; known only to you</h4>
+          <div class="file-row"><span>which command?</span><span>guess</span></div>
+          <div class="file-row"><span>which arguments?</span><span>guess</span></div>
+          <div class="file-row"><span>load model.joblib how?</span><span>guess</span></div>
+        </div>
+        <div class="hero-diagram__arrow">&rarr;</div>
+        <div class="hero-card crate">
+          <h4>After &mdash; written down once</h4>
+          <div class="file-row"><span>MLproject</span><span>entry points</span></div>
+          <div class="file-row"><span>python_env.yaml</span><span>environment</span></div>
+          <div class="file-row"><span>MLmodel</span><span>flavors + signature</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="article" id="articleBody">
+
+      <section class="section section--plain" id="intro">
+        <p class="lede">The last session gave the campaign model a memory. Running <code>python -m campaign.track</code> trains it and records its parameters, its holdout metrics, its commit, and the fitted pipeline &mdash; every run searchable afterward. That answers how the model was created. It doesn't answer two other questions.</p>
+        <p>A teammate who wants to extend the tuning search can see the commit history, but not which command to run, which arguments it takes, or which environment it needs. A developer who wants to use the trained model still needs to know, by hand, how the pipeline is shaped, what its inputs look like, and how to read what it returns.</p>
+        <p>MLflow answers both with two small conventions. An <strong>MLflow Project</strong> names the commands a repository offers, so anyone can run training the same way &mdash; locally, or straight from GitHub &mdash; with <code>mlflow run</code>. An <strong>MLflow Model</strong> packages a fitted model with instructions for loading it, so a tool can load and serve it without any custom code. This session builds both, and along the way finally connects the tuning search to the tracking store.</p>
+      </section>
+
+      <section class="section" id="why">
+        <div class="section__head">
+          <span class="section__num">00</span>
+          <h2>What a teammate still cannot do</h2>
+        </div>
+
+        <p>The quickest way to see the gap is to record a run the ordinary way, then read it back as a stranger would &mdash; using only what the tracking store itself can say.</p>
+
+        <p>Search for that run and its tags say <code>LOCAL</code>: a script, started by hand. The run knows its source file and its commit. It holds no tag at all about how it was launched. So a teammate who wants to rerun it has to work several things out for themselves: that the file runs as <code>python -m campaign.track</code>, not <code>python campaign/track.py</code>; that it has to run from the repository root; which Python environment it needs; and which of several commands in the README comes first. If they want more tuning trials, they also have to discover that tuning is a separate command with its own <code>--trials</code> flag.</p>
+
+        <div class="callout">
+          <span class="callout__label">None of this is hard</span>
+          <p>It's all written in the README &mdash; and a README is prose for people. It goes stale without anybody noticing. An MLflow Project puts the same facts in a file a program reads and runs, so a wrong line fails loudly the first time somebody actually uses it.</p>
+        </div>
+      </section>
+
+      <section class="section" id="manifest">
+        <div class="section__head">
+          <span class="section__num">01</span>
+          <h2>A project is a folder with a manifest</h2>
+        </div>
+
+        <p>An MLflow Project isn't a new kind of code. It's a repository plus one file at its root, <code>MLproject</code>, naming the commands the project offers &mdash; plus, optionally, a file describing the environment those commands need. <code>mlflow run</code> reads both, prepares the environment, opens a run in the tracking store, and starts the command.</p>
+
+        <p>Plenty of teams never write one. They wrap training in a container instead and start it from a scheduler. What <code>MLproject</code> writes down still carries over: named commands, declared parameters, an environment built from a file, a pinned commit &mdash; it's simply the smallest way to get all four, and it plugs straight into a tracking store you already have.</p>
+
+        <h3>The manifest</h3>
+
+        <div class="code">
+          <div class="code__bar"><span class="pill">MLproject</span>repository root</div>
+          <pre><code><span class="c-com"># What `mlflow run` reads. Each entry point is a command the project</span>
+<span class="c-com"># offers, with the parameters it accepts. The experiment is not named</span>
+<span class="c-com"># here, because that's the caller's choice:</span>
+<span class="c-com">#     mlflow run . -e train --experiment-name term-deposit</span>
+<span class="c-com">#     mlflow run . -e tune -P trials=10 --experiment-name term-deposit</span>
+
+name: term-deposit
+
+python_env: python_env.yaml
+
+entry_points:
+  <span class="c-com"># Continue the stored Optuna study. One parent run, one child per trial.</span>
+  tune:
+    parameters:
+      trials: {type: <span class="c-kw">int</span>, default: <span class="c-num">10</span>}
+    command: <span class="c-str">"python -m campaign.track_tune --trials {trials}"</span>
+
+  <span class="c-com"># Fit the study's best configuration. No parameters &mdash; train.py reads</span>
+  <span class="c-com"># its choices from the study rather than the command line.</span>
+  train:
+    command: <span class="c-str">"python -m campaign.track"</span></code></pre>
+        </div>
+
+        <p>The file must be named exactly <code>MLproject</code>, no extension. <code>name</code> is a label; <code>python_env</code> points at the environment file. <code>entry_points</code> is what matters &mdash; each one a command the project offers, with a name, its parameters, and a <code>command</code> template that <code>mlflow run</code> fills in before running it from the project's folder. There are two entry points because the project already has two jobs with different costs: <code>train</code> wraps last session's training and takes nothing, because it reads its choices from the study; <code>tune</code> continues that study, and its one parameter is how many trials to add.</p>
+
+        <p>A parameter has a type and a default. The documented types are <code>string</code>, <code>float</code>, <code>path</code> and <code>uri</code> &mdash; MLflow accepts any name you give it, such as the <code>int</code> used here. What that type actually enforces turns out to be less than it looks; section 03 checks.</p>
+
+        <p>The comment at the top says the experiment isn't named in the file. That's deliberate, and it's about to cost something.</p>
+
+        <h3>The first run &mdash; and its intended failure</h3>
+
+        <div class="code">
+          <div class="code__bar"><span class="pill">terminal</span>repository root<button class="code__copy" data-copy>Copy</button></div>
+          <pre><code>mlflow run . -e train --env-manager local</code></pre>
+        </div>
+
+        <p>Training runs to completion &mdash; and then the run fails, on the line that opens it inside <code>track.py</code>. The order of events explains most of what <code>mlflow run</code> does. It opens a run <em>before</em> the command starts; with no experiment given, it opens one in <code>Default</code>. It then starts the command with three environment variables set &mdash; the run id, the experiment id, the tracking store &mdash; so when <code>track.py</code> calls <code>mlflow.start_run</code>, MLflow sees that run id and joins it rather than creating a new one. But <code>track.py</code> had just called <code>set_experiment("term-deposit")</code>, and a run can't belong to two experiments at once. MLflow refuses.</p>
+
+        <div class="callout callout--warn">
+          <span class="callout__label">A run that fails late fails expensively</span>
+          <p>The run isn't lost &mdash; a failed run now sits in <code>Default</code>, and training has already rewritten the files on disk. Nothing about this was wasted quietly.</p>
+        </div>
+
+        <p>The experiment is the caller's choice, so it belongs on the command line:</p>
+
+        <div class="code">
+          <div class="code__bar"><span class="pill">terminal</span>repository root<button class="code__copy" data-copy>Copy</button></div>
+          <pre><code>mlflow run . -e train --env-manager local --experiment-name term-deposit</code></pre>
+        </div>
+
+        <p>This time it succeeds, named <code>campaign-train</code> because <code>track.py</code> names it. Set beside the run started by hand in the previous section, the tags that describe where each came from tell the whole story:</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <caption>Same command, two ways of starting it</caption>
+            <thead><tr><th>Tag</th><th>Started by hand</th><th>Started by <code>mlflow run</code></th></tr></thead>
+            <tbody>
+              <tr><td><code>mlflow.source.type</code></td><td>LOCAL</td><td>PROJECT</td></tr>
+              <tr><td><code>mlflow.source.name</code></td><td><code>track.py</code></td><td>the project folder itself</td></tr>
+              <tr><td><code>mlflow.project.entryPoint</code></td><td>&mdash;</td><td><code>train</code></td></tr>
+              <tr><td><code>mlflow.project.backend</code></td><td>&mdash;</td><td><code>local</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>The project run holds the full instruction for rerunning it: entry point <code>train</code>, of that project, at the commit it also records. The failed attempt sits in <code>Default</code>, with its entry point recorded too &mdash; nothing about a project run vanishes just because it failed.</p>
+      </section>
+
+      <section class="section" id="entrypoints">
+        <div class="section__head">
+          <span class="section__num">02</span>
+          <h2>Entry points, parameters, and the search</h2>
+        </div>
+
+        <p>The <code>tune</code> entry point is where parameters earn their place, because tuning is the job people rerun with a different budget. It's also where the last session's loose end gets tied off &mdash; the Optuna study the tracking store couldn't see.</p>
+
+        <h3>Every trial becomes a run</h3>
+        <p><code>campaign/track_tune.py</code> runs the same search <code>campaign.tune</code> always ran, on the same stored study, and records it as one parent run with a child run per trial. The search script itself is never edited, for the same reason the training script wasn't edited last session.</p>
+
+        <div class="code">
+          <div class="code__bar"><span class="pill">campaign/track_tune.py</span><button class="code__copy" data-copy>Copy</button></div>
+          <pre><code><span class="c-kw">def</span> <span class="c-fn">tracked</span>(objective):
+    <span class="c-str">"""Wrap an objective so every call is a child run of the open parent."""</span>
+    <span class="c-kw">def</span> <span class="c-fn">run_trial</span>(trial):
+        <span class="c-kw">with</span> mlflow.start_run(run_name=<span class="c-str">f"trial-{trial.number:03d}"</span>, nested=<span class="c-kw">True</span>):
+            value = objective(trial)
+            mlflow.log_params(trial.params)
+            mlflow.log_metric(<span class="c-str">"cv_roc_auc"</span>, value)
+            mlflow.set_tag(<span class="c-str">"stage"</span>, <span class="c-str">"trial"</span>)
+        <span class="c-kw">return</span> value
+    <span class="c-kw">return</span> run_trial</code></pre>
+        </div>
+
+        <p><code>nested=True</code> is what makes a run a <em>child</em> &mdash; it tells MLflow to attach it to whatever run is already open instead of refusing to open a second one. The child opens <em>before</em> the objective runs, not after it succeeds, so a trial that raises still leaves a <code>FAILED</code> child behind, and a crashing corner of the search space shows up instead of disappearing.</p>
+
+        <div class="diagram">
+          <svg viewBox="0 0 640 190" role="img" aria-label="Diagram: a parent run named campaign-tune, with ten child trial runs nested beneath it, each tagged with the parent's run id, folding into a single row in the runs table until expanded.">
+            <rect x="230" y="16" width="180" height="34" rx="4" fill="#1f2125" stroke="#c9a227" stroke-opacity=".5"/>
+            <text x="320" y="38" fill="#e8c468" font-size="11.5" text-anchor="middle" font-family="IBM Plex Mono, monospace">campaign-tune (parent)</text>
+            <path d="M320 50 V66" stroke="#2d3036"/>
+            <path d="M80 66 H560" stroke="#2d3036"/>
+            <path d="M80 66 V82" stroke="#2d3036"/>
+            <path d="M230 66 V82" stroke="#2d3036"/>
+            <path d="M410 66 V82" stroke="#2d3036"/>
+            <path d="M560 66 V82" stroke="#2d3036"/>
+            <g font-family="IBM Plex Mono, monospace" font-size="10">
+              <rect x="20" y="82" width="120" height="26" rx="3" fill="#17181b" stroke="#2d3036"/>
+              <text x="80" y="99" fill="#a7acb4" text-anchor="middle">trial-000</text>
+              <rect x="170" y="82" width="120" height="26" rx="3" fill="#17181b" stroke="#2d3036"/>
+              <text x="230" y="99" fill="#a7acb4" text-anchor="middle">trial-001</text>
+              <rect x="350" y="82" width="120" height="26" rx="3" fill="#17181b" stroke="#2d3036"/>
+              <text x="410" y="99" fill="#a7acb4" text-anchor="middle">trial-002</text>
+              <rect x="500" y="82" width="120" height="26" rx="3" fill="#17181b" stroke="#2d3036"/>
+              <text x="560" y="99" fill="#a7acb4" text-anchor="middle">&hellip; trial-009</text>
+            </g>
+            <path d="M50 122 H620" stroke="#2d3036" stroke-dasharray="2 4"/>
+            <text x="320" y="145" fill="#6f747c" font-size="10.5" text-anchor="middle">every child tagged &nbsp;tags.mlflow.parentRunId = campaign-tune's run id</text>
+            <rect x="230" y="158" width="180" height="26" rx="13" fill="#1f2125" stroke="#8a6f2c"/>
+            <text x="320" y="175" fill="#e8c468" font-size="10.5" text-anchor="middle">folds into one row, until opened</text>
+          </svg>
+          <p class="diagram__caption">Ten trials, one parent &mdash; a search of any size stays one line in the runs table until you expand it.</p>
+        </div>
+
+        <p>The parent, <code>main()</code>, opens a run named <code>campaign-tune</code>, hands the wrapped objective to <code>study.optimize</code>, and records how large the study was before, how many trials were requested, and the best score and family the whole study has found so far. <code>artifacts/study.db</code> stays the source of truth for the search &mdash; the sampler still reads it to decide what to try next &mdash; while the tracked runs become the searchable record of what was tried.</p>
+
+        <p>Passing ten more trials grows the study from 60 to 70. The best score is still <strong>0.8013</strong>, unchanged since it was first found &mdash; none of the ten beat it, which is ordinary once a study has converged, and it's also why the model <code>train</code> logs doesn't change either.</p>
+
+        <p>Optuna ships its own MLflow callback that does much the same job, in the <code>optuna-integration</code> package &mdash; but it logs a trial only after it finishes, so a trial that crashes leaves no run behind. The wrapper here is a dozen lines, all readable, and opens the child first specifically so a crash still gets recorded.</p>
+
+        <h3>Who actually checks a parameter</h3>
+        <p>The manifest declares <code>trials</code> as an <code>int</code>. Passing something that isn't one, and then passing a name that doesn't exist, both fail &mdash; but not for the reason you'd expect, and not in the same way.</p>
+
+        <div class="demo">
+          <div class="demo__title">Which layer actually catches the mistake?</div>
+          <div class="demo__toggle" role="group" aria-label="Choose which mistake to trace">
+            <button class="demo__btn" id="typeBtn" aria-pressed="true">-P trials=ten (wrong type)</button>
+            <button class="demo__btn" id="typoBtn" aria-pressed="false">-P trails=5 (misspelled name)</button>
+          </div>
+          <div class="pipeline" id="pipelineStages"></div>
+          <p class="demo__note" id="pipelineNote"></p>
+        </div>
+
+        <p>Neither message comes from MLflow. Both come from <code>argparse</code>, inside <code>track_tune.py</code> itself. For <code>ten</code>, MLflow put the text into the command exactly as given, and the parser rejected it. For the misspelled <code>trails</code>, MLflow doesn't know the manifest never declared it &mdash; it's added to the command anyway, while <code>--trials</code> quietly keeps its default of 10. <code>parse_args</code> happens to fail on an unknown flag; a more forgiving <code>parse_known_args</code> would have ignored it outright, and the search would have run with defaults and nobody would have noticed.</p>
+
+        <p>The <code>type</code> in <code>MLproject</code> is documentation, except for <code>path</code> and <code>uri</code>, which MLflow does act on. The real check is your own argument parser, exactly as strict as you wrote it. Both mistakes still leave a run behind &mdash; two failed runs with random names, since the command died before the parent could be named. They hold no metrics, so unlike an ordinary failed run they can't climb a leaderboard; filtering on status keeps them out of any search that matters.</p>
+
+        <h3>Letting MLflow log the fit by itself</h3>
+        <p><code>mlflow.sklearn.autolog()</code> patches scikit-learn so every <code>fit</code> logs a run with no logging code at all. Run once, on one pipeline fit, it's worth judging against the runs this session writes by hand.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <caption>autolog() vs. the project's own logging</caption>
+            <thead><tr><th></th><th>mlflow.sklearn.autolog()</th><th>campaign/track.py</th></tr></thead>
+            <tbody>
+              <tr><td>Parameters logged</td><td>59 &mdash; every pipeline setting, chosen or default</td><td>only the ones actually decided</td></tr>
+              <tr><td>Metrics logged</td><td>training rows only (0.9065 accuracy &mdash; a model that says no to everyone already scores 0.8873 on those same rows)</td><td>the holdout metrics the service reports</td></tr>
+              <tr><td>Model format</td><td><code>cloudpickle</code>, chosen quietly</td><td><code>skops</code>, chosen and trusted deliberately</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Autolog earns its keep early in a problem, trying things in a notebook where nothing should go unrecorded. A command whose runs other people will compare should log the holdout metrics it was built to report, and save the model in the format you actually decided on &mdash; which is exactly why the project's own commands log by hand instead.</p>
+      </section>
+
+      <section class="section" id="wherecode">
+        <div class="section__head">
+          <span class="section__num">03</span>
+          <h2>Where the code runs</h2>
+        </div>
+
+        <p>Every run so far used <code>--env-manager local</code> &mdash; the environment you're already sitting in. That's fast, and it's exactly the &ldquo;works on my machine&rdquo; setup a project is meant to get away from.</p>
+
+        <h3>An environment built from the file</h3>
+        <p><code>--env-manager uv</code> tells MLflow to build a fresh environment from <code>python_env.yaml</code> before running the command, using <code>uv</code> &mdash; the same installer that built the project's own <code>.venv</code>.</p>
+
+        <div class="diagram">
+          <svg viewBox="0 0 640 130" role="img" aria-label="Diagram: the first run under env-manager uv builds and installs a fresh environment before running the command; the second run, with the environment already cached, skips straight to running the command.">
+            <text x="20" y="24" fill="#6f747c" font-size="10.5" font-family="IBM Plex Mono, monospace">FIRST RUN</text>
+            <rect x="20" y="34" width="330" height="30" rx="4" fill="#1f2125" stroke="#2d3036"/>
+            <text x="185" y="53" fill="#a7acb4" font-size="11" text-anchor="middle" font-family="IBM Plex Mono, monospace">build + install environment</text>
+            <rect x="356" y="34" width="150" height="30" rx="4" fill="#1f2125" stroke="#c9a227" stroke-opacity=".6"/>
+            <text x="431" y="53" fill="#e8c468" font-size="11" text-anchor="middle" font-family="IBM Plex Mono, monospace">run command</text>
+
+            <text x="20" y="94" fill="#6f747c" font-size="10.5" font-family="IBM Plex Mono, monospace">SECOND RUN &mdash; ~/.mlflow/envs/ cached</text>
+            <rect x="20" y="104" width="150" height="20" rx="4" fill="#141513" stroke="#2d3036" stroke-dasharray="3 3"/>
+            <text x="95" y="118" fill="#6f747c" font-size="9.5" text-anchor="middle" font-family="IBM Plex Mono, monospace">(skipped)</text>
+            <rect x="356" y="100" width="150" height="30" rx="4" fill="#1f2125" stroke="#c9a227" stroke-opacity=".6"/>
+            <text x="431" y="119" fill="#e8c468" font-size="11" text-anchor="middle" font-family="IBM Plex Mono, monospace">run command</text>
+          </svg>
+          <p class="diagram__caption">MLflow keeps the environment under <code>~/.mlflow/envs/</code>, named by a hash of the environment file, and reuses it unchanged.</p>
+        </div>
+
+        <p>The two managers suit different jobs. <code>local</code> suits your own laptop while you work &mdash; fast, and it uses what you already have. <code>uv</code> suits a run somebody else has to trust, because it proves the project works from its own files rather than from whatever you happened to install last month. (<code>virtualenv</code> and <code>conda</code> are the older ways of doing the same thing.)</p>
+
+        <p>Be honest about how far this goes: the environment is only as fixed as <code>requirements.txt</code>. This project pins <code>scikit-learn</code> and <code>mlflow</code> exactly, and gives only lower bounds for the rest &mdash; enough to protect the two libraries that would change the model or the store, not enough to reproduce a run years later. That would call for a full lock file, which is more ceremony than this project needs yet.</p>
+
+        <h3>Running a commit straight from GitHub</h3>
+        <p>So far <code>.</code> has meant &ldquo;the project in this folder.&rdquo; <code>mlflow run</code> also accepts a Git URL, with <code>--version</code> naming the commit &mdash; the full hash, since MLflow asks GitHub for exactly the name it's given, and GitHub only knows full hashes, branches, and tags.</p>
+
+        <div class="code">
+          <div class="code__bar"><span class="pill">terminal</span>repository root<button class="code__copy" data-copy>Copy</button></div>
+          <pre><code>COMMIT=$(git rev-parse HEAD)
+mlflow run https://github.com/pulkit-scaler/mlops-mlflow-projects-2 \
+  -e tune -P trials=2 --version $COMMIT \
+  --env-manager local --experiment-name term-deposit</code></pre>
+        </div>
+
+        <p>MLflow clones the project into a temporary folder, checks out that exact commit, and runs it there &mdash; nothing in the working copy is touched. Read the trial count this run starts from: 60, the study as it was committed at that hash, even though the local folder had already grown to 70 and beyond. That's the whole promise of a project &mdash; anybody with the URL and the hash gets the same code and the same starting files you had, whatever state your own laptop is in.</p>
+
+        <p>The run still lands in the local store, the one the browser UI is already showing. That needed one small change to <code>track.py</code> this stage: <code>mlflow run</code> passes the caller's store to the command as <code>MLFLOW_TRACKING_URI</code>, and the training script now reads that variable instead of always writing to <code>mlflow.db</code> next to itself. Without the fix, a temporary clone would see an empty database and fail outright with <em>&ldquo;Run with id=&hellip; not found.&rdquo;</em></p>
+
+        <div class="callout callout--warn">
+          <span class="callout__label">One warning about <code>--version</code></span>
+          <p>Use it with a URL, never with <code>.</code>. For a local folder MLflow doesn't clone &mdash; it checks the commit out <em>inside the folder you gave it</em>, which moves your own working copy onto that commit and leaves it there.</p>
+        </div>
+      </section>
+
+      <section class="section" id="logmodel">
+        <div class="section__head">
+          <span class="section__num">04</span>
+          <h2>What <code>log_model</code> wrote</h2>
+        </div>
+
+        <p>The project makes training repeatable. The rest of this session is about what training leaves behind. <code>track.py</code> now ends with <code>mlflow.sklearn.log_model</code>, and every training run since has logged a model alongside it.</p>
+
+        <p>The FastAPI service loads <code>artifacts/model.joblib</code> directly with <code>joblib.load</code> &mdash; which works only because the service was written by the same people who trained the model. It knows the file is a scikit-learn pipeline, which version pickled it, and that a &ldquo;yes&rdquo; probability sits in column 1 of <code>predict_proba</code>. Take that shared knowledge away, and every model needs its own loading code: a PyTorch model one way, a booster from another library a third way entirely.</p>
+
+        <div class="diagram">
+          <svg viewBox="0 0 640 190" role="img" aria-label="Diagram: without a common convention, each model library needs its own loading code, a wall of confusion. MLflow gives every saved model a pyfunc flavor, so any caller can load any model the same way, through one door.">
+            <text x="20" y="22" fill="#6f747c" font-size="10.5" font-family="IBM Plex Mono, monospace">WITHOUT A CONVENTION</text>
+            <g font-family="IBM Plex Mono, monospace" font-size="10.5">
+              <rect x="20" y="34" width="130" height="28" rx="4" fill="#1f2125" stroke="#2d3036"/><text x="85" y="53" fill="#a7acb4" text-anchor="middle">scikit-learn model</text>
+              <rect x="20" y="70" width="130" height="28" rx="4" fill="#1f2125" stroke="#2d3036"/><text x="85" y="89" fill="#a7acb4" text-anchor="middle">PyTorch model</text>
+              <rect x="20" y="106" width="130" height="28" rx="4" fill="#1f2125" stroke="#2d3036"/><text x="85" y="125" fill="#a7acb4" text-anchor="middle">booster / other</text>
+              <rect x="220" y="34" width="150" height="28" rx="4" fill="#241813" stroke="#b9633f" stroke-opacity=".6"/><text x="295" y="53" fill="#b9633f" text-anchor="middle">its own loader code</text>
+              <rect x="220" y="70" width="150" height="28" rx="4" fill="#241813" stroke="#b9633f" stroke-opacity=".6"/><text x="295" y="89" fill="#b9633f" text-anchor="middle">its own loader code</text>
+              <rect x="220" y="106" width="150" height="28" rx="4" fill="#241813" stroke="#b9633f" stroke-opacity=".6"/><text x="295" y="125" fill="#b9633f" text-anchor="middle">its own loader code</text>
+            </g>
+            <path d="M150 48 H220 M150 84 H220 M150 120 H220" stroke="#2d3036"/>
+
+            <text x="440" y="22" fill="#6f747c" font-size="10.5" font-family="IBM Plex Mono, monospace">WITH PYFUNC</text>
+            <g font-family="IBM Plex Mono, monospace" font-size="10.5">
+              <rect x="400" y="34" width="130" height="28" rx="4" fill="#1f2125" stroke="#2d3036"/><text x="465" y="53" fill="#a7acb4" text-anchor="middle">scikit-learn model</text>
+              <rect x="400" y="70" width="130" height="28" rx="4" fill="#1f2125" stroke="#2d3036"/><text x="465" y="89" fill="#a7acb4" text-anchor="middle">PyTorch model</text>
+              <rect x="400" y="106" width="130" height="28" rx="4" fill="#1f2125" stroke="#2d3036"/><text x="465" y="125" fill="#a7acb4" text-anchor="middle">booster / other</text>
+            </g>
+            <path d="M530 48 C560 48 560 84 585 84 M530 84 H585 M530 120 C560 120 560 84 585 84" stroke="#8a6f2c" fill="none"/>
+            <rect x="585" y="70" width="40" height="28" rx="14" fill="#1f2125" stroke="#e8c468"/>
+            <text x="605" y="89" fill="#e8c468" font-size="9" text-anchor="middle" font-family="IBM Plex Mono, monospace">.predict()</text>
+          </svg>
+          <p class="diagram__caption">Every model MLflow saves gets a pyfunc flavor, whatever library trained it &mdash; one door, whatever's behind it.</p>
+        </div>
+
+        <h3>The folder</h3>
+        <p>Looking a model up follows last session's advice &mdash; filtering on the tag and entry point of the command that logs models, and on <code>FINISHED</code>, rather than trusting the best number in the experiment.</p>
+
+        <div class="file-list">
+          <div class="file-list__row"><span class="file-list__name">model.skops</span><span class="file-list__desc">the fitted pipeline itself, in the format chosen and trusted last session</span></div>
+          <div class="file-list__row"><span class="file-list__name">requirements.txt</span><span class="file-list__desc">the environment it was saved in, for pip</span></div>
+          <div class="file-list__row"><span class="file-list__name">python_env.yaml</span><span class="file-list__desc">the same environment, for MLflow's own tools</span></div>
+          <div class="file-list__row"><span class="file-list__name">conda.yaml</span><span class="file-list__desc">the same environment again, for conda-based tools</span></div>
+          <div class="file-list__row"><span class="file-list__name">input_example.json</span><span class="file-list__desc">the example rows <code>track.py</code> passed in</span></div>
+          <div class="file-list__row"><span class="file-list__name">serving_input_example.json</span><span class="file-list__desc">the same rows, already wrapped the way a model server expects a request</span></div>
+          <div class="file-list__row"><span class="file-list__name">registered_model_meta</span><span class="file-list__desc">a placeholder &mdash; the model registry writes here, later in the course</span></div>
+          <div class="file-list__row"><span class="file-list__name">MLmodel</span><span class="file-list__desc">the file that ties all of the above together</span></div>
+        </div>
+
+        <h3>The <code>MLmodel</code> file</h3>
+        <p>What matters most in it is the list of <strong>flavors</strong> &mdash; a flavor being simply one way of loading the same saved model.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <caption>Two flavors, the same model folder</caption>
+            <thead><tr><th>Flavor</th><th>For</th><th>Gives back</th></tr></thead>
+            <tbody>
+              <tr><td><span class="chip chip--outline">sklearn</span></td><td>code that already knows it's dealing with scikit-learn</td><td>the actual <code>Pipeline</code> object, every attribute intact</td></tr>
+              <tr><td><span class="chip chip--outline">python_function</span> <span class="muted">(pyfunc)</span></td><td>code that knows nothing about the training library</td><td>one method, <code>.predict(data)</code> &mdash; here returning probabilities, because <code>track.py</code> passed <code>predict_fn: predict_proba</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Every model MLflow saves gets a pyfunc flavor, whatever library trained it, so every one can be loaded by the same call and asked the same question. It doesn't remove the need for the library &mdash; loading still needs scikit-learn installed &mdash; but the calling code no longer has to know which library that is.</p>
+
+        <h3>One model, two ways to load it</h3>
+        <p>Loaded through each flavor, the same saved model comes back as two different objects: through <code>sklearn</code> it's the <code>Pipeline</code>, with its <code>preprocess</code> and <code>model</code> steps &mdash; the object you'd inspect or refit. Through <code>pyfunc</code> it's a <code>PyFuncModel</code>, offering little beyond <code>predict</code>. Its answer is a NumPy array with two columns per row, the probability of no and of yes. Over all <strong>10,297</strong> test rows, it matches <code>model.joblib</code> to the last digit &mdash; it's the same model, reached two ways.</p>
+
+        <p><code>runs:/&lt;run id&gt;/model</code> is one address for it. Since MLflow&nbsp;3 a logged model also gets an id of its own, so <code>models:/&lt;model id&gt;</code> loads the same folder &mdash; though the run id is the one you'll usually have to hand.</p>
+      </section>
+
+      <section class="section" id="signature">
+        <div class="section__head">
+          <span class="section__num">05</span>
+          <h2>What the signature checks</h2>
+        </div>
+
+        <p>A <strong>signature</strong> is the part of <code>MLmodel</code> the last section skipped. It lists every input column with a type, and describes the output. <code>track.py</code> never wrote it by hand &mdash; <code>infer_signature</code> read the three example rows and wrote down what it saw. From then on, pyfunc checks every input against it before the model ever sees the data.</p>
+
+        <h3>The model refuses its own training data</h3>
+        <p>The signature says <code>age</code> is a <code>double</code> &mdash; a float. In the training frame, <code>age</code> is an integer. MLflow won't silently convert a 64-bit integer to a float, because very large integers lose precision that way, so it refuses the whole frame &mdash; the model rejects the very rows it learned from.</p>
+
+        <p>The cause is one line in <code>track.py</code>: every numeric column of the <em>example</em> rows was cast to float before the signature was inferred from them, because <code>pdays</code> is missing for most customers and an integer column can't hold a missing value. A fair choice &mdash; but it means every Python caller now has to cast too. A signature is inferred from whatever you show it; the example rows are a decision about the model's contract, not a formality.</p>
+
+        <h3>What it refuses, and what it quietly lets through</h3>
+        <p>Eight inputs, each one real caller mistake, each changing exactly one thing from a correctly typed row. Choose one to see what the signature actually does with it.</p>
+
+        <div class="demo">
+          <div class="demo__title">Click an input to see the signature's verdict</div>
+          <div class="sig-grid" id="sigGrid" role="group" aria-label="Choose an input variant"></div>
+          <div class="sig-detail" id="sigDetail" aria-live="polite"></div>
+        </div>
+
+        <p>The first three are refused, each with a message naming the exact problem &mdash; that's what a signature is for. Without it, a renamed-but-correctly-ordered frame could be scored with nobody noticing. The next two are accepted, reasonably: an extra column is dropped (here it's <code>duration</code>, the leakage column from the earlier end-to-end session, thrown away before the model ever sees it), and column order never matters because columns are matched by name.</p>
+
+        <p>The last three are the ones worth remembering. A job the bank has never heard of, a month typed in capitals, and a negative age are all scored and handed back a probability &mdash; no error, no warning. The model isn't wrong, exactly; it's quietly answering a different question than the one the caller meant to ask.</p>
+
+        <div class="callout">
+          <span class="callout__label">A signature is a contract about names and types</span>
+          <p>Never about values. That gap is exactly what <code>app/schemas.py</code> fills in the FastAPI service &mdash; where <code>job</code> is a fixed list of the values the encoder actually saw, <code>month</code> is one of ten lower-case strings, and <code>age</code> must be at least 17.</p>
+        </div>
+      </section>
+
+      <section class="section" id="serving">
+        <div class="section__head">
+          <span class="section__num">06</span>
+          <h2>Serving the logged model</h2>
+        </div>
+
+        <p>MLflow can put a logged model behind HTTP with one command and no code. The earlier end-to-end session built a service by hand for the same model. This section runs both, side by side, and sends them the same requests.</p>
+
+        <div class="code">
+          <div class="code__bar"><span class="pill">terminal</span>repository root<button class="code__copy" data-copy>Copy</button></div>
+          <pre><code>mlflow models serve -m runs:/$RUN_ID/model --env-manager local --port 5001</code></pre>
+        </div>
+
+        <div class="callout callout--warn">
+          <span class="callout__label">Easy to point at the wrong run</span>
+          <p>The autologged run from section 02 has a model too &mdash; but its <code>predict</code> returns a bare 0 or 1, not a pair of probabilities. Picking a run by hand in the UI is easy to get wrong; the lookup above filters on the tag and entry point that only the real training command sets.</p>
+        </div>
+
+        <p>One line in what it prints is worth reading: <code>exec uvicorn &hellip; mlflow.pyfunc.scoring_server.app:app</code>. <code>mlflow models serve</code> <em>is</em> uvicorn, running in front of an application MLflow ships. <code>/ping</code> answers 200 once the model is loaded &mdash; what a load balancer would check. <code>/invocations</code> takes a JSON body, runs it through the same signature check from the last section, calls <code>predict</code>, and returns one pair of probabilities per row. One command, and it's a working prediction service.</p>
+
+        <h3>The same prospect, two services</h3>
+        <p>The FastAPI service takes a request shaped like a person, and builds the rest itself. The MLflow server takes exactly the model's twenty columns &mdash; so for that request, the caller has to build those columns using the project's own code.</p>
+
+        <div class="demo">
+          <div class="demo__title">Send one prospect to both servers</div>
+          <div class="demo__toggle" role="group" aria-label="Choose which prospect to send">
+            <button class="demo__btn" id="normalBtn" aria-pressed="true">Ordinary prospect</button>
+            <button class="demo__btn" id="astroBtn" aria-pressed="false">job = "astronaut"</button>
+          </div>
+          <div class="compare2" id="serverCompare"></div>
+          <p class="demo__note" id="serverNote"></p>
+        </div>
+
+        <h3>Which one to put in front of callers</h3>
+        <p><code>mlflow models serve</code> is right when the caller already speaks in model columns &mdash; another team's batch job over the same feature table, a quick check of a new model before anyone writes a service, or a platform serving many models the same way. No code, works for any flavor, always in step with the model because the signature comes straight from it &mdash; and it's the form most hosting platforms expect.</p>
+
+        <p>The FastAPI service is right when the caller is a product &mdash; here, a campaign console and a person on the phone who shouldn't need to know what <code>pdays</code> is. It carries the decisions the model itself doesn't contain: the threshold, the allowed values, the economic context, the version to report.</p>
+
+        <p>They're not rivals, and they could meet in the middle &mdash; the service could load its model from the tracking store by address instead of from <code>model.joblib</code>, keeping its own contract in front. That swap needs a way to say which of all the logged models is <em>the</em> approved one. That's the registry's job, later in the course.</p>
+      </section>
+
+      <section class="section" id="boundaries">
+        <div class="section__head">
+          <span class="section__num">07</span>
+          <h2>Where this stops</h2>
+        </div>
+
+        <p>This session made training something anyone can run and the model something anyone can load. Four things were left out on purpose &mdash; they mark the edges of what Projects and Models do.</p>
+
+        <div class="boundary-grid">
+          <div class="boundary-card">
+            <h4>Not recorded &mdash; which model is approved</h4>
+            <p>The store holds several logged models, all loadable by address, and nothing says which one is the approved one. A name, versions, and an alias such as <code>champion</code> is the model registry's job, later in the course &mdash; <code>registered_model_meta</code> is where it will write.</p>
+          </div>
+          <div class="boundary-card">
+            <h4>The environment is only Python</h4>
+            <p><code>python_env.yaml</code> rebuilds Python packages. It can't install a system library, pin the operating system, or guarantee the same machine. <code>MLproject</code> also accepts a <code>docker_env</code> that runs an entry point inside a container &mdash; the next session builds that image.</p>
+          </div>
+          <div class="boundary-card">
+            <h4>The store is still a file on your laptop</h4>
+            <p>Projects run straight from GitHub still wrote their runs into your own <code>mlflow.db</code>. A team points <code>MLFLOW_TRACKING_URI</code> at one shared server instead &mdash; <code>track.py</code> already reads that variable, so no code changes when that happens.</p>
+          </div>
+          <div class="boundary-card">
+            <h4>The service still loads model.joblib</h4>
+            <p>Section 06 showed the logged model can be served, and why the product's contract still belongs in front of it. Moving the service onto a model it fetches from the store waits for the registry too.</p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <span class="callout__label">An honest word on cost</span>
+          <p>For one person training one model from one laptop, a README and <code>--env-manager local</code> would do. <code>MLproject</code> earns its keep the first time somebody else &mdash; or a scheduler &mdash; has to run your training without asking you, and the same goes for rerunning a commit you've already moved past. This project has reached that point. The signature and pyfunc earn theirs the moment a model leaves the code that trained it.</p>
+        </div>
+      </section>
+
+      <section class="section" id="summary">
+        <div class="section__head">
+          <span class="section__num">08</span>
+          <h2>Summary</h2>
+        </div>
+
+        <p>A tracked run knows what happened. By itself, it doesn't tell anybody how to make it happen again, or how to use what it left behind.</p>
+
+        <p>An <strong>MLflow Project</strong> fixes the first half: the repository plus an <code>MLproject</code> file naming entry points &mdash; each a command with typed parameters &mdash; and an environment file pointing at one <code>requirements.txt</code>. <code>mlflow run</code> opens a run, starts the command with that run's id and store in its environment, and records the entry point and source. A command shouldn't pick its own experiment unless the caller agrees, and it should read the store it's handed rather than choosing one.</p>
+
+        <p>The search is now part of the record: each Optuna trial is a child run of one <code>campaign-tune</code> parent, named by its trial number, while the study itself stays the source of truth for the sampler. Autolog would record every fit with no code at all &mdash; but with training-only metrics, dozens of unchosen parameters, and a pickled model, which suits exploring more than a command other people will compare. <code>--env-manager uv</code> builds the environment from the file and reuses it; a Git URL with a full <code>--version</code> hash runs that exact commit in a clean checkout, and still logs to your store.</p>
+
+        <p>An <strong>MLflow Model</strong> fixes the second half: <code>log_model</code> writes a folder holding the saved model, its environment, example rows, a signature, and an <code>MLmodel</code> file listing its flavors. The <code>sklearn</code> flavor gives back the pipeline; the pyfunc flavor gives any caller <code>.predict</code>, returning probabilities here because of <code>predict_fn</code>. <code>mlflow models serve</code> puts the same thing behind HTTP with one command.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <caption>The quiet failures worth remembering</caption>
+            <tbody>
+              <tr><td><strong>The parameter type in MLproject isn't checked.</strong></td><td>Your argument parser is the real check &mdash; a typo only fails if the parser is strict.</td></tr>
+              <tr><td><strong>The signature follows the example rows.</strong></td><td>A cast in the example decides what every caller must send, down to rejecting the training frame.</td></tr>
+              <tr><td><strong>The signature checks names and types, never values.</strong></td><td>An astronaut gets a probability. The value contract belongs in front of the model &mdash; the service already has one.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="reading">
+        <div class="section__head">
+          <span class="section__num">09</span>
+          <h2>Further reading</h2>
+        </div>
+
+        <h3>Documentation likely to get real use</h3>
+        <ul>
+          <li><a href="https://mlflow.org/docs/latest/ml/projects/" target="_blank" rel="noopener">MLflow Projects</a> &mdash; the <code>MLproject</code> format, entry points, parameter types, and the environment managers.</li>
+          <li><a href="https://mlflow.org/docs/latest/ml/model/" target="_blank" rel="noopener">MLflow Models</a> &mdash; the model folder, flavors, the <code>MLmodel</code> file, and the pyfunc interface.</li>
+          <li><a href="https://mlflow.org/docs/latest/ml/model/signatures/" target="_blank" rel="noopener">Model signatures and input examples</a> &mdash; how signatures are inferred and enforced, including the column-type rules.</li>
+          <li><a href="https://mlflow.org/docs/latest/ml/deployment/deploy-model-locally/" target="_blank" rel="noopener">Serving with MLflow</a> &mdash; <code>mlflow models serve</code> and the request formats <code>/invocations</code> accepts.</li>
+          <li><a href="https://mlflow.org/docs/latest/ml/tracking/autolog/" target="_blank" rel="noopener">Automatic logging</a> &mdash; what autolog records for each library, and how to limit it.</li>
+        </ul>
+
+        <h3>Why packaging matters at all</h3>
+        <ul>
+          <li>D. Sculley et al., <em>Hidden Technical Debt in Machine Learning Systems</em>, NeurIPS 2015 &mdash; its sections on glue code and pipeline jungles describe what happens when the way a model is trained exists only in someone's head.</li>
+          <li>Chip Huyen, <em>Designing Machine Learning Systems</em>, O'Reilly 2022 &mdash; Chapter 7 covers model deployment and the difference between a model and the service built around it.</li>
+        </ul>
+
+        <h3>Living resources</h3>
+        <ul>
+          <li><a href="https://github.com/mlflow/mlflow/releases" target="_blank" rel="noopener">MLflow releases</a> &mdash; read the notes before raising the pin. The skops default and the separate logged-model id both arrived in recent releases.</li>
+          <li><a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener">uv documentation</a> &mdash; the installer behind <code>--env-manager uv</code>, and its lock files, for when the floors in <code>requirements.txt</code> stop being enough.</li>
+        </ul>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div class="mark">ML-Flow 2 <span class="dot">&middot;</span> post read</div>
+  <p>Experiment Tracking with MLflow &middot; Part 2</p>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- mobile TOC ---------- */
+  var tocList = document.getElementById('tocList');
+  var tocListMobile = document.getElementById('tocListMobile');
+  if (tocList && tocListMobile) { tocListMobile.innerHTML = tocList.innerHTML; }
+  var tocMobile = document.getElementById('tocMobile');
+  document.querySelectorAll('#tocListMobile a').forEach(function(a){
+    a.addEventListener('click', function(){ if (tocMobile) tocMobile.open = false; });
+  });
+
+  /* ---------- reading progress rail ---------- */
+  var fill = document.getElementById('progressFill');
+  function updateProgress(){
+    var doc = document.documentElement;
+    var scrollTop = window.scrollY || doc.scrollTop;
+    var height = (doc.scrollHeight - doc.clientHeight) || 1;
+    var pct = Math.min(100, Math.max(0, (scrollTop / height) * 100));
+    if (fill) fill.style.height = pct + '%';
+  }
+  window.addEventListener('scroll', updateProgress, { passive: true });
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---------- scrollspy ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('main .section, main .hero'));
+  var allTocLinks = document.querySelectorAll('.toc a, .toc-mobile a');
+  function setActive(id){
+    allTocLinks.forEach(function(a){
+      if (a.getAttribute('href') === '#' + id) a.setAttribute('aria-current', 'true');
+      else a.removeAttribute('aria-current');
+    });
+  }
+  if ('IntersectionObserver' in window && sections.length) {
+    var observer = new IntersectionObserver(function(entries){
+      var visible = entries.filter(function(e){ return e.isIntersecting; });
+      if (visible.length) {
+        visible.sort(function(a,b){ return a.boundingClientRect.top - b.boundingClientRect.top; });
+        var id = visible[0].target.id;
+        if (id) setActive(id);
+      }
+    }, { rootMargin: '-15% 0px -70% 0px', threshold: [0, 1] });
+    sections.forEach(function(s){ if (s.id) observer.observe(s); });
+  }
+
+  /* ---------- copy buttons ---------- */
+  document.querySelectorAll('.code__copy').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var codeEl = btn.closest('.code').querySelector('pre');
+      var text = codeEl ? codeEl.innerText : '';
+      var done = function(ok){
+        var original = btn.textContent;
+        btn.textContent = ok ? 'Copied' : 'Select & copy';
+        setTimeout(function(){ btn.textContent = original; }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function(){ done(true); }).catch(function(){ done(false); });
+      } else { done(false); }
+    });
+  });
+
+  /* ---------- demo 1: which layer catches the parameter mistake ---------- */
+  var pipelineData = {
+    type: {
+      stages: [
+        { name: 'MLproject file', verdict: 'declares int, unenforced', kind: 'neutral' },
+        { name: 'mlflow run', verdict: 'passes "ten" through as-is', kind: 'neutral' },
+        { name: 'command line', verdict: '--trials ten', kind: 'neutral' },
+        { name: "track_tune.py's argparse", verdict: 'REJECTS \u2014 not an int', kind: 'catch' }
+      ],
+      note: '<b>argparse catches it</b> \u2014 but only because the script declared <code>type=int</code> itself. MLflow never checked the manifest\u2019s type at all.'
+    },
+    typo: {
+      stages: [
+        { name: 'MLproject file', verdict: 'no "trails" parameter', kind: 'neutral' },
+        { name: 'mlflow run', verdict: 'doesn\u2019t know it\u2019s undeclared', kind: 'neutral' },
+        { name: 'command line', verdict: '--trails 5 --trials 10 (default)', kind: 'neutral' },
+        { name: "track_tune.py's argparse", verdict: 'REJECTS \u2014 unknown flag', kind: 'catch' }
+      ],
+      note: '<b>Still caught \u2014 by luck.</b> <code>parse_args</code> happens to fail on an unknown flag. A more forgiving <code>parse_known_args</code> would have silently ignored <code>--trails 5</code> and run with the default ten trials, with nobody the wiser.'
+    }
+  };
+  var pipelineStages = document.getElementById('pipelineStages');
+  var pipelineNote = document.getElementById('pipelineNote');
+  var typeBtn = document.getElementById('typeBtn');
+  var typoBtn = document.getElementById('typoBtn');
+
+  function renderPipeline(key){
+    var d = pipelineData[key];
+    if (!d || !pipelineStages) return;
+    pipelineStages.innerHTML = '';
+    d.stages.forEach(function(stage, i){
+      if (i > 0) {
+        var arrow = document.createElement('div');
+        arrow.className = 'pipeline__arrow';
+        arrow.textContent = '\u2192';
+        pipelineStages.appendChild(arrow);
+      }
+      var el = document.createElement('div');
+      el.className = 'pipeline__stage' + (stage.kind === 'catch' ? ' is-catch' : (stage.kind === 'pass' ? ' is-pass' : ''));
+      el.innerHTML = '<div class="stage-name">' + stage.name + '</div><div class="stage-verdict">' + stage.verdict + '</div>';
+      pipelineStages.appendChild(el);
+    });
+    if (pipelineNote) pipelineNote.innerHTML = d.note;
+    if (typeBtn) typeBtn.setAttribute('aria-pressed', key === 'type' ? 'true' : 'false');
+    if (typoBtn) typoBtn.setAttribute('aria-pressed', key === 'typo' ? 'true' : 'false');
+  }
+  if (typeBtn) typeBtn.addEventListener('click', function(){ renderPipeline('type'); });
+  if (typoBtn) typoBtn.addEventListener('click', function(){ renderPipeline('typo'); });
+  renderPipeline('type');
+
+  /* ---------- demo 2: signature refusal grid ---------- */
+  var sigCases = [
+    { id: 'renamed', label: 'columns renamed', verdict: 'REFUSED', kind: 'bad',
+      detail: '<b>Refused \u2014 fails on names.</b> The signature matches columns by name; renamed columns don\u2019t match any of them, whatever order they\u2019re in.' },
+    { id: 'missing', label: 'nr.employed missing', verdict: 'REFUSED', kind: 'bad',
+      detail: '<b>Refused \u2014 fails on a missing column.</b> Every column the signature lists has to be present. Drop one, and the whole frame is rejected before the model sees any of it.' },
+    { id: 'text', label: 'age sent as text', verdict: 'REFUSED', kind: 'bad',
+      detail: '<b>Refused \u2014 fails on type.</b> The signature says <code>age</code> is a double. Text where a number belongs is refused outright, with a message naming the column.' },
+    { id: 'extra', label: 'extra duration column', verdict: 'ACCEPTED', kind: 'good',
+      detail: '<b>Accepted \u2014 the extra column is dropped.</b> Here it\u2019s <code>duration</code>, the leakage column from the earlier end-to-end session, discarded before the model ever sees it. A warning is logged, silenced in this demo for readability.' },
+    { id: 'reorder', label: 'columns in reverse order', verdict: 'ACCEPTED', kind: 'good',
+      detail: '<b>Accepted \u2014 order never matters.</b> Columns are matched by name, not position, so a frame in any column order scores identically.' },
+    { id: 'astronaut', label: "job = 'astronaut'", verdict: 'ACCEPTED', kind: 'bad',
+      detail: '<b>Accepted \u2014 and that\u2019s the problem.</b> The encoder has never seen this job, so every one-hot job column comes back zero. No tree looks at the column that would have marked this row as unusual, so it\u2019s scored anyway \u2014 a plausible-looking probability for a category the model was never trained on.' },
+    { id: 'month', label: "month = 'MAY'", verdict: 'ACCEPTED', kind: 'bad',
+      detail: '<b>Accepted \u2014 same problem, different column.</b> Capitalized <code>MAY</code> is a category the encoder has never seen either, and this row scores <i>exactly</i> as <code>may</code> did \u2014 the model barely leans on month for this particular customer.' },
+    { id: 'negage', label: 'age = -5', verdict: 'ACCEPTED', kind: 'bad',
+      detail: '<b>Accepted \u2014 no error, no warning.</b> The signature checks that <code>age</code> is a number. It has no idea a negative age is nonsensical. That check belongs one layer up, in the service\u2019s own request schema.' }
+  ];
+  var sigGrid = document.getElementById('sigGrid');
+  var sigDetail = document.getElementById('sigDetail');
+
+  function renderSigDetail(id){
+    var item = sigCases.find(function(c){ return c.id === id; });
+    if (!item || !sigDetail) return;
+    sigDetail.innerHTML = item.detail;
+    document.querySelectorAll('.sig-item').forEach(function(btn){
+      btn.classList.toggle('is-active', btn.getAttribute('data-id') === id);
+    });
+  }
+
+  if (sigGrid) {
+    sigCases.forEach(function(item, i){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sig-item';
+      btn.setAttribute('data-id', item.id);
+      btn.innerHTML = item.label + '<span class="sig-badge ' + (item.kind === 'bad' ? 'bad' : 'good') + '">' + item.verdict + '</span>';
+      btn.addEventListener('click', function(){ renderSigDetail(item.id); });
+      sigGrid.appendChild(btn);
+      if (i === 0) { btn.classList.add('is-active'); }
+    });
+    renderSigDetail(sigCases[0].id);
+  }
+
+  /* ---------- demo 3: same prospect, two servers ---------- */
+  var serverScenarios = {
+    normal: {
+      note: 'The two services agree on the number \u2014 FastAPI rounds to four places, and the matching probability comes back from MLflow too. Everything <i>around</i> the number differs: FastAPI\u2019s answer says whether to call, at which threshold, from which model version; MLflow\u2019s answer is two bare probabilities, and the caller has to already know which one means yes.',
+      fastapi: { title: 'FastAPI /predict', astro: false, lines: [
+        ['request', '14 fields about a person'], ['server builds', 'pdays + flag, 5 economic figures'], ['response', '<span class="status">200 OK</span>'], ['answer', 'call decision + threshold + model version']
+      ]},
+      mlflow: { title: 'MLflow /invocations', astro: false, lines: [
+        ['request', '20 model columns'], ['caller builds', 'the columns, by hand, from project code'], ['response', '<span class="status">200 OK</span>'], ['answer', 'two bare probabilities \u2014 matches FastAPI\u2019s number']
+      ]}
+    },
+    astronaut: {
+      note: 'The FastAPI service refuses the astronaut outright and names the field, because <code>app/schemas.py</code> lists the jobs that exist. The MLflow server scores it anyway, at HTTP 200, returning the <i>exact same</i> probability it gave for <code>admin.</code> \u2014 a fully plausible-looking answer for a customer who doesn\u2019t exist.',
+      fastapi: { title: 'FastAPI /predict', astro: true, lines: [
+        ['request', 'job: "astronaut"'], ['schema check', 'not in the allowed list'], ['response', '<span class="status bad">422 Unprocessable</span>'], ['answer', 'names the rejected field']
+      ]},
+      mlflow: { title: 'MLflow /invocations', astro: true, lines: [
+        ['request', 'job: "astronaut" \u2192 encodes to zeros'], ['signature check', 'string \u2014 passes, values unchecked'], ['response', '<span class="status">200 OK</span>'], ['answer', 'same probability as "admin.", to the last digit']
+      ]}
+    }
+  };
+  var serverCompare = document.getElementById('serverCompare');
+  var serverNote = document.getElementById('serverNote');
+  var normalBtn = document.getElementById('normalBtn');
+  var astroBtn = document.getElementById('astroBtn');
+
+  function renderServerCard(data){
+    var card = document.createElement('div');
+    card.className = 'server-card' + (data.astro ? ' is-astronaut' : '');
+    var html = '<h4>' + data.title + '</h4>';
+    data.lines.forEach(function(pair){
+      html += '<div class="line"><span>' + pair[0] + '</span><span>' + pair[1] + '</span></div>';
+    });
+    card.innerHTML = html;
+    return card;
+  }
+
+  function renderServers(key){
+    var d = serverScenarios[key];
+    if (!d || !serverCompare) return;
+    serverCompare.innerHTML = '';
+    serverCompare.appendChild(renderServerCard(d.fastapi));
+    serverCompare.appendChild(renderServerCard(d.mlflow));
+    if (serverNote) serverNote.innerHTML = d.note;
+    if (normalBtn) normalBtn.setAttribute('aria-pressed', key === 'normal' ? 'true' : 'false');
+    if (astroBtn) astroBtn.setAttribute('aria-pressed', key === 'astronaut' ? 'true' : 'false');
+  }
+  if (normalBtn) normalBtn.addEventListener('click', function(){ renderServers('normal'); });
+  if (astroBtn) astroBtn.addEventListener('click', function(){ renderServers('astronaut'); });
+  renderServers('normal');
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/MLOPS-6" target="_blank" rel="noopener">github.com/scaler-content/MLOPS-6</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

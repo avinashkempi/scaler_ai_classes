@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neural Networks 9 post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#081334; --bg2:#0c1c4a; --panel:#0f2159; --panel2:#15306f;
+  --line:#2a4497; --line-soft:#1e3479;
+  --ink:#eef2ff; --ink2:#b9c6ec; --ink3:#8c9dd2;
+  --red:#ff2e43; --red-text:#ff7482; --red-dim:rgba(255,46,67,.16);
+  --blue:#86a8ff; --blue-dim:rgba(134,168,255,.18);
+  --sans:'Bricolage Grotesque','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif;
+  --serif:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --math:'STIX Two Text','Cambria Math','Times New Roman',Georgia,serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 18.5px/1.72 var(--serif);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:var(--red-text);text-underline-offset:3px}
+:focus-visible{outline:3px solid var(--red);outline-offset:3px;border-radius:3px}
+button,input{font:inherit}
+h1,h2,h3{font-family:var(--sans);line-height:1.12;margin:0;letter-spacing:-.015em}
+p{margin:0 0 1.1em}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:20;background:rgba(8,19,52,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line-soft)}
+.topbar-in{max-width:1240px;margin:auto;padding:0 24px;height:52px;display:flex;align-items:center}
+.brand{font:600 15px var(--sans);color:var(--ink);text-decoration:none;letter-spacing:0}
+.progress{height:3px;background:transparent}
+.progress span{display:block;height:100%;width:0;background:var(--red)}
+
+/* hero */
+.hero{border-bottom:1px solid var(--line-soft)}
+.hero-in{max-width:1240px;margin:auto;padding:72px 24px 64px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:56px;align-items:center}
+.hero h1{font-size:clamp(2.7rem,6.4vw,5rem);font-weight:800;letter-spacing:-.035em;line-height:1}
+.hero .sub{font:600 clamp(1.15rem,2.2vw,1.5rem)/1.3 var(--sans);color:var(--red-text);margin:22px 0 18px}
+.hero .lede{color:var(--ink2);max-width:34em;margin:0}
+.gap{margin:0}
+.gap figcaption{font:400 14px/1.4 var(--sans);color:var(--ink3);margin-top:10px}
+.gap svg{width:100%;height:auto;display:block}
+
+/* shell */
+.shell{max-width:1240px;margin:auto;padding:0 24px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:56px}
+.rail{position:sticky;top:76px;align-self:start;padding:40px 0;font:400 14.5px/1.35 var(--sans)}
+.rail ol{list-style:none;margin:0;padding:0;border-left:1px solid var(--line-soft)}
+.rail a{display:block;padding:7px 0 7px 14px;margin-left:-1px;border-left:2px solid transparent;color:var(--ink3);text-decoration:none}
+.rail a:hover{color:var(--ink)}
+.rail a[aria-current="true"]{color:var(--ink);border-left-color:var(--red);font-weight:600}
+main{max-width:820px;padding-bottom:40px;min-width:0}
+section{padding:64px 0 8px;border-top:1px solid var(--line-soft)}
+section:first-of-type{border-top:0;padding-top:48px}
+h2{font-size:clamp(1.85rem,3.4vw,2.5rem);font-weight:800;margin-bottom:22px}
+h3{font-size:1.35rem;font-weight:600;margin:40px 0 14px}
+.tag{display:inline-block;font:600 .8rem var(--sans);color:#fff;background:var(--red);padding:3px 10px;border-radius:99px;margin-bottom:14px}
+
+/* prose blocks */
+.analogy{border-left:3px solid var(--red);padding:2px 0 2px 20px;margin:26px 0;color:var(--ink)}
+.analogy b{font:600 .85rem var(--sans);color:var(--red-text);display:block;margin-bottom:2px}
+.points{padding-left:1.2em;margin:0 0 1.2em}
+.points li{margin:.35em 0;padding-left:.2em}
+.points li::marker{color:var(--red)}
+.note{font-size:.95em;color:var(--ink2);border:1px dashed var(--line);padding:12px 16px;border-radius:6px;margin:22px 0}
+
+/* path */
+.path{list-style:none;padding:0;margin:26px 0 0;display:flex;flex-wrap:wrap;gap:8px 0;font:600 14px var(--sans)}
+.path li{display:flex;align-items:center}
+.path li+li::before{content:"";width:18px;height:2px;background:var(--red);margin:0 6px}
+.path a{color:var(--ink);text-decoration:none;background:var(--panel);border:1px solid var(--line);padding:6px 12px;border-radius:99px}
+.path a:hover{border-color:var(--red)}
+
+/* equations */
+.eq{font-family:var(--math);font-size:1.22rem;line-height:1.5;background:var(--bg2);border:1px solid var(--line-soft);border-radius:6px;padding:18px 22px;margin:22px 0 10px;overflow-x:auto;text-align:center;white-space:nowrap}
+.eq i{font-style:italic}
+.eq .gap-s{display:inline-block;width:2.2em}
+.frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 .15em;line-height:1.3}
+.frac>span:first-child{border-bottom:1.5px solid currentColor;padding:0 .3em .05em}
+.frac>span:last-child{padding:.05em .3em 0}
+.sum{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 .2em;line-height:1}
+.sum .big{font-size:1.7em}
+.sum .lim{font-size:.62em;line-height:1.2}
+.br{font-size:2em;font-weight:200;line-height:0;vertical-align:-.12em}
+.hat{position:relative}
+dl.where{display:flex;flex-wrap:wrap;gap:8px 10px;margin:8px 0 24px;padding:0;font:400 14.5px/1.35 var(--sans)}
+dl.where div{display:flex;gap:8px;align-items:baseline;background:var(--panel);border:1px solid var(--line-soft);border-radius:6px;padding:6px 10px}
+dl.where dt{font:italic 1.1rem var(--math);color:var(--red-text);margin:0}
+dl.where dd{margin:0;color:var(--ink2)}
+.m{font-family:var(--math);font-style:italic;font-size:1.06em}
+.steps-eq{display:grid;gap:8px;margin:22px 0}
+.steps-eq .row{display:grid;grid-template-columns:150px minmax(0,1fr);align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--line-soft);border-left:3px solid var(--line);border-radius:6px;padding:12px 16px;transition:border-color .15s,background .15s}
+.steps-eq .row[aria-current="true"]{border-left-color:var(--red);background:var(--panel)}
+.steps-eq .lab{font:600 14px var(--sans);color:var(--ink2)}
+.steps-eq .f{font-family:var(--math);font-size:1.15rem;overflow-x:auto;white-space:nowrap}
+.steps-eq i{font-style:italic}
+
+/* widgets */
+.widget{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--red);border-radius:6px;padding:20px 22px 22px;margin:30px 0}
+.widget>h4{font:600 1.05rem var(--sans);margin:0 0 4px}
+.widget>.cap{font:400 14.5px/1.45 var(--sans);color:var(--ink2);margin:0 0 16px}
+.widget svg{width:100%;height:auto;display:block}
+.foot{font:400 13.5px/1.45 var(--sans);color:var(--ink3);margin:12px 0 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;margin:14px 0}
+.ctrl{display:flex;flex-direction:column;gap:2px;font:600 14px var(--sans);min-width:190px;flex:1 1 190px}
+.ctrl output{font:600 14px var(--sans);color:var(--red-text);font-variant-numeric:tabular-nums}
+.ctrl .lr{display:flex;justify-content:space-between}
+input[type=range]{width:100%;accent-color:var(--red);height:28px;margin:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden;background:var(--bg2)}
+.seg button{background:none;border:0;color:var(--ink2);padding:7px 15px;font:600 14px var(--sans);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--red);color:#fff}
+.seg button:not([aria-pressed="true"]):hover{color:var(--ink)}
+.btn{background:var(--bg2);color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:7px 16px;font:600 14px var(--sans);cursor:pointer}
+.btn:hover{border-color:var(--red)}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+.chk{display:flex;align-items:center;gap:8px;font:600 14px var(--sans);cursor:pointer}
+.chk input{accent-color:var(--red);width:18px;height:18px}
+.read{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}
+.read div{background:var(--bg2);border:1px solid var(--line-soft);border-radius:6px;padding:10px 14px}
+.read span{display:block;font:400 13px var(--sans);color:var(--ink3)}
+.read strong{font:600 1.4rem var(--sans);font-variant-numeric:tabular-nums}
+.read strong.r{color:var(--red-text)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font:400 13.5px var(--sans);color:var(--ink2);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend svg{width:22px;height:14px}
+.status{font:400 15px/1.5 var(--sans);color:var(--ink);margin:12px 0 0;min-height:1.5em}
+table.data{border-collapse:collapse;width:100%;font:400 15px/1.4 var(--sans);margin:14px 0}
+table.data th,table.data td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+table.data th{background:var(--panel2);font-weight:600}
+table.data td.n{font-variant-numeric:tabular-nums;text-align:right}
+.tblwrap{overflow-x:auto}
+
+/* quiz */
+.quiz{border:1px solid var(--line);border-radius:6px;background:var(--bg2);padding:20px 22px;margin:30px 0}
+.q-label{font:600 .85rem var(--sans);color:var(--red-text);margin:0 0 6px}
+.q-text{font-size:1.05em;margin:0 0 14px}
+.choices{display:grid;gap:8px}
+.choice{text-align:left;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:11px 14px;border-radius:6px;font:400 16px/1.45 var(--serif);cursor:pointer}
+.choice:hover:not(:disabled){border-color:var(--red)}
+.choice.ok{border-color:#fff;background:var(--panel2);box-shadow:inset 4px 0 0 var(--blue)}
+.choice.no{border-style:dashed;border-color:var(--red);color:var(--ink3);text-decoration:line-through}
+.choice:disabled{cursor:default}
+.q-fb{margin-top:14px;font-size:.97em;min-height:1em}
+.q-fb strong{font-family:var(--sans)}
+
+/* deeper */
+details.deeper{border:1px solid var(--line-soft);border-radius:6px;padding:0;margin:26px 0;background:var(--bg2)}
+details.deeper summary{cursor:pointer;padding:12px 18px;font:600 15px var(--sans);list-style:none}
+details.deeper summary::-webkit-details-marker{display:none}
+details.deeper summary::before{content:"+";display:inline-block;width:1.2em;color:var(--red-text);font-weight:800}
+details.deeper[open] summary::before{content:"\2212"}
+details.deeper .body{padding:0 18px 16px;font-size:.97em}
+details.deeper .prompt{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin:0 0 10px;font-size:.95em}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:22px 0}
+.two>div{border-top:2px solid var(--red);padding-top:10px}
+.two h4{font:600 1.05rem var(--sans);margin:0 0 6px}
+.sample{font-family:var(--math);font-size:1.05rem;background:var(--bg2);border:1px solid var(--line-soft);border-left:3px solid var(--red);padding:14px 18px;margin:18px 0;border-radius:6px}
+.sample small{display:block;font:400 13px var(--sans);color:var(--ink3);margin-bottom:4px}
+
+footer{border-top:1px solid var(--line);margin-top:56px}
+footer .in{max-width:1240px;margin:auto;padding:28px 24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font:600 15px var(--sans)}
+footer a{color:var(--ink2)}
+
+@media (max-width:1100px){
+  .shell{grid-template-columns:minmax(0,1fr);gap:0}
+  .rail{display:none}
+  .hero-in{grid-template-columns:1fr;gap:36px}
+}
+@media (max-width:640px){
+  body{font-size:17.5px}
+  .two{grid-template-columns:1fr}
+  .steps-eq .row{grid-template-columns:1fr;gap:4px}
+  .widget{padding:16px 14px 18px}
+  .hero-in{padding:44px 20px 40px}
+  .shell,.topbar-in,footer .in{padding-left:20px;padding-right:20px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/deep-learning/">Deep learning &amp; neural networks</a><span class="t">· Neural Networks 9 · Fixing overfitting with regularisation</span><span class="pn"><a href="../DSML-NN-8/" title="Neural Networks 8 · Optimisers and learning rate decay">← Prev</a><a href="../DSML-NN-10/" title="Neural Networks 10 · Autoencoders for compression">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><header class="topbar">
+  <div class="topbar-in"><a class="brand" href="#top">Neural Networks 9 post read</a></div>
+  <div class="progress" aria-hidden="true"><span id="bar"></span></div>
+</header>
+
+<section class="hero" id="top" style="padding:0;border-top:0">
+  <div class="hero-in">
+    <div>
+      <h1>Neural Networks 9 post read</h1>
+      <p class="sub">Hyperparameter tuning: finding better neural networks</p>
+      <p class="lede">A neural network that scores well on the data it trained on can still fail on new data. This read follows one delivery-delay model through diagnosis and four fixes: L2 regularization, dropout, batch normalization and early stopping.</p>
+    </div>
+    <figure class="gap">
+      <svg viewBox="0 0 400 330" role="img" aria-label="Bar chart of Meera's baseline model: training accuracy 71 percent, validation accuracy 63 percent, an 8 point gap.">
+        <defs>
+          <pattern id="stripe" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#0f2159"/><rect width="4" height="8" fill="#86a8ff"/></pattern>
+        </defs>
+        <line x1="20" y1="290" x2="340" y2="290" stroke="#2a4497" stroke-width="2"/>
+        <rect x="50" y="77" width="100" height="213" fill="#86a8ff"/>
+        <rect x="200" y="101" width="100" height="189" fill="url(#stripe)" stroke="#86a8ff" stroke-width="2"/>
+        <text x="100" y="66" text-anchor="middle" fill="#eef2ff" font-family="Bricolage Grotesque,Segoe UI,sans-serif" font-weight="800" font-size="28">71%</text>
+        <text x="250" y="150" text-anchor="middle" fill="#eef2ff" font-family="Bricolage Grotesque,Segoe UI,sans-serif" font-weight="800" font-size="28" style="paint-order:stroke;stroke:#0f2159;stroke-width:6px">63%</text>
+        <text x="100" y="312" text-anchor="middle" fill="#b9c6ec" font-family="Bricolage Grotesque,Segoe UI,sans-serif" font-size="15">Train</text>
+        <text x="250" y="312" text-anchor="middle" fill="#b9c6ec" font-family="Bricolage Grotesque,Segoe UI,sans-serif" font-size="15">Validation</text>
+        <line x1="150" y1="77" x2="322" y2="77" stroke="#ff2e43" stroke-width="2" stroke-dasharray="5 4"/>
+        <line x1="300" y1="101" x2="322" y2="101" stroke="#ff2e43" stroke-width="2" stroke-dasharray="5 4"/>
+        <path d="M322 77 V101" stroke="#ff2e43" stroke-width="4"/>
+        <text x="332" y="94" fill="#ff7482" font-family="Bricolage Grotesque,Segoe UI,sans-serif" font-weight="600" font-size="14">8-point</text>
+        <text x="332" y="110" fill="#ff7482" font-family="Bricolage Grotesque,Segoe UI,sans-serif" font-weight="600" font-size="14">gap</text>
+      </svg>
+      <figcaption>Meera's baseline model: accuracy on training data versus held-out validation data. The red gap is what every fix in this read tries to close.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<div class="shell">
+  <nav class="rail" aria-label="Sections">
+    <ol id="toc">
+      <li><a href="#story">The QuickCart story</a></li>
+      <li><a href="#overfitting">Overfitting</a></li>
+      <li><a href="#encoding">Categories to numbers</a></li>
+      <li><a href="#scaling">Why scale matters</a></li>
+      <li><a href="#baseline">Baseline and loss</a></li>
+      <li><a href="#curve">Reading the curve</a></li>
+      <li><a href="#l2">Fix 1: L2 regularization</a></li>
+      <li><a href="#dropout">Fix 2: Dropout</a></li>
+      <li><a href="#batchnorm">Fix 3: Batch normalization</a></li>
+      <li><a href="#early">Fix 4: Early stopping</a></li>
+      <li><a href="#ai">AI in the loop</a></li>
+      <li><a href="#wrap">Wrap-up</a></li>
+    </ol>
+  </nav>
+
+<main>
+
+<!-- STORY -->
+<section id="story">
+  <h2>The story: QuickCart</h2>
+  <p>Meera is a data scientist at QuickCart, a grocery delivery startup. Her task: at the moment an order is placed, predict whether the delivery will miss its promised window, so operations can re-route early.</p>
+  <p>She already knows logistic regression, but this problem calls for a neural network because the features interact. A heavy order, plus rain, plus a new rider is not the sum of three separate effects.</p>
+  <p>This read follows her build step by step, and every time she hits the same wall.</p>
+  <ol class="path" aria-label="Meera's build path">
+    <li><a href="#baseline">Baseline</a></li>
+    <li><a href="#curve">Diagnose overfitting</a></li>
+    <li><a href="#l2">L2</a></li>
+    <li><a href="#dropout">Dropout</a></li>
+    <li><a href="#batchnorm">BatchNorm</a></li>
+    <li><a href="#early">Early stopping</a></li>
+  </ol>
+</section>
+
+<!-- OVERFITTING -->
+<section id="overfitting">
+  <h2>Recap: overfitting</h2>
+  <div class="analogy"><b>Analogy</b>A student memorizes the answers to a practice paper instead of learning the method. On that same paper they look brilliant. On a new paper they fall apart.</div>
+  <p>A network does the same when it has enough capacity: it fits the real pattern <em>and</em> the noise in the training set. The tell-tale sign is <strong>training accuracy far above validation accuracy</strong>. Everything that follows is a way to keep that gap small.</p>
+
+  <div class="widget" id="fitW">
+    <h4>Pattern versus noise</h4>
+    <p class="cap">Twelve noisy training points drawn around a real pattern. Switch between a fit that follows the pattern and one that memorizes every point, then add fresh data from the same source.</p>
+    <div class="ctrls">
+      <div class="seg" role="group" aria-label="Fit type" id="fitSeg">
+        <button type="button" data-v="pattern" aria-pressed="true">Learns the pattern</button>
+        <button type="button" data-v="memo" aria-pressed="false">Memorizes the noise</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="fitNew"> Show new data</label>
+    </div>
+    <svg id="fitSvg" viewBox="0 0 640 300" role="img" aria-label="Scatter of training points with a fitted curve"></svg>
+    <div class="legend" aria-hidden="true">
+      <span><svg viewBox="0 0 22 14"><circle cx="11" cy="7" r="5" fill="#86a8ff"/></svg>Training point</span>
+      <span><svg viewBox="0 0 22 14"><rect x="6" y="2" width="9" height="9" transform="rotate(45 11 7)" fill="#ff2e43"/></svg>New point</span>
+      <span><svg viewBox="0 0 22 14"><line x1="0" y1="7" x2="22" y2="7" stroke="#86a8ff" stroke-width="3"/></svg>Real pattern</span>
+      <span><svg viewBox="0 0 22 14"><line x1="0" y1="7" x2="22" y2="7" stroke="#ff2e43" stroke-width="3"/></svg>Memorizing fit</span>
+    </div>
+    <div class="read">
+      <div><span>Error on training points</span><strong id="fitTr">0.000</strong></div>
+      <div><span>Error on new points</span><strong id="fitNw" class="r">-</strong></div>
+    </div>
+    <p class="status" id="fitStatus" aria-live="polite"></p>
+    <p class="foot">Synthetic example. Error is mean squared error against each point. The memorizing fit simply connects the training points.</p>
+  </div>
+</section>
+
+<!-- ENCODING -->
+<section id="encoding">
+  <h2>Prepping the data: categories to numbers</h2>
+  <p>QuickCart's data mixes numeric features (distance, weight) with categorical ones (zone, delivery mode, rider tier). A neural network only accepts numbers, so Meera uses <strong>target encoding</strong>: each category is replaced by the historical average of the outcome for that category.</p>
+  <div class="eq" role="math" aria-label="Target encoding of category c equals one over n sub c times the sum of y sub i over all rows i whose category is c">
+    <i>TE</i>(<i>c</i>) = <span class="frac"><span>1</span><span><i>n</i><sub><i>c</i></sub></span></span>
+    <span class="sum"><span class="big">Σ</span><span class="lim"><i>i</i>: category<sub><i>i</i></sub> = <i>c</i></span></span>
+    <i>y</i><sub><i>i</i></sub>
+  </div>
+  <dl class="where">
+    <div><dt>n<sub>c</sub></dt><dd>training rows in category c</dd></div>
+    <div><dt>y<sub>i</sub></dt><dd>label of row i (1 = late, 0 = on time)</dd></div>
+  </dl>
+  <p class="note">When n<sub>c</sub> is very small the average is noisy, so it is usually smoothed toward the overall mean. The widget below shows why.</p>
+
+  <div class="widget" id="teW">
+    <h4>Target encoding calculator</h4>
+    <p class="cap">Each dot is one training row in the category. Red dots were late. The encoded value is simply the share of red dots.</p>
+    <div class="ctrls">
+      <div class="ctrl"><span class="lr"><label for="teN">Rows in category (n<sub>c</sub>)</label><output id="teNo"></output></span><input type="range" id="teN" min="1" max="100" value="40"></div>
+      <div class="ctrl"><span class="lr"><label for="teL">Late deliveries</label><output id="teLo"></output></span><input type="range" id="teL" min="0" max="40" value="6"></div>
+    </div>
+    <svg id="teSvg" viewBox="0 0 640 110" role="img" aria-label="Dots representing rows"></svg>
+    <div class="read">
+      <div><span>Target-encoded value</span><strong id="teVal" class="r"></strong></div>
+      <div><span>Calculation</span><strong id="teCalc"></strong></div>
+      <div><span>Change if one row flipped</span><strong id="teFlip"></strong></div>
+    </div>
+    <p class="status" id="teNote" aria-live="polite"></p>
+  </div>
+  <div data-quiz="q1"></div>
+</section>
+
+<!-- SCALING -->
+<section id="scaling">
+  <h2>Why scale matters: standardization</h2>
+  <p>Distance in kilometres next to weight in grams is like comparing height in metres to age in days. The features are not on the same footing. Unscaled features stretch the loss surface into a lopsided shape, and gradient descent zig-zags across it.</p>
+  <p>The fix is to z-score every feature.</p>
+  <div class="eq" role="math" aria-label="z equals x minus mu divided by sigma">
+    <i>z</i> = <span class="frac"><span><i>x</i> − <i>μ</i></span><span><i>σ</i></span></span>
+  </div>
+  <dl class="where">
+    <div><dt>x</dt><dd>raw value</dd></div>
+    <div><dt>μ</dt><dd>feature mean (training data)</dd></div>
+    <div><dt>σ</dt><dd>feature standard deviation (training data)</dd></div>
+  </dl>
+  <p>The result is a more symmetric bowl, which means faster and steadier convergence.</p>
+
+  <div class="widget" id="stdW">
+    <h4>Gradient descent on a stretched bowl versus a round one</h4>
+    <p class="cap">Contours are lines of equal loss and the star is the minimum. Both runs start from the same point.</p>
+    <div class="ctrls">
+      <div class="seg" role="group" aria-label="Feature scaling" id="stdSeg">
+        <button type="button" data-v="raw" aria-pressed="true">Raw features</button>
+        <button type="button" data-v="std" aria-pressed="false">Standardized</button>
+      </div>
+      <div class="ctrl"><span class="lr"><label for="stdSteps">Steps taken</label><output id="stdStepsO"></output></span><input type="range" id="stdSteps" min="0" max="40" value="10"></div>
+      <button type="button" class="btn primary" id="stdPlay">Play</button>
+    </div>
+    <svg id="stdSvg" viewBox="0 0 640 320" role="img" aria-label="Contour plot with gradient descent path"></svg>
+    <div class="read">
+      <div><span>Learning rate used</span><strong id="stdLr"></strong></div>
+      <div><span>Loss remaining</span><strong id="stdLoss" class="r"></strong></div>
+      <div><span>Steps to reach 1% of start loss</span><strong id="stdTo"></strong></div>
+    </div>
+    <p class="foot">Illustrative quadratic surface. Raw run uses 0.09, close to the largest rate this stretched surface tolerates (above 0.1 the zig-zag grows instead of shrinking). The standardized surface tolerates a larger rate, so it uses 0.5.</p>
+  </div>
+</section>
+
+<!-- BASELINE -->
+<section id="baseline">
+  <h2>Baseline model and the right loss</h2>
+  <p>Meera's baseline is a few dense layers. The final neuron is a sigmoid, so the network outputs a probability <span class="m">ŷ</span> between 0 and 1. The true label <span class="m">y</span> is either 0 or 1, so a continuous prediction is being compared with a hard label. The loss that fits this pairing is <strong>binary cross-entropy</strong>.</p>
+  <div class="eq" role="math" aria-label="L equals negative one over m times the sum over i from 1 to m of y_i log y-hat_i plus one minus y_i log of one minus y-hat_i">
+    <i>L</i> = −<span class="frac"><span>1</span><span><i>m</i></span></span>
+    <span class="sum"><span class="lim"><i>m</i></span><span class="big">Σ</span><span class="lim"><i>i</i>=1</span></span>
+    <span class="br">[</span> <i>y</i><sub><i>i</i></sub> log(<i>ŷ</i><sub><i>i</i></sub>) + (1 − <i>y</i><sub><i>i</i></sub>) log(1 − <i>ŷ</i><sub><i>i</i></sub>) <span class="br">]</span>
+  </div>
+  <dl class="where">
+    <div><dt>m</dt><dd>number of examples</dd></div>
+    <div><dt>y<sub>i</sub></dt><dd>true label</dd></div>
+    <div><dt>ŷ<sub>i</sub></dt><dd>predicted probability</dd></div>
+  </dl>
+  <p>Binary cross-entropy punishes confident wrong predictions heavily. Compare it with mean squared error below.</p>
+
+  <div class="widget" id="bceW">
+    <h4>Binary cross-entropy versus MSE</h4>
+    <p class="cap">True label is 1 (late). Drag the marker toward 0 to make the model confidently wrong.</p>
+    <div class="ctrls">
+      <div class="seg" role="group" aria-label="Chart view" id="bceSeg">
+        <button type="button" data-v="grad" aria-pressed="true">Gradient signal</button>
+        <button type="button" data-v="loss" aria-pressed="false">Loss value</button>
+      </div>
+      <div class="ctrl"><span class="lr"><label for="bceP">Predicted probability ŷ</label><output id="bcePo"></output></span><input type="range" id="bceP" min="0.01" max="0.99" step="0.01" value="0.05"></div>
+    </div>
+    <svg id="bceSvg" viewBox="0 0 640 300" role="img" aria-label="Line chart comparing binary cross-entropy and MSE"></svg>
+    <div class="read">
+      <div><span id="bceL1">BCE gradient</span><strong id="bceV1" class="r"></strong></div>
+      <div><span id="bceL2">MSE gradient</span><strong id="bceV2"></strong></div>
+      <div><span>BCE is stronger by</span><strong id="bceRatio"></strong></div>
+    </div>
+    <p class="foot">Gradient signal is the size of dL/dz at the sigmoid neuron's input z. For binary cross-entropy that is |ŷ − y|. For MSE, defined as (y − ŷ)², it is 2|ŷ − y| · ŷ(1 − ŷ), which flattens out as ŷ nears 0 or 1.</p>
+  </div>
+  <div data-quiz="q2"></div>
+</section>
+
+<!-- CURVE -->
+<section id="curve">
+  <h2>Reading the training curve</h2>
+  <div class="tblwrap">
+  <table class="data">
+    <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Train accuracy</td><td class="n">71%</td></tr><tr><td>Validation accuracy</td><td class="n">63%</td></tr></tbody>
+  </table>
+  </div>
+  <p>An 8-point gap means the model has enough capacity to fit noise: rare routes, one-off rider mistakes, freak weather days. Meera needs to hold the network back without losing what it has learned correctly.</p>
+</section>
+
+<!-- L2 -->
+<section id="l2">
+  <span class="tag">Fix 1</span>
+  <h2>L2 regularization</h2>
+  <div class="analogy"><b>Analogy</b>Every weight is a volume knob. Overfitting is a few knobs cranked way up for tiny quirks. L2 is a spring quietly pulling every knob back toward zero, unless the data really insists otherwise.</div>
+  <div class="eq" role="math" aria-label="Regularized loss equals L plus lambda over 2m times the sum of squared weights of layer L. The weight update is W minus eta times dW plus lambda over m times W.">
+    <i>L</i><sub><i>reg</i></sub> = <i>L</i> + <span class="frac"><span><i>λ</i></span><span>2<i>m</i></span></span> <span class="sum"><span class="big">Σ</span></span> (<i>W</i><sup><i>L</i></sup>)²
+    <span class="gap-s"></span>
+    <i>W</i><sup><i>L</i></sup> := <i>W</i><sup><i>L</i></sup> − <i>η</i> <span class="br">(</span><i>dW</i><sup><i>L</i></sup> + <span class="frac"><span><i>λ</i></span><span><i>m</i></span></span><i>W</i><sup><i>L</i></sup><span class="br">)</span>
+  </div>
+  <dl class="where">
+    <div><dt>λ</dt><dd>regularization strength (hyperparameter)</dd></div>
+    <div><dt>m</dt><dd>number of examples</dd></div>
+    <div><dt>W<sup>L</sup></dt><dd>layer L's weights</dd></div>
+    <div><dt>η</dt><dd>learning rate</dd></div>
+    <div><dt>dW<sup>L</sup></dt><dd>original gradient, before regularization</dd></div>
+  </dl>
+  <p>This is also called <strong>weight decay</strong>. Each update shrinks the weights a little, in addition to reducing error.</p>
+
+  <div class="widget" id="l2W">
+    <h4>The spring on the knobs</h4>
+    <p class="cap">Six weights, with one update rule applied repeatedly. Only the decay term of the update is simulated here, to isolate what the spring does on its own.</p>
+    <div class="ctrls">
+      <div class="ctrl"><span class="lr"><label for="l2L">Regularization strength λ</label><output id="l2Lo"></output></span><input type="range" id="l2L" min="0" max="100" value="20"></div>
+      <div class="ctrl"><span class="lr"><label for="l2T">Update steps</label><output id="l2To"></output></span><input type="range" id="l2T" min="0" max="50" value="25"></div>
+    </div>
+    <svg id="l2Svg" viewBox="0 0 640 250" role="img" aria-label="Bars showing weights before and after decay"></svg>
+    <div class="read">
+      <div><span>Shrink per step (1 − ηλ/m)</span><strong id="l2F"></strong></div>
+      <div><span>Weight size remaining</span><strong id="l2R" class="r"></strong></div>
+    </div>
+    <p class="status" id="l2Status" aria-live="polite"></p>
+    <p class="foot">Illustrative weights. Fixed values: η = 0.1, m = 100. In real training the data gradient dW pushes back, so weights the data needs survive.</p>
+  </div>
+  <div data-quiz="q3"></div>
+  <details class="deeper">
+    <summary>Go deeper: L1 versus L2</summary>
+    <div class="body">
+      <p>Ask an AI assistant this:</p>
+      <p class="prompt">Explain the difference between L1 and L2 regularization: why L1 can zero out weights entirely while L2 only shrinks them, and the geometric reason (diamond versus circle constraint region).</p>
+      <button type="button" class="btn copy">Copy prompt</button>
+    </div>
+  </details>
+</section>
+
+<!-- DROPOUT -->
+<section id="dropout">
+  <span class="tag">Fix 2</span>
+  <h2>Dropout</h2>
+  <div class="analogy"><b>Analogy</b>A team that only ever plays its five stars collapses if one is out. A coach who randomly benches players in <em>practice</em> forces everyone to become independently capable, and the team becomes more robust.</div>
+  <p>On each training step, dropout randomly benches a fraction <span class="m">r</span> of the neurons in a layer.</p>
+  <div class="eq" role="math" aria-label="The mask d is 1 with probability 1 minus r and 0 with probability r. The dropped activation is the activation times the mask, divided by 1 minus r.">
+    <i>d</i><sup><i>l</i></sup><sub><i>j</i></sub> = <span class="br">{</span> 1 with prob (1 − <i>r</i>), 0 with prob <i>r</i>
+    <span class="gap-s"></span>
+    <i>a</i><sup><i>l</i></sup><sub><i>dropped</i></sub> = <span class="frac"><span><i>a</i><sup><i>l</i></sup> ∘ <i>d</i><sup><i>l</i></sup></span><span>1 − <i>r</i></span></span>
+  </div>
+  <dl class="where">
+    <div><dt>r</dt><dd>dropout rate</dd></div>
+    <div><dt>∘</dt><dd>elementwise multiply</dd></div>
+    <div><dt>1 ÷ (1 − r)</dt><dd>keeps expected activation unchanged (inverted dropout)</dd></div>
+  </dl>
+
+  <div class="widget" id="dropW">
+    <h4>Dropout playground: one hidden layer of 64 neurons</h4>
+    <p class="cap">Brightness is activation strength. Crossed cells are benched for this training step. Survivors are scaled up by 1 ÷ (1 − r).</p>
+    <div class="ctrls">
+      <div class="ctrl"><span class="lr"><label for="dropR">Dropout rate r</label><output id="dropRo"></output></span><input type="range" id="dropR" min="0" max="0.8" step="0.05" value="0.3"></div>
+      <button type="button" class="btn primary" id="dropGo">New training step</button>
+    </div>
+    <svg id="dropSvg" viewBox="0 0 640 330" role="img" aria-label="Two 8 by 8 grids of neuron activations, before and after dropout"></svg>
+    <div class="read">
+      <div><span>Dropped this step</span><strong id="dropN" class="r"></strong></div>
+      <div><span>Expected (r × 64)</span><strong id="dropE"></strong></div>
+      <div><span>Mean activation before, after</span><strong id="dropM"></strong></div>
+    </div>
+    <p class="foot">The two means stay close because of the 1 ÷ (1 − r) scaling. Any single step will differ a little by chance. Hover a cell for its values.</p>
+  </div>
+  <div data-quiz="q4"></div>
+
+  <h3>Dropout: train versus test</h3>
+  <p>Masking happens <strong>only during training</strong>. At test time all neurons are active, with no masking and no further adjustment. This just works because the inverted scaling during training already calibrated the network for full-capacity behaviour.</p>
+  <div class="widget" id="netW">
+    <h4>The same network in training and at test time</h4>
+    <p class="cap">Dropout applies to both hidden layers here.</p>
+    <div class="ctrls">
+      <div class="seg" role="group" aria-label="Mode" id="netSeg">
+        <button type="button" data-v="train" aria-pressed="true">Training step</button>
+        <button type="button" data-v="test" aria-pressed="false">Test time</button>
+      </div>
+      <div class="ctrl"><span class="lr"><label for="netR">Dropout rate r</label><output id="netRo"></output></span><input type="range" id="netR" min="0.1" max="0.7" step="0.05" value="0.35"></div>
+      <button type="button" class="btn" id="netGo">Resample</button>
+    </div>
+    <svg id="netSvg" viewBox="0 0 640 290" role="img" aria-label="Neural network diagram"></svg>
+    <p class="status" id="netStatus" aria-live="polite"></p>
+  </div>
+  <details class="deeper">
+    <summary>Go deeper: dropout as an ensemble</summary>
+    <div class="body">
+      <p>Ask an AI assistant this:</p>
+      <p class="prompt">Why is dropout described as "training an ensemble of smaller networks inside one big network"? Give me a different analogy than a sports team.</p>
+      <button type="button" class="btn copy">Copy prompt</button>
+    </div>
+  </details>
+</section>
+
+<!-- BATCHNORM -->
+<section id="batchnorm">
+  <span class="tag">Fix 3</span>
+  <h2>Batch normalization</h2>
+  <div class="analogy"><b>Analogy</b>A chef who recalibrates the kitchen scale before every use, versus a scale that silently drifts and forces constant guesswork.</div>
+  <p>The problem: as early layers update, the <em>input distribution</em> that later layers see keeps shifting, so they chase a moving target. The fix is to normalize each layer's input per mini-batch.</p>
+  <div class="steps-eq" id="bnEqs">
+    <div class="row" data-step="1"><span class="lab">Batch mean</span><span class="f"><i>μ</i><sub><i>B</i></sub> = <span class="frac"><span>1</span><span><i>n</i></span></span> <span class="sum"><span class="big">Σ</span></span> <i>z</i><sub><i>i</i></sub></span></div>
+    <div class="row" data-step="2"><span class="lab">Batch variance</span><span class="f"><i>σ</i><sup>2</sup><sub><i>B</i></sub> = <span class="frac"><span>1</span><span><i>n</i></span></span> <span class="sum"><span class="big">Σ</span></span> (<i>z</i><sub><i>i</i></sub> − <i>μ</i><sub><i>B</i></sub>)²</span></div>
+    <div class="row" data-step="3"><span class="lab">Normalize</span><span class="f"><i>ẑ</i><sub><i>i</i></sub> = <span class="frac"><span><i>z</i><sub><i>i</i></sub> − <i>μ</i><sub><i>B</i></sub></span><span>√(<i>σ</i><sup>2</sup><sub><i>B</i></sub> + <i>ε</i>)</span></span></span></div>
+    <div class="row" data-step="4"><span class="lab">Scale and shift</span><span class="f"><i>y</i><sub><i>i</i></sub> = <i>γ</i> <i>ẑ</i><sub><i>i</i></sub> + <i>β</i></span></div>
+  </div>
+  <dl class="where">
+    <div><dt>n</dt><dd>batch size</dd></div>
+    <div><dt>z<sub>i</sub></dt><dd>pre-activation value</dd></div>
+    <div><dt>ε</dt><dd>tiny constant (avoids dividing by zero)</dd></div>
+    <div><dt>γ, β</dt><dd>learnable scale and shift</dd></div>
+  </dl>
+
+  <div class="widget" id="bnW">
+    <h4>Batch normalization, step by step</h4>
+    <p class="cap">A toy batch of six pre-activation values. Move through the four steps, then adjust γ and β.</p>
+    <div class="ctrls">
+      <div class="seg" role="group" aria-label="Step" id="bnSeg">
+        <button type="button" data-v="1" aria-pressed="false">1 Mean</button>
+        <button type="button" data-v="2" aria-pressed="false">2 Variance</button>
+        <button type="button" data-v="3" aria-pressed="false">3 Normalize</button>
+        <button type="button" data-v="4" aria-pressed="true">4 Scale and shift</button>
+      </div>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><span class="lr"><label for="bnG">Scale γ</label><output id="bnGo"></output></span><input type="range" id="bnG" min="0.2" max="6" step="0.01" value="1"></div>
+      <div class="ctrl"><span class="lr"><label for="bnB">Shift β</label><output id="bnBo"></output></span><input type="range" id="bnB" min="-5" max="25" step="0.01" value="0"></div>
+      <button type="button" class="btn" id="bnUndo">Set γ, β to undo normalization</button>
+    </div>
+    <svg id="bnSvg" viewBox="0 0 640 270" role="img" aria-label="Number lines showing the batch before and after normalization"></svg>
+    <div class="tblwrap"><table class="data" id="bnTbl"></table></div>
+    <p class="status" id="bnStatus" aria-live="polite"></p>
+    <p class="foot">Toy values with ε = 0.00001. With γ = σ<sub>B</sub> and β = μ<sub>B</sub> the layer recovers its original values, so normalization never removes what the layer could represent.</p>
+  </div>
+  <div data-quiz="q5"></div>
+  <details class="deeper">
+    <summary>Go deeper: internal covariate shift</summary>
+    <div class="body">
+      <p>Ask an AI assistant this:</p>
+      <p class="prompt">Explain "internal covariate shift", the problem batch normalization was built to fix, and what happens in a very deep (about 100 layer) network if it is left unaddressed.</p>
+      <button type="button" class="btn copy">Copy prompt</button>
+    </div>
+  </details>
+</section>
+
+<!-- EARLY STOPPING -->
+<section id="early">
+  <span class="tag">Fix 4</span>
+  <h2>Early stopping</h2>
+  <div class="analogy"><b>Analogy</b>A cake left in the oven past the right time does not get better. It just dries out.</div>
+  <p>Meera trains longer, expecting accuracy to keep climbing. Instead, validation accuracy peaks and then <em>declines</em> while training accuracy keeps rising. The model is back in overfitting.</p>
+  <p>The fix: after every epoch, check validation performance and save the best version so far. Stop once validation performance has stalled for a set number of epochs, called the <strong>patience</strong>.</p>
+
+  <div class="widget" id="esW">
+    <h4>Early stopping simulator</h4>
+    <p class="cap">Change the patience and see where training halts and which checkpoint is kept.</p>
+    <div class="ctrls">
+      <div class="ctrl"><span class="lr"><label for="esP">Patience (epochs)</label><output id="esPo"></output></span><input type="range" id="esP" min="1" max="10" value="3"></div>
+      <button type="button" class="btn primary" id="esPlay">Replay training</button>
+    </div>
+    <svg id="esSvg" viewBox="0 0 640 310" role="img" aria-label="Training and validation accuracy by epoch"></svg>
+    <div class="legend" aria-hidden="true">
+      <span><svg viewBox="0 0 22 14"><line x1="0" y1="7" x2="22" y2="7" stroke="#86a8ff" stroke-width="3" stroke-dasharray="6 3"/></svg>Training accuracy</span>
+      <span><svg viewBox="0 0 22 14"><line x1="0" y1="7" x2="22" y2="7" stroke="#ff2e43" stroke-width="3"/></svg>Validation accuracy</span>
+    </div>
+    <div class="read">
+      <div><span>Best epoch (saved)</span><strong id="esBest"></strong></div>
+      <div><span>Training stops at epoch</span><strong id="esStop" class="r"></strong></div>
+      <div><span>Epochs saved</span><strong id="esSaved"></strong></div>
+    </div>
+    <p class="status" id="esStatus" aria-live="polite"></p>
+    <p class="foot">Schematic curves to show the shape, not measured results. A very small patience can stop before the peak, because validation accuracy wobbles from epoch to epoch.</p>
+  </div>
+</section>
+
+<!-- AI -->
+<section id="ai">
+  <h2>AI in the loop</h2>
+  <p>Every fix in this read is a hyperparameter that someone has to choose: λ, r, where to place BatchNorm, and patience. Industry teams increasingly automate that search.</p>
+  <div class="two">
+    <div><h4>Automated hyperparameter search</h4><p>Tools such as Bayesian optimization try combinations systematically, guided by validation results.</p></div>
+    <div><h4>AI assistants</h4><p>An assistant can read a description of a training curve and suggest which fix is likely to help, acting as a first-pass debugging partner.</p></div>
+  </div>
+  <div class="sample"><small>The kind of description an assistant can work from</small>train 90%, val 68%, gap widened after epoch 15</div>
+  <p>Automation does not replace the understanding built above. Someone still has to interpret what it suggests and sanity-check it.</p>
+</section>
+
+<!-- WRAP -->
+<section id="wrap">
+  <h2>Wrap-up</h2>
+  <ul class="points">
+    <li>Overfitting is a train/validation gap caused by memorizing noise instead of pattern.</li>
+    <li>Target encoding and standardization prepare the data for stable training.</li>
+    <li>Sigmoid with binary cross-entropy fits a probability-versus-binary-label problem.</li>
+    <li>Automation extends this diagnostic process but does not replace it.</li>
+  </ul>
+  <div class="tblwrap">
+  <table class="data">
+    <thead><tr><th>Fix</th><th>Hyperparameter</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><a href="#l2">L2 regularization</a></td><td>λ</td><td>Weight decay: every update shrinks the weights a little, on top of reducing error.</td></tr>
+      <tr><td><a href="#dropout">Dropout</a></td><td>r</td><td>Randomly masks neurons during training, scaled by 1 ÷ (1 − r) so training and test stay consistent.</td></tr>
+      <tr><td><a href="#batchnorm">Batch normalization</a></td><td>Placement in the network</td><td>Normalizes each layer's input per batch, then restores flexibility through learnable γ and β.</td></tr>
+      <tr><td><a href="#early">Early stopping</a></td><td>Patience</td><td>Halts training at the validation peak and keeps the best version.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <div class="in"><span>Neural Networks 9 post read</span><a href="#top">Back to top</a></div>
+</footer>
+
+<script>
+(function(){
+'use strict';
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const f2=(n,d=2)=>Number(n).toFixed(d);
+const REDUCE=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const C={red:'#ff2e43',redT:'#ff7482',blue:'#86a8ff',ink:'#eef2ff',ink2:'#b9c6ec',ink3:'#8c9dd2',line:'#2a4497',soft:'#1e3479',bg2:'#0c1c4a',panel:'#0f2159',panel2:'#15306f'};
+const FONT="font-family=\"Bricolage Grotesque,Segoe UI,system-ui,sans-serif\"";
+function rng(seed){let s=seed>>>0;return function(){s=(s+0x6D2B79F5)>>>0;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
+function gauss(r){return Math.sqrt(-2*Math.log(1-r()))*Math.cos(2*Math.PI*r());}
+function seg(root,cb){const bs=$$('button',root);bs.forEach(b=>b.addEventListener('click',()=>{bs.forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));cb(b.dataset.v);}));return{set(v){bs.forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===String(v)?'true':'false'));}}}
+function T(x,y,txt,o={}){return `<text x="${x}" y="${y}" ${FONT} font-size="${o.s||13}" fill="${o.c||C.ink2}" text-anchor="${o.a||'start'}" ${o.w?`font-weight="${o.w}"`:''}>${txt}</text>`;}
+
+/* ---------- progress + scrollspy ---------- */
+const bar=$('#bar');
+function onScroll(){const h=document.documentElement;const p=h.scrollTop/(h.scrollHeight-h.clientHeight||1);bar.style.width=(clamp(p,0,1)*100)+'%';}
+addEventListener('scroll',onScroll,{passive:true});onScroll();
+const links=$$('#toc a');const secs=links.map(a=>$(a.getAttribute('href')));
+if('IntersectionObserver' in window){
+  const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.removeAttribute('aria-current'));const a=links[secs.indexOf(e.target)];if(a)a.setAttribute('aria-current','true');}})},{rootMargin:'-20% 0px -70% 0px'});
+  secs.forEach(s=>s&&io.observe(s));
+}
+
+/* ---------- quizzes ---------- */
+const QUIZ=[
+ {id:'q1',q:'The <code>on_foot</code> category has 40 training rows, and 6 of them were late. What is the target-encoded value?',c:['0.06','0.15','0.40','6.00'],a:1,e:'6 ÷ 40 = 0.15. Target encoding is the average label for the category.'},
+ {id:'q2',q:'Why is MSE a weak choice here compared with binary cross-entropy?',c:["MSE can't run with sigmoid outputs",'MSE gives a much gentler gradient on confidently-wrong probability predictions, slowing learning','MSE only works with 3+ classes','They always give identical gradients'],a:1,e:'Binary cross-entropy keeps a strong gradient exactly when the model is confidently wrong. MSE flattens out there. Set the marker near 0 in the chart above to see it.'},
+ {id:'q3',q:'Meera sets <i class="m">λ</i> way too high. What is the most likely effect?',c:['Faster training, nothing else changes','The model overfits even more','Weight-decay term dominates → weights collapse toward 0 → model underfits','No effect on updates'],a:2,e:'A spring that is too strong overpowers the real learning signal. Push λ to its maximum in the widget above.'},
+ {id:'q4',q:'A layer has 256 neurons and <i class="m">r</i> = 0.25. How many neurons are dropped in expectation?',c:['25','64','192','256'],a:1,e:'0.25 × 256 = 64.'},
+ {id:'q5',q:'Why are <i class="m">γ</i> and <i class="m">β</i> learnable, instead of forcing every normalized output to have mean 0 and variance 1?',c:['They only matter at test time','Strict mean-0/variance-1 normalization can limit what a layer can represent; learnable γ, β let the network adjust the scale and shift while keeping the benefits of normalization','They replace the activation function','They are fixed constants and never updated'],a:1,e:'Normalization keeps activations stable, but forcing them to always sit at mean 0 and variance 1 can be too restrictive. Learnable γ and β let the network <strong>scale and shift</strong> the normalized values when needed, so the layer can learn the most useful distribution for the task.'}
+];
+QUIZ.forEach(q=>{
+  const host=$('[data-quiz="'+q.id+'"]');if(!host)return;
+  host.innerHTML=`<p class="q-label">Check your understanding</p><p class="q-text">${q.q}</p><div class="choices" role="group" aria-label="Answer choices">${q.c.map((c,i)=>`<button type="button" class="choice" data-i="${i}">${c}</button>`).join('')}</div><div class="q-fb" aria-live="polite"></div>`;
+  const fb=$('.q-fb',host);
+  $$('.choice',host).forEach(b=>b.addEventListener('click',()=>{
+    const i=+b.dataset.i;
+    if(i===q.a){$$('.choice',host).forEach(x=>x.disabled=true);b.classList.add('ok');fb.innerHTML=`<strong>Correct.</strong> ${q.e}`;}
+    else{b.classList.add('no');b.disabled=true;fb.innerHTML='<strong>Not quite.</strong> Try another option.';}
+  }));
+});
+
+/* ---------- copy prompts ---------- */
+$$('.copy').forEach(b=>b.addEventListener('click',async()=>{
+  const t=b.previousElementSibling.textContent.trim();
+  try{await navigator.clipboard.writeText(t);b.textContent='Copied';}
+  catch(e){const r=document.createRange();r.selectNodeContents(b.previousElementSibling);const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Selected. Press copy.';}
+  setTimeout(()=>b.textContent='Copy prompt',1800);
+}));
+
+/* ---------- fit widget ---------- */
+(function(){
+  const svg=$('#fitSvg'),W=640,H=300,pl=44,pr=16,pt=16,pb=34;
+  const f=x=>0.5+0.3*Math.sin(2*Math.PI*x);
+  const N=12;
+  function mk(seed){const r=rng(seed);return Array.from({length:N},(_,i)=>{const x=(i+0.5+(r()-0.5)*0.55)/N;return{x,y:clamp(f(x)+0.09*gauss(r),0.02,0.98)};});}
+  const tr=mk(11),nw=mk(23);
+  const sx=x=>pl+x*(W-pl-pr), sy=y=>H-pb-y*(H-pt-pb);
+  function interp(x){if(x<=tr[0].x)return tr[0].y;for(let i=1;i<N;i++){if(x<=tr[i].x){const a=tr[i-1],b=tr[i];return a.y+(b.y-a.y)*(x-a.x)/(b.x-a.x);}}return tr[N-1].y;}
+  const mse=(pts,fn)=>pts.reduce((s,p)=>s+(p.y-fn(p.x))**2,0)/pts.length;
+  let mode='pattern',showNew=false;
+  const S=seg($('#fitSeg'),v=>{mode=v;draw();});
+  $('#fitNew').addEventListener('change',e=>{showNew=e.target.checked;draw();});
+  function draw(){
+    const fn=mode==='pattern'?f:interp;
+    let h=`<rect x="${pl}" y="${pt}" width="${W-pl-pr}" height="${H-pt-pb}" fill="${C.bg2}" stroke="${C.soft}"/>`;
+    h+=T(W/2,H-8,'input feature',{a:'middle',c:C.ink3});
+    h+=`<text transform="translate(14 ${H/2}) rotate(-90)" ${FONT} font-size="13" fill="${C.ink3}" text-anchor="middle">target</text>`;
+    let d='';for(let i=0;i<=120;i++){const x=i/120;d+=(i?'L':'M')+sx(x).toFixed(1)+' '+sy(f(x)).toFixed(1);}
+    if(mode==='memo'){
+      h+=`<path d="${d}" fill="none" stroke="${C.blue}" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>`;
+      let m=`M${sx(0)} ${sy(tr[0].y)}`;tr.forEach(p=>m+=`L${sx(p.x).toFixed(1)} ${sy(p.y).toFixed(1)}`);m+=`L${sx(1)} ${sy(tr[N-1].y)}`;
+      h+=`<path d="${m}" fill="none" stroke="${C.red}" stroke-width="3" stroke-linejoin="round"/>`;
+    } else h+=`<path d="${d}" fill="none" stroke="${C.blue}" stroke-width="3.5"/>`;
+    if(showNew)nw.forEach(p=>{h+=`<line x1="${sx(p.x)}" y1="${sy(p.y)}" x2="${sx(p.x)}" y2="${sy(fn(p.x))}" stroke="${C.red}" stroke-width="1.5" opacity=".75"/>`;});
+    tr.forEach((p,i)=>h+=`<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="5.5" fill="${C.blue}" stroke="${C.panel}" stroke-width="1.5"><title>Training point ${i+1}</title></circle>`);
+    if(showNew)nw.forEach((p,i)=>h+=`<rect x="${sx(p.x)-5}" y="${sy(p.y)-5}" width="10" height="10" transform="rotate(45 ${sx(p.x)} ${sy(p.y)})" fill="${C.red}" stroke="${C.panel}" stroke-width="1.5"><title>New point ${i+1}</title></rect>`);
+    svg.innerHTML=h;
+    const a=mse(tr,fn),b=mse(nw,fn);
+    $('#fitTr').textContent=f2(a,3);
+    $('#fitNw').textContent=showNew?f2(b,3):'-';
+    $('#fitStatus').textContent=mode==='pattern'
+      ? (showNew?'The smooth fit misses training and new points by about the same amount, so it will hold up on unseen data.':'A smooth fit leaves some error on the training points. That leftover is the noise, which cannot be predicted.')
+      : (showNew?'Zero error on training points, but noticeably more error on new ones. The fit learned the noise.':'Zero error on training points looks perfect. Tick "Show new data" to test it.');
+  }
+  draw();
+})();
+
+/* ---------- target encoding ---------- */
+(function(){
+  const n=$('#teN'),l=$('#teL'),svg=$('#teSvg');
+  function draw(){
+    const N=+n.value;l.max=N;if(+l.value>N)l.value=N;const L=+l.value;
+    $('#teNo').textContent=N;$('#teLo').textContent=L;
+    const cols=Math.min(N,25),rows=Math.ceil(N/cols),gap=Math.min(24,(640-20)/cols),r=Math.min(8,gap*.36);
+    const ox=(640-(cols-1)*gap)/2, ry=Math.min(24,90/Math.max(rows,1));
+    let h='';for(let i=0;i<N;i++){const cx=ox+(i%cols)*gap,cy=(rows===1?55:16+Math.floor(i/cols)*ry+ (ry*0.3));const late=i<L;
+      h+=late?`<rect x="${cx-r}" y="${cy-r}" width="${2*r}" height="${2*r}" transform="rotate(45 ${cx} ${cy})" fill="${C.red}"/>`:`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${C.blue}" opacity=".85"/>`;}
+    svg.setAttribute('viewBox',`0 0 640 ${rows===1?110:Math.max(110,rows*ry+30)}`);
+    svg.setAttribute('aria-label',`${N} rows, ${L} late (red diamonds), ${N-L} on time (blue circles)`);
+    svg.innerHTML=h;
+    $('#teVal').textContent=f2(L/N,2);$('#teCalc').textContent=`${L} ÷ ${N}`;
+    $('#teFlip').textContent='±'+f2(1/N,3);
+    $('#teNote').textContent=N<10?`With only ${N} rows, a single different label moves the encoded value by ${f2(1/N,2)}. This is why small categories are smoothed toward the overall mean.`:(N===40&&L===6?'The on_foot example from the quiz below: 6 late out of 40 rows.':'Larger categories give steadier averages: one flipped label barely moves the value.');
+  }
+  n.addEventListener('input',draw);l.addEventListener('input',draw);draw();
+})();
+
+/* ---------- standardization ---------- */
+(function(){
+  const svg=$('#stdSvg'),U=46.67,cx=320,cy=160;
+  const cfg={raw:{a:1,b:20,lr:.09,lv:[2,6,14,26,44.9]},std:{a:1,b:1,lr:.5,lv:[1,3,6,10,14.1]}};
+  const start=[-5,1.8],MAX=40;
+  Object.values(cfg).forEach(c=>{let p=start.slice();c.pts=[p.slice()];for(let k=0;k<MAX;k++){p=[p[0]-c.lr*c.a*p[0],p[1]-c.lr*c.b*p[1]];c.pts.push(p.slice());}
+    c.loss=q=>0.5*(c.a*q[0]*q[0]+c.b*q[1]*q[1]);c.l0=c.loss(start);
+    c.to=c.pts.findIndex(q=>c.loss(q)<0.01*c.l0);});
+  let mode='raw',steps=10,timer=null;
+  const X=v=>cx+v*U,Y=v=>cy-v*U;
+  const sl=$('#stdSteps');
+  seg($('#stdSeg'),v=>{mode=v;stop();draw();});
+  sl.addEventListener('input',()=>{stop();steps=+sl.value;draw();});
+  $('#stdPlay').addEventListener('click',()=>{if(REDUCE){steps=MAX;sl.value=MAX;draw();return;}stop();steps=0;sl.value=0;draw();timer=setInterval(()=>{steps++;sl.value=steps;draw();if(steps>=MAX)stop();},160);});
+  function stop(){if(timer){clearInterval(timer);timer=null;}}
+  function draw(){
+    const c=cfg[mode];
+    let h=`<defs><clipPath id="clipStd"><rect x="20" y="10" width="600" height="300"/></clipPath></defs><rect x="20" y="10" width="600" height="300" fill="${C.bg2}" stroke="${C.soft}"/>`;
+    h+=`<g clip-path="url(#clipStd)"><line x1="20" y1="${cy}" x2="620" y2="${cy}" stroke="${C.soft}"/><line x1="${cx}" y1="10" x2="${cx}" y2="310" stroke="${C.soft}"/>`;
+    c.lv.forEach((lv,i)=>{h+=`<ellipse cx="${cx}" cy="${cy}" rx="${(Math.sqrt(2*lv/c.a)*U).toFixed(1)}" ry="${(Math.sqrt(2*lv/c.b)*U).toFixed(1)}" fill="none" stroke="${C.blue}" stroke-opacity="${.25+i*.12}" stroke-width="1.5"/>`;});
+    let d='';for(let k=0;k<=steps;k++){d+=(k?'L':'M')+X(c.pts[k][0]).toFixed(1)+' '+Y(c.pts[k][1]).toFixed(1);}
+    h+=`<path d="${d}" fill="none" stroke="${C.red}" stroke-width="2"/>`;
+    for(let k=0;k<=steps;k++)h+=`<circle cx="${X(c.pts[k][0])}" cy="${Y(c.pts[k][1])}" r="${k===steps?6:3}" fill="${k===steps?C.red:C.ink}" stroke="${C.bg2}" stroke-width="1.5"/>`;
+    h+=`</g><path d="M${cx} ${cy-9}l2.6 6.2 6.4.4-4.9 4.2 1.6 6.4-5.7-3.5-5.7 3.5 1.6-6.4-4.9-4.2 6.4-.4z" fill="${C.ink}" stroke="${C.bg2}"/>`;
+    h+=T(610,304,'weight 1 (horizontal)',{a:'end',c:C.ink3})+T(30,28,'weight 2 (vertical)',{c:C.ink3});
+    h+=T(X(start[0])+10,Y(start[1])-8,'start',{c:C.ink});
+    svg.innerHTML=h;
+    svg.setAttribute('aria-label',`${mode==='raw'?'Stretched':'Round'} loss contours. After ${steps} steps loss is ${f2(100*c.loss(c.pts[steps])/c.l0,1)} percent of the start.`);
+    $('#stdStepsO').textContent=steps;$('#stdLr').textContent=c.lr;
+    $('#stdLoss').textContent=f2(100*c.loss(c.pts[steps])/c.l0,1)+'%';
+    $('#stdTo').textContent=c.to+' steps';
+  }
+  draw();
+})();
+
+/* ---------- BCE vs MSE ---------- */
+(function(){
+  const svg=$('#bceSvg'),l=52,r=616,t=18,b=262;
+  let view='grad';const sl=$('#bceP');
+  const F={grad:{bce:p=>1-p,mse:p=>2*p*(1-p)**2,max:1,tick:[0,.25,.5,.75,1],lab:'gradient size at z'},loss:{bce:p=>-Math.log(p),mse:p=>(1-p)**2,max:5,tick:[0,1,2,3,4,5],lab:'loss'}};
+  seg($('#bceSeg'),v=>{view=v;draw();});sl.addEventListener('input',draw);
+  function draw(){
+    const p=+sl.value,c=F[view];
+    const X=v=>l+v*(r-l),Y=v=>b-clamp(v,0,c.max)/c.max*(b-t);
+    let h=`<rect x="${X(0)}" y="${t}" width="${X(.1)-X(0)}" height="${b-t}" fill="${C.red}" opacity=".14"/>`;
+    h+=T(X(.1)+6,t+14,'confidently wrong',{c:C.redT,s:12});
+    c.tick.forEach(v=>{h+=`<line x1="${l}" x2="${r}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C.soft}"/>`+T(l-8,Y(v)+4,v,{a:'end',c:C.ink3,s:12});});
+    [0,.25,.5,.75,1].forEach(v=>{h+=T(X(v),b+18,v,{a:'middle',c:C.ink3,s:12});});
+    h+=T((l+r)/2,b+38,'predicted probability ŷ (true label y = 1)',{a:'middle',c:C.ink3});
+    h+=`<text transform="translate(12 ${(t+b)/2}) rotate(-90)" ${FONT} font-size="13" fill="${C.ink3}" text-anchor="middle">${c.lab}</text>`;
+    const path=fn=>{let d='';for(let i=0;i<=99;i++){const v=.01+i*.0098;d+=(i?'L':'M')+X(v).toFixed(1)+' '+Y(fn(v)).toFixed(1);}return d;};
+    h+=`<path d="${path(c.mse)}" fill="none" stroke="${C.blue}" stroke-width="3" stroke-dasharray="7 5"/>`;
+    h+=`<path d="${path(c.bce)}" fill="none" stroke="${C.red}" stroke-width="3.5"/>`;
+    const lp=view==='grad'?.66:.24;
+    h+=T(X(lp),Y(c.bce(lp))-10,'Binary cross-entropy',{c:C.redT,w:600});
+    h+=T(X(lp),Y(c.mse(lp))+(view==='grad'?22:20),'MSE',{c:C.blue,w:600});
+    h+=`<line x1="${X(p)}" x2="${X(p)}" y1="${t}" y2="${b}" stroke="${C.ink}" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+    h+=`<circle cx="${X(p)}" cy="${Y(c.bce(p))}" r="6" fill="${C.red}" stroke="#fff" stroke-width="2"/><circle cx="${X(p)}" cy="${Y(c.mse(p))}" r="6" fill="${C.blue}" stroke="#fff" stroke-width="2"/>`;
+    svg.innerHTML=h;
+    const a=c.bce(p),m=c.mse(p);
+    svg.setAttribute('aria-label',`At predicted probability ${p}, binary cross-entropy ${view==='grad'?'gradient':'loss'} is ${f2(a)} and MSE is ${f2(m)}.`);
+    $('#bcePo').textContent=f2(p,2);
+    $('#bceL1').textContent='BCE '+(view==='grad'?'gradient':'loss');$('#bceL2').textContent='MSE '+(view==='grad'?'gradient':'loss');
+    $('#bceV1').textContent=f2(a,2);$('#bceV2').textContent=f2(m,2);
+    $('#bceRatio').textContent=m>0.0005?f2(a/m,1)+'×':'a lot';
+  }
+  draw();
+})();
+
+/* ---------- L2 ---------- */
+(function(){
+  const svg=$('#l2Svg'),W0=[1.8,-0.4,0.3,-1.5,0.2,0.6],eta=.1,m=100;
+  const L=$('#l2L'),Tt=$('#l2T');
+  function draw(){
+    const lam=+L.value,t=+Tt.value,fac=1-eta*lam/m,rem=Math.pow(fac,t);
+    $('#l2Lo').textContent=lam;$('#l2To').textContent=t;
+    let h='';const cx=330,S=125,row=38;
+    h+=`<line x1="${cx}" x2="${cx}" y1="8" y2="${8+row*6}" stroke="${C.line}" stroke-width="2"/>`;
+    W0.forEach((w,i)=>{const y=14+i*row,w1=w*rem;
+      h+=T(20,y+16,'w'+(i+1),{c:C.ink2,s:14,w:600});
+      h+=`<rect x="${Math.min(cx,cx+w*S)}" y="${y}" width="${Math.abs(w*S)}" height="24" fill="none" stroke="${C.ink3}" stroke-dasharray="4 3"/>`;
+      h+=`<rect x="${Math.min(cx,cx+w1*S)}" y="${y+3}" width="${Math.max(Math.abs(w1*S),1.5)}" height="18" fill="${C.blue}"><title>w${i+1}: ${f2(w)} → ${f2(w1)}</title></rect>`;
+      h+=T(w>=0?cx+w*S+8:cx+w*S-8,y+17,f2(w1),{a:w>=0?'start':'end',c:C.ink,s:13});});
+    h+=T(cx,8+row*6+22,'dashed outline = weight before decay, filled bar = after',{a:'middle',c:C.ink3,s:12});
+    svg.innerHTML=h;
+    $('#l2F').textContent=f2(fac,3);$('#l2R').textContent=f2(rem*100,1)+'%';
+    $('#l2Status').textContent=lam===0?'λ = 0: no spring. Weights stay wherever the data pushed them.':(rem<0.1?'The spring dominates: nearly every weight has collapsed toward 0, so the model has no capacity left to learn. That is underfitting.':(rem<0.6?'The spring is clearly pulling: the largest weights lose the most in absolute terms.':'A gentle spring: weights shrink slowly, and the data gradient can hold on to the ones it needs.'));
+  }
+  L.addEventListener('input',draw);Tt.addEventListener('input',draw);draw();
+})();
+
+/* ---------- dropout playground ---------- */
+(function(){
+  const svg=$('#dropSvg'),R=$('#dropR');
+  const rr=rng(7),base=Array.from({length:64},()=>0.4+0.6*rr());
+  let mask=[];
+  function resample(){const r=+R.value;mask=base.map(()=>Math.random()>=r);}
+  const col=v=>{const t=clamp(v/1.3,0,1);const a=[15,33,89],b=[196,214,255];return `rgb(${a.map((x,i)=>Math.round(x+(b[i]-x)*t)).join(',')})`;};
+  function draw(){
+    const r=+R.value;$('#dropRo').textContent=f2(r,2);
+    const sc=base.map((v,i)=>mask[i]?v/(1-r+1e-8):0);
+    const cs=34,gx=[24,344];let h='';
+    [['No dropout',base,false],['r = '+f2(r,2)+', one training step',sc,true]].forEach(([title,vals,drop],g)=>{
+      h+=T(gx[g],20,title,{c:C.ink,w:600,s:14});
+      vals.forEach((v,i)=>{const x=gx[g]+(i%8)*cs,y=34+Math.floor(i/8)*cs;
+        const off=drop&&!mask[i];
+        h+=`<g><title>Neuron ${i+1}: ${f2(base[i])}${drop?(off?' → dropped':' → '+f2(v)):''}</title><rect x="${x}" y="${y}" width="${cs-3}" height="${cs-3}" fill="${off?C.bg2:col(v)}" stroke="${off?C.red:C.soft}" stroke-width="${off?1.5:1}"/>${off?`<path d="M${x+7} ${y+7}L${x+cs-10} ${y+cs-10}M${x+cs-10} ${y+7}L${x+7} ${y+cs-10}" stroke="${C.red}" stroke-width="2"/>`:''}</g>`;});
+    });
+    h+=`<defs><linearGradient id="lg"><stop offset="0" stop-color="${col(0)}"/><stop offset="1" stop-color="${col(1.3)}"/></linearGradient></defs><rect x="24" y="312" width="140" height="8" fill="url(#lg)" stroke="${C.soft}"/>`+T(24,308,'0',{s:11,c:C.ink3})+T(164,308,'1.3 or more',{s:11,c:C.ink3,a:'end'});
+    svg.innerHTML=h;
+    const dropped=mask.filter(x=>!x).length,mb=base.reduce((a,b)=>a+b,0)/64,ma=sc.reduce((a,b)=>a+b,0)/64;
+    $('#dropN').textContent=dropped+' / 64';$('#dropE').textContent=f2(r*64,1);$('#dropM').textContent=f2(mb,2)+', '+f2(ma,2);
+  }
+  R.addEventListener('input',()=>{resample();draw();});$('#dropGo').addEventListener('click',()=>{resample();draw();});
+  resample();draw();
+})();
+
+/* ---------- network train/test ---------- */
+(function(){
+  const svg=$('#netSvg'),R=$('#netR'),layers=[4,6,6,1],xs=[90,250,410,570],names=['input','hidden 1','hidden 2','output (sigmoid)'];
+  let mode='train',masks=[];
+  function resample(){const r=+R.value;masks=layers.map((n,li)=>{const m=Array.from({length:n},()=>li===1||li===2?Math.random()>=r:true);if(!m.some(Boolean))m[Math.floor(Math.random()*n)]=true;return m;});}
+  seg($('#netSeg'),v=>{mode=v;draw();});
+  R.addEventListener('input',()=>{resample();draw();});$('#netGo').addEventListener('click',()=>{resample();draw();});
+  const py=(li,i)=>145+(i-(layers[li]-1)/2)*38;
+  function draw(){
+    const r=+R.value;$('#netRo').textContent=f2(r,2);
+    const act=(li,i)=>mode==='test'||masks[li][i];
+    let h='';
+    for(let li=0;li<3;li++)for(let i=0;i<layers[li];i++)for(let j=0;j<layers[li+1];j++)if(act(li,i)&&act(li+1,j))h+=`<line x1="${xs[li]}" y1="${py(li,i)}" x2="${xs[li+1]}" y2="${py(li+1,j)}" stroke="${C.blue}" stroke-opacity=".28"/>`;
+    let off=0;
+    layers.forEach((n,li)=>{for(let i=0;i<n;i++){const a=act(li,i);if(!a)off++;
+      h+=a?`<circle cx="${xs[li]}" cy="${py(li,i)}" r="12" fill="${C.blue}" stroke="${C.panel}" stroke-width="2"/>`:`<circle cx="${xs[li]}" cy="${py(li,i)}" r="12" fill="${C.panel}" stroke="${C.red}" stroke-width="2" stroke-dasharray="3 3"/><path d="M${xs[li]-6} ${py(li,i)-6}l12 12M${xs[li]+6} ${py(li,i)-6}l-12 12" stroke="${C.red}" stroke-width="2"/>`;}
+      h+=T(xs[li],275,names[li],{a:'middle',c:C.ink3,s:13});});
+    svg.innerHTML=h;
+    $('#netStatus').textContent=mode==='train'?`${off} of 12 hidden neurons are benched this step. The survivors' outputs are scaled by 1 ÷ (1 − r) = ${f2(1/(1-r),2)}.`:'All 12 hidden neurons are active. No masking and no rescaling: training already calibrated the network for this.';
+    svg.setAttribute('aria-label',mode==='train'?`Network during a training step with ${off} hidden neurons dropped`:'Network at test time with all neurons active');
+  }
+  resample();draw();
+})();
+
+/* ---------- batch norm ---------- */
+(function(){
+  const Z=[12,15,9,20,14,10],n=Z.length,eps=1e-5,svg=$('#bnSvg');
+  const mu=Z.reduce((a,b)=>a+b,0)/n,va=Z.reduce((a,b)=>a+(b-mu)**2,0)/n,sd=Math.sqrt(va+eps);
+  const zh=Z.map(z=>(z-mu)/sd);
+  const G=$('#bnG'),B=$('#bnB');let step=4;
+  const S=seg($('#bnSeg'),v=>{step=+v;draw();});
+  G.addEventListener('input',draw);B.addEventListener('input',draw);
+  $('#bnUndo').addEventListener('click',()=>{G.value=f2(sd,2);B.value=f2(mu,2);draw();});
+  const lo=-15,hi=40,X=v=>40+(v-lo)/(hi-lo)*560;
+  function draw(){
+    const g=+G.value,b=+B.value,y=zh.map(v=>g*v+b);
+    $('#bnGo').textContent=f2(g,2);$('#bnBo').textContent=f2(b,2);
+    $$('#bnEqs .row').forEach(r=>r.setAttribute('aria-current',+r.dataset.step===step?'true':'false'));
+    let h='';const rows=[[50,'z: pre-activations',Z,1],[130,'ẑ: normalized',zh,3],[210,'y = γẑ + β',y,4]];
+    for(let v=lo+5;v<=hi;v+=10){h+=`<line x1="${X(v)}" x2="${X(v)}" y1="20" y2="236" stroke="${C.soft}" stroke-dasharray="2 4"/>`+T(X(v),256,v,{a:'middle',c:C.ink3,s:12});}
+    h+=`<line x1="${X(0)}" x2="${X(0)}" y1="20" y2="236" stroke="${C.line}"/>`;
+    rows.forEach(([y0,lab,vals,need])=>{if(step<need)return;
+      h+=`<line x1="40" x2="600" y1="${y0}" y2="${y0}" stroke="${C.line}" stroke-width="2"/>`+T(40,y0-26,lab,{c:C.ink,w:600,s:14});
+      vals.forEach((v,i)=>h+=`<circle cx="${clamp(X(v),40,600)}" cy="${y0}" r="7" fill="${need===1?C.blue:(need===3?'#fff':C.red)}" stroke="${C.panel}" stroke-width="2"><title>${lab.split(':')[0].split(' ')[0]}${i+1} = ${f2(v)}</title></circle>`);});
+    if(step>=1){h+=`<line x1="${X(mu)}" x2="${X(mu)}" y1="24" y2="76" stroke="${C.red}" stroke-width="2" stroke-dasharray="4 3"/>`+T(X(mu)+6,22,'μ_B = '+f2(mu),{c:C.redT,s:12});}
+    if(step>=2){const s=Math.sqrt(va);h+=`<path d="M${X(mu-s)} 80v6h${X(mu+s)-X(mu-s)}v-6" fill="none" stroke="${C.redT}" stroke-width="2"/>`+T(X(mu),102,'± σ_B = '+f2(s),{a:'middle',c:C.redT,s:12});}
+    svg.innerHTML=h;
+    const mz=zh.reduce((a,c)=>a+c,0)/n,vz=zh.reduce((a,c)=>a+(c-mz)**2,0)/n;
+    $('#bnStatus').textContent=step===1?`Step 1: the batch mean is μ_B = ${f2(mu)}.`:step===2?`Step 2: the batch variance is σ²_B = ${f2(va)} (spread σ_B = ${f2(Math.sqrt(va))}).`:step===3?`Step 3: after normalizing, the batch has mean ${f2(Math.abs(mz)<1e-9?0:mz)} and variance ${f2(vz)}.`:(Math.abs(g-sd)<0.02&&Math.abs(b-mu)<0.02?'γ ≈ σ_B and β ≈ μ_B: the layer has recovered its original values, so normalization has been undone.':`Step 4: the outputs now have mean ${f2(b)} (set by β) and spread ${f2(g)} (set by γ). The network chooses these while learning.`);
+    let t='<thead><tr><th></th>'+Z.map((_,i)=>`<th>i = ${i+1}</th>`).join('')+'</tr></thead><tbody>';
+    t+='<tr><th>z</th>'+Z.map(v=>`<td class="n">${f2(v,1)}</td>`).join('')+'</tr>';
+    if(step>=3)t+='<tr><th>ẑ</th>'+zh.map(v=>`<td class="n">${f2(v)}</td>`).join('')+'</tr>';
+    if(step>=4)t+='<tr><th>y</th>'+y.map(v=>`<td class="n">${f2(v)}</td>`).join('')+'</tr>';
+    $('#bnTbl').innerHTML=t+'</tbody>';
+    svg.setAttribute('aria-label',`Batch of ${n} values. Mean ${f2(mu)}, variance ${f2(va)}.`);
+  }
+  draw();
+})();
+
+/* ---------- early stopping ---------- */
+(function(){
+  const svg=$('#esSvg'),N=40,P=$('#esP');
+  const tr=[],va=[];
+  for(let e=1;e<=N;e++){tr.push(0.62+0.35*(1-Math.exp(-e/14)));va.push(0.60+0.10*(1-Math.exp(-e/4))-0.0006*Math.pow(Math.max(0,e-13),1.5)+(e>6?0.005*Math.sin(e*1.9):0));}
+  function run(p){let best=-1,be=0,w=0,stop=N;for(let e=1;e<=N;e++){if(va[e-1]>best){best=va[e-1];be=e;w=0;}else{w++;if(w>=p){stop=e;break;}}}return{be,stop};}
+  const l=44,r=624,t=16,b=262,lo=0.56,hi=1.0;
+  const X=e=>l+(e-1)/(N-1)*(r-l),Y=v=>b-(v-lo)/(hi-lo)*(b-t);
+  let shown=N,timer=null;
+  P.addEventListener('input',()=>{stopT();shown=N;draw();});
+  $('#esPlay').addEventListener('click',()=>{const {stop}=run(+P.value);if(REDUCE){shown=N;draw();return;}stopT();shown=0;draw();timer=setInterval(()=>{shown++;draw();if(shown>=stop)stopT();},130);});
+  function stopT(){if(timer){clearInterval(timer);timer=null;}}
+  function draw(){
+    const p=+P.value,{be,stop}=run(p);$('#esPo').textContent=p;
+    const vis=Math.min(shown,stop);
+    let h=`<rect x="${l}" y="${t}" width="${r-l}" height="${b-t}" fill="${C.bg2}" stroke="${C.soft}"/>`;
+    if(vis>=stop&&stop<N)h+=`<rect x="${X(stop)}" y="${t}" width="${r-X(stop)}" height="${b-t}" fill="${C.red}" opacity=".08"/>`+T((X(stop)+r)/2,t+22,'training halted',{a:'middle',c:C.redT,s:13});
+    for(let e=5;e<=N;e+=5)h+=T(X(e),b+18,e,{a:'middle',c:C.ink3,s:12});
+    h+=T(X(1),b+18,1,{a:'middle',c:C.ink3,s:12})+T((l+r)/2,b+40,'epoch',{a:'middle',c:C.ink3});
+    h+=`<text transform="translate(12 ${(t+b)/2}) rotate(-90)" ${FONT} font-size="13" fill="${C.ink3}" text-anchor="middle">accuracy (schematic)</text>`;
+    const path=a=>{let d='';for(let e=1;e<=vis;e++)d+=(e>1?'L':'M')+X(e).toFixed(1)+' '+Y(a[e-1]).toFixed(1);return d;};
+    h+=`<path d="${path(tr)}" fill="none" stroke="${C.blue}" stroke-width="3" stroke-dasharray="7 4"/><path d="${path(va)}" fill="none" stroke="${C.red}" stroke-width="3.5" stroke-linejoin="round"/>`;
+    if(vis>=be){h+=`<line x1="${X(be)}" x2="${X(be)}" y1="${t}" y2="${b}" stroke="${C.ink}" stroke-dasharray="3 3"/><circle cx="${X(be)}" cy="${Y(va[be-1])}" r="7" fill="${C.ink}" stroke="${C.red}" stroke-width="3"/>`+T(X(be)-8,t+22,'best so far, saved',{a:be>N/2?'end':'end',c:C.ink,s:13,w:600});}
+    if(vis>=stop){h+=`<line x1="${X(stop)}" x2="${X(stop)}" y1="${t}" y2="${b}" stroke="${C.red}" stroke-width="2.5"/>`+T(X(stop)+(stop<N-6?8:-8),b-10,'stop',{a:stop<N-6?'start':'end',c:C.redT,s:13,w:600});}
+    svg.innerHTML=h;
+    $('#esBest').textContent=be;$('#esStop').textContent=stop;$('#esSaved').textContent=(N-stop)+' of '+N;
+    $('#esStatus').textContent=(be<14&&p<3)?`Patience ${p} is too impatient here: training stops at epoch ${stop}, before validation accuracy reaches its later peak.`:(stop>=N?'Patience is long enough that training never triggers a stop within these epochs.':`Validation accuracy last improved at epoch ${be}. After ${p} epochs without improvement, training stops at epoch ${stop} and the epoch-${be} version is kept.`);
+    svg.setAttribute('aria-label',`Validation accuracy peaks at epoch ${be}; training stops at epoch ${stop} with patience ${p}.`);
+  }
+  draw();
+})();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/DSML-NN-9" target="_blank" rel="noopener">github.com/scaler-content/DSML-NN-9</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

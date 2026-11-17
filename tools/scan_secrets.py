@@ -6,12 +6,16 @@
 Keys are printed masked (first 9 + last 3 characters). Obvious placeholders (xxxx, your-, example, ...) are skipped.
 """
 import io
+import os
 import re
+import shutil
 import subprocess
 import sys
 import zipfile
 
 GIT = r"C:\Users\raghuram\AppData\Local\GitHubDesktop\app-3.6.10\resources\app\git\cmd\git.exe"
+if not os.path.exists(GIT):  # another PC: use git from PATH
+    GIT = shutil.which("git") or GIT
 KEY = re.compile(rb"((?:sk|pk|rk)_(?:test|live)_[A-Za-z0-9]{10,}|whsec_[A-Za-z0-9]{16,}|gsk_[A-Za-z0-9]{20,}"
                  rb"|sk-(?:proj|ant|svcacct)-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}"
                  rb"|tvly-[A-Za-z0-9-]{16,}|AIza[0-9A-Za-z_-]{30,}|hf_[A-Za-z0-9]{30,}|gh[pousr]_[A-Za-z0-9]{30,}"

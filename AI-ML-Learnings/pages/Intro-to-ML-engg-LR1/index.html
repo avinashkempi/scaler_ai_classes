@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Introduction to Machine Learning — Lecture Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --olive-deep:    #2E3A12;
+    --olive-mid:     #4A5E1E;
+    --olive-soft:    #6B7C3A;
+    --olive-pale:    #A8B878;
+    --olive-mist:    #D6DFB8;
+    --gold:          #C4983A;
+    --gold-light:    #E8C76A;
+    --parchment:     #F7F3E8;
+    --parchment-mid: #EDE7D4;
+    --charcoal:      #2A2A1F;
+    --text-body:     #3B3D2A;
+    --text-muted:    #7A7D5E;
+    --white:         #FFFFFF;
+    --sidebar-w:     280px;
+    --header-h:      64px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--parchment);
+    color: var(--text-body);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--olive-deep);
+    position: fixed;
+    top: 0; left: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transition: transform .3s ease;
+  }
+
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--olive-soft); border-radius: 4px; }
+
+  .sidebar-header {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    position: sticky; top: 0;
+    background: var(--olive-deep);
+    z-index: 1;
+  }
+  .sidebar-header .course-label {
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--olive-pale);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .sidebar-header h1 {
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    color: var(--white);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .progress-bar-wrap {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .progress-label {
+    font-size: 11px;
+    color: var(--olive-pale);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .progress-track {
+    height: 4px;
+    background: rgba(255,255,255,.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--olive-pale), var(--gold-light));
+    border-radius: 2px;
+    transition: width .4s ease;
+    width: 0%;
+  }
+
+  .nav-list {
+    list-style: none;
+    padding: 12px 0 80px;
+  }
+  .nav-item a {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 20px;
+    text-decoration: none;
+    color: rgba(255,255,255,.6);
+    font-size: 12.5px;
+    line-height: 1.4;
+    transition: all .2s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item a:hover {
+    color: var(--white);
+    background: rgba(255,255,255,.05);
+  }
+  .nav-item.active a {
+    color: var(--gold-light);
+    border-left-color: var(--gold);
+    background: rgba(255,255,255,.07);
+    font-weight: 500;
+  }
+  .nav-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    flex-shrink: 0;
+    margin-top: 5px;
+    transition: background .3s;
+  }
+  .nav-item.visited .nav-dot {
+    background: var(--gold-light);
+    border-color: var(--gold-light);
+  }
+  .nav-item .nav-type {
+    font-size: 9.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--olive-pale);
+    margin-top: 2px;
+    opacity: .7;
+  }
+
+  /* ── MAIN CONTENT ────────────────────────────────── */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    max-width: 860px;
+    padding: 48px 52px 120px;
+  }
+
+  /* ── SECTION CARDS ───────────────────────────────── */
+  .section-card {
+    background: var(--white);
+    border-radius: 12px;
+    border: 1px solid var(--olive-mist);
+    margin-bottom: 36px;
+    overflow: hidden;
+    scroll-margin-top: 32px;
+    box-shadow: 0 2px 8px rgba(46,58,18,.06);
+    transition: box-shadow .2s;
+  }
+  .section-card:hover {
+    box-shadow: 0 4px 20px rgba(46,58,18,.1);
+  }
+
+  .card-header {
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--parchment-mid);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .card-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: var(--olive-mist);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+  .card-meta { flex: 1; }
+  .card-type {
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--olive-soft);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .card-title {
+    font-family: 'Lora', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--olive-deep);
+    line-height: 1.3;
+  }
+  .card-duration {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .card-body {
+    padding: 24px 28px 28px;
+  }
+
+  /* ── TYPOGRAPHY ──────────────────────────────────── */
+  .card-body h2 {
+    font-family: 'Lora', serif;
+    font-size: 18px;
+    color: var(--olive-mid);
+    margin: 28px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1.5px solid var(--olive-mist);
+  }
+  .card-body h3 {
+    font-family: 'Lora', serif;
+    font-size: 15.5px;
+    color: var(--olive-deep);
+    margin: 22px 0 10px;
+    font-style: italic;
+  }
+  .card-body p { margin-bottom: 12px; font-size: 14.5px; }
+  .card-body ul, .card-body ol {
+    margin: 8px 0 14px 20px;
+    font-size: 14.5px;
+  }
+  .card-body li { margin-bottom: 5px; }
+  .card-body strong { color: var(--olive-deep); font-weight: 600; }
+  .card-body em { color: var(--olive-soft); }
+
+  /* ── CALLOUT BOXES ───────────────────────────────── */
+  .callout-ask {
+    background: #FFF8E6;
+    border-left: 3px solid var(--gold);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: #5C4A10;
+  }
+  .callout-ask .callout-label {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+  .callout-note {
+    background: #EEF3E2;
+    border-left: 3px solid var(--olive-soft);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: var(--olive-deep);
+  }
+  .callout-note .callout-label {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--olive-soft);
+    margin-bottom: 4px;
+  }
+
+  /* ── TABLE ───────────────────────────────────────── */
+  .card-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 16px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--olive-mist);
+  }
+  .card-body th {
+    background: var(--olive-mid);
+    color: var(--white);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: .04em;
+  }
+  .card-body td {
+    padding: 9px 14px;
+    border-top: 1px solid var(--parchment-mid);
+  }
+  .card-body tr:nth-child(even) td { background: var(--parchment); }
+
+  /* ── CODE ────────────────────────────────────────── */
+  .card-body pre {
+    background: var(--charcoal);
+    color: #D0E8B0;
+    border-radius: 8px;
+    padding: 16px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    overflow-x: auto;
+    margin: 14px 0;
+    line-height: 1.6;
+  }
+  .card-body code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--parchment-mid);
+    color: var(--olive-mid);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+  }
+  .card-body pre code { background: none; color: inherit; padding: 0; }
+
+  /* ── QUIZ CARDS ──────────────────────────────────── */
+  .quiz-card .card-icon { background: #FFF3D0; }
+  .quiz-question {
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--olive-deep);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .quiz-options { list-style: none; margin: 0; }
+  .quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1.5px solid var(--olive-mist);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all .2s;
+    user-select: none;
+    background: var(--white);
+  }
+  .quiz-option:hover { border-color: var(--olive-soft); background: #F2F5E8; }
+  .quiz-option.selected-correct {
+    border-color: var(--olive-soft);
+    background: #EDF3D8;
+    color: var(--olive-deep);
+  }
+  .quiz-option.selected-wrong {
+    border-color: #C0392B;
+    background: #FDECEA;
+    color: #922B21;
+  }
+  .quiz-option.reveal-correct {
+    border-color: var(--olive-soft);
+    background: #EDF3D8;
+    color: var(--olive-deep);
+  }
+  .quiz-circle {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--olive-mist);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    transition: all .2s;
+    font-weight: 700;
+  }
+  .selected-correct .quiz-circle { border-color: var(--olive-soft); background: var(--olive-soft); color: #fff; }
+  .selected-wrong .quiz-circle { border-color: #C0392B; background: #C0392B; color: #fff; }
+  .reveal-correct .quiz-circle { border-color: var(--olive-soft); background: var(--olive-mist); }
+
+  .quiz-feedback {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 500;
+    display: none;
+  }
+  .quiz-feedback.correct { background: #EDF3D8; color: var(--olive-deep); display: block; }
+  .quiz-feedback.wrong { background: #FDECEA; color: #922B21; display: block; }
+
+  /* ── AGENDA CARD ─────────────────────────────────── */
+  .agenda-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .agenda-item {
+    background: var(--parchment);
+    border: 1px solid var(--olive-mist);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--olive-deep);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .agenda-item::before {
+    content: '▸';
+    color: var(--olive-soft);
+    font-size: 11px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── PHASES TIMELINE ─────────────────────────────── */
+  .phase-timeline { margin: 20px 0; }
+  .phase-step {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .phase-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 17px; top: 36px;
+    width: 2px; height: calc(100% - 8px);
+    background: var(--olive-mist);
+  }
+  .phase-num {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--olive-mid);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .phase-content h4 {
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--olive-deep);
+    margin-bottom: 5px;
+  }
+  .phase-content p { font-size: 13.5px; color: var(--text-muted); margin: 0; }
+
+  /* ── ML TYPES GRID ───────────────────────────────── */
+  .ml-types-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .ml-type-card {
+    background: var(--parchment);
+    border: 1.5px solid var(--olive-mist);
+    border-radius: 10px;
+    padding: 16px 14px;
+    text-align: center;
+    transition: all .2s;
+  }
+  .ml-type-card:hover {
+    border-color: var(--olive-soft);
+    background: #EEF3E2;
+    transform: translateY(-2px);
+  }
+  .ml-type-icon { font-size: 24px; margin-bottom: 8px; }
+  .ml-type-name {
+    font-family: 'Lora', serif;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--olive-deep);
+    margin-bottom: 4px;
+  }
+  .ml-type-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+  /* ── LEARNING TOGGLE ─────────────────────────────── */
+  .learning-toggle {
+    display: flex;
+    gap: 0;
+    background: var(--parchment-mid);
+    border-radius: 10px;
+    padding: 4px;
+    margin: 16px 0;
+    width: fit-content;
+  }
+  .toggle-btn {
+    padding: 9px 20px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: all .2s;
+  }
+  .toggle-btn.active {
+    background: var(--olive-mid);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(74,94,30,.3);
+  }
+  .learning-panel { display: none; }
+  .learning-panel.active { display: block; animation: fadeIn .3s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform: none; } }
+
+  /* ── HAMBURGER (mobile) ──────────────────────────── */
+  #hamburger {
+    display: none;
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 200;
+    background: var(--olive-deep);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    flex-direction: column;
+    gap: 5px;
+  }
+  #hamburger span {
+    display: block;
+    width: 20px; height: 2px;
+    background: #fff;
+    border-radius: 1px;
+    transition: all .2s;
+  }
+  #overlay { display: none; }
+
+  @media (max-width: 768px) {
+    #hamburger { display: flex; }
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; padding: 24px 18px 80px; }
+    #overlay {
+      display: block;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.4);
+      z-index: 99;
+      opacity: 0; pointer-events: none;
+      transition: opacity .3s;
+    }
+    #overlay.active { opacity: 1; pointer-events: all; }
+    .ml-types-grid { grid-template-columns: 1fr 1fr; }
+    .agenda-grid { grid-template-columns: 1fr; }
+    #main { max-width: 100%; }
+    .card-body { padding: 18px 18px 22px; }
+    .card-header { padding: 18px 18px 14px; }
+  }
+
+  /* ── BACK TO TOP ─────────────────────────────────── */
+  #back-top {
+    position: fixed;
+    bottom: 32px; right: 32px;
+    background: var(--olive-mid);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 44px; height: 44px;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(46,58,18,.3);
+    opacity: 0; pointer-events: none;
+    transition: opacity .3s;
+    z-index: 50;
+  }
+  #back-top.visible { opacity: 1; pointer-events: all; }
+  #back-top:hover { background: var(--olive-deep); }
+
+  /* ── LINK STYLE ──────────────────────────────────── */
+  .card-body a {
+    color: var(--olive-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .card-body a:hover { color: var(--olive-deep); }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations 1 · Introduction to machine learning</span><span class="pn"><a href="../ML-with-AI-workflows-1/" title="ML with AI 1 · Classification, regression, clustering">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><!-- Hamburger -->
+<button id="hamburger" aria-label="Open menu" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</button>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="course-label">ML Foundations · Lecture 1</div>
+    <h1>Introduction to Machine Learning</h1>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-label">
+      <span>Progress</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <ul class="nav-list" id="nav-list">
+    <li class="nav-item" data-target="s-intro">
+      <a href="#s-intro"><span class="nav-dot"></span><span><div>Introduction to ML</div><div class="nav-type">Concept</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-vs">
+      <a href="#s-vs"><span class="nav-dot"></span><span><div>ML vs Classical Programming</div><div class="nav-type">Concept</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-phases1">
+      <a href="#s-phases1"><span class="nav-dot"></span><span><div>ML Phases — Part 1</div><div class="nav-type">Lifecycle</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-phases2">
+      <a href="#s-phases2"><span class="nav-dot"></span><span><div>ML Phases — Part 2</div><div class="nav-type">Lifecycle</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-cat">
+      <a href="#s-cat"><span class="nav-dot"></span><span><div>ML Categorization</div><div class="nav-type">Overview</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-learning">
+      <a href="#s-learning"><span class="nav-dot"></span><span><div>Learning Types</div><div class="nav-type">Concept</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-regression">
+      <a href="#s-regression"><span class="nav-dot"></span><span><div>Regression</div><div class="nav-type">Task Type</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-classification">
+      <a href="#s-classification"><span class="nav-dot"></span><span><div>Classification</div><div class="nav-type">Task Type</div></span></a>
+    </li>
+    <li class="nav-item" data-target="q1">
+      <a href="#q1"><span class="nav-dot"></span><span><div>Quiz 1</div><div class="nav-type">Quiz</div></span></a>
+    </li>
+    <li class="nav-item" data-target="q2">
+      <a href="#q2"><span class="nav-dot"></span><span><div>Quiz 2</div><div class="nav-type">Quiz</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-clustering">
+      <a href="#s-clustering"><span class="nav-dot"></span><span><div>Clustering</div><div class="nav-type">Task Type</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-recsys">
+      <a href="#s-recsys"><span class="nav-dot"></span><span><div>Recommendation & Time Series</div><div class="nav-type">Task Type</div></span></a>
+    </li>
+    <li class="nav-item" data-target="q3">
+      <a href="#q3"><span class="nav-dot"></span><span><div>Quiz 3</div><div class="nav-type">Quiz</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-rl">
+      <a href="#s-rl"><span class="nav-dot"></span><span><div>Reinforcement Learning</div><div class="nav-type">Task Type</div></span></a>
+    </li>
+    <li class="nav-item" data-target="q4">
+      <a href="#q4"><span class="nav-dot"></span><span><div>Quiz 4</div><div class="nav-type">Quiz</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-linreg">
+      <a href="#s-linreg"><span class="nav-dot"></span><span><div>Linear Regression Problem</div><div class="nav-type">Case Study</div></span></a>
+    </li>
+    <li class="nav-item" data-target="s-wrap">
+      <a href="#s-wrap"><span class="nav-dot"></span><span><div>Wrap Up</div><div class="nav-type">Summary</div></span></a>
+    </li>
+  </ul>
+</nav>
+
+<!-- MAIN -->
+<main id="main">
+
+  <!-- INTRO -->
+  <section class="section-card" id="s-intro">
+    <div class="card-header">
+      <div class="card-icon">🧠</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Introduction to Machine Learning</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Let's think back to our first day of school — teary-eyed, in a room of strangers, watching a teacher draw strange curves on a blackboard. Those curves were numbers. We learnt to recognize them through patterns:</p>
+      <ul>
+        <li>A vertical straight line → <strong>1</strong></li>
+        <li>A snake-like shape → <strong>2</strong></li>
+        <li>Grandma's rotated eyeglasses → <strong>8</strong></li>
+        <li><strong>3</strong> is just an <strong>8</strong> on a diet</li>
+      </ul>
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Think about it</div>
+        We were associating numbers with real-world patterns — that's the seed of machine learning!
+      </div>
+      <h3>The Iron Analogy</h3>
+      <p>Imagine a steam iron — a dragon with a tail blowing hot steam. As a curious child, you might have touched it once. After burning your hand, you never did it again. Why? Because your brain <strong>learnt</strong> that touching the iron is a bad idea.</p>
+      <p><strong>Machine Learning is exactly this:</strong> finding and learning <em>patterns</em> in data, so future decisions can be smarter.</p>
+    </div>
+  </section>
+
+  <!-- ML VS CLASSICAL -->
+  <section class="section-card" id="s-vs">
+    <div class="card-header">
+      <div class="card-icon">⚙️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">ML vs Classical Programming</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Let's understand this through a concrete task: <strong>classifying emails as spam or not spam.</strong></p>
+
+      <h3>The Classical (SDE) Approach</h3>
+      <ol>
+        <li><strong>Look at the data</strong> — find patterns like suspicious keywords.</li>
+        <li><strong>Build rules</strong> — write long <code>if-elif-else</code> chains.</li>
+        <li><strong>Ship it</strong> — it works decently, but is brittle.</li>
+      </ol>
+      <div class="callout-ask">
+        <div class="callout-label">⚠️ Problems with rule-based systems</div>
+        If a spammer replaces "lottery" with "lucky draw" or "lotto" — your rules break. Covering every synonym requires thousands of <code>if-else</code> branches. Not feasible.
+      </div>
+      <p><strong>SDE pipeline:</strong> <em>Input text + Hand-written Rules → Decision</em></p>
+
+      <h3>The ML Approach</h3>
+      <p>Instead of finding rules yourself, you write <strong>algorithms that mine the rules from data.</strong></p>
+      <p><strong>ML pipeline:</strong> <em>Training Data (text + labels) → Learning Algorithm → Trained Model → Prediction</em></p>
+      <div class="callout-note">
+        <div class="callout-label">📌 Key Insight</div>
+        We only use ML when patterns are too complex for humans to write manually, or when we want the system to generalize to <em>similar</em> patterns it hasn't seen.
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASES 1 -->
+  <section class="section-card" id="s-phases1">
+    <div class="card-header">
+      <div class="card-icon">🗺️</div>
+      <div class="card-meta">
+        <div class="card-type">ML Lifecycle</div>
+        <div class="card-title">Phases of Machine Learning — Part 1</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="phase-timeline">
+        <div class="phase-step">
+          <div class="phase-num">1</div>
+          <div class="phase-content">
+            <h4>Business Context & Problem Definition</h4>
+            <p>State your goal in <em>non-ML terms</em> first. Understand the industry context — fraud detection in banking looks very different from fraud detection in healthcare.</p>
+            <table>
+              <tr><th>Application</th><th>Goal</th></tr>
+              <tr><td>Weather app</td><td>Forecast precipitation in 6-hr windows</td></tr>
+              <tr><td>Video app</td><td>Recommend useful videos</td></tr>
+              <tr><td>Mail app</td><td>Detect spam</td></tr>
+              <tr><td>Banking app</td><td>Identify fraudulent transactions</td></tr>
+              <tr><td>Dining app</td><td>Identify cuisine by menu</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="phase-step">
+          <div class="phase-num">2</div>
+          <div class="phase-content">
+            <h4>Data Gathering & Understanding</h4>
+            <p>Collect relevant data aligned with the business objective. Understand the features and what they represent.</p>
+            <ul>
+              <li><strong>Categorical:</strong> car color, engine type (diesel / petrol)</li>
+              <li><strong>Numerical:</strong> student weights, house area in sq ft</li>
+              <li><strong>Time Series:</strong> stock prices, daily temperatures</li>
+              <li><strong>Text:</strong> chatbot conversations, email content</li>
+            </ul>
+            <div class="callout-note">
+              <div class="callout-label">🗑️ Garbage In, Garbage Out</div>
+              Poor quality data always produces poor models — no matter how sophisticated the algorithm.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASES 2 -->
+  <section class="section-card" id="s-phases2">
+    <div class="card-header">
+      <div class="card-icon">🔬</div>
+      <div class="card-meta">
+        <div class="card-type">ML Lifecycle</div>
+        <div class="card-title">Phases of Machine Learning — Part 2</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="phase-timeline">
+        <div class="phase-step">
+          <div class="phase-num">3</div>
+          <div class="phase-content">
+            <h4>Data Preparation & Cleaning</h4>
+            <p>Data scientists spend the <em>majority</em> of their time here. <strong>"Better data beats fancier algorithms."</strong></p>
+            <ul>
+              <li>Remove duplicate observations</li>
+              <li>Handle missing values</li>
+              <li>Fix structural errors (e.g., "ML Eng." vs "Machine Learning Engineer")</li>
+              <li>Filter outliers (e.g., someone adding an extra zero to their salary)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="phase-step">
+          <div class="phase-num">4</div>
+          <div class="phase-content">
+            <h4>Exploratory Data Analysis (EDA)</h4>
+            <p>Use statistics and visualizations (pandas, matplotlib) to understand relationships in data:</p>
+            <ul>
+              <li>Uni-variate and multi-variate analysis</li>
+              <li>Identify trends and correlations</li>
+              <li>Split into <strong>Training set</strong> (teaches the model) and <strong>Test set</strong> (evaluates it)</li>
+            </ul>
+            <div class="callout-note">
+              <div class="callout-label">⚠️ Golden Rule</div>
+              Never train on test data. The test set must be "unseen" — otherwise your model just memorizes, not generalizes.
+            </div>
+          </div>
+        </div>
+        <div class="phase-step">
+          <div class="phase-num">5</div>
+          <div class="phase-content">
+            <h4>Model Building</h4>
+            <p>Apply ML algorithms to discover patterns in the prepared data. Try multiple techniques and evaluate performance.</p>
+          </div>
+        </div>
+        <div class="phase-step">
+          <div class="phase-num">6</div>
+          <div class="phase-content">
+            <h4>Deployment</h4>
+            <p>Make the model available in the real world — as an API (e.g., on AWS) or an interactive web app. A weather model that only lives in a notebook helps no one.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CATEGORIZATION -->
+  <section class="section-card" id="s-cat">
+    <div class="card-header">
+      <div class="card-icon">🗂️</div>
+      <div class="card-meta">
+        <div class="card-type">Overview</div>
+        <div class="card-title">ML Categorization</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>ML algorithms can be organized along two axes: <strong>how they learn</strong> and <strong>what task they perform.</strong></p>
+      <div class="ml-types-grid">
+        <div class="ml-type-card">
+          <div class="ml-type-icon">📈</div>
+          <div class="ml-type-name">Regression</div>
+          <div class="ml-type-desc">Predict a continuous numeric value</div>
+        </div>
+        <div class="ml-type-card">
+          <div class="ml-type-icon">🏷️</div>
+          <div class="ml-type-name">Classification</div>
+          <div class="ml-type-desc">Assign to one of several discrete categories</div>
+        </div>
+        <div class="ml-type-card">
+          <div class="ml-type-icon">🔵</div>
+          <div class="ml-type-name">Clustering</div>
+          <div class="ml-type-desc">Group similar data points together</div>
+        </div>
+        <div class="ml-type-card">
+          <div class="ml-type-icon">🎬</div>
+          <div class="ml-type-name">Recommendation</div>
+          <div class="ml-type-desc">Suggest items based on preferences</div>
+        </div>
+        <div class="ml-type-card">
+          <div class="ml-type-icon">📅</div>
+          <div class="ml-type-name">Time Series</div>
+          <div class="ml-type-desc">Forecast future from historical values</div>
+        </div>
+        <div class="ml-type-card">
+          <div class="ml-type-icon">🎮</div>
+          <div class="ml-type-name">Reinforcement</div>
+          <div class="ml-type-desc">Learn through rewards and penalties</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEARNING TYPES -->
+  <section class="section-card" id="s-learning">
+    <div class="card-header">
+      <div class="card-icon">📚</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Types of Learning</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Toggle between the two primary learning paradigms:</p>
+      <div class="learning-toggle">
+        <button class="toggle-btn active" onclick="showPanel('supervised', this)">Supervised</button>
+        <button class="toggle-btn" onclick="showPanel('unsupervised', this)">Unsupervised</button>
+      </div>
+      <div class="learning-panel active" id="panel-supervised">
+        <h3>Supervised Learning</h3>
+        <p>The model is trained on <strong>labeled data</strong> — each input has a corresponding expected output (label).</p>
+        <ul>
+          <li>Labeled examples guide the learning process</li>
+          <li>Tasks: Regression, Classification</li>
+          <li><em>Example:</em> Emails labeled "spam" / "not spam" teach the model to distinguish them</li>
+        </ul>
+        </div>
+      <div class="learning-panel" id="panel-unsupervised">
+        <h3>Unsupervised Learning</h3>
+        <p>The model finds patterns in <strong>unlabeled data</strong> — there are no predefined output labels.</p>
+        <ul>
+          <li>No labels provided; the model discovers hidden structure</li>
+          <li>Tasks: Clustering, Dimensionality Reduction</li>
+          <li><em>Example:</em> Grouping Amazon customers by behavior without any pre-assigned categories</li>
+        </ul>
+        </div>
+    </div>
+  </section>
+
+  <!-- REGRESSION -->
+  <section class="section-card" id="s-regression">
+    <div class="card-header">
+      <div class="card-icon">📈</div>
+      <div class="card-meta">
+        <div class="card-type">Task Type · Supervised</div>
+        <div class="card-title">Regression</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>The target variable <strong>y</strong> is a continuous numeric value — it can range from <code>-∞</code> to <code>+∞</code>.</p>
+      <h3>Example: House Price Prediction</h3>
+      <p>Given features like area, number of rooms, and location — predict the selling price of a house.</p>
+      <ul>
+        <li><strong>Input features (X):</strong> area, rooms, age, location…</li>
+        <li><strong>Target (y):</strong> selling price — a real number</li>
+      </ul>
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Think about it</div>
+        What factors would you personally use to estimate a house's price? Location? Size? Age of the building? All of these become <em>features</em> in a regression model.
+      </div>
+      <p>Upcoming topics in regression: <strong>Linear Regression, Polynomial Regression, Ridge Regression</strong></p>
+    </div>
+  </section>
+
+  <!-- CLASSIFICATION -->
+  <section class="section-card" id="s-classification">
+    <div class="card-header">
+      <div class="card-icon">🏷️</div>
+      <div class="card-meta">
+        <div class="card-type">Task Type · Supervised</div>
+        <div class="card-title">Classification</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>The target variable <strong>y</strong> is a <strong>discrete category</strong>, not a continuous number.</p>
+      <h3>Example: Cat vs Dog Image Classification</h3>
+      <ul>
+        <li><strong>Binary Classification:</strong> Two categories — Cat (0) or Dog (1)</li>
+        <li><strong>Multiclass Classification:</strong> Multiple categories — Cat, Dog, Bird, Fish…</li>
+      </ul>
+      <p>Classification finds a <strong>decision boundary</strong> (hyperplane) that separates data points of different classes.</p>
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Regression vs Classification?</div>
+        Regression predicts <em>how much</em> (a number). Classification predicts <em>which category</em> (a label). House price → Regression. Spam or not → Classification.
+      </div>
+      <p>Upcoming topics: <strong>Logistic Regression, Decision Trees, Random Forests, Bagging, Boosting</strong></p>
+    </div>
+  </section>
+
+  <!-- QUIZ 1 -->
+  <section class="section-card quiz-card" id="q1">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 1</div>
+        <div class="card-title">Regression vs Classification</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">You have thousands of identical items to sell and want to predict how many you'll sell over the next three months. Which ML technique is most appropriate?</div>
+      <ul class="quiz-options" id="quiz-1-options">
+        <li class="quiz-option" onclick="checkAnswer(this, 'q1', false)"><span class="quiz-circle"></span>Classification</li>
+        <li class="quiz-option" onclick="checkAnswer(this, 'q1', true)"><span class="quiz-circle"></span>Regression</li>
+        <li class="quiz-option" onclick="checkAnswer(this, 'q1', false)"><span class="quiz-circle"></span>Clustering</li>
+      </ul>
+      <div class="quiz-feedback" id="q1-feedback"></div>
+    </div>
+  </section>
+
+  <!-- QUIZ 2 -->
+  <section class="section-card quiz-card" id="q2">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 2</div>
+        <div class="card-title">Banknote Authenticity</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Several agencies use industrial cameras for print inspection to determine the authenticity of banknotes. Which ML method is most appropriate?</div>
+      <ul class="quiz-options" id="quiz-2-options">
+        <li class="quiz-option" onclick="checkAnswer(this, 'q2', false)"><span class="quiz-circle"></span>Regression</li>
+        <li class="quiz-option" onclick="checkAnswer(this, 'q2', true)"><span class="quiz-circle"></span>Classification</li>
+        <li class="quiz-option" onclick="checkAnswer(this, 'q2', false)"><span class="quiz-circle"></span>Reinforcement Learning</li>
+      </ul>
+      <div class="quiz-feedback" id="q2-feedback"></div>
+    </div>
+  </section>
+
+  <!-- CLUSTERING -->
+  <section class="section-card" id="s-clustering">
+    <div class="card-header">
+      <div class="card-icon">🔵</div>
+      <div class="card-meta">
+        <div class="card-type">Task Type · Unsupervised</div>
+        <div class="card-title">Clustering</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Imagine 100 million Amazon customers described by location, average purchase value, and Prime membership. There are <strong>no labels</strong> — we want to discover hidden groups.</p>
+      <h3>Why Cluster?</h3>
+      <ul>
+        <li>Qualitative surveys: survey one representative from each cluster instead of everyone</li>
+        <li>Targeted strategies: offer different discounts to different segments</li>
+        <li>Discover natural groupings you didn't know existed</li>
+      </ul>
+      <div class="callout-note">
+        <div class="callout-label">📌 Definition</div>
+        Clustering divides data into groups where points within a group are <em>more similar</em> to each other than to points in other groups.
+      </div>
+      <p>Upcoming topics: <strong>K-Means, K-Means++, DBSCAN</strong></p>
+    </div>
+  </section>
+
+  <!-- REC SYS + TIME SERIES -->
+  <section class="section-card" id="s-recsys">
+    <div class="card-header">
+      <div class="card-icon">🎬</div>
+      <div class="card-meta">
+        <div class="card-type">Task Types</div>
+        <div class="card-title">Recommendation Systems & Time Series</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Recommendation Systems</h3>
+      <p>Think of YouTube's "Up Next" panel. Based on your viewing history — say videos <code>v10</code>, <code>v12</code>, <code>v16</code> — the system suggests <code>v15</code> (similar to <code>v12</code>) and <code>v36</code> (similar to <code>v10</code>).</p>
+      <p>Core techniques:</p>
+      <ul>
+        <li><strong>Collaborative Filtering</strong> (Matrix Factorization)</li>
+        <li><strong>Item-Item Similarity</strong></li>
+        <li><strong>Content-Based Similarity</strong></li>
+      </ul>
+
+      <h3>Time Series Forecasting</h3>
+      <p>A <strong>time series</strong> is data collected at successive, equally-spaced time points — stock prices from 2012–2022, daily taxi fares, hourly temperatures.</p>
+      <p>Time Series Forecasting uses statistical models to predict <em>future values</em> from past observations.</p>
+      <ul>
+        <li><strong>y</strong> = stock price</li>
+        <li><strong>t</strong> = day index</li>
+        <li>Goal: predict <strong>y</strong> at future <strong>t</strong></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- QUIZ 3 -->
+  <section class="section-card quiz-card" id="q3">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 3</div>
+        <div class="card-title">YouTube Recommendations</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">While browsing YouTube, you see a section labeled "Videos you may like" or "Based on your viewing history." What type of ML algorithm is primarily used?</div>
+      <ul class="quiz-options" id="quiz-3-options">
+        <li class="quiz-option" onclick="checkAnswer(this, 'q3', false)"><span class="quiz-circle"></span>Classification Algorithm</li>
+        <li class="quiz-option" onclick="checkAnswer(this, 'q3', false)"><span class="quiz-circle"></span>Regression Algorithm</li>
+        <li class="quiz-option" onclick="checkAnswer(this, 'q3', true)"><span class="quiz-circle"></span>Recommendation System</li>
+        <li class="quiz-option" onclick="checkAnswer(this, 'q3', false)"><span class="quiz-circle"></span>Time Series Forecasting</li>
+      </ul>
+      <div class="quiz-feedback" id="q3-feedback"></div>
+    </div>
+  </section>
+
+  <!-- RL -->
+  <section class="section-card" id="s-rl">
+    <div class="card-header">
+      <div class="card-icon">🎮</div>
+      <div class="card-meta">
+        <div class="card-type">Task Type</div>
+        <div class="card-title">Reinforcement Learning</div>
+        <div class="card-duration">⏱ 6 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Ever wonder how a game bot beats human players in DOTA or CS:GO? That's Reinforcement Learning.</p>
+      <h3>The Dog Training Analogy</h3>
+      <ul>
+        <li>✅ Dog fetches a stick → <strong>reward</strong> (treat)</li>
+        <li>❌ Dog chews a slipper → <strong>punishment</strong> (scolding)</li>
+      </ul>
+      <p>The dog (agent) learns which behaviors to repeat and which to avoid through this feedback loop.</p>
+      <h3>Chess Bot Example</h3>
+      <ul>
+        <li><strong>Agent:</strong> The chess bot</li>
+        <li><strong>Environment:</strong> The chess board</li>
+        <li><strong>Interpreter:</strong> Evaluates moves and assigns <code>+/-</code> rewards</li>
+      </ul>
+      <p>The loop: Agent acts → Environment changes → Interpreter rewards → Agent updates → repeat indefinitely until the bot becomes a grandmaster.</p>
+      <div class="callout-note">
+        <div class="callout-label">📌 Real-World Applications</div>
+        Game bots (Google DeepMind's AlphaGo), robotic path planning, algorithmic trading.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 4 -->
+  <section class="section-card quiz-card" id="q4">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 4</div>
+        <div class="card-title">Learning by Doing</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Ducklings, born a week ago, start walking. After repeated falls, learning from mistakes, they eventually walk and swim confidently. Which type of ML best fits this analogy?</div>
+      <ul class="quiz-options" id="quiz-4-options">
+        <li class="quiz-option" onclick="checkAnswer(this, 'q4', false)"><span class="quiz-circle"></span>Unsupervised Learning</li>
+        <li class="quiz-option" onclick="checkAnswer(this, 'q4', false)"><span class="quiz-circle"></span>Supervised Learning</li>
+        <li class="quiz-option" onclick="checkAnswer(this, 'q4', true)"><span class="quiz-circle"></span>Reinforcement Learning</li>
+        <li class="quiz-option" onclick="checkAnswer(this, 'q4', false)"><span class="quiz-circle"></span>None of these</li>
+      </ul>
+      <div class="quiz-feedback" id="q4-feedback"></div>
+    </div>
+  </section>
+
+  <!-- LINEAR REGRESSION -->
+  <section class="section-card" id="s-linreg">
+    <div class="card-header">
+      <div class="card-icon">🚗</div>
+      <div class="card-meta">
+        <div class="card-type">Case Study</div>
+        <div class="card-title">Linear Regression — Problem Statement</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>The Cars24 Scenario</h3>
+      <p>An automobile company from Japan wants to enter the US market. They need to understand what factors drive car prices in America — which may be very different from Japan.</p>
+      <p><strong>Business questions:</strong></p>
+      <ul>
+        <li>Which variables are significant in predicting car price?</li>
+        <li>How well do these variables describe the price?</li>
+      </ul>
+      <div class="callout-ask">
+        <div class="callout-label">🤔 What would you use?</div>
+        Engine type, engine capacity, transmission, fuel type, car model, mileage — these are all potential <em>features</em> in our regression model.
+      </div>
+      <h3>Dataset Preview</h3>
+      <p>The dataset is pre-cleaned (EDA already done). Features include: <code>year</code>, <code>km_driven</code>, <code>mileage</code>, <code>engine</code>, <code>max_power</code>, <code>age</code>, <code>make</code>, <code>fuel_type</code>, <code>transmission</code>, and more — all normalized.</p>
+      <pre><code>import numpy as np
+import pandas as pd
+
+# Load the Cars24 dataset
+df = pd.read_csv('cars24-car-price-clean.csv')
+df.head()</code></pre>
+    </div>
+  </section>
+
+  <!-- WRAP UP -->
+  <section class="section-card" id="s-wrap">
+    <div class="card-header">
+      <div class="card-icon">✅</div>
+      <div class="card-meta">
+        <div class="card-type">Summary</div>
+        <div class="card-title">Wrapping Up</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Today we covered the full foundation of Machine Learning:</p>
+      <div class="agenda-grid">
+        <div class="agenda-item">ML vs rule-based classical programming</div>
+        <div class="agenda-item">The 6-phase ML lifecycle</div>
+        <div class="agenda-item">Supervised vs Unsupervised learning</div>
+        <div class="agenda-item">Regression, Classification, Clustering</div>
+        <div class="agenda-item">Recommendation Systems</div>
+        <div class="agenda-item">Time Series Forecasting</div>
+        <div class="agenda-item">Reinforcement Learning</div>
+        <div class="agenda-item">Cars24 regression problem setup</div>
+      </div>
+      <div class="callout-ask" style="margin-top:20px">
+        <div class="callout-label">🔮 Coming Up Next</div>
+        How does a machine actually <em>learn</em> the relationship between features and a target? We'll answer this with <strong>Linear Regression</strong> — understanding the best-fit line and building the mathematical foundation for prediction.
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Back to top -->
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script>
+  // ── QUIZ LOGIC ─────────────────────────────────────
+  const quizAnswered = {};
+  function checkAnswer(el, qid, isCorrect) {
+    if (quizAnswered[qid]) return;
+    quizAnswered[qid] = true;
+    const options = el.closest('.quiz-options').querySelectorAll('.quiz-option');
+    const feedback = document.getElementById(qid + '-feedback');
+    options.forEach(opt => {
+      opt.style.cursor = 'default';
+      opt.onclick = null;
+    });
+    if (isCorrect) {
+      el.classList.add('selected-correct');
+      el.querySelector('.quiz-circle').textContent = '✓';
+      feedback.textContent = '✅ Correct! Great thinking.';
+      feedback.className = 'quiz-feedback correct';
+    } else {
+      el.classList.add('selected-wrong');
+      el.querySelector('.quiz-circle').textContent = '✗';
+      // Reveal correct
+      options.forEach(opt => {
+        if (opt.onclick === null && !opt.classList.contains('selected-wrong')) {
+          // find which one is correct by re-evaluating (we mark them by data attr below)
+        }
+      });
+      feedback.textContent = '❌ Not quite — review the section and try again!';
+      feedback.className = 'quiz-feedback wrong';
+      // highlight correct
+      const allOpts = el.closest('.quiz-options').querySelectorAll('.quiz-option');
+      allOpts.forEach((o, i) => {
+        if (o.dataset.correct === 'true') {
+          o.classList.add('reveal-correct');
+          o.querySelector('.quiz-circle').textContent = '✓';
+        }
+      });
+    }
+  }
+
+  // Tag correct answers via data attr
+  function tagQuizCorrects() {
+    document.querySelectorAll('.quiz-options').forEach(list => {
+      const qid = list.id.replace('-options','');
+      const opts = list.querySelectorAll('.quiz-option');
+      opts.forEach(o => {
+        const wasCorrect = o.onclick && o.onclick.toString().includes('true');
+      });
+    });
+    // Re-wire onclick to store correct flag
+    const maps = {
+      'quiz-1': [false, true, false],
+      'quiz-2': [false, true, false],
+      'quiz-3': [false, false, true, false],
+      'quiz-4': [false, false, true, false]
+    };
+    Object.entries(maps).forEach(([listId, correctFlags]) => {
+      const list = document.getElementById(listId + '-options');
+      if (!list) return;
+      const opts = list.querySelectorAll('.quiz-option');
+      opts.forEach((o, i) => {
+        o.dataset.correct = correctFlags[i] ? 'true' : 'false';
+        const qid = listId.replace('quiz-','q');
+        o.onclick = () => checkAnswer(o, qid, correctFlags[i]);
+      });
+    });
+  }
+  tagQuizCorrects();
+
+  // ── LEARNING TOGGLE ────────────────────────────────
+  function showPanel(name, btn) {
+    document.querySelectorAll('.learning-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ── SIDEBAR HIGHLIGHT + PROGRESS ──────────────────
+  const sections = document.querySelectorAll('.section-card');
+  const navItems = document.querySelectorAll('.nav-item');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct = document.getElementById('progress-pct');
+  const visited = new Set();
+
+  function onScroll() {
+    let current = '';
+    sections.forEach(sec => {
+      const rect = sec.getBoundingClientRect();
+      if (rect.top <= 120) {
+        current = sec.id;
+        visited.add(sec.id);
+      }
+    });
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.target === current);
+      if (visited.has(item.dataset.target)) item.classList.add('visited');
+    });
+    const pct = Math.round((visited.size / sections.length) * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent = pct + '%';
+
+    // back to top
+    document.getElementById('back-top').classList.toggle('visible', window.scrollY > 400);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // ── MOBILE SIDEBAR ─────────────────────────────────
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('active');
+  }
+  // Close sidebar on nav link click (mobile)
+  document.querySelectorAll('.nav-item a').forEach(a => {
+    a.addEventListener('click', () => {
+      if (window.innerWidth <= 768) toggleSidebar();
+    });
+  });
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Intro-to-ML-engg-LR1" target="_blank" rel="noopener">github.com/scaler-content/Intro-to-ML-engg-LR1</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear regression 2 post read</title>
+<meta name="description" content="An interactive read on reading a trained model's coefficients, revisiting gradient descent, and training a Linear Regression class end to end.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+  :root{
+    --bg:#FFF7FB;
+    --paper:#FFFFFF;
+    --tint:#FCE8F1;
+    --tint-2:#F8D9E7;
+    --line:#F0D2E0;
+    --pink-soft:#F3B8D2;
+    --accent:#C2477A;
+    --accent-700:#9C3560;
+    --accent-900:#6B2245;
+    --ink:#34222B;
+    --ink-soft:#6B5560;
+    --code-bg:#2B1B24;
+    --code-text:#F3DCE8;
+    --code-kw:#F2A6C9;
+    --code-str:#FFD9A8;
+    --code-cm:#9A7D89;
+    --code-nm:#C9F3E4;
+    --warn:#9C5A3A;
+    --shadow:0 20px 40px -22px rgba(108,40,75,.28);
+    --radius:18px;
+    --maxw:740px;
+    --maxw-wide:900px;
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important;}
+  }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+    font-size:17px;
+    line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{
+    font-family:'Fraunces',Georgia,serif;
+    font-weight:600;
+    color:var(--ink);
+    line-height:1.2;
+    margin:0 0 .5em 0;
+  }
+  p{margin:0 0 1.1em 0;}
+  ul,ol{margin:0 0 1.1em 0; padding-left:1.35em;}
+  li{margin-bottom:.4em;}
+  a{color:var(--accent-700);}
+  a:hover{color:var(--accent-900);}
+  img{max-width:100%; display:block; height:auto;}
+  .wrap{max-width:var(--maxw); margin-inline:auto; padding-inline:24px;}
+  .wrap-wide{max-width:var(--maxw-wide); margin-inline:auto; padding-inline:24px;}
+
+  .skip-link{
+    position:absolute; left:12px; top:-60px; background:var(--accent-900); color:#fff;
+    padding:10px 16px; border-radius:10px; z-index:200; transition:top .2s ease;
+  }
+  .skip-link:focus{top:12px;}
+
+  :focus-visible{outline:3px solid var(--accent-700); outline-offset:3px; border-radius:4px;}
+
+  /* progress bar */
+  #progressBar{
+    position:fixed; top:0; left:0; height:3px; width:0%; background:var(--accent-700);
+    z-index:150; transition:width .1s linear;
+  }
+
+  /* toc */
+  .toc-toggle{
+    position:fixed; top:18px; right:18px; z-index:140;
+    background:var(--paper); border:1px solid var(--line); color:var(--accent-900);
+    font-family:'Manrope',sans-serif; font-weight:700; font-size:.85rem;
+    padding:10px 16px; border-radius:999px; cursor:pointer; box-shadow:var(--shadow);
+    display:flex; align-items:center; gap:8px;
+  }
+  .toc-toggle:hover{background:var(--tint);}
+  .toc-toggle svg{width:14px; height:14px;}
+  .toc-drawer{
+    position:fixed; top:0; right:0; height:100%; width:min(320px,86vw);
+    background:var(--paper); border-left:1px solid var(--line); z-index:160;
+    transform:translateX(100%); transition:transform .3s ease;
+    padding:80px 26px 26px; overflow-y:auto;
+  }
+  .toc-drawer.open{transform:translateX(0);}
+  .toc-drawer h2{font-size:1rem; text-transform:none; color:var(--accent-900); margin-bottom:1em;}
+  .toc-drawer ol{list-style:none; padding:0; margin:0; counter-reset:toc;}
+  .toc-drawer li{counter-increment:toc; margin-bottom:.2em;}
+  .toc-drawer a{
+    display:flex; gap:10px; padding:9px 10px; border-radius:10px; text-decoration:none;
+    color:var(--ink-soft); font-size:.92rem; font-weight:600;
+  }
+  .toc-drawer a::before{
+    content:counter(toc); color:var(--accent-700); font-family:'Fraunces',serif; font-weight:700;
+    min-width:1.2em;
+  }
+  .toc-drawer a:hover{background:var(--tint); color:var(--accent-900);}
+  .toc-close{
+    position:absolute; top:20px; right:20px; background:none; border:none; font-size:1.4rem;
+    color:var(--ink-soft); cursor:pointer; line-height:1; padding:6px;
+  }
+  .scrim{
+    position:fixed; inset:0; background:rgba(52,34,43,.25); z-index:155; opacity:0;
+    pointer-events:none; transition:opacity .3s ease;
+  }
+  .scrim.open{opacity:1; pointer-events:auto;}
+
+  /* hero */
+  .hero{
+    position:relative; overflow:hidden;
+    padding:96px 24px 72px;
+    background:linear-gradient(180deg,#FFEAF4 0%, var(--bg) 78%);
+    border-bottom:1px solid var(--line);
+  }
+  .hero::before{
+    content:""; position:absolute; top:-120px; right:-120px; width:420px; height:420px;
+    border-radius:50%; background:radial-gradient(circle at 30% 30%, var(--pink-soft), transparent 70%);
+    opacity:.55;
+  }
+  .hero-inner{position:relative; max-width:var(--maxw); margin-inline:auto;}
+  .hero-kicker{
+    font-size:.85rem; font-weight:700; color:var(--accent-700); margin-bottom:14px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .hero-kicker svg{width:18px; height:18px;}
+  .hero h1{
+    font-size:clamp(2.1rem, 4.6vw + 1rem, 3.4rem);
+    text-transform:capitalize;
+    max-width:14ch;
+  }
+  .hero p.lede{
+    font-size:1.15rem; color:var(--ink-soft); max-width:52ch; margin-top:18px;
+  }
+  .hero-meta{
+    display:flex; gap:22px; margin-top:34px; flex-wrap:wrap;
+  }
+  .hero-meta div{font-size:.85rem; color:var(--ink-soft);}
+  .hero-meta strong{display:block; font-family:'Fraunces',serif; font-size:1.3rem; color:var(--accent-900);}
+
+  main{padding-bottom:40px;}
+  section{padding:56px 0; border-bottom:1px solid var(--line);}
+  section:last-of-type{border-bottom:none;}
+  section > .wrap > h2, section > .wrap-wide > h2{
+    font-size:clamp(1.5rem, 1.4vw + 1.2rem, 2rem);
+    position:relative; padding-bottom:14px; margin-bottom:22px;
+  }
+  section > .wrap > h2::after, section > .wrap-wide > h2::after{
+    content:""; position:absolute; left:0; bottom:0; width:52px; height:4px;
+    background:var(--accent); border-radius:4px;
+  }
+  h3{font-size:1.2rem; margin-top:1.6em;}
+  .eyebrow{
+    font-size:.8rem; color:var(--accent-700); font-weight:700; margin-bottom:.6em;
+  }
+
+  /* callouts */
+  .callout{
+    background:var(--tint); border:1px solid var(--line); border-left:4px solid var(--accent);
+    border-radius:14px; padding:18px 22px; margin:1.4em 0;
+  }
+  .callout h4{font-family:'Manrope',sans-serif; font-weight:800; font-size:.85rem; color:var(--accent-900); margin-bottom:.5em; letter-spacing:.01em;}
+  .callout p:last-child{margin-bottom:0;}
+  .callout.definition{border-left-color:var(--accent-900); background:var(--paper);}
+
+  /* formula */
+  .formula{
+    background:var(--paper); border:1px solid var(--line); border-radius:16px;
+    padding:26px 24px; margin:1.4em 0; text-align:center; overflow-x:auto; box-shadow:var(--shadow);
+  }
+  .formula .katex{font-size:1.15rem;}
+
+  dl.legend{
+    background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:6px 22px; margin:1.4em 0;
+  }
+  dl.legend dt{font-weight:800; color:var(--accent-900); margin-top:16px; font-size:.98rem;}
+  dl.legend dd{margin:2px 0 16px 0; color:var(--ink-soft);}
+
+  figure{margin:1.6em 0;}
+  figure img{border-radius:16px; border:1px solid var(--line); box-shadow:var(--shadow);}
+  figcaption{font-size:.88rem; color:var(--ink-soft); margin-top:10px; text-align:center;}
+
+  /* code */
+  .code-panel{
+    background:var(--code-bg); border-radius:16px; overflow:hidden; margin:1.3em 0; box-shadow:var(--shadow);
+  }
+  .code-label{
+    padding:10px 18px; font-size:.78rem; font-weight:700; color:var(--code-text);
+    background:rgba(255,255,255,.06); letter-spacing:.02em;
+  }
+  .code-panel pre{margin:0; padding:18px 20px; overflow-x:auto;}
+  .code-panel code{
+    font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+    font-size:.88rem; line-height:1.65; color:var(--code-text); white-space:pre;
+  }
+  .kw{color:var(--code-kw); font-weight:600;}
+  .st{color:var(--code-str);}
+  .nm{color:var(--code-nm);}
+  .cm{color:var(--code-cm); font-style:italic;}
+
+  .data-table-wrap{overflow-x:auto; margin:1.3em 0; border-radius:14px; border:1px solid var(--line);}
+  table{border-collapse:collapse; width:100%; background:var(--paper); font-size:.92rem;}
+  th,td{padding:11px 16px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap;}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{background:var(--tint); color:var(--accent-900); font-weight:700; font-size:.8rem;}
+  tbody tr:last-child td{border-bottom:none;}
+
+  /* quiz */
+  .quiz{
+    background:var(--paper); border:1px solid var(--line); border-radius:18px;
+    padding:26px; margin:1.8em 0; box-shadow:var(--shadow);
+  }
+  .quiz-tag{font-size:.78rem; font-weight:800; color:var(--accent-700); margin-bottom:8px;}
+  .quiz p.q{font-weight:700; font-size:1.02rem; margin-bottom:1.1em;}
+  .quiz-options{display:grid; gap:10px; padding:0; margin:0; list-style:none;}
+  .quiz-options button{
+    width:100%; text-align:left; padding:13px 16px; border-radius:12px; border:1.5px solid var(--line);
+    background:var(--bg); color:var(--ink); font-family:'Manrope',sans-serif; font-size:.95rem;
+    cursor:pointer; transition:border-color .15s ease, background .15s ease; display:flex; gap:10px; align-items:flex-start;
+  }
+  .quiz-options button:hover:not(:disabled){border-color:var(--accent);}
+  .quiz-options button:disabled{cursor:default;}
+  .quiz-options .mark{font-weight:800; min-width:1.2em;}
+  .quiz-options button.correct{background:#FBEFEA; border-color:var(--accent-700); color:var(--accent-900);}
+  .quiz-options button.incorrect{background:#F7ECE6; border-color:var(--warn); color:var(--warn);}
+  .quiz-feedback{
+    margin-top:16px; padding:16px 18px; border-radius:12px; background:var(--tint);
+    font-size:.94rem; max-height:0; overflow:hidden; opacity:0; transition:max-height .35s ease, opacity .3s ease, margin .3s ease;
+  }
+  .quiz-feedback.show{max-height:400px; opacity:1; margin-top:16px;}
+  .quiz-feedback strong{color:var(--accent-900);}
+
+  /* calculator */
+  .calc-card{
+    background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:26px;
+    margin:1.6em 0; box-shadow:var(--shadow);
+  }
+  .calc-card h4{font-family:'Fraunces',serif; font-size:1.05rem; margin-bottom:4px;}
+  .calc-card .calc-sub{color:var(--ink-soft); font-size:.9rem; margin-bottom:20px;}
+  .calc-row{margin-bottom:18px;}
+  .calc-row label{display:flex; justify-content:space-between; font-weight:700; font-size:.9rem; margin-bottom:8px;}
+  .calc-row label span.val{color:var(--accent-700); font-weight:800;}
+  input[type="range"]{
+    width:100%; accent-color:var(--accent-700); height:6px;
+  }
+  .calc-toggle{display:flex; align-items:center; gap:10px; font-weight:700; font-size:.9rem;}
+  .calc-toggle input{width:20px; height:20px; accent-color:var(--accent-700);}
+  .calc-result{
+    margin-top:22px; padding:20px; border-radius:14px; background:var(--tint); text-align:center;
+  }
+  .calc-result .num{font-family:'Fraunces',serif; font-size:2.4rem; color:var(--accent-900); font-weight:700;}
+  .calc-result .lbl{font-size:.85rem; color:var(--ink-soft); margin-top:2px;}
+  .calc-breakdown{margin-top:16px; display:grid; gap:6px; font-size:.85rem;}
+  .calc-breakdown div{display:flex; justify-content:space-between; color:var(--ink-soft); padding:4px 0; border-bottom:1px dashed var(--line);}
+  .calc-breakdown div span:last-child{color:var(--accent-900); font-weight:700;}
+
+  /* iframe panel */
+  .iframe-panel{
+    border-radius:18px; overflow:hidden; border:1px solid var(--line); margin:1.4em 0; box-shadow:var(--shadow);
+  }
+  .iframe-panel iframe{width:100%; height:600px; border:none; display:block; background:#fff;}
+  .iframe-note{font-size:.85rem; color:var(--ink-soft); margin-top:10px;}
+
+  /* learning rate sim */
+  .sim-card{
+    background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:26px;
+    margin:1.6em 0; box-shadow:var(--shadow);
+  }
+  .sim-card h4{font-family:'Fraunces',serif; font-size:1.05rem; margin-bottom:4px;}
+  .sim-sub{color:var(--ink-soft); font-size:.9rem; margin-bottom:18px;}
+  .sim-grid{display:grid; grid-template-columns:1fr; gap:20px;}
+  @media(min-width:640px){ .sim-grid{grid-template-columns:1.1fr 1fr;} }
+  .sim-svg-wrap{background:var(--bg); border-radius:14px; padding:10px; border:1px solid var(--line);}
+  .sim-controls{display:flex; flex-direction:column; gap:10px;}
+  .sim-btn{
+    padding:11px 16px; border-radius:12px; border:1.5px solid var(--line); background:var(--bg);
+    color:var(--accent-900); font-family:'Manrope',sans-serif; font-weight:700; font-size:.9rem; cursor:pointer;
+    text-align:left; display:flex; justify-content:space-between; align-items:center;
+  }
+  .sim-btn small{font-weight:500; color:var(--ink-soft);}
+  .sim-btn:hover:not(:disabled){border-color:var(--accent);}
+  .sim-btn:disabled{opacity:.5; cursor:default;}
+  .sim-reset{
+    margin-top:4px; padding:9px 14px; border-radius:10px; border:none; background:none;
+    color:var(--ink-soft); font-size:.82rem; cursor:pointer; text-decoration:underline; align-self:flex-start;
+  }
+  .sim-status{
+    margin-top:6px; font-size:.86rem; padding:10px 14px; border-radius:10px; background:var(--tint); min-height:1.4em;
+  }
+  .sim-status.diverge{background:#F7ECE6; color:var(--warn); font-weight:700;}
+
+  /* bar chart */
+  .bar-chart{margin:1.6em 0; background:var(--paper); border:1px solid var(--line); border-radius:16px; padding:24px; box-shadow:var(--shadow);}
+  .bar-row{margin-bottom:16px;}
+  .bar-row:last-child{margin-bottom:0;}
+  .bar-row .bar-label{display:flex; justify-content:space-between; font-size:.88rem; font-weight:700; margin-bottom:6px;}
+  .bar-row .bar-label span:last-child{color:var(--accent-900);}
+  .bar-track{height:12px; border-radius:8px; background:var(--tint); overflow:hidden;}
+  .bar-fill{height:100%; background:linear-gradient(90deg, var(--pink-soft), var(--accent-700)); border-radius:8px;}
+
+  /* stat cards */
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:1.4em 0;}
+  .stat-card{background:var(--paper); border:1px solid var(--line); border-radius:16px; padding:20px; text-align:center; box-shadow:var(--shadow);}
+  .stat-card .num{font-family:'Fraunces',serif; font-size:2rem; color:var(--accent-900); font-weight:700;}
+  .stat-card .lbl{font-size:.82rem; color:var(--ink-soft); margin-top:2px;}
+
+  /* loss schematic */
+  .loss-card{background:var(--paper); border:1px solid var(--line); border-radius:16px; padding:22px; margin:1.4em 0; box-shadow:var(--shadow);}
+  .loss-card svg{width:100%; height:auto; display:block;}
+  .loss-caption{font-size:.85rem; color:var(--ink-soft); margin-top:10px;}
+
+  /* go further */
+  .further{
+    background:linear-gradient(135deg, var(--tint-2), var(--tint));
+    border:1px solid var(--line); border-radius:20px; padding:30px; margin:1.4em 0;
+  }
+  .further blockquote{
+    margin:14px 0 0; padding:16px 18px; background:var(--paper); border-radius:12px;
+    border-left:4px solid var(--accent-700); font-style:italic; color:var(--ink); font-size:.98rem;
+  }
+
+  /* wrap up */
+  .wrap-grid{display:grid; grid-template-columns:1fr; gap:18px;}
+  @media(min-width:760px){ .wrap-grid{grid-template-columns:repeat(3,1fr);} }
+  .wrap-card{background:var(--paper); border:1px solid var(--line); border-radius:16px; padding:22px; box-shadow:var(--shadow);}
+  .wrap-card h4{font-family:'Fraunces',serif; font-size:1.05rem; color:var(--accent-900); margin-bottom:10px;}
+  .wrap-card ul{padding-left:1.1em; margin:0; font-size:.92rem; color:var(--ink-soft);}
+  .wrap-card li{margin-bottom:.55em;}
+
+  footer{
+    text-align:center; padding:44px 24px 50px; color:var(--ink-soft); font-size:.85rem;
+  }
+  footer .fname{
+    font-family:'Fraunces',serif; color:var(--accent-900); font-weight:600; font-size:1rem;
+    text-transform:capitalize; margin-bottom:4px;
+  }
+
+  @media(max-width:560px){
+    .hero{padding:84px 20px 56px;}
+    .stat-grid{grid-template-columns:1fr;}
+    .iframe-panel iframe{height:460px;}
+  }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML with AI 3 · Coefficients and gradient descent</span><span class="pn"><a href="../ML-with-AI-workflows-2/" title="ML with AI 2 · Linear regression from scratch">← Prev</a><a href="../ML-with-AI-workflows-4/" title="ML with AI 4 · Trusting a regression model">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip-link" href="#main">Skip to content</a>
+<div id="progressBar"></div>
+
+<button class="toc-toggle" id="tocToggle" aria-haspopup="true" aria-expanded="false" aria-controls="tocDrawer">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
+  Contents
+</button>
+<div class="scrim" id="scrim"></div>
+<nav class="toc-drawer" id="tocDrawer" aria-label="Table of contents">
+  <button class="toc-close" id="tocClose" aria-label="Close contents menu">&times;</button>
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#meera">Meet Meera and CoolCups</a></li>
+    <li><a href="#goal">What linear regression is trying to do</a></li>
+    <li><a href="#coefficients">Reading the coefficients</a></li>
+    <li><a href="#gradient-descent">Gradient descent, revisited</a></li>
+    <li><a href="#prediction-function">Building the prediction function</a></li>
+    <li><a href="#cost-function">The optimization problem</a></li>
+    <li><a href="#geometric-intuition">The bowl of loss</a></li>
+    <li><a href="#gradient-calc">Calculating the gradient</a></li>
+    <li><a href="#weight-update">Updating the weights</a></li>
+    <li><a href="#training">Training Meera's model</a></li>
+    <li><a href="#go-further">Take it further</a></li>
+    <li><a href="#wrap-up">Key takeaways</a></li>
+  </ol>
+</nav>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-kicker">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v10M12 13l4-4M12 13l-4-4"/><path d="M4 21h16"/></svg>
+      A CoolCups data story
+    </div>
+    <h1>Linear regression 2 post read</h1>
+    <p class="lede">How a trained model's coefficients are read, how gradient descent actually finds them, and how it all comes together in code — told through Meera's CoolCups juice stall.</p>
+    <div class="hero-meta">
+      <div><strong>1</strong> running example</div>
+      <div><strong>5</strong> checks along the way</div>
+      <div><strong>3</strong> interactive demos</div>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <section id="meera">
+    <div class="wrap">
+      <h2>Meet Meera and CoolCups</h2>
+      <p>Meera runs a small fresh-juice stall chain called CoolCups in three neighbourhoods of the city. Every evening she notes down, by hand, in a notebook:</p>
+      <ul>
+        <li>the day's maximum temperature</li>
+        <li>the footfall near her stall — how many people walked past between 4&nbsp;PM and 8&nbsp;PM</li>
+        <li>whether the day was a weekend</li>
+        <li>how many cups of juice she actually sold that day</li>
+      </ul>
+      <p>Meera has been running her stalls on gut feeling for two years. On some days she over-stocks fruit and throws away unsold stock at closing time. On other days she under-stocks and has to turn customers away. She wants a system that looks at her notebook of past days and tells her, in advance, roughly how many cups she should prepare for tomorrow.</p>
+      <p>This is exactly the kind of problem Linear Regression is built for — and it's the problem we'll solve, one piece at a time.</p>
+    </div>
+  </section>
+
+  <section id="goal">
+    <div class="wrap">
+      <h2>What Linear Regression Is Trying to Do</h2>
+      <p>Before opening Meera's notebook, let's align on the goal in one line:</p>
+      <div class="callout definition">
+        <h4>The one-line goal</h4>
+        <p>Linear Regression tries to find the best straight line — or, with more than one input factor, the best flat plane or hyperplane — that fits a set of past data points, so that line can predict an output value for a new, unseen input.</p>
+      </div>
+      <p>For Meera, the "points" are past days, and the "line" is a formula that turns temperature, footfall, and the weekend flag into a predicted number of cups sold. For a single day <em>i</em>, the model predicts:</p>
+      <div class="formula">$$\hat{y}_i = w_1 x_{1i} + w_2 x_{2i} + w_3 x_{3i} + b$$</div>
+      <dl class="legend">
+        <dt>$x_{1i}$</dt><dd>the temperature recorded on day <em>i</em>, in degrees Celsius</dd>
+        <dt>$x_{2i}$</dt><dd>the footfall recorded on day <em>i</em> — the number of people who passed the stall</dd>
+        <dt>$x_{3i}$</dt><dd>the weekend flag for day <em>i</em> (1 if Saturday or Sunday, 0 otherwise)</dd>
+        <dt>$w_1, w_2, w_3$</dt><dd>the weights, or coefficients, the model assigns to temperature, footfall, and the weekend flag — how strongly each factor pulls the prediction up or down</dd>
+        <dt>$b$</dt><dd>the bias, or intercept — the baseline number of cups the model would predict if every feature were zero</dd>
+        <dt>$\hat{y}_i$</dt><dd>the number of cups the model predicts for day <em>i</em></dd>
+        <dt>$y_i$</dt><dd>the actual number of cups Meera sold on day <em>i</em>, as recorded in her notebook</dd>
+      </dl>
+      <p>The entire job of <em>training</em> a Linear Regression model is finding good values for $w_1$, $w_2$, $w_3$, and $b$.</p>
+      <figure>
+        <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/226/643/original/ChatGPT_Image_Sep_11__2026__12_36_16_PM.png?1789110388" alt="Diagram showing temperature, footfall, and the weekend flag flowing through their weights and a bias into a single predicted number of cups sold." loading="lazy">
+        <figcaption>How the model turns three inputs into one prediction.</figcaption>
+      </figure>
+      <p>The next few sections show exactly how those four numbers get found.</p>
+    </div>
+  </section>
+
+  <section id="coefficients">
+    <div class="wrap">
+      <h2>Reading the Coefficients</h2>
+      <p>Suppose Meera's model has already been trained on her notebook, and it has learned the following values:</p>
+      <dl class="legend">
+        <dt>$w_1$ (temperature)</dt><dd>15.4</dd>
+        <dt>$w_2$ (footfall)</dt><dd>0.6</dd>
+        <dt>$w_3$ (weekend flag)</dt><dd>22.1</dd>
+        <dt>$b$ (bias)</dt><dd>10.2</dd>
+      </dl>
+      <p>What can Meera actually learn from these four numbers?</p>
+      <div class="callout">
+        <h4>Analogy</h4>
+        <p>Think of a recipe with several ingredients. If halving one spice barely changes how the dish tastes, that spice isn't doing much work at these quantities. If halving another ingredient changes the dish completely, that ingredient is doing a lot of work. A coefficient plays a similar role: it tells us how much the prediction moves when its input moves by one unit, holding everything else fixed.</p>
+      </div>
+      <p>Two things are worth noting:</p>
+      <ul>
+        <li>The <strong>sign</strong> of a weight tells us direction. All three weights above are positive, so higher temperature, higher footfall, and a weekend all push the predicted number of cups sold upward.</li>
+        <li>The <strong>size</strong> of a weight tells us how much pull that factor has — but only if we're comparing features on a similar scale.</li>
+      </ul>
+      <p>That second point is easy to get wrong. Footfall in Meera's notebook might range from about 100 to 900, while temperature usually ranges from about 20 to 40. So a weight of 0.6 for footfall isn't automatically "less important" than a weight of 15.4 for temperature, because footfall's raw values are so much larger to begin with. A fair comparison requires first bringing all features to a similar scale — a step called <strong>feature scaling</strong> — before comparing coefficient sizes.</p>
+
+      <div class="calc-card">
+        <h4>Try Meera's model</h4>
+        <p class="calc-sub">Adjust the inputs and watch each weight pull the prediction up.</p>
+        <div class="calc-row">
+          <label for="calcTemp">Temperature (°C) <span class="val" id="calcTempVal">30.0</span></label>
+          <input type="range" id="calcTemp" min="20" max="40" step="0.5" value="30">
+        </div>
+        <div class="calc-row">
+          <label for="calcFootfall">Footfall (people, 4–8pm) <span class="val" id="calcFootfallVal">500</span></label>
+          <input type="range" id="calcFootfall" min="100" max="900" step="5" value="500">
+        </div>
+        <div class="calc-toggle">
+          <input type="checkbox" id="calcWeekend">
+          <label for="calcWeekend">It's a weekend</label>
+        </div>
+        <div class="calc-result">
+          <div class="num" id="calcResult">—</div>
+          <div class="lbl">predicted cups sold</div>
+        </div>
+        <div class="calc-breakdown">
+          <div><span>Temperature contributes</span><span id="calcT">—</span></div>
+          <div><span>Footfall contributes</span><span id="calcF">—</span></div>
+          <div><span>Weekend contributes</span><span id="calcW">—</span></div>
+          <div><span>Base (bias)</span><span>+10.2</span></div>
+        </div>
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-tag">Check your understanding</div>
+        <p class="q">In Meera's trained model, which is the most reasonable interpretation of $w_2 = 0.6$ for footfall, given that footfall ranges from about 100 to 900 while temperature ranges from about 20 to 40?</p>
+        <ul class="quiz-options">
+          <li><button data-correct="false">Footfall is definitely the least important feature in the model.</button></li>
+          <li><button data-correct="true">Footfall's weight can't be fairly compared to temperature's weight without first scaling both features to a similar range.</button></li>
+          <li><button data-correct="false">A weight of 0.6 always means the feature has no effect on the prediction.</button></li>
+          <li><button data-correct="false">The sign of $w_2$ tells us nothing about how footfall affects the prediction.</button></li>
+        </ul>
+        <div class="quiz-feedback" data-feedback>Because footfall naturally takes much larger values than temperature, a small-looking weight like 0.6 can still correspond to a large contribution once multiplied by footfall's typical values. Comparing raw weights across features is only meaningful once the features are on comparable scales.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="gradient-descent">
+    <div class="wrap">
+      <h2>Gradient Descent, Revisited</h2>
+      <p>So Meera now knows how to read a trained model. But how does the model land on these exact numbers for $w_1, w_2, w_3$, and $b$ in the first place?</p>
+      <div class="callout">
+        <h4>Walking downhill in the fog</h4>
+        <p>Imagine Meera standing on a hillside at night, in thick fog, holding a torch that only lights the ground right around her feet. She can't see the whole hill, and has no idea where the lowest point of the valley is. All she can do is feel the slope under her feet and take a small step in whichever direction goes downhill fastest from where she's standing. She repeats this, step after step, until she reaches the bottom of the valley.</p>
+      </div>
+      <p>In this analogy:</p>
+      <ul>
+        <li>The <strong>hill</strong> represents the cost function — a surface where "height" at any point represents how wrong the model's predictions currently are, for a given choice of $w_1, w_2, w_3$, and $b$.</li>
+        <li>The <strong>lowest point of the valley</strong> represents the combination of weights and bias that makes predictions closest overall to the true values in Meera's notebook.</li>
+        <li>The <strong>slope Meera feels underfoot</strong> is what we call the <strong>gradient</strong>.</li>
+      </ul>
+      <div class="callout definition">
+        <h4>Gradient, defined precisely</h4>
+        <p>The gradient of a function at a given point tells us the direction in which the function increases most steeply at that point, and how steep that increase is. Gradient descent works by always stepping in the exact opposite direction — the direction of steepest decrease.</p>
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-tag">Check your understanding</div>
+        <p class="q">In gradient descent, the gradient of the cost function at a given point tells us:</p>
+        <ul class="quiz-options">
+          <li><button data-correct="true">The direction in which the cost function increases most steeply at that point.</button></li>
+          <li><button data-correct="false">The exact lowest point of the entire cost function, wherever it may be.</button></li>
+          <li><button data-correct="false">The number of training examples used so far.</button></li>
+          <li><button data-correct="false">The final values the weights will eventually reach.</button></li>
+        </ul>
+        <div class="quiz-feedback" data-feedback>The gradient only describes the local slope at the current position — it doesn't know where the overall minimum lies. Because we want to reduce cost, gradient descent moves opposite to the gradient at every single step, gradually working its way downhill.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="prediction-function">
+    <div class="wrap">
+      <h2>Building the Prediction Function</h2>
+      <p>Before computing the exact slope Meera's model should follow, we need to write down precisely what our model looks like in code, and what exactly we're trying to minimize.</p>
+      <p>We translate $\hat{y} = XW + b$ into code, where:</p>
+      <ul>
+        <li><strong>X</strong> is a table with one row per day and one column per feature (temperature, footfall, weekend flag)</li>
+        <li><strong>W</strong> is a list of weights, one per feature</li>
+        <li><strong>b</strong> is a single number, the bias</li>
+      </ul>
+      <p>For $m$ days and $d$ features, X has shape $(m, d)$, W has shape $(d, 1)$, and the matrix multiplication $X \cdot W$ produces one predicted value per day, to which we add $b$.</p>
+
+      <h3>The class shell</h3>
+      <div class="code-panel">
+        <div class="code-label">Python</div>
+        <pre><code class="py">import numpy as np
+
+class LinearRegression:
+    def __init__(self, learning_rate=0.01, iterations=100):
+        self.learning_rate = learning_rate
+        self.iterations = iterations</code></pre>
+      </div>
+
+      <h3>Predicting</h3>
+      <p>This calculates $\hat{y} = XW + b$ for every day at once, using matrix multiplication instead of looping over individual days.</p>
+      <div class="code-panel">
+        <div class="code-label">Python</div>
+        <pre><code class="py">def predict(self, X):
+    return np.dot(X, self.W) + self.b
+
+LinearRegression.predict = predict</code></pre>
+      </div>
+
+      <h3>Scoring with R²</h3>
+      <p>The R² score tells us what fraction of the variation in cups sold the model can explain.</p>
+      <ul>
+        <li>An R² of <strong>1</strong> means predictions match the actual values perfectly.</li>
+        <li>An R² of <strong>0</strong> means the model is no better than always predicting the average number of cups sold, regardless of temperature, footfall, or day.</li>
+      </ul>
+      <div class="code-panel">
+        <div class="code-label">Python</div>
+        <pre><code class="py">def r2_score(self, X, y):
+    y_pred = self.predict(X)
+    ss_res = np.sum((y - y_pred) ** 2)
+    ss_tot = np.sum((y - y.mean()) ** 2)
+    return 1 - ss_res / ss_tot
+
+LinearRegression.score = r2_score</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="cost-function">
+    <div class="wrap">
+      <h2>Formulating the Optimization Problem</h2>
+      <p>We now have a way to make predictions and a way to measure how good they are. But we still haven't answered the central question: how do we find the values of $W$ and $b$ that make those predictions as good as possible?</p>
+      <p>Our goal is to find the hyperplane, in $d{+}1$ dimensions, that sits as close as possible to all of Meera's data points. For Meera, $d = 3$, so we're fitting a plane in four-dimensional space — impossible to draw on paper, but the same idea as fitting the best line through points on a simple 2D graph.</p>
+      <p>To decide whether one candidate line is "better" than another, we need a single number that tells us how wrong it currently is. That's the <strong>cost function</strong>, also called the <strong>loss function</strong>. We use the <strong>Mean Squared Error</strong>:</p>
+      <div class="formula">$$J(W, b) = \frac{1}{m}\sum_{i=1}^{m}(y_i - \hat{y}_i)^2$$</div>
+      <dl class="legend">
+        <dt>$m$</dt><dd>the total number of days in Meera's training data</dd>
+        <dt>$y_i$</dt><dd>the actual number of cups sold on day $i$</dd>
+        <dt>$\hat{y}_i$</dt><dd>the number of cups the model currently predicts for day $i$</dd>
+        <dt>$(y_i - \hat{y}_i)$</dt><dd>the error for day $i$ — how far off the prediction is</dd>
+        <dt>squaring the error</dt><dd>makes every error positive, and penalises large errors far more heavily than small ones — a mistake of 20 cups counts four times as much as a mistake of 10 cups, not just twice</dd>
+        <dt>summing and dividing by $m$</dt><dd>gives the average squared error across the whole notebook, so $J$ doesn't depend on whether Meera has 30 or 300 days of data</dd>
+      </dl>
+      <p>Training the model now becomes a precise mathematical goal: find the $W$ and $b$ that make $J(W,b)$ as small as possible. That's exactly what gradient descent does.</p>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-tag">Check your understanding</div>
+        <p class="q">Why does the MSE cost function square the error terms $(y_i - \hat{y}_i)$ instead of simply adding them up directly?</p>
+        <ul class="quiz-options">
+          <li><button data-correct="false">Squaring makes the cost function faster for a computer to calculate.</button></li>
+          <li><button data-correct="true">Squaring ensures errors don't cancel each other out, and penalises larger errors more heavily.</button></li>
+          <li><button data-correct="false">Squaring converts the cost function into a probability value between 0 and 1.</button></li>
+          <li><button data-correct="false">Squaring removes the need for a bias term in the model.</button></li>
+        </ul>
+        <div class="quiz-feedback" data-feedback>If we simply added up $(y_i - \hat{y}_i)$ without squaring, a day where the model over-predicts by 20 cups could cancel out a day where it under-predicts by 20 cups — making the model look better than it is. Squaring makes every term positive and grows faster for larger mistakes, exactly the behaviour we want from a cost function.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="geometric-intuition">
+    <div class="wrap">
+      <h2>The Bowl of Loss</h2>
+      <p>We now know precisely what we're trying to minimize. What does this cost function actually look like, geometrically — and why does gradient descent work on it at all?</p>
+      <p>If we simplify Meera's problem down to one feature — say temperature — and plot the cost function $J$ against a single weight $w_1$, the graph turns out shaped like a parabola: a smooth curve that dips to one lowest point and rises again on either side, much like the cross-section of a bowl.</p>
+      <p>Imagine placing a marble anywhere on the inside surface of this bowl and letting it go — gravity pulls it toward the single lowest point. Gradient descent does exactly the same thing to our cost function, except instead of rolling continuously, it takes a series of calculated steps using the slope it detects at each position.</p>
+      <figure>
+        <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/226/656/original/ChatGPT_Image_Sep_11__2026__01_03_43_PM.png?1789112038" alt="Sketch of a bowl-shaped cost function curve with a marble rolling toward the lowest point, illustrating gradient descent." loading="lazy">
+        <figcaption>A simplified sketch of the loss surface as a bowl.</figcaption>
+      </figure>
+      <p>With more than one feature, the same picture holds — the bowl exists in more dimensions than we can draw. With Meera's three features, it effectively lives in four-dimensional space: three weight dimensions plus the bias. The intuition stays identical: there's one lowest region, and gradient descent's job is to guide the marble there, step by step.</p>
+
+      <div class="iframe-panel">
+        <iframe src="https://shrijankumar1-maker.github.io/Gradient-descent-visualisation-3D/" title="Interactive 3D gradient descent visualization" loading="lazy"></iframe>
+      </div>
+      <p class="iframe-note">Live interactive 3D demo — drag to rotate and explore. If it doesn't load, open it directly: <a href="https://shrijankumar1-maker.github.io/Gradient-descent-visualisation-3D/">shrijankumar1-maker.github.io/Gradient-descent-visualisation-3D</a></p>
+    </div>
+  </section>
+
+  <section id="gradient-calc">
+    <div class="wrap">
+      <h2>Calculating the Gradient</h2>
+      <p>Knowing a lowest point exists is a good start, but gradient descent needs an exact formula that tells it, at any position on the bowl, precisely which direction is downhill. That comes from the gradient.</p>
+      <p>We differentiate $J(W,b) = \frac{1}{m}\sum_{i=1}^{m}(y_i - \hat{y}_i)^2$, where $\hat{y}_i$ itself depends on $W$ and $b$ through $\hat{y}_i = X_i \cdot W + b$. Working through the chain rule, the gradient with respect to the weights comes out to:</p>
+      <div class="formula">$$\frac{\partial J}{\partial W} = -\frac{2}{m}X^T(y - \hat{y})$$</div>
+      <p>and with respect to the bias:</p>
+      <div class="formula">$$\frac{\partial J}{\partial b} = -\frac{2}{m}\sum_{i=1}^{m}(y_i - \hat{y}_i)$$</div>
+      <dl class="legend">
+        <dt>$X^T$</dt><dd>the transpose of the feature matrix — needed purely so the shapes line up for matrix multiplication: X is $(m,d)$, the error is $(m,1)$, so transposing X to $(d,m)$ gives a result of shape $(d,1)$, exactly one gradient value per weight</dd>
+        <dt>$(y - \hat{y})$</dt><dd>the vector of errors across all $m$ days at once</dd>
+        <dt>the negative sign</dt><dd>tells us that moving each weight opposite to this gradient reduces the cost</dd>
+      </dl>
+      <div class="callout">
+        <h4>Analogy</h4>
+        <p>Meera's foot feels a slightly different slope depending on which direction she considers stepping in — north, east, or somewhere in between. The gradient is simply the combination of "how steep is it along the temperature-weight direction," "how steep along the footfall-weight direction," and so on for every weight, bundled into one set of numbers: one per weight, plus one for the bias.</p>
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-tag">Check your understanding</div>
+        <p class="q">For a single training example, what's the correct partial derivative of the squared error with respect to the footfall weight $w_2$?</p>
+        <ul class="quiz-options">
+          <li><button data-correct="false">$-2 (y - \hat{y})$</button></li>
+          <li><button data-correct="false">$-2 (y - \hat{y}) \, w_2$</button></li>
+          <li><button data-correct="true">$-2 (y - \hat{y}) \, x_2$</button></li>
+          <li><button data-correct="false">$-2 (y - \hat{y}) \, b$</button></li>
+        </ul>
+        <div class="quiz-feedback" data-feedback>Differentiating $(y-\hat y)^2$ with respect to a specific weight $w_j$ brings down a factor of $-2(y-\hat y)$, multiplied by whichever input that weight multiplies in the prediction formula. For $w_2$, that input is footfall, $x_2$ — which is exactly why each weight's gradient depends on its own corresponding feature.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="weight-update">
+    <div class="wrap">
+      <h2>Updating the Weights</h2>
+      <p>We now know exactly which direction is downhill. The only thing left to decide is how big a step to take — controlled by a single, important number: the learning rate.</p>
+      <p>Once we know the gradient, updating each weight is straightforward:</p>
+      <div class="formula">$$W := W - \alpha \frac{\partial J}{\partial W} \qquad\qquad b := b - \alpha \frac{\partial J}{\partial b}$$</div>
+      <dl class="legend">
+        <dt>$\alpha$ (alpha)</dt><dd>the learning rate — a small positive number, chosen before training, that controls how big a step we take downhill at each iteration</dd>
+        <dt>$\partial J/\partial W, \partial J/\partial b$</dt><dd>the gradients calculated in the previous section — telling us which direction is uphill</dd>
+        <dt>the minus sign</dt><dd>ensures we move opposite to that uphill direction — downhill, reducing the cost</dd>
+      </dl>
+      <div class="callout">
+        <h4>Analogy, continued</h4>
+        <p>If Meera takes very tiny steps down the hill (a very small $\alpha$), she'll eventually reach the bottom, but it could take a long time. If she takes very large strides (a very large $\alpha$), she risks overshooting the lowest point, landing on the opposite slope, and bouncing back and forth without ever settling — in severe cases ending up higher than where she started, called <strong>divergence</strong>. A common practical approach is to start with a slightly larger step and gradually shrink it, like jogging down the initial slope and taking smaller, careful steps as the valley floor approaches.</p>
+      </div>
+
+      <div class="sim-card">
+        <h4>Try it: how the learning rate changes the descent</h4>
+        <p class="sim-sub">A single-weight bowl, $J(w) = w^2$. Pick a step size and watch where the marble ends up.</p>
+        <div class="sim-grid">
+          <div class="sim-svg-wrap">
+            <svg id="simSvg" viewBox="0 0 400 240" role="img" aria-label="Parabola showing the cost bowl with a marble that moves as gradient descent steps are taken">
+              <path id="simCurve" fill="none" stroke="#E9AFC9" stroke-width="3"></path>
+              <line x1="20" y1="222" x2="380" y2="222" stroke="#F0D2E0" stroke-width="1"></line>
+              <circle id="simMarble" r="8" fill="#9C3560" stroke="#fff" stroke-width="2"></circle>
+            </svg>
+          </div>
+          <div class="sim-controls">
+            <button class="sim-btn" data-alpha="0.05">Small step <small>α = 0.05</small></button>
+            <button class="sim-btn" data-alpha="0.3">Good step <small>α = 0.3</small></button>
+            <button class="sim-btn" data-alpha="1.05">Too-large step <small>α = 1.05</small></button>
+            <button class="sim-reset" id="simReset" type="button">Reset marble</button>
+            <div class="sim-status" id="simStatus" aria-live="polite">Pick a step size to begin.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="quiz" data-quiz>
+        <div class="quiz-tag">Check your understanding</div>
+        <p class="q">What's most likely to happen if the learning rate $\alpha$ is set far too large for the given problem?</p>
+        <ul class="quiz-options">
+          <li><button data-correct="false">The algorithm converges to the minimum faster than usual, with no downsides.</button></li>
+          <li><button data-correct="true">The weights may oscillate back and forth, or diverge, instead of settling near the minimum.</button></li>
+          <li><button data-correct="false">The cost function will automatically be rescaled to a smaller range.</button></li>
+          <li><button data-correct="false">The number of features in the model will be reduced automatically.</button></li>
+        </ul>
+        <div class="quiz-feedback" data-feedback>A learning rate that's too large can cause each update to overshoot the lowest point repeatedly. Instead of settling near the minimum, the weights can swing between opposite sides of the bowl — and in severe cases the loss grows with every iteration instead of shrinking, a situation called divergence.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="training">
+    <div class="wrap-wide">
+      <h2>Bringing It Together: Training Meera's Model</h2>
+      <div class="wrap" style="padding-inline:0;">
+      <p>We've covered every mathematical ingredient gradient descent needs: the cost function, the gradient, and the update rule governed by a learning rate. Now we implement the two remaining pieces our <code>LinearRegression</code> class needs — <strong>update_weights</strong>, which performs a single gradient descent step, and <strong>fit</strong>, which repeats it for a fixed number of iterations.</p>
+      </div>
+      <div class="code-panel">
+        <div class="code-label">Python — a gradient step, and the training loop</div>
+        <pre><code class="py">def update_weights(self):
+    y_pred = self.predict(self.X)
+    error = self.Y - y_pred
+
+    dW = -(2 * self.X.T.dot(error)) / self.m
+    db = -2 * np.sum(error) / self.m
+
+    self.W = self.W - self.learning_rate * dW
+    self.b = self.b - self.learning_rate * db
+    return self
+
+LinearRegression.update_weights = update_weights
+
+def fit(self, X, Y):
+    self.m, self.d = X.shape
+    self.W = np.zeros(self.d)
+    self.b = 0
+    self.X = X
+    self.Y = Y
+    self.error_list = []
+
+    for i in range(self.iterations):
+        self.update_weights()
+        y_pred = X.dot(self.W) + self.b
+        error = np.square(np.subtract(Y, y_pred)).mean()
+        self.error_list.append(error)
+    return self
+
+LinearRegression.fit = fit</code></pre>
+      </div>
+
+      <div class="wrap" style="padding-inline:0;">
+      <p>Let's generate a small synthetic version of Meera's notebook so we can watch the full pipeline run end to end. In a real class delivered to a business team, this synthetic data would simply be Meera's actual recorded notebook entries — and, fittingly, it reuses the very weights we used to illustrate reading a trained model earlier.</p>
+      </div>
+      <div class="code-panel">
+        <div class="code-label">Python — generating Meera's notebook</div>
+        <pre><code class="py">import numpy as np
+import pandas as pd
+
+np.random.seed(42)
+n_days = 120
+
+temperature = np.random.uniform(20, 40, n_days)
+footfall = np.random.uniform(100, 900, n_days)
+is_weekend = np.random.choice([0, 1], size=n_days, p=[5/7, 2/7])
+
+true_w1, true_w2, true_w3, true_b = 15.4, 0.6, 22.1, 10.2
+noise = np.random.normal(0, 8, n_days)
+
+cups_sold = (true_w1 * temperature) + (true_w2 * footfall) + (true_w3 * is_weekend) + true_b + noise
+
+coolcups_df = pd.DataFrame({
+    "temperature": temperature,
+    "footfall": footfall,
+    "is_weekend": is_weekend,
+    "cups_sold": cups_sold
+})</code></pre>
+      </div>
+
+      <div class="data-table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>temperature</th><th>footfall</th><th>is_weekend</th><th>cups_sold</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>27.490802</td><td>745.952124</td><td>1</td><td>915.917766</td></tr>
+            <tr><td>1</td><td>39.014286</td><td>816.873040</td><td>1</td><td>1113.341306</td></tr>
+            <tr><td>2</td><td>34.639879</td><td>354.402780</td><td>1</td><td>795.460069</td></tr>
+            <tr><td>3</td><td>31.973170</td><td>188.041540</td><td>0</td><td>599.795035</td></tr>
+            <tr><td>4</td><td>23.120373</td><td>282.348130</td><td>0</td><td>534.448339</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-label">Python — splitting into train and test</div>
+        <pre><code class="py">from sklearn.model_selection import train_test_split
+
+X = coolcups_df.drop("cups_sold", axis=1).values
+y = coolcups_df["cups_sold"].values
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=10)</code></pre>
+      </div>
+
+      <div class="wrap" style="padding-inline:0;">
+      <p>Footfall naturally takes much larger values than temperature or the weekend flag. Left unscaled, gradient descent can struggle for exactly the reasons discussed earlier: one learning rate has to work reasonably well across features on very different scales, which is difficult when one feature is a hundred times larger than another. So, just as flagged in the coefficients section, we scale our features before training.</p>
+      </div>
+      <div class="code-panel">
+        <div class="code-label">Python — scaling and training</div>
+        <pre><code class="py">X_train_mean = X_train.mean(axis=0)
+X_train_std = X_train.std(axis=0)
+
+X_train_scaled = (X_train - X_train_mean) / X_train_std
+X_test_scaled = (X_test - X_train_mean) / X_train_std
+
+lr = LinearRegression(learning_rate=0.1, iterations=200)
+lr.fit(X_train_scaled, y_train)</code></pre>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="num">0.9978</div><div class="lbl">Training R² score</div></div>
+        <div class="stat-card"><div class="num">0.9977</div><div class="lbl">Test R² score</div></div>
+      </div>
+
+      <div class="loss-card">
+        <svg viewBox="0 0 400 140" role="img" aria-label="A curve that drops steeply at first and then flattens, illustrating loss decreasing over training iterations">
+          <polyline points="10,20 30,55 55,80 85,98 120,110 165,118 220,122 290,125 360,126" fill="none" stroke="#9C3560" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          <line x1="10" y1="130" x2="380" y2="130" stroke="#F0D2E0" stroke-width="1"></line>
+          <line x1="10" y1="10" x2="10" y2="130" stroke="#F0D2E0" stroke-width="1"></line>
+          <text x="12" y="14" font-size="10" fill="#6B5560" font-family="Manrope,sans-serif">high loss</text>
+          <text x="330" y="122" font-size="10" fill="#6B5560" font-family="Manrope,sans-serif">converged</text>
+        </svg>
+        <p class="loss-caption">Illustrative shape of <code>lr.error_list</code> over 200 iterations — mean squared error drops sharply at first, then flattens as training converges. Exact values depend on your run.</p>
+      </div>
+
+      <div class="wrap" style="padding-inline:0;">
+      <p>Because we scaled our features before training, we can now fairly compare the size of the learned weights below — exactly the caveat flagged earlier.</p>
+      </div>
+      <div class="code-panel">
+        <div class="code-label">Python — reading the learned model</div>
+        <pre><code class="py">print("Learned weights (temperature, footfall, is_weekend):", lr.W)
+print("Learned bias:", lr.b)</code></pre>
+      </div>
+
+      <div class="bar-chart">
+        <div class="bar-row">
+          <div class="bar-label"><span>Temperature</span><span>89.84</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:65.7%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label"><span>Footfall</span><span>136.75</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:100%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label"><span>Weekend flag</span><span>10.67</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:7.8%"></div></div>
+        </div>
+        <div class="bar-row" style="margin-top:20px; padding-top:16px; border-top:1px dashed var(--line);">
+          <div class="bar-label"><span>Bias (not comparable on this scale)</span><span>758.84</span></div>
+        </div>
+      </div>
+
+      <div class="wrap" style="padding-inline:0;">
+      <p>This closes the loop on Meera's original question. She now has a trained model, she understands what its coefficients mean, and she understands — both mathematically and intuitively — how those coefficients were found.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="go-further">
+    <div class="wrap">
+      <h2>Take It Further</h2>
+      <div class="further">
+        <p>Try asking an AI assistant this, and compare what comes back with what we covered in the coefficients and geometric intuition sections:</p>
+        <blockquote>"If I have two features in a linear regression model, one ranging from 0 to 1 and another ranging from 0 to 10,000, and I don't scale them before training with gradient descent, what problems can this cause, and how does feature scaling fix them?"</blockquote>
+        <p style="margin-top:16px; margin-bottom:0;">Read the response carefully, and note at least one point it raises that wasn't explicitly discussed here.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="wrap-up">
+    <div class="wrap-wide">
+      <div class="wrap" style="padding-inline:0;">
+      <h2>Key Takeaways</h2>
+      </div>
+      <div class="wrap-grid">
+        <div class="wrap-card">
+          <h4>The concept</h4>
+          <ul>
+            <li>Linear Regression fits the best line, plane, or hyperplane through past data to predict a new value — for Meera, cups sold from temperature, footfall, and the weekend flag.</li>
+            <li>A coefficient's sign shows direction; its size shows pull — but sizes are only comparable once features are scaled.</li>
+          </ul>
+        </div>
+        <div class="wrap-card">
+          <h4>The math</h4>
+          <ul>
+            <li>Gradient descent walks downhill on the cost function's bowl-shaped surface, using the gradient as its compass.</li>
+            <li>Mean Squared Error is the cost function; its gradient with respect to $W$ and $b$ tells us which way is uphill.</li>
+            <li>The learning rate sets the step size — too small is slow, too large can overshoot or diverge.</li>
+          </ul>
+        </div>
+        <div class="wrap-card">
+          <h4>The code</h4>
+          <ul>
+            <li>Built a <code>LinearRegression</code> class from scratch: <code>predict</code>, <code>score</code>, <code>update_weights</code>, and <code>fit</code>.</li>
+            <li>Trained it end to end on a scaled, synthetic version of Meera's CoolCups data, reaching a test R² of 0.9977.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="fname">Linear regression 2 post read</div>
+  <div>A CoolCups data story.</div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  /* ---- KaTeX render ---- */
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+
+  /* ---- progress bar ---- */
+  var bar = document.getElementById('progressBar');
+  function updateProgress() {
+    var h = document.documentElement;
+    var scrolled = h.scrollTop || document.body.scrollTop;
+    var height = (h.scrollHeight || document.body.scrollHeight) - h.clientHeight;
+    var pct = height > 0 ? (scrolled / height) * 100 : 0;
+    bar.style.width = pct + '%';
+  }
+  document.addEventListener('scroll', updateProgress, {passive: true});
+  updateProgress();
+
+  /* ---- TOC drawer ---- */
+  var toggle = document.getElementById('tocToggle');
+  var drawer = document.getElementById('tocDrawer');
+  var closeBtn = document.getElementById('tocClose');
+  var scrim = document.getElementById('scrim');
+
+  function openDrawer() {
+    drawer.classList.add('open');
+    scrim.classList.add('open');
+    toggle.setAttribute('aria-expanded', 'true');
+  }
+  function closeDrawer() {
+    drawer.classList.remove('open');
+    scrim.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+  toggle.addEventListener('click', function () {
+    drawer.classList.contains('open') ? closeDrawer() : openDrawer();
+  });
+  closeBtn.addEventListener('click', closeDrawer);
+  scrim.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeDrawer();
+  });
+  drawer.querySelectorAll('a').forEach(function (a) {
+    a.addEventListener('click', closeDrawer);
+  });
+
+  /* ---- code highlighting ---- */
+  var KEYWORDS = ['def','class','return','for','in','import','from','if','elif','else','while','as','self','True','False','None','and','or','not','is'];
+  var kwRegex = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b', 'g');
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function highlight(raw) {
+    var escaped = escapeHtml(raw);
+    var tokens = [];
+    var masked = escaped.replace(/(#.*$)|('[^']*'|"[^"]*")|(\b\d+\.?\d*\b)/gm, function (m, cm, st, nm) {
+      var cls = cm ? 'cm' : (st ? 'st' : 'nm');
+      tokens.push('<span class="' + cls + '">' + m + '</span>');
+      return '\u0000' + (tokens.length - 1) + '\u0000';
+    });
+    masked = masked.replace(kwRegex, '<span class="kw">$1</span>');
+    masked = masked.replace(/\u0000(\d+)\u0000/g, function (m, i) { return tokens[parseInt(i, 10)]; });
+    return masked;
+  }
+
+  document.querySelectorAll('code.py').forEach(function (block) {
+    block.innerHTML = highlight(block.textContent);
+  });
+
+  /* ---- quizzes ---- */
+  document.querySelectorAll('[data-quiz]').forEach(function (quiz) {
+    var buttons = quiz.querySelectorAll('.quiz-options button');
+    var feedback = quiz.querySelector('[data-feedback]');
+    var answered = false;
+    buttons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (answered) return;
+        answered = true;
+        var isCorrect = btn.getAttribute('data-correct') === 'true';
+        buttons.forEach(function (b) {
+          b.disabled = true;
+          if (b.getAttribute('data-correct') === 'true') {
+            b.classList.add('correct');
+            b.insertAdjacentHTML('afterbegin', '<span class="mark">&#10003;</span>');
+          } else if (b === btn && !isCorrect) {
+            b.classList.add('incorrect');
+            b.insertAdjacentHTML('afterbegin', '<span class="mark">&#10007;</span>');
+          }
+        });
+        feedback.innerHTML = '<strong>' + (isCorrect ? 'Correct. ' : 'Not quite. ') + '</strong>' + feedback.innerHTML;
+        feedback.classList.add('show');
+        if (window.renderMathInElement) {
+          renderMathInElement(feedback, {
+            delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}],
+            throwOnError: false
+          });
+        }
+      });
+    });
+  });
+
+  /* ---- prediction calculator ---- */
+  var W1 = 15.4, W2 = 0.6, W3 = 22.1, B = 10.2;
+  var temp = document.getElementById('calcTemp');
+  var foot = document.getElementById('calcFootfall');
+  var wknd = document.getElementById('calcWeekend');
+  var tempVal = document.getElementById('calcTempVal');
+  var footVal = document.getElementById('calcFootfallVal');
+  var result = document.getElementById('calcResult');
+  var cT = document.getElementById('calcT');
+  var cF = document.getElementById('calcF');
+  var cW = document.getElementById('calcW');
+
+  function updateCalc() {
+    var t = parseFloat(temp.value);
+    var f = parseFloat(foot.value);
+    var w = wknd.checked ? 1 : 0;
+    tempVal.textContent = t.toFixed(1);
+    footVal.textContent = Math.round(f);
+    var tContrib = W1 * t;
+    var fContrib = W2 * f;
+    var wContrib = W3 * w;
+    var total = tContrib + fContrib + wContrib + B;
+    result.textContent = Math.round(total);
+    cT.textContent = '+' + tContrib.toFixed(1);
+    cF.textContent = '+' + fContrib.toFixed(1);
+    cW.textContent = (w ? '+' : '') + wContrib.toFixed(1);
+  }
+  [temp, foot, wknd].forEach(function (el) { el.addEventListener('input', updateCalc); });
+  updateCalc();
+
+  /* ---- learning rate simulator ---- */
+  var svg = document.getElementById('simSvg');
+  var curve = document.getElementById('simCurve');
+  var marble = document.getElementById('simMarble');
+  var statusEl = document.getElementById('simStatus');
+  var simButtons = document.querySelectorAll('.sim-btn');
+  var resetBtn = document.getElementById('simReset');
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var X_MIN = -5.2, X_MAX = 5.2, J_MAX = 27;
+  var PX_LEFT = 30, PX_RIGHT = 370, PX_TOP = 16, PX_BOTTOM = 222;
+
+  function xToPx(x) {
+    return PX_LEFT + (x - X_MIN) / (X_MAX - X_MIN) * (PX_RIGHT - PX_LEFT);
+  }
+  function jToPy(j) {
+    var clamped = Math.min(j, J_MAX);
+    return PX_BOTTOM - (clamped / J_MAX) * (PX_BOTTOM - PX_TOP);
+  }
+
+  (function drawCurve() {
+    var pts = [];
+    for (var x = X_MIN; x <= X_MAX; x += 0.15) {
+      pts.push(xToPx(x) + ',' + jToPy(x * x));
+    }
+    curve.setAttribute('points', pts.join(' '));
+    curve.setAttribute('fill', 'none');
+    var d = 'M ' + pts.join(' L ');
+    curve.setAttribute('d', d);
+    curve.removeAttribute('points');
+  })();
+
+  var startW = 4.5;
+  var currentW = startW;
+  var animating = false;
+
+  function placeMarble(w) {
+    var j = w * w;
+    marble.setAttribute('cx', xToPx(Math.max(X_MIN, Math.min(X_MAX, w))));
+    marble.setAttribute('cy', jToPy(j));
+  }
+  placeMarble(currentW);
+
+  function setButtonsDisabled(state) {
+    simButtons.forEach(function (b) { b.disabled = state; });
+  }
+
+  function runDescent(alpha) {
+    if (animating) return;
+    animating = true;
+    setButtonsDisabled(true);
+    currentW = startW;
+    placeMarble(currentW);
+    statusEl.classList.remove('diverge');
+    statusEl.textContent = 'Starting at w = ' + currentW.toFixed(2) + ' \u2026';
+
+    var steps = 10;
+    var i = 0;
+    var delay = reduceMotion ? 0 : 550;
+
+    function step() {
+      if (i >= steps) {
+        animating = false;
+        setButtonsDisabled(false);
+        return;
+      }
+      var grad = 2 * currentW;
+      currentW = currentW - alpha * grad;
+      i++;
+      placeMarble(currentW);
+      var j = currentW * currentW;
+      var diverging = Math.abs(currentW) > 5.5;
+      if (diverging) {
+        statusEl.classList.add('diverge');
+        statusEl.textContent = 'Step ' + i + ': diverging \u2014 each step overshoots further. w = ' + currentW.toFixed(2);
+      } else {
+        statusEl.classList.remove('diverge');
+        statusEl.textContent = 'Step ' + i + ': w = ' + currentW.toFixed(2) + ', J(w) = ' + j.toFixed(2);
+      }
+      if (diverging && i >= 4) {
+        animating = false;
+        setButtonsDisabled(false);
+        return;
+      }
+      if (delay === 0) { step(); } else { setTimeout(step, delay); }
+    }
+    step();
+  }
+
+  simButtons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      runDescent(parseFloat(b.getAttribute('data-alpha')));
+    });
+  });
+  resetBtn.addEventListener('click', function () {
+    animating = false;
+    setButtonsDisabled(false);
+    currentW = startW;
+    placeMarble(currentW);
+    statusEl.classList.remove('diverge');
+    statusEl.textContent = 'Pick a step size to begin.';
+  });
+
+});
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/ML-with-AI-workflows-3" target="_blank" rel="noopener">github.com/scaler-content/ML-with-AI-workflows-3</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

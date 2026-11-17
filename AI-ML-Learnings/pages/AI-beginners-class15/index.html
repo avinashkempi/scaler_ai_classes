@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 15 · Building Agents Without Code — Groundwire Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Manrope:wght@300..800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0f14;--bg2:#12161d;--card:#161b24;--card2:#1b212c;--line:#262e3b;--line2:#33405266;
+  --ink:#eef2f7;--ink2:#aab6c6;--ink3:#6d7a8c;
+  --orange:#ff8a2a;--orange2:#ffb066;--orange-dim:#ff8a2a22;
+  --teal:#3dd6c3;--teal-dim:#3dd6c31f;--violet:#a48bff;--violet-dim:#a48bff1f;
+  --gold:#ffd166;--rose:#ff6b8b;--green:#5fe08a;--red:#ff6161;
+  --mono:'JetBrains Mono',monospace;--serif:'Fraunces',serif;--sans:'Manrope',sans-serif;--r:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+::selection{background:var(--orange);color:#111}
+.wrap{max-width:1020px;margin:0 auto;padding:0 26px}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:600;line-height:1.22}
+a{color:var(--orange2)}
+strong{color:var(--ink)}
+em{color:var(--orange2);font-style:normal}
+p{color:var(--ink2)}
+p strong{color:var(--ink)}
+#progressBar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--orange),var(--gold));width:0;z-index:999;transition:width .1s linear}
+.topnav{position:sticky;top:0;background:#0c0f14e8;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);z-index:900}
+.topnav .wrap{display:flex;align-items:center;gap:14px;padding-top:12px;padding-bottom:12px;overflow-x:auto;scrollbar-width:none}
+.topnav .wrap::-webkit-scrollbar{display:none}
+.brand{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--orange);white-space:nowrap}
+.topnav a.nl{font-size:12.5px;font-weight:600;color:var(--ink3);text-decoration:none;white-space:nowrap;padding:5px 10px;border-radius:20px;transition:.2s}
+.topnav a.nl:hover{color:var(--orange);background:var(--orange-dim)}
+.hero{position:relative;padding:88px 0 70px;overflow:hidden;background:radial-gradient(1100px 480px at 78% -12%,#ff8a2a14,transparent 60%),radial-gradient(800px 400px at 8% 110%,#3dd6c30e,transparent 60%)}
+.hero .eyebrow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:26px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.06em;padding:6px 13px;border-radius:100px;border:1px solid var(--line);color:var(--ink2);background:var(--card)}
+.chip.hot{border-color:#ff8a2a55;color:var(--orange2);background:var(--orange-dim)}
+.chip.cool{border-color:#3dd6c355;color:var(--teal);background:var(--teal-dim)}
+.hero h1{font-size:clamp(38px,6vw,64px);font-weight:640;letter-spacing:-.01em;margin-bottom:8px}
+.hero h1 .amp{color:var(--orange);font-style:italic;font-weight:500}
+.hero .sub{font-size:clamp(17px,2.2vw,21px);color:var(--ink2);max-width:740px;margin-top:16px}
+.hero .sub b{color:var(--ink)}
+.heroStats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:44px}
+.hstat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.hstat .n{font-family:var(--serif);font-size:30px;font-weight:640;color:var(--orange)}
+.hstat .l{font-size:12px;color:var(--ink3);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+@media(max-width:760px){.heroStats{grid-template-columns:repeat(2,1fr)}}
+.agenda{margin-top:50px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px 28px}
+.agenda h3{font-size:14px;font-family:var(--sans);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:18px}
+.agRow{display:flex;align-items:center;flex-wrap:wrap;gap:14px;padding:11px 0;border-bottom:1px dashed var(--line)}
+.agRow:last-child{border-bottom:none}
+.agRow .t{font-family:var(--mono);font-size:12px;color:var(--orange);min-width:86px;font-weight:500}
+.agRow .name{font-weight:600;font-size:15px;color:var(--ink);flex:1;min-width:180px}
+.agRow .tag{margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--ink3);border:1px solid var(--line);padding:3px 10px;border-radius:100px;white-space:nowrap}
+.agRow .tag.simtag{color:var(--teal);border-color:#3dd6c344}
+section.blk{padding:74px 0 30px}
+.secHead{display:flex;align-items:baseline;gap:18px;margin-bottom:8px;flex-wrap:wrap}
+.secNum{font-family:var(--mono);font-size:13px;color:var(--orange);border:1px solid #ff8a2a55;background:var(--orange-dim);padding:5px 13px;border-radius:100px;font-weight:500;white-space:nowrap}
+.secHead h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.01em}
+.secTime{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-left:auto;white-space:nowrap}
+.secLede{font-size:18px;color:var(--ink2);max-width:800px;margin:12px 0 34px}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:44px 0 0}
+.say{position:relative;background:linear-gradient(180deg,#1a1410,#161b24);border:1px solid #ff8a2a33;border-left:3px solid var(--orange);border-radius:14px;padding:20px 24px 20px 26px;margin:22px 0}
+.say .who{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange);font-weight:700;margin-bottom:10px}
+.say p{color:#e8dccb;font-size:15.5px;margin-bottom:10px}
+.say p:last-child{margin-bottom:0}
+.say.ask{border-left-color:var(--teal);border-color:#3dd6c333;background:linear-gradient(180deg,#101a19,#161b24)}
+.say.ask .who{color:var(--teal)}
+.say.do{border-left-color:var(--violet);border-color:#a48bff33;background:linear-gradient(180deg,#141021,#161b24)}
+.say.do .who{color:var(--violet)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;margin:20px 0}
+.card h3{font-size:21px;margin-bottom:10px}
+.card h4{font-size:17px;margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:820px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+.defBox{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin:20px 0;position:relative}
+.defBox::before{content:'DEFINITION';position:absolute;top:-10px;left:20px;font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--gold);background:var(--bg);padding:2px 10px;border:1px solid #ffd16644;border-radius:100px}
+.defBox .term{font-family:var(--serif);font-size:19px;color:var(--gold);font-weight:600}
+.defBox p{margin-top:6px;font-size:15.5px}
+.useCase{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;transition:.25s;position:relative;overflow:hidden}
+.useCase:hover{border-color:#ff8a2a66;transform:translateY(-3px)}
+.useCase .ico{font-size:26px;margin-bottom:8px}
+.useCase .co{font-family:var(--mono);font-size:11px;color:var(--orange);letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.useCase h4{font-size:16px;margin:4px 0 6px;font-family:var(--sans);font-weight:700}
+.useCase p{font-size:13.5px;color:var(--ink2);line-height:1.55}
+.analogy{display:flex;gap:16px;background:linear-gradient(135deg,#1b1626,#161b24);border:1px solid #a48bff33;border-radius:14px;padding:20px 24px;margin:20px 0}
+.analogy .ic{font-size:30px;line-height:1}
+.analogy .tt{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--violet);font-weight:700;margin-bottom:6px}
+.analogy p{font-size:15px;color:var(--ink2)}
+.analogy p b{color:var(--ink)}
+.note{border-radius:12px;padding:14px 18px;margin:16px 0;font-size:14.5px;border:1px solid var(--line);background:var(--card2);color:var(--ink2)}
+.note b{color:var(--ink)}
+.note.beg{border-color:#5fe08a44}.note.beg b{color:var(--green)}
+.note.adv{border-color:#ff6b8b44}.note.adv b{color:var(--rose)}
+.note.pro{border-color:#ffd16644}.note.pro b{color:var(--gold)}
+table.tbl{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px}
+table.tbl th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--orange);text-align:left;padding:10px 14px;border-bottom:1px solid #ff8a2a44;font-weight:500}
+table.tbl td{padding:11px 14px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top}
+table.tbl tr:hover td{background:#ffffff05}
+table.tbl td:first-child{color:var(--ink);font-weight:600}
+code.k{font-family:var(--mono);font-size:.86em;background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--orange2)}
+pre.code{font-family:var(--mono);font-size:13px;line-height:1.7;background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px 22px;overflow-x:auto;margin:16px 0;color:#c7d2e0}
+pre.code .cm{color:#5b6b7f}
+pre.code .st{color:#8fd8a0}
+pre.code .fn{color:#7cc4ff}
+pre.code .kw{color:var(--orange2)}
+.sim{background:linear-gradient(180deg,#101620,#0e131b);border:1px solid #3dd6c344;border-radius:20px;padding:26px 28px;margin:30px 0;position:relative}
+.sim::before{content:'\26A1 INTERACTIVE SIMULATOR';position:absolute;top:-12px;left:22px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--teal);background:var(--bg);padding:3px 12px;border:1px solid #3dd6c355;border-radius:100px;font-weight:700}
+.sim h3{font-size:20px;margin-bottom:4px}
+.sim .simSub{font-size:14px;color:var(--ink3);margin-bottom:18px}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--sans);font-weight:700;font-size:13.5px;color:#161009;background:linear-gradient(180deg,var(--orange2),var(--orange));border:none;border-radius:100px;padding:10px 20px;cursor:pointer;transition:.2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px #ff8a2a44}
+.btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--orange);color:var(--orange);box-shadow:none}
+.btn.sm{padding:7px 15px;font-size:12.5px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.quiz{background:linear-gradient(180deg,#151021,#12161d);border:1px solid #a48bff44;border-radius:20px;padding:26px 28px;margin:34px 0;position:relative}
+.quiz::before{content:'\2726 CHECKPOINT QUIZ';position:absolute;top:-12px;left:22px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--violet);background:var(--bg);padding:3px 12px;border:1px solid #a48bff55;border-radius:100px;font-weight:700}
+.quiz .q{font-family:var(--serif);font-size:19px;font-weight:600;margin:6px 0 18px;color:var(--ink)}
+.opt{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 17px;margin:9px 0;cursor:pointer;transition:.2s;font-size:14.5px;color:var(--ink2)}
+.opt:hover{border-color:var(--violet)}
+.opt .ab{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--violet);border:1px solid #a48bff55;border-radius:8px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.opt.correct{border-color:var(--green);background:#5fe08a12;color:var(--ink)}
+.opt.correct .ab{color:var(--green);border-color:var(--green)}
+.opt.wrong{border-color:var(--red);background:#ff616112;opacity:.75}
+.opt.wrong .ab{color:var(--red);border-color:var(--red)}
+.opt.locked{pointer-events:none}
+.quizWhy{display:none;margin-top:16px;border-top:1px dashed #a48bff44;padding-top:16px;font-size:14.5px;color:var(--ink2)}
+.quizWhy.show{display:block;animation:fadeUp .4s ease}
+.quizWhy b{color:var(--violet)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+.svgWrap{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin:24px 0;overflow-x:auto}
+.svgWrap svg,.svgWrap img{display:block;margin:0 auto;max-width:100%;height:auto;border-radius:10px}
+.svgCap{text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-top:14px;letter-spacing:.04em}
+.bigQuote{font-family:var(--serif);font-size:clamp(21px,3vw,28px);font-weight:500;font-style:italic;color:var(--ink);text-align:center;max-width:780px;margin:50px auto;line-height:1.5}
+.bigQuote em{color:var(--orange);font-style:italic}
+.footer{border-top:1px solid var(--line);margin-top:80px;padding:44px 0 60px;text-align:center}
+.footer p{font-size:13px;color:var(--ink3)}
+.slackDrop{background:linear-gradient(120deg,#12201e,#0f1720);border:1px solid #3dd6c355;border-radius:14px;padding:16px 20px;margin:18px 0;display:flex;gap:14px;align-items:flex-start}
+.slackDrop .av{font-size:26px}
+.slackDrop .nm{font-weight:700;color:var(--teal);font-size:14px}
+.slackDrop .tm{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-left:8px}
+.slackDrop p{font-size:14px;color:var(--ink2);margin-top:4px}
+.msgPills{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px}
+.msgPill{font-family:var(--sans);font-size:12.5px;font-weight:600;text-align:left;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:100px;padding:9px 16px;cursor:pointer;transition:.2s;max-width:100%}
+.msgPill:hover{border-color:var(--teal);color:var(--teal)}
+.msgPill.sel{background:var(--teal-dim);border-color:var(--teal);color:var(--teal)}
+.pickRow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.pickBtn{font-family:var(--sans);font-weight:700;font-size:12.5px;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:9px;padding:9px 14px;cursor:pointer;transition:.2s;text-align:left}
+.pickBtn:hover{border-color:var(--orange)}
+.pickBtn.on{background:var(--orange-dim);border-color:var(--orange);color:var(--orange2)}
+.pickGroup{margin-bottom:14px}
+.pickGroup .pgl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px;display:block}
+.matchBtns{display:flex;flex-wrap:wrap;gap:10px}
+.matchBtn{font-family:var(--sans);font-weight:700;font-size:13px;border:1px solid var(--line);background:#141b26;color:var(--ink2);border-radius:10px;padding:10px 16px;cursor:pointer;transition:.2s;text-align:left}
+.matchBtn:hover{border-color:var(--orange)}
+.matchBtn.right{border-color:var(--green);background:#0f1f1c;color:var(--green)}
+.matchBtn.wrong{border-color:var(--red);background:#221214;color:var(--rose)}
+.matchWhy{margin-top:14px;font-size:14px;color:var(--ink2);min-height:24px}
+.matchWhy b{color:var(--teal)}
+.matchScore{font-family:var(--mono);font-size:12px;color:var(--gold);border:1px solid #ffd16655;background:#ffd16611;border-radius:100px;padding:6px 14px;display:inline-block;margin-top:6px}
+.runLog{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-family:var(--mono);font-size:11.5px;line-height:1.85;color:var(--ink2);min-height:120px;max-height:280px;overflow-y:auto;margin-top:12px}
+.runLog .lg{display:block}
+.runLog .lg.ok{color:var(--green)}.runLog .lg.err{color:var(--rose)}.runLog .lg.warn{color:var(--gold)}.runLog .lg.dim{color:var(--ink3)}
+.verdict{border-radius:12px;padding:14px 18px;margin-top:14px;font-size:14px;border:1px solid var(--line);background:var(--card2);color:var(--ink2)}
+.verdict b{color:var(--ink)}
+.verdict.good{border-color:#5fe08a55;background:#5fe08a0e}.verdict.good b{color:var(--green)}
+.verdict.bad{border-color:#ff616155;background:#ff61610e}.verdict.bad b{color:var(--rose)}
+.verdict.mid{border-color:#ffd16655;background:#ffd1660e}.verdict.mid b{color:var(--gold)}
+.gapCallout{background:#20160f;border:1px solid #ffd16655;border-radius:12px;padding:14px 18px;margin-top:16px;font-size:14px;color:var(--ink2)}
+.gapCallout b{color:var(--gold)}
+.twoCol{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
+@media(max-width:820px){.twoCol{grid-template-columns:1fr}}
+.colCard{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.colCard .ct{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+.colCard p{font-size:13.5px}
+.chalCard{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:18px 0;overflow:hidden;transition:.25s}
+.chalCard.open{border-color:#3dd6c366}
+.chalHead{display:flex;align-items:center;gap:14px;padding:18px 22px;cursor:pointer}
+.chalHead .cn{font-family:var(--mono);font-size:12px;color:var(--teal);border:1px solid #3dd6c355;border-radius:8px;padding:4px 10px;font-weight:700}
+.chalHead h4{font-family:var(--serif);font-size:19px;flex:1}
+.chalHead .chev{font-family:var(--mono);color:var(--ink3);transition:.3s}
+.chalCard.open .chev{transform:rotate(90deg);color:var(--teal)}
+.chalBody{display:none;padding:0 22px 22px}
+.chalCard.open .chalBody{display:block;animation:fadeUp .4s ease}
+.chalBody .cLabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin:16px 0 6px}
+.chalBody .mission{color:var(--ink2);font-size:14.5px}
+/* ---- Class 13 additions — agent-loop visual language (inherited, still used) ---- */
+.canvasStrip{display:flex;flex-wrap:wrap;align-items:center;gap:7px;background:#0a0d12;border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+.cNode{font-family:var(--sans);font-weight:700;font-size:12px;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 13px;cursor:pointer;transition:.25s;position:relative;white-space:nowrap}
+.cNode:hover{border-color:var(--orange)}
+.cNode .ci{font-size:14px;margin-right:5px}
+.cNode.sel{border-color:var(--orange);background:var(--orange-dim);color:var(--orange2)}
+.cNode.run{border-color:var(--gold);color:var(--gold);animation:pulse .8s infinite}
+.cNode.ok{border-color:#5fe08a88;color:var(--green);background:#5fe08a10}
+.cNode.err{border-color:var(--red);color:var(--red);background:#ff616112}
+.cNode.skip{opacity:.3}
+.switchRow{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:13px 17px;margin:9px 0}
+.switchRow .swl{font-size:13.5px;color:var(--ink2)}
+.switchRow .swl b{color:var(--ink);display:block;font-size:14.5px;margin-bottom:2px}
+.swBtn{font-family:var(--mono);font-weight:700;font-size:11.5px;letter-spacing:.06em;border:1px solid var(--line);background:#141b26;color:var(--ink3);border-radius:100px;padding:7px 16px;cursor:pointer;transition:.2s;min-width:64px;text-align:center}
+.swBtn.on{border-color:var(--green);background:#5fe08a1a;color:var(--green)}
+.transcriptCard{background:#0f141b;border:1px solid var(--line);border-radius:14px;padding:0;margin-top:16px;overflow:hidden}
+.transcriptCard .th{background:#141b26;border-bottom:1px solid var(--line);padding:10px 16px;font-family:var(--mono);font-size:11px;color:var(--ink3);display:flex;justify-content:space-between}
+.transcriptCard .tb{padding:16px 18px;font-size:13.5px;color:var(--ink2);line-height:1.7;white-space:pre-wrap;min-height:70px}
+.choiceRow{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+.choiceBtn{display:flex;gap:12px;align-items:flex-start;text-align:left;background:#141b26;border:1px solid var(--line);border-radius:12px;padding:12px 16px;cursor:pointer;transition:.2s;font-family:var(--sans);font-size:13.5px;color:var(--ink2)}
+.choiceBtn:hover{border-color:var(--orange)}
+.choiceBtn.good{border-color:var(--green);background:#5fe08a12;color:var(--ink)}
+.choiceBtn.bad{border-color:var(--rose);background:#ff6b8b12;color:var(--ink)}
+.choiceBtn .cico{font-size:16px;flex-shrink:0}
+.alarmMeter{background:#0a0d12;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:14px}
+.alarmBar{height:16px;border-radius:100px;background:#181f2b;overflow:hidden;margin:12px 0 8px;border:1px solid var(--line)}
+.alarmFill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--green),var(--gold),var(--red));width:0%;transition:width .25s linear}
+.alarmEnds{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.verifyHead{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+.verifySteps{list-style:none;counter-reset:vs;margin:0;padding:0}
+.verifySteps li{counter-increment:vs;position:relative;padding:0 0 0 34px;margin:0 0 12px;font-size:13.5px;color:var(--ink2);line-height:1.6}
+.verifySteps li:last-child{margin-bottom:0}
+.verifySteps li::before{content:counter(vs);position:absolute;left:0;top:1px;width:22px;height:22px;border-radius:100px;background:#141b26;border:1px solid var(--line);color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center}
+.verifySteps li b{color:var(--ink)}
+.verifySteps li code{background:#141b26;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px;color:var(--gold);white-space:nowrap}
+.realGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+@media(max-width:820px){.realGrid{grid-template-columns:1fr}}
+.realCard{background:linear-gradient(180deg,#1a1113,#161b24);border:1px solid #ff6b8b3a;border-radius:14px;padding:20px 22px}
+.realCard .rtag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--rose);font-weight:700;margin-bottom:10px}
+.realCard h4{font-size:16.5px;margin-bottom:8px;color:var(--ink)}
+.realCard p{font-size:14px;color:var(--ink2);line-height:1.65}
+.realCard p b{color:var(--ink)}
+/* ---- Class 14 additions — tools/memory/MCP visual language (inherited, still used) ---- */
+.trayRow{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.trayBtn{font-family:var(--sans);font-weight:700;font-size:13px;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:12px;padding:12px 18px;cursor:pointer;transition:.2s;flex:1;min-width:140px;text-align:center}
+.trayBtn:hover{border-color:var(--orange)}
+.trayBtn:disabled{opacity:.35;cursor:not-allowed}
+.queueStrip{display:flex;flex-wrap:wrap;gap:10px;min-height:56px;background:#0a0d12;border:1px solid var(--line);border-radius:14px;padding:14px;margin:14px 0}
+.queueCard{font-family:var(--sans);font-size:13px;font-weight:600;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;cursor:pointer;transition:.2s;max-width:260px;animation:popIn .3s ease}
+.queueCard:hover{border-color:var(--teal)}
+.queueCard.sel{border-color:var(--orange);background:var(--orange-dim);color:var(--orange2)}
+.ruleList{list-style:none;margin:16px 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ruleItem{display:flex;align-items:center;gap:12px;background:#141b26;border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.ruleItem .rn{font-family:var(--mono);font-size:11px;color:var(--ink3);min-width:18px}
+.ruleItem .rl{flex:1;font-size:13.5px;color:var(--ink2)}
+.ruleItem .rl b{color:var(--ink)}
+.ruleArrows{display:flex;flex-direction:column;gap:2px}
+.ruleArrows button{font-family:var(--mono);font-size:11px;background:#0a0d12;color:var(--ink3);border:1px solid var(--line);border-radius:6px;width:24px;height:20px;cursor:pointer}
+.ruleArrows button:hover:not(:disabled){border-color:var(--orange);color:var(--orange)}
+.ruleArrows button:disabled{opacity:.25;cursor:not-allowed}
+.memBank{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+@media(max-width:820px){.memBank{grid-template-columns:1fr}}
+.memLane{background:#0a0d12;border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-height:110px}
+.memLane .ml-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+.memFact{font-size:12.5px;color:var(--ink2);background:#141b26;border:1px solid var(--line);border-radius:8px;padding:7px 11px;margin-bottom:7px}
+.memFact.empty{color:var(--ink3);font-style:italic;background:transparent;border-style:dashed}
+.memFact b{color:var(--teal)}
+.mcpMatrix{display:grid;gap:6px;margin:16px 0;justify-content:start}
+.mcpCell{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#141b26;border:1px solid var(--rose);border-radius:8px;font-size:14px}
+.mcpHub{display:flex;align-items:center;justify-content:center;gap:22px;margin:20px 0;flex-wrap:wrap}
+.hubCol{display:flex;flex-direction:column;gap:8px}
+.hubChip{font-family:var(--sans);font-weight:700;font-size:12px;background:#141b26;border:1px solid #5fe08a55;color:var(--green);border-radius:9px;padding:8px 12px;white-space:nowrap}
+.hubCenter{font-family:var(--serif);font-weight:640;font-size:16px;color:var(--teal);background:var(--teal-dim);border:1px solid #3dd6c355;border-radius:16px;padding:16px 20px;text-align:center}
+.stepperRow{display:flex;gap:24px;flex-wrap:wrap;margin:16px 0}
+.stepperGroup{display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:var(--ink3)}
+.stepperGroup>div{display:flex;align-items:center;gap:10px}
+.stepperBtn{font-family:var(--mono);font-weight:700;font-size:15px;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:8px;width:30px;height:30px;cursor:pointer}
+.stepperBtn:hover{border-color:var(--orange);color:var(--orange)}
+.stepperVal{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--ink);min-width:20px;text-align:center}
+.consentCard{background:#0a0d12;border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin:16px 0}
+.consentCard .cc-h{font-family:var(--serif);font-size:16.5px;font-weight:600;color:var(--ink);margin-bottom:14px}
+.scopeRow{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.scopeRow:last-of-type{border-bottom:none}
+.scopeRow div{font-size:13px;color:var(--ink2)}
+.scopeRow div b{display:block;color:var(--ink);font-size:14px;margin-bottom:1px}
+.scopeCheck{width:22px;height:22px;flex-shrink:0;border-radius:6px;border:1px solid var(--line);background:#141b26;cursor:pointer;margin-top:2px;color:transparent}
+.scopeCheck.on{background:var(--green);border-color:var(--green);color:#0a0d12;font-weight:700;font-size:14px;line-height:20px}
+/* ---- Class 15 additions — no-code agent-builder visual language ---- */
+.reqList{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.reqRow{display:flex;align-items:center;gap:12px;background:#0a0d12;border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13.5px;color:var(--ink2);transition:.2s}
+.reqRow .rq-i{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.reqRow.met{border-color:#5fe08a55;color:var(--ink)}
+.reqRow.met .rq-i{color:var(--green)}
+.reqRow.unmet .rq-i{color:var(--ink3)}
+.docPreview{background:#f4f2ee;color:#1a1a1a;border-radius:12px;padding:0;margin-top:16px;overflow:hidden;box-shadow:0 10px 30px #00000055;animation:fadeUp .4s ease}
+.docPreview .dp-h{background:#e8e6e1;border-bottom:1px solid #d4d1ca;padding:10px 18px;font-family:var(--sans);font-size:12px;color:#555;display:flex;align-items:center;gap:8px}
+.docPreview .dp-b{padding:22px 26px 26px}
+.docPreview .dp-b .dp-title{font-family:var(--serif);font-size:17px;font-weight:600;color:#111;margin-bottom:12px}
+.docPreview .dp-b .dp-body p{color:#333;font-size:13.5px;line-height:1.6;margin-bottom:8px}
+.backoffTrack{display:flex;align-items:flex-end;gap:10px;background:#0a0d12;border:1px solid var(--line);border-radius:14px;padding:20px 18px 14px;margin-top:14px;min-height:130px}
+.attemptBlock{display:flex;flex-direction:column;align-items:center;gap:6px;transition:.3s}
+.attemptBlock .ab-bar{width:36px;border-radius:6px 6px 0 0;background:#33405266;transition:.3s}
+.attemptBlock.pending .ab-bar{background:#33405266}
+.attemptBlock.active .ab-bar{background:var(--gold);animation:pulse .7s infinite}
+.attemptBlock.ok .ab-bar{background:var(--green)}
+.attemptBlock.fail .ab-bar{background:var(--red)}
+.attemptBlock .ab-l{font-family:var(--mono);font-size:10px;color:var(--ink3);text-align:center;line-height:1.4}
+.tabRow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tabBtn{font-family:var(--sans);font-weight:700;font-size:13px;background:#141b26;color:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:9px 16px;cursor:pointer;transition:.2s}
+.tabBtn:hover{border-color:var(--orange)}
+.tabBtn.on{background:var(--orange-dim);border-color:var(--orange);color:var(--orange2)}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/automation/">No-code automation &amp; chatbots</a><span class="t">· AI Beginners 15 · Building agents without code</span><span class="p"><b>Class</b><a href="../beginner-15-post_read/">Post-read</a></span><span class="pn"><a href="../Academy-AI-class-8/" title="AI Academy 8 · Agents in n8n: tools, memory, approval">← Prev</a><a href="../AI-beginners-class7/" title="AI Beginners 7 · No-code AI chatbots">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progressBar"></div>
+<nav class="topnav"><div class="wrap">
+<span class="brand">🧭 Scaler AIML · Class 15</span>
+<a class="nl" href="#open">The Ask</a>
+<a class="nl" href="#concept">Brains, Tools &amp; Chaining</a>
+<a class="nl" href="#build1">Build 1</a>
+<a class="nl" href="#build2">Build 2</a>
+<a class="nl" href="#build3">Build 3</a>
+<a class="nl" href="#relevance">Relevance AI</a>
+<a class="nl" href="#takehome">Take-Home</a>
+<a class="nl" href="#wrap">Wrap-Up</a>
+</div></nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero"><div class="wrap">
+  <div class="eyebrow">
+    <span class="chip hot">CLASS 15 / SESSION SCRIPT</span>
+    <span class="chip">⏱ ~98 MINUTES</span>
+    <span class="chip cool">GROUNDWIRE CONTINUES</span>
+    <span class="chip">NO-CODE AGENT BUILDERS</span>
+    <span class="chip">REAL WEB RESEARCH</span>
+  </div>
+  <h1>Building Agents Without Code — <span class="amp">Two Builders, One Brain</span></h1>
+  <p class="sub"><b>Last class solved speed and memory for Groundwire's own tips. Imran's next question was sharper: what's actually reading all this before it goes out?</b> Today Zara builds something that doesn't just sort Advait's messages — it goes and researches a real claim, on the real open web, checks itself, and hands back a sourced brief. Then you'll build that exact same shape again, on another no-code canvas, so you're comparing them yourself instead of taking anyone's word for which is "best."</p>
+
+  <div class="slackDrop" style="margin-top:32px">
+    <div class="av">📻</div>
+    <div><span class="nm">Imran → Groundwire newsroom</span><span class="tm">9:10 AM · Monday</span>
+    <p>"That flood-tip sorter is great for our own tips. But Advait's pitching a real story on flood-warning tech next week, and I want someone — something — that can actually go dig into it properly. Real sources, not vibes. Can we build that without hiring a researcher?"</p></div>
+  </div>
+  <p style="font-family:var(--mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--orange2);margin-top:14px">🔎🧠📄 Today's rule: a real brain, real tools, a real topic — nothing about today's research is made up.</p>
+
+  <div class="heroStats">
+    <div class="hstat"><div class="n" data-count="2">0</div><div class="l">No-Code Builders Compared</div></div>
+    <div class="hstat"><div class="n" data-count="3">0</div><div class="l">Live Simulators</div></div>
+    <div class="hstat"><div class="n" data-count="3">0</div><div class="l">Checkpoint Quizzes</div></div>
+    <div class="hstat"><div class="n" data-count="3">0</div><div class="l">New Free Signups Today</div></div>
+  </div>
+  <div class="agenda">
+    <h3>Today's Flight Plan · ~98 Minutes</h3>
+    <div class="agRow"><span class="t">00:00–00:06</span><span class="name">The Ask</span><span class="tag">SETUP</span></div>
+    <div class="agRow"><span class="t">00:06–00:18</span><span class="name">Concept — Brains, Tools &amp; Chaining</span><span class="tag simtag">SIM + QUIZ</span></div>
+    <div class="agRow"><span class="t">00:18–00:36</span><span class="name">Build 1 — n8n's Smallest Research Agent</span><span class="tag simtag">BUILD + SIM</span></div>
+    <div class="agRow"><span class="t">00:36–00:52</span><span class="name">Build 2 — Give It Hands &amp; A Notebook</span><span class="tag simtag">BUILD + QUIZ</span></div>
+    <div class="agRow"><span class="t">00:52–01:06</span><span class="name">Build 3 — Make It Reliable</span><span class="tag simtag">BUILD + SIM + QUIZ</span></div>
+    <div class="agRow"><span class="t">01:06–01:12</span><span class="name">☕ Stretch break</span><span class="tag">BREAK</span></div>
+    <div class="agRow"><span class="t">01:12–01:26</span><span class="name">Relevance AI — Same Shape, Drag-and-Drop</span><span class="tag">BUILD</span></div>
+    <div class="agRow"><span class="t">01:26–01:32</span><span class="name">Take-Home — Build It Yourself</span><span class="tag simtag">3 CHALLENGES</span></div>
+    <div class="agRow"><span class="t">01:32–01:38</span><span class="name">Wrap-Up — Key Takeaways</span><span class="tag">NO SIM</span></div>
+  </div>
+</div></header>
+
+<!-- ============ SECTION: OPEN ============ -->
+<section class="blk" id="open"><div class="wrap">
+  <div class="secHead"><span class="secNum">SETUP</span><h2>The Ask</h2><span class="secTime">⏱ 6 min</span></div>
+  <p class="secLede">Same newsroom, same cast. This time the question isn't "can it keep up" — it's "can I trust what it hands back."</p>
+
+  <div class="card" style="border-color:#3dd6c344">
+    <h4 style="color:var(--teal)">Groundwire Newsroom · Monday, 9:10 AM</h4>
+    <p style="font-size:14.5px;margin-bottom:14px">Advait wants to pitch a real feature on flood early-warning technology — not a Groundwire tip, an actual story that needs actual research. Imran doesn't want Zara spending a day on background reading before anyone even knows if there's a story here. Priya's concern is blunter: whatever comes back had better be able to show its sources, because she's the one who signs off before it goes to print.</p>
+    <table class="tbl">
+      <tr><th>Who</th><th>What they need from today's build</th></tr>
+      <tr><td>Advait</td><td>A fast first pass on a real topic — enough to know if the story's worth chasing</td></tr>
+      <tr><td>Imran</td><td>Something built without hiring anyone or writing code</td></tr>
+      <tr><td>Priya</td><td>Sources she can actually check, not confident-sounding guesses</td></tr>
+    </table>
+  </div>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says — Cold Open</span>
+    <p>"Every build today produces something you can genuinely check — a real Google Doc, with real search results behind it, on a topic you pick yourself. That's a deliberate choice: an agent that researches fiction to prove it works isn't actually proof of anything. Today it has to work on the real internet, live, in front of you."</p>
+    <p>"You're also going to build the <em>same</em> agent three separate times, on three different no-code canvases. That's not busywork — it's the only honest way to compare them. Nobody has to trust my opinion on which tool is 'best' when you've personally felt the difference."</p>
+  </div>
+
+  <div class="note beg"><b>Beginner Note — why real topics, not Groundwire lore:</b> every past class researched things happening inside Groundwire's own fictional newsroom. Today's agent researches something true, on the open web, that you could show a friend afterward. That's the whole point of a research agent — it only earns trust by being checkable.</div>
+</div></section>
+
+<!-- ============ SECTION: CONCEPT ============ -->
+<section class="blk" id="concept"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 1</span><h2>Concept — Brains, Tools &amp; Chaining</h2><span class="secTime">⏱ 12 min</span></div>
+  <p class="secLede">Quick recap, then two genuinely new ideas: which brain you're plugging in today, and what it actually means for an agent to use more than one tool in a row.</p>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says</span>
+    <p>"Class 13 introduced the AI Agent node as a first look — concept only. Class 14 built one, wired to two directory connectors inside Claude. Today's different in one specific way: you're connecting the brain yourself, by API key, and choosing what it's allowed to reach for. That's the difference between using someone else's finished assistant and actually building the agent from its parts."</p>
+  </div>
+
+  <div class="defBox">
+    <div class="term">The Brain</div>
+    <p>The actual language model doing the reasoning — attached to the Agent node by an API key, not built in. Today's brain runs on <b>Groq</b>, the fast-inference API. Swap the key and model name later, and the rest of the build doesn't change — that's the whole point of the Agent/Model split.</p>
+  </div>
+  <div class="defBox" style="margin-top:-8px">
+    <div class="term">Tool Chaining</div>
+    <p>An agent calling more than one tool in a single run, using what one tool returned to decide what to do next — not a fixed sequence you wrote in advance. Search first, then write, only because the brain decided that order made sense for this task.</p>
+  </div>
+
+  <div class="analogy">
+    <div class="ic">🕵️</div>
+    <div><div class="tt">Hiring A Researcher, Not Buying A Search Engine</div>
+    <p>A search engine gives you links back. What you're building today is closer to <b>hiring a junior researcher</b>: give them a mind (the brain), a search subscription and a stack of blank documents (the tools), and a notepad (memory) — then hand them a topic and let them decide, on their own, what to look up first and when they've got enough to write something up.</p></div>
+  </div>
+
+  <div class="note pro"><b>Getting Groq's API key — do this now, it takes two minutes:</b> go to <b>console.groq.com</b>, sign up with email, Google, or GitHub (no credit card needed), and you land straight on the dashboard — Groq's free tier is rate-limited, not a dollar credit, so there's nothing that expires. Open <b>API Keys → Create API Key</b> and copy it somewhere safe; it's shown to you exactly once. We'll use it in Build 1.</div>
+
+  <div class="note beg"><b>Beginner Note — which model:</b> Groq hosts several open-weight models on its own fast-inference hardware; today we're using <b>GPT-OSS 20B</b> — the cheapest, fastest option in the lineup, plenty capable for research-and-summarize work, and comfortably inside the free tier's rate limits for a whole classroom. Model names shift fast in this industry — if you don't see that exact name, pick whichever is listed as the cheapest/fastest current Groq model.</div>
+
+  <div class="note"><b>Concept preview — sub-workflow as a tool:</b> n8n lets an entire separate workflow be wired in as a single callable tool for an agent — handy for reusing a complex routine across several builds without redrawing it each time. We're not building this today (it's Build 3's closing concept note), but keep it in mind as "what's next" once today's shape feels familiar.</div>
+
+  <div class="sim">
+    <h3>🧰 SIM 1 · Load The Toolbox</h3>
+    <p class="simSub">Here's today's task: <em>"Research a real topic, then save a written brief."</em> Click tools on and off below and watch which needs actually get covered — and notice what happens when you attach more than the task needs.</p>
+    <div class="pickRow" id="toolboxPalette"></div>
+    <div class="reqList" id="toolboxReqs"></div>
+    <div class="verdict" id="toolboxVerdict" style="display:none"></div>
+  </div>
+
+  <div class="quiz">
+    <p class="q">Quiz 1 · In today's build, what's the actual difference between "the Chat Model" attached to the AI Agent node, and "a Tool" attached to it?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span><span>They're two names for the exact same connection</span></div>
+    <div class="opt" data-r="c"><span class="ab">B</span><span>The Chat Model is what reasons and decides what to do; a Tool is a capability it can call to actually act on the world</span></div>
+    <div class="opt" data-r="w"><span class="ab">C</span><span>A Tool is required for the Agent to run at all; the Chat Model is optional</span></div>
+    <div class="opt" data-r="w"><span class="ab">D</span><span>You can only ever attach one Tool to a single Agent node</span></div>
+    <div class="quizWhy"><b>Why B?</b> The Model port is the brain — it's what thinks, plans, and decides which tool (if any) a step needs. The Tool port is the hands — each attached tool is one specific capability (search the web, write a doc, do math) the brain can choose to invoke. Neither is optional and neither is a stand-in for the other: no Model means nothing can reason at all; no Tools means the brain can only talk, never act.</div>
+  </div>
+</div></section>
+
+<!-- ============ SECTION: BUILD 1 ============ -->
+<section class="blk" id="build1"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 2</span><h2>Build 1 — n8n's Smallest Research Agent</h2><span class="secTime">⏱ 18 min</span></div>
+  <p class="secLede">Smallest thing that genuinely works: a trigger, a brain, one tool. Get this running before anything else gets added.</p>
+
+  <div class="card">
+    <h4>Two Free Accounts You Need First</h4>
+    <div class="verifyHead">▸ Do this live, together — takes about 4 minutes total</div>
+    <ol class="verifySteps">
+      <li><b>Groq (the brain):</b> at <b>console.groq.com</b>, sign up with email, Google, or GitHub — no card. You land on a dashboard with a free, rate-limited tier already active. Open <b>API Keys → Create API Key</b> and copy it.</li>
+      <li><b>SerpApi (the search tool):</b> at <b>serpapi.com</b>, sign up free — no card. The free plan covers roughly <b>100 searches a month</b>, plenty for today. On your dashboard, copy the <b>Private API Key</b>.</li>
+    </ol>
+  </div>
+
+  <div class="note beg"><b>Beginner Note — real cost check:</b> GPT-OSS 20B on Groq's free tier costs nothing to run — it's metered in requests-per-minute, not dollars. A room of 40 people each running this two or three times stays well inside the limit — nobody needs to worry about the bill today.</div>
+
+  <div class="card">
+    <h4>The Build</h4>
+    <div class="verifyHead">▸ Node by node</div>
+    <ol class="verifySteps">
+      <li><b>Open the n8n workflow you already built in Class 14 — do not start a new one.</b> That workflow has a Chat Trigger and an AI Agent node on it already; today's build extends it with a real search tool. If you genuinely don't have it (missed that class, or it's gone), only then create a new workflow and add a <code>Chat Trigger</code> node — same hosted test-chat window from Class 13, no account needed.</li>
+      <li>Confirm an <b>AI Agent</b> node is connected after the Chat Trigger. It should already be there from Class 14 — if not, add one now.</li>
+      <li>Click the dangling connector under the Agent labeled <b>Chat Model</b>. Search <code>Groq</code>, add the <b>Groq Chat Model</b> node. Create a new credential, paste your Groq API key, save. Set the model to <code>openai/gpt-oss-20b</code> (or whichever is listed as the current cheapest/fastest Groq model).</li>
+      <li>In the Agent's <b>System Message</b> / prompt field, replace whatever's there with: <code class="k">You are Groundwire's research assistant. When asked to search a topic, search for current, real information and summarise it clearly with sources.</code></li>
+      <li>Click the Agent's <b>Tool</b> connector, search <code>SerpApi</code>, add it as a Tool. Create a new credential with your SerpApi key, save.</li>
+      <li>On the SerpApi tool node, set <b>Search Query (q)</b> to <b>Defined automatically by the model</b>, and set its description to <code class="k">The query that the user is asking</code>. Then open <b>Additional Fields</b> and add a new field named <code>jsonRestrictor</code>; in its input box write something like <code class="k">organic_results[1:2]</code>. This tells the search API not to return its entire JSON result — just a small slice of it. Without this, the full unfiltered response goes straight to the LLM and can blow past its token limit, causing errors. Limiting the response at the API level avoids that entirely.</li>
+      <li>Open the test chat (top bar) and type something simple to confirm the wiring works, e.g. <code class="k">Search for "Herbivorous" and tell me what you find.</code></li>
+    </ol>
+  </div>
+
+  <div class="note"><b>What to watch for (the ReAct loop, running for real):</b> the Agent names the tool it's about to call before calling it (Think), the SerpApi node lights up as it runs (Act), and the reply that comes back references specific results rather than a vague, generic summary (Observe feeding the final answer). This is Class 13's loop, on a real topic, for the first time.</div>
+
+  <div class="note pro"><b>⏱ Compression flag:</b> if signups are eating the clock, pre-create both accounts and share one demo API key pair with the room via chat — get everyone to a working test chat first, then circle back to "get your own key" as the very first take-home item.</div>
+
+  <div class="sim">
+    <h3>🔬 SIM 2 · Watch It Research</h3>
+    <p class="simSub">Pick a real topic, hit Run, and watch the exact trace your own build just produced — ending in the doc it would actually hand you.</p>
+    <div class="pickRow" id="watchPicker"></div>
+    <div class="canvasStrip" id="watchStrip"></div>
+    <div class="transcriptCard"><div class="th"><span>AGENT TRACE</span><span>LIVE RUN</span></div><div class="tb" id="watchTranscript">Pick a topic above, then press Run.</div></div>
+    <button class="btn" id="watchRun" style="margin-top:14px">▶ Run</button>
+    <div class="docPreview" id="watchDoc" style="display:none">
+      <div class="dp-h">📄 Google Docs — new document</div>
+      <div class="dp-b"><div class="dp-title"></div><div class="dp-body"></div></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============ SECTION: BUILD 2 ============ -->
+<section class="blk" id="build2"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 3</span><h2>Build 2 — Give It Hands &amp; A Notebook</h2><span class="secTime">⏱ 16 min</span></div>
+  <p class="secLede">One new idea, in two small pieces: somewhere to actually write the output, and somewhere to remember what it already found.</p>
+
+  <div class="card">
+    <h4>Add Google Docs — As A Step After The Agent, Not As A Tool</h4>
+    <div class="verifyHead">▸ Node by node</div>
+    <ol class="verifySteps">
+      <li>If you haven't already connected a Google account in n8n (from Class 11 or 14), do that first — Credentials → New → Google Docs → sign in and approve.</li>
+      <li><b>Don't</b> click the Agent's Tool connector this time. Instead, drag a plain <b>Google Docs</b> node onto the canvas from the regular node panel, and connect it to the AI Agent node's own <b>main output</b> — the same kind of connection Chat Trigger → AI Agent uses, not the Tool/Memory ports underneath it.</li>
+      <li>In your Drive, create one blank Google Doc yourself first (e.g. titled <code class="k">Research Brief</code>) and copy its URL — this is the doc every run will write into. Set the node's operation to <b>Update Document</b>, not Create Document. In the <b>Doc ID / URL</b> field, paste that URL. Under its actions, add one action, and in <b>Action Field 1's Text</b> input, switch to <b>Expression</b> and map it to the Agent's finished reply: <code class="k">{{ $('AI Agent').item.json.output }}</code></li>
+      <li>SerpApi stays the Agent's only Tool. Google Docs now runs automatically, once, right after the Agent finishes replying, updating that same document every time — not something the Agent decides to invoke.</li>
+    </ol>
+  </div>
+
+  <div class="note pro"><b>Why not just add it as a second Tool — the actual bug you'll hit:</b> when a big-output node like Google Docs sits on the Agent's <b>Tool</b> port, the model has to reproduce the <em>entire document body</em> as an escaped string argument inside its own tool-call JSON — it's regenerating the whole brief a second time, inside a function call, instead of just handing off text it already wrote. That's exactly where long research briefs blow past what a fast, smaller model like Groq's oss-20b can reliably produce — the call comes back truncated or malformed, and nothing lands in the doc. This is a well-documented n8n community pain point, not something you did wrong. Wiring Docs downstream instead means the already-finished text just flows through as ordinary node data — no regeneration, no JSON-escaping, and no token ceiling on the write step at all.</div>
+
+  <div class="card">
+    <h4>Add Short-Term Memory</h4>
+    <div class="verifyHead">▸ Node by node</div>
+    <ol class="verifySteps">
+      <li>Click the Agent's <b>Memory</b> connector, search <code>Simple Memory</code>, add it. No configuration needed beyond the default.</li>
+      <li>This is exactly the short-term memory node from Class 14's memory section — a scratchpad for this run, gone once the session ends.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h4>Test It</h4>
+    <p style="font-size:14.5px">In the test chat: <em>"Research AI-powered flood early-warning systems — what's actually being deployed in 2026? Give me 3-4 key points with sources."</em> Google Docs fires automatically once the Agent replies — open the doc whose URL you pasted and you'll see it now holds that reply. Then, without repeating the topic, follow up in the <b>same chat</b>: <em>"Add a one-line caveat about the biggest adoption blocker, and give me the complete updated brief."</em> That second reply triggers Google Docs again, writing the updated brief — caveat folded in — into that same document.</p>
+  </div>
+
+  <div class="note adv"><b>Advanced Note — that follow-up only worked because of memory:</b> without Simple Memory, "add a one-line caveat" is a sentence fragment with no topic attached — the Agent has no idea what to caveat, let alone what the "complete updated brief" should contain. With it, the scratchpad still holds the topic and what it already found, so the follow-up resolves correctly and the Docs step downstream has a full, fresh brief to save. This is short-term memory earning its keep, not just a theory slide.</div>
+
+  <div class="note beg"><b>Beginner Note — not every action needs to be a Tool:</b> SerpApi sits on the Tool port because the Agent genuinely has to decide, mid-run, whether and when to search. Saving the finished brief doesn't need that kind of judgment call — it happens every time, after the Agent is done. Treating it as a deterministic step instead of a Tool is what makes it reliable.</div>
+
+  <div class="quiz">
+    <p class="q">Quiz 2 · SerpApi is wired to the Agent's Tool port; Google Docs is wired to the Agent's main output instead. Why the different wiring for the two?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span><span>n8n only allows one Tool per Agent node, so Docs had nowhere else to go</span></div>
+    <div class="opt" data-r="c"><span class="ab">B</span><span>SerpApi needs the Agent to actively decide, mid-run, whether and when to call it — but writing the finished brief is a fixed last step, and making the model regenerate the whole document inside a tool-call argument is exactly what caused the token-limit failures</span></div>
+    <div class="opt" data-r="w"><span class="ab">C</span><span>Google Docs isn't compatible with AI Agent workflows in n8n at all</span></div>
+    <div class="opt" data-r="w"><span class="ab">D</span><span>Wiring position is arbitrary — both ports behave identically either way</span></div>
+    <div class="quizWhy"><b>Why B?</b> A Tool is for something the model needs to reason about calling — SerpApi, because search is only useful if and when the Agent decides it needs fresh information. Google Docs doesn't need that judgment call here; it always runs once the Agent is done. Putting it on the Tool port anyway forces the model to reproduce the entire finished document as a JSON argument inside its own tool call — regenerating text it already wrote, which is exactly where longer briefs exceeded what the model could reliably output. Downstream wiring passes the same text through as plain node data instead — same result, without the regeneration step that was breaking it.</div>
+  </div>
+</div></section>
+
+<!-- ============ SECTION: BUILD 3 ============ -->
+<section class="blk" id="build3"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 4</span><h2>Build 3 — Make It Reliable</h2><span class="secTime">⏱ 14 min</span></div>
+  <p class="secLede">No new node types today — just settings that decide what happens when something actually goes wrong, plus deliberately breaking it to check.</p>
+
+  <div class="card">
+    <h4>Max Iterations</h4>
+    <p style="font-size:14.5px">Open the <b>AI Agent</b> node → <b>Options</b> (or Settings, depending on your n8n version) → find <b>Max Iterations</b> and set it to <code class="k">8</code>. This caps how many tool calls a single run can make before the Agent is forced to stop and return whatever it has — the same safeguard from Class 11's Build 3, now protecting a build that can genuinely loop on ambiguous research tasks.</p>
+  </div>
+
+  <div class="card">
+    <h4>Retry On Fail</h4>
+    <p style="font-size:14.5px">On <b>both</b> nodes that call an external service (the SerpApi tool and the Google Docs step), open <b>Settings</b> → toggle <b>Retry On Fail</b> ON, set <b>Max Tries</b> to <code class="k">3</code>. A single dropped connection or a slow API response no longer kills the whole run.</p>
+  </div>
+
+  <div class="card">
+    <h4>Break It On Purpose</h4>
+    <div class="verifyHead">▸ Two deliberate test prompts</div>
+    <ol class="verifySteps">
+      <li><b>Empty-results test:</b> <code class="k">Research the 2026 quarterly filings of a startup called "Nexolume Grid Systems."</code> — this company doesn't exist. Watch for the agent to report it couldn't find credible information, not invent numbers to fill the gap.</li>
+      <li><b>Too-broad test:</b> <code class="k">Research artificial intelligence.</code> — vague enough to trigger many searches. Max Iterations should cut it off with a partial, honest answer rather than spiralling.</li>
+    </ol>
+  </div>
+
+  <div class="note"><b>Concept only — sub-workflow as a tool:</b> a whole separate n8n workflow (say, a 10-step fact-checking routine) can be wired in as one callable tool via the <b>Execute Workflow Tool</b> node type — the Agent calls it exactly like it calls SerpApi. Not building this today; it's take-home challenge 3.</div>
+
+  <div class="sim">
+    <h3>🪜 SIM 3 · The Backoff Ladder</h3>
+    <p class="simSub">Set how many retries you're willing to allow, pick a query behaviour, then run it and watch each attempt play out.</p>
+    <div class="stepperRow">
+      <div class="stepperGroup"><span>Max Tries</span><div><button class="stepperBtn" id="tryMinus">−</button><span class="stepperVal" id="tryVal">3</span><button class="stepperBtn" id="tryPlus">+</button></div></div>
+    </div>
+    <div class="pickRow" id="backoffPicker"></div>
+    <div class="backoffTrack" id="backoffTrack"></div>
+    <button class="btn" id="backoffRun" style="margin-top:14px">▶ Run</button>
+    <div class="runLog" id="backoffLog"></div>
+    <div class="verdict" id="backoffVerdict" style="display:none"></div>
+  </div>
+
+  <div class="quiz">
+    <p class="q">Quiz 3 · Max Iterations is set to 8 and you ask a genuinely impossible research question. What should actually happen?</p>
+    <div class="opt" data-r="w"><span class="ab">A</span><span>The agent keeps trying indefinitely until you close the tab</span></div>
+    <div class="opt" data-r="w"><span class="ab">B</span><span>The whole n8n workflow crashes and needs to be rebuilt</span></div>
+    <div class="opt" data-r="c"><span class="ab">C</span><span>After 8 tool calls, the agent stops and returns whatever it has instead of looping indefinitely</span></div>
+    <div class="opt" data-r="w"><span class="ab">D</span><span>Max Iterations only limits how long you personally can chat, not how many tools it calls</span></div>
+    <div class="quizWhy"><b>Why C?</b> Max Iterations is a hard ceiling on tool calls within one run, not a chat-length limit and not a crash trigger. Hitting it forces a graceful stop — the agent reports back with whatever it's got, honestly incomplete, rather than looping forever chasing an answer that may not exist.</div>
+  </div>
+</div></section>
+
+<!-- ============ BREAK ============ -->
+<section class="blk"><div class="wrap">
+  <div class="card" style="text-align:center;border-color:#a48bff33">
+    <h4 style="color:var(--violet)">☕ Six-Minute Break</h4>
+    <p style="font-size:14px">When we're back: the exact same agent, rebuilt twice, on two canvases that don't look anything like n8n's.</p>
+  </div>
+</div></section>
+
+<!-- ============ SECTION: RELEVANCE AI ============ -->
+<section class="blk" id="relevance"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 5</span><h2>Relevance AI — Same Shape, Drag-and-Drop</h2><span class="secTime">⏱ 14 min</span></div>
+  <p class="secLede">Same trigger-brain-tool shape as Builds 1 and 2 — but the whole agent lives inside one object instead of separate wired nodes.</p>
+
+  <div class="note beg"><b>Beginner Note — this is genuinely free:</b> Relevance AI's Free plan gives you <b>200 Actions a month plus 1,000 one-time Vendor Credits</b>, no credit card to sign up. That easily covers today's single agent and a handful of test runs.</div>
+
+  <div class="card">
+    <h4>Build It</h4>
+    <div class="verifyHead">▸ Node by node</div>
+    <ol class="verifySteps">
+      <li>Go to <b>relevanceai.com</b> and sign up free — no card.</li>
+      <li>From the dashboard, click <b>Create Agent</b> (or "New Agent") and start from a blank agent rather than a template.</li>
+      <li>Name it, then in its <b>Prompt Template</b> box, inside <b>Goals</b>, write the exact same system prompt from Build 1: <code class="k">You are Groundwire's research assistant. When asked to research a topic, search for current, real information and summarise it clearly with sources.</code></li>
+      <li>Open the agent's <b>Tools</b> panel and add the built-in <b>Google Search</b> tool.</li>
+      <li>Click <b>Test Agent</b> (or <b>Run</b>) to open the chat preview, and run the same prompt you used in Build 1: <em>"Research AI-powered flood early-warning systems — what's actually being deployed in 2026? Give me 3-4 key points with sources."</em></li>
+    </ol>
+  </div>
+
+  <div class="note pro"><b>⏱ Compression flag:</b> if the room's short on time, skip adding a second action here — the point of this section is comparing the shape and the vocabulary to n8n, not rebuilding all of Build 2's depth a second time.</div>
+
+  <div class="note"><b>Instructor — verify the night before:</b> Relevance AI is a funded, fast-moving product — exact menu labels ("Create Agent" vs "New Agent," where Actions live in the panel) can shift between when this is written and when you teach it. Click through the flow yourself first.</div>
+</div></section>
+
+<!-- ============ SECTION: TAKE-HOME ============ -->
+<section class="blk" id="takehome"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 6</span><h2>Take-Home — Build It Yourself</h2><span class="secTime">⏱ 6 min</span></div>
+  <p class="secLede">Three ways to practice what today actually built. Pick any one, or do all three.</p>
+
+  <div class="chalCard">
+    <div class="chalHead"><span class="cn">01</span><h4>Swap The Topic</h4><span class="chev">▸</span></div>
+    <div class="chalBody">
+      <div class="cLabel">MISSION</div>
+      <p class="mission">Pick a real topic you actually care about, rerun today's n8n build (or Relevance AI) on it, and set your own signups if you shared a demo account in class.</p>
+      <div class="cLabel">WATCH FOR</div>
+      <p class="mission">Does it name real, checkable sources? What happens if your topic is more obscure than flood-warning tech — does it admit uncertainty, or start guessing?</p>
+    </div>
+  </div>
+  <div class="chalCard">
+    <div class="chalHead"><span class="cn">02</span><h4>Finish Relevance AI</h4><span class="chev">▸</span></div>
+    <div class="chalBody">
+      <div class="cLabel">MISSION</div>
+      <p class="mission">Go back into Relevance AI if you didn't fully finish it live, and get it running end-to-end solo, including a second action/tool.</p>
+      <div class="cLabel">WATCH FOR</div>
+      <p class="mission">Where the vocabulary trips you up — what n8n calls a Tool, Relevance AI calls an Action.</p>
+    </div>
+  </div>
+  <div class="chalCard">
+    <div class="chalHead"><span class="cn">03</span><h4>Wire In A Sub-Workflow As A Tool</h4><span class="chev">▸</span></div>
+    <div class="chalBody">
+      <div class="cLabel">MISSION</div>
+      <p class="mission">Build a small second n8n workflow (even 2-3 nodes) that does one useful thing, then use an <b>Execute Workflow Tool</b> node to wire it into your Build 3 agent as a callable tool.</p>
+      <div class="cLabel">WATCH FOR</div>
+      <p class="mission">Whether the Agent decides to call your sub-workflow on its own, the same way it decides whether and when to reach for SerpApi.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============ SECTION: WRAP ============ -->
+<section class="blk" id="wrap"><div class="wrap">
+  <div class="secHead"><span class="secNum">§ 7</span><h2>Wrap-Up — Key Takeaways</h2><span class="secTime">⏱ 6 min</span></div>
+  <p class="secLede">One brain, real tools, two canvases — and a research agent that can actually show its work.</p>
+
+  <div class="card">
+    <h4>Six Things You Can Now Do</h4>
+    <table class="tbl">
+      <tr><th>Skill</th><th>What you can now do</th></tr>
+      <tr><td>Brain vs. tools</td><td>Explain the difference between the Model port and the Tool port on an Agent node</td></tr>
+      <tr><td>Tool chaining</td><td>Recognise an agent deciding its own call order, rather than following a fixed sequence</td></tr>
+      <tr><td>Short-term memory</td><td>Wire in Simple Memory so follow-up requests don't need the topic repeated</td></tr>
+      <tr><td>Reliability settings</td><td>Set Max Iterations and Retry On Fail, and explain what each actually protects against</td></tr>
+      <tr><td>n8n</td><td>Build a real research agent from a Groq API key, a search tool, and a doc tool</td></tr>
+      <tr><td>Relevance AI</td><td>Rebuild the same shape on a second no-code canvas and read its own vocabulary</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Key Takeaways</h3>
+    <p><b>A brain is not a tool, and a tool is not a brain.</b> The Model port reasons; the Tool port acts. Mixing those up is the fastest way to misunderstand why an agent did what it did.</p>
+    <p><b>Chaining means the agent decides the order.</b> Search-then-write wasn't wired by you — it was reasoned, live, from what the agent had already observed.</p>
+    <p><b>Reliability is settings, not new nodes.</b> Max Iterations and Retry On Fail turned today's build from a demo into something you'd trust running unattended.</p>
+    <p><b>Free doesn't mean unlimited.</b> Groq, SerpApi, and Relevance AI are all genuinely free today — but every one of them meters usage somewhere, and a shared classroom account finds that ceiling faster than a solo builder does.</p>
+    <p><b>No single builder wins on everything.</b> n8n gives you flexibility and any node/API as a tool; Relevance AI trades that for speed — the right pick depends on which requirement you're not willing to compromise on.</p>
+    <p><b>Today's research was real.</b> Every source the agent cited, every doc it produced, exists on the actual internet — that's what makes it worth Priya's trust, not just Zara's.</p>
+  </div>
+
+  <div class="card" style="border-color:#3dd6c344">
+    <h4 style="color:var(--teal)">Groundwire — Monday, 11:50 AM</h4>
+    <p style="font-size:14.5px">Zara hands Imran a real Google Doc: four sourced points on flood-warning tech, built in under an hour, with a Relevance AI version sitting alongside it for comparison. Advait reads it twice and says there's actually a story here.</p>
+    <p style="font-size:14.5px;margin-top:12px">Priya reads it a third time, slower, and asks: <em>"The sourcing's solid on the two points I checked myself. What happens when someone asks it to research something where the sources actually disagree with each other?"</em></p>
+    <p style="font-size:13.5px;color:var(--ink3);margin-top:10px">Today solved "can it research something real." What it hasn't been asked yet: what does it do when the real answer is contested, and who — or what — is supposed to catch that.</p>
+  </div>
+
+  <div class="bigQuote">"A real brain, real tools, and a topic nobody scripted for it. That's the difference between a demo <em>and</em> something you'd actually publish under your own name."</div>
+
+  <div class="say">
+    <span class="who">🎙 Instructor Says — Closing</span>
+    <p>"You didn't just watch an agent today — you wired the brain in yourself, picked the topic yourself, and then did it again on a tool you'd never opened before. That's the actual skill: not memorising one canvas, but recognising the same three or four ideas underneath any of them."</p>
+    <p>"One habit worth keeping: whenever you're evaluating a no-code builder for real work, build the same small thing in it that you built here today. Ten minutes tells you more than any comparison article will."</p>
+  </div>
+</div></section>
+
+<div class="footer"><div class="wrap">
+  <p>Scaler AIML · Class 15 — Building Agents Without Code: Two Builders, One Brain · Groundwire Edition</p>
+  <p style="margin-top:8px">n8n AI Agent node (Groq Chat Model, SerpApi, Google Docs, Simple Memory) · Relevance AI — interface details and free-tier limits verified August 2026 · <b>these features, pricing, and menu labels change frequently on both tools; re-verify before teaching</b></p>
+</div></div>
+
+<script>
+/* progress bar + hero counters */
+addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%'});
+document.querySelectorAll('.hstat .n').forEach(el=>{const t=+el.dataset.count;let c=0;const step=()=>{c+=Math.max(1,Math.round(t/30));if(c>=t)c=t;el.textContent=c;if(c<t)requestAnimationFrame(step)};setTimeout(step,300)});
+
+/* quizzes */
+document.querySelectorAll('.quiz').forEach(q=>{const opts=q.querySelectorAll('.opt');
+ opts.forEach(o=>o.addEventListener('click',()=>{opts.forEach(x=>{x.classList.add('locked');if(x.dataset.r==='c')x.classList.add('correct')});
+  if(o.dataset.r!=='c')o.classList.add('wrong');q.querySelector('.quizWhy').classList.add('show');}));});
+
+/* challenge accordion cards */
+document.querySelectorAll('.chalHead').forEach(h=>h.addEventListener('click',()=>h.closest('.chalCard').classList.toggle('open')));
+
+/* ===== SIM 1: Load The Toolbox ===== */
+(()=>{
+const REQS=[
+ {k:'search',l:'Needs to find current information from the open web'},
+ {k:'write',l:'Needs to produce a written brief someone can actually read'},
+ {k:'remember',l:'Needs to recall what it already found, later in the same chat'}
+];
+const TOOLS=[
+ {k:'search',l:'🔎 Web Search',meets:['search']},
+ {k:'docs',l:'📄 Google Docs',meets:['write']},
+ {k:'memory',l:'🗄️ Simple Memory',meets:['remember']},
+ {k:'calc',l:'🧮 Calculator',meets:[]},
+ {k:'cal',l:'📅 Calendar',meets:[]},
+ {k:'slack',l:'💬 Slack',meets:[]}
+];
+let sel=new Set();
+const palette=document.getElementById('toolboxPalette'),reqEl=document.getElementById('toolboxReqs'),vd=document.getElementById('toolboxVerdict');
+const render=()=>{
+ palette.innerHTML='';
+ TOOLS.forEach(t=>{const b=document.createElement('button');b.className='pickBtn'+(sel.has(t.k)?' on':'');b.textContent=t.l;
+  b.onclick=()=>{sel.has(t.k)?sel.delete(t.k):sel.add(t.k);render();};palette.appendChild(b);});
+ const met=new Set();TOOLS.forEach(t=>{if(sel.has(t.k))t.meets.forEach(m=>met.add(m));});
+ reqEl.innerHTML=REQS.map(r=>'<div class="reqRow '+(met.has(r.k)?'met':'unmet')+'"><span class="rq-i">'+(met.has(r.k)?'✓':'○')+'</span>'+r.l+'</div>').join('');
+ const extra=[...sel].filter(k=>!['search','docs','memory'].includes(k));
+ const allMet=REQS.every(r=>met.has(r.k));
+ vd.style.display='block';
+ if(allMet&&extra.length===0){vd.className='verdict good';vd.innerHTML='<b>Minimum viable loadout.</b> All three needs are covered, and nothing extra is attached — this is exactly Build 1 and Build 2\'s toolset.';}
+ else if(allMet&&extra.length>0){vd.className='verdict mid';vd.innerHTML='<b>Works, but over-provisioned.</b> Every need is covered, but '+extra.map(k=>TOOLS.find(t=>t.k===k).l).join(', ')+' isn\'t doing anything for this task. Same least-privilege instinct from Class 14: don\'t wire in reach the task doesn\'t need.';}
+ else{vd.className='verdict bad';vd.innerHTML='<b>Not yet.</b> At least one need is still unmet — keep picking tools until every row above shows a ✓.';}
+};
+render();
+})();
+
+/* ===== SIM 2: Watch It Research ===== */
+(()=>{
+const TOPICS=[
+ {k:'flood',label:'🌊 Flood early-warning tech (2026 rollout)',doc:'Flood Early-Warning Tech',
+  snippets:['a municipal engineering report on sensor-network pilots','a wire-service story covering one city\'s rollout','a vendor case study on a river-gauge AI model'],
+  points:['Several mid-size US cities piloted sensor-plus-AI river gauges through 2025-26, feeding real-time models instead of fixed flood-stage thresholds.','Cost and maintenance of sensor networks remain the biggest adoption blocker for smaller municipalities.','Early pilots report faster warnings, but also false-positive rates that still need a human reviewer in the loop.']},
+ {k:'slm',label:'📱 On-device AI models on phones (2026)',doc:'On-Device AI On Phones',
+  snippets:['a phone maker\'s technical keynote recap','a benchmark comparison site','an industry analyst\'s note on chip efficiency'],
+  points:['Flagship phones now run multi-billion-parameter models locally for tasks like summarising and photo editing.','Battery and thermal limits still push the largest reasoning tasks out to the cloud.','On-device processing is increasingly marketed as a privacy feature first, a speed feature second.']},
+ {k:'ev',label:'🔋 EV battery-swap stations — real 2026 numbers',doc:'EV Battery-Swap Adoption',
+  snippets:['a market-research firm\'s adoption report','a regional news story on a swap-station rollout','a manufacturer\'s investor update'],
+  points:['Battery swapping has scaled fastest in markets with a standardised battery form factor and high two-wheeler/taxi density.','Markets without a shared battery standard have struggled to justify the capital cost of swap stations.','Swap networks are increasingly pitched as a commercial fleet play rather than a mass consumer one.']}
+];
+const NODES=[{i:'💬',n:'Chat Trigger'},{i:'🧭',n:'AI Agent'},{i:'🔎',n:'SerpApi'},{i:'📄',n:'Google Docs'}];
+const NODE_SEQ=[1,2,2,1,3,1];
+let current=null,running=false;
+const pickRow=document.getElementById('watchPicker'),strip=document.getElementById('watchStrip'),tc=document.getElementById('watchTranscript'),
+      doc=document.getElementById('watchDoc'),runBtn=document.getElementById('watchRun');
+strip.innerHTML=NODES.map(n=>'<div class="cNode"><span class="ci">'+n.i+'</span>'+n.n+'</div>').join('<span style="color:var(--ink3);font-family:monospace">→</span>');
+const nodeEls=strip.querySelectorAll('.cNode');
+const stepsFor=(t)=>[
+ 'THINK → "I need current information on this — I\'ll search first."',
+ 'ACT → Calling SerpApi: "'+t.label.replace(/^\S+\s/,'')+'"',
+ 'OBSERVE → Found relevant results: '+t.snippets.join('; ')+'.',
+ 'THINK → "I have enough to write a sourced summary." Reply finalised.',
+ 'STEP → Google Docs (downstream, not a Tool call) creates "'+t.doc+' — Research Brief"',
+ 'DONE → Draft complete, saved to Docs.'
+];
+const renderPicker=()=>{
+ pickRow.innerHTML='';
+ TOPICS.forEach(t=>{const b=document.createElement('button');b.className='pickBtn'+(current&&current.k===t.k?' on':'');b.textContent=t.label;
+  b.onclick=()=>{if(running)return;current=t;renderPicker();tc.textContent='Press Run to watch the agent work.';doc.style.display='none';nodeEls.forEach(n=>n.className='cNode');};
+  pickRow.appendChild(b);});
+};
+runBtn.onclick=()=>{
+ if(!current||running)return;running=true;runBtn.disabled=true;
+ nodeEls.forEach(n=>n.className='cNode');doc.style.display='none';tc.textContent='';
+ const seq=stepsFor(current);let i=0;const touched=new Set([0]);
+ const tick=()=>{
+  if(i>=seq.length){
+   nodeEls.forEach((n,idx)=>{n.className='cNode'+(touched.has(idx)?' ok':'');});
+   doc.style.display='block';
+   doc.querySelector('.dp-title').textContent=current.doc+' — Research Brief';
+   doc.querySelector('.dp-body').innerHTML=current.points.map(p=>'<p>• '+p+'</p>').join('');
+   running=false;runBtn.disabled=false;
+   return;
+  }
+  const ni=NODE_SEQ[i];touched.add(ni);
+  nodeEls.forEach((n,idx)=>{n.className='cNode'+(idx===ni?' run':touched.has(idx)?' ok':'');});
+  tc.textContent+=(tc.textContent?'\n\n':'')+seq[i];i++;
+  setTimeout(tick,950);
+ };
+ tick();
+};
+renderPicker();
+})();
+
+/* ===== SIM 3: The Backoff Ladder ===== */
+(()=>{
+const QUERIES={
+ reliable:{l:'✅ Reliable — succeeds on the first try',succeedAt:1},
+ flaky:{l:'🌊 Flaky — SerpApi times out twice under load, works on try 3',succeedAt:3},
+ broken:{l:'❌ Genuinely broken — a topic that doesn\'t exist, never succeeds',succeedAt:Infinity}
+};
+let maxTries=3,queryKey='reliable',running=false;
+const valEl=document.getElementById('tryVal'),minus=document.getElementById('tryMinus'),plus=document.getElementById('tryPlus'),
+      pickRow=document.getElementById('backoffPicker'),track=document.getElementById('backoffTrack'),
+      runBtn=document.getElementById('backoffRun'),log=document.getElementById('backoffLog'),vd=document.getElementById('backoffVerdict');
+const renderPicker=()=>{
+ pickRow.innerHTML='';
+ Object.keys(QUERIES).forEach(k=>{const b=document.createElement('button');b.className='pickBtn'+(queryKey===k?' on':'');b.textContent=QUERIES[k].l;
+  b.onclick=()=>{if(running)return;queryKey=k;renderPicker();};pickRow.appendChild(b);});
+};
+minus.onclick=()=>{if(running)return;maxTries=Math.max(1,maxTries-1);valEl.textContent=maxTries;};
+plus.onclick=()=>{if(running)return;maxTries=Math.min(5,maxTries+1);valEl.textContent=maxTries;};
+runBtn.onclick=()=>{
+ if(running)return;running=true;runBtn.disabled=true;
+ track.innerHTML='';log.innerHTML='';vd.style.display='none';
+ const blocks=[];
+ for(let a=1;a<=maxTries;a++){
+  const d=document.createElement('div');d.className='attemptBlock pending';
+  d.innerHTML='<div class="ab-bar" style="height:'+(22+a*16)+'px"></div><div class="ab-l">Try '+a+'<br>'+(a===1?'0s wait':Math.pow(2,a-2)+'s wait')+'</div>';
+  track.appendChild(d);blocks.push(d);
+ }
+ const q=QUERIES[queryKey];let a=1;const lines=[];
+ const step=()=>{
+  if(a>maxTries){
+   vd.style.display='block';
+   if(q.succeedAt===Infinity){vd.className='verdict good';vd.innerHTML='<b>Graceful failure.</b> All '+maxTries+' attempts genuinely failed, so the agent stopped and reported "couldn\'t verify this" instead of guessing. Max Iterations + Retry On Fail, doing their job together.';}
+   else{vd.className='verdict bad';vd.innerHTML='<b>Gave up too early.</b> This query actually succeeds on try '+q.succeedAt+', but Max Tries was set to '+maxTries+'. Raise it and run again.';}
+   running=false;runBtn.disabled=false;
+   return;
+  }
+  blocks[a-1].className='attemptBlock active';
+  blocks[a-1].querySelector('.ab-bar').style.height=(22+a*16)+'px';
+  const willSucceed=a>=q.succeedAt;
+  setTimeout(()=>{
+   if(willSucceed){
+    blocks[a-1].className='attemptBlock ok';
+    lines.push('<span class="lg ok">✓ Attempt '+a+' — success.</span>');
+    log.innerHTML=lines.join('');
+    vd.style.display='block';vd.className='verdict good';
+    vd.innerHTML='<b>Succeeded on attempt '+a+'.</b>'+(a>1?' Retry On Fail caught what would otherwise have looked like a dead workflow.':' No retry even needed.');
+    running=false;runBtn.disabled=false;
+   }else{
+    blocks[a-1].className='attemptBlock fail';
+    lines.push('<span class="lg err">✗ Attempt '+a+' — failed.</span>');
+    log.innerHTML=lines.join('');
+    a++;step();
+   }
+  },700);
+ };
+ step();
+};
+renderPicker();
+})();
+
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/AI-beginners-class15" target="_blank" rel="noopener">github.com/scaler-content/AI-beginners-class15</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

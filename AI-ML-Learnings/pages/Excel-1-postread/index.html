@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sheets 01 — Cleanup &amp; Structure</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --paper:#FAFAF8;
+    --paper-dim:#F1F2ED;
+    --ink:#1B1F23;
+    --ink-soft:#5F6368;
+    --grid:#D7DBDD;
+    --grid-strong:#B8BEC2;
+    --sheet-green:#0F9D58;
+    --sheet-green-dark:#0B7A44;
+    --sheet-green-pale:#E6F4EA;
+    --formula-blue:#1A73E8;
+    --formula-blue-pale:#E8F0FE;
+    --bad-red:#D93025;
+    --bad-red-pale:#FCE8E6;
+    --amber:#E8710A;
+    --amber-pale:#FEF3E0;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--sheet-green); color:#fff;}
+
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  /* ---------- Column-letter frame ---------- */
+  .colframe{
+    position:sticky; top:0; z-index:50;
+    display:flex;
+    background:var(--paper-dim);
+    border-bottom:1px solid var(--grid);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    letter-spacing:0.04em;
+  }
+  .colframe > div{
+    flex:1;
+    text-align:center;
+    padding:6px 0;
+    border-right:1px solid var(--grid);
+  }
+  .colframe .corner{
+    flex:0 0 46px;
+    background:var(--paper-dim);
+  }
+
+  .wrap{max-width:960px; margin:0 auto; padding:0 24px;}
+
+  /* ---------- Hero / formula bar ---------- */
+  .hero{
+    padding:56px 0 40px;
+    border-bottom:1px solid var(--grid);
+  }
+  .fbar{
+    display:flex;
+    align-items:center;
+    gap:0;
+    border:1px solid var(--grid-strong);
+    background:#fff;
+    border-radius:4px;
+    overflow:hidden;
+    margin-bottom:28px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.04);
+  }
+  .fbar .cellref{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink-soft);
+    padding:9px 14px;
+    border-right:1px solid var(--grid);
+    background:var(--paper-dim);
+    white-space:nowrap;
+  }
+  .fbar .fx{
+    font-style:italic;
+    color:var(--ink-soft);
+    padding:9px 10px;
+    font-family:Georgia, serif;
+    border-right:1px solid var(--grid);
+  }
+  .fbar .formula{
+    padding:9px 14px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    color:var(--formula-blue);
+    white-space:nowrap;
+    overflow:hidden;
+  }
+  .fbar .formula .typed::after{
+    content:'';
+    display:inline-block;
+    width:2px; height:14px;
+    background:var(--formula-blue);
+    margin-left:2px;
+    vertical-align:-2px;
+    animation:blink 1s step-end infinite;
+  }
+  @keyframes blink{50%{opacity:0;}}
+
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--sheet-green-dark);
+    background:var(--sheet-green-pale);
+    padding:5px 10px;
+    border-radius:3px;
+    margin-bottom:18px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--sheet-green);}
+
+  h1.title{
+    font-size:clamp(32px,5vw,48px);
+    font-weight:800;
+    letter-spacing:-0.02em;
+    margin:0 0 14px;
+    color:var(--ink);
+  }
+  .subtitle{
+    font-size:17px;
+    color:var(--ink-soft);
+    max-width:640px;
+    margin:0;
+  }
+
+  .pipeline{
+    display:grid;
+    grid-template-columns:1fr auto 1fr auto 1fr;
+    align-items:center;
+    gap:8px;
+    margin-top:36px;
+  }
+  .pipeline .stage{
+    border:1px solid var(--grid);
+    background:#fff;
+    border-radius:6px;
+    padding:14px 12px;
+    text-align:center;
+  }
+  .pipeline .stage.active{
+    border-color:var(--sheet-green);
+    background:var(--sheet-green-pale);
+  }
+  .pipeline .stage .label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-soft);
+  }
+  .pipeline .stage.active .label{color:var(--sheet-green-dark); font-weight:700;}
+  .pipeline .arrow{color:var(--grid-strong); font-size:18px;}
+
+  /* ---------- Section shell ---------- */
+  section{
+    padding:52px 0;
+    border-bottom:1px solid var(--grid);
+  }
+  .kicker{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  h2.h{
+    font-size:26px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+    margin:0 0 10px;
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+  h2.h .rowno{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:15px;
+    font-weight:600;
+    color:#fff;
+    background:var(--sheet-green);
+    padding:2px 8px;
+    border-radius:3px;
+  }
+  .lede{color:var(--ink-soft); font-size:15.5px; max-width:680px; margin:0 0 28px;}
+
+  /* ---------- Data type cards ---------- */
+  .grid4{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+  }
+  @media(max-width:800px){.grid4{grid-template-columns:repeat(2,1fr);}}
+  .typecard{
+    border:1px solid var(--grid);
+    border-radius:6px;
+    background:#fff;
+    padding:16px;
+    cursor:pointer;
+    transition:box-shadow .15s ease, transform .15s ease;
+  }
+  .typecard:hover{box-shadow:0 4px 14px rgba(0,0,0,0.06); transform:translateY(-2px);}
+  .typecard .tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    font-weight:700;
+    padding:2px 6px;
+    border-radius:3px;
+    display:inline-block;
+    margin-bottom:10px;
+  }
+  .typecard h4{margin:0 0 6px; font-size:15px;}
+  .typecard p{margin:0; font-size:13px; color:var(--ink-soft);}
+  .typecard .ex{
+    margin-top:10px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    background:var(--paper-dim);
+    border-radius:4px;
+    padding:6px 8px;
+  }
+  .t-string .tag{background:#E8EAED; color:#3C4043;}
+  .t-number .tag{background:var(--sheet-green-pale); color:var(--sheet-green-dark);}
+  .t-date .tag{background:var(--amber-pale); color:#B75B00;}
+  .t-bool .tag{background:#EDE7F6; color:#5E35B1;}
+
+  /* type sorter game */
+  .sorter{
+    margin-top:22px;
+    border:1px solid var(--grid);
+    border-radius:8px;
+    background:#fff;
+    padding:18px;
+  }
+  .sorter-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;}
+  .sorter-head .title2{font-weight:700; font-size:14px;}
+  .sorter-score{font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--ink-soft);}
+  #cellPrompt{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:16px;
+    background:var(--paper-dim);
+    border:1px dashed var(--grid-strong);
+    padding:14px;
+    border-radius:6px;
+    text-align:center;
+    margin-bottom:14px;
+    min-height:20px;
+  }
+  .sorter-btns{display:flex; gap:8px; flex-wrap:wrap;}
+  .sbtn{
+    flex:1;
+    min-width:100px;
+    border:1px solid var(--grid-strong);
+    background:#fff;
+    padding:10px 8px;
+    border-radius:6px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    transition:all .12s ease;
+  }
+  .sbtn:hover{border-color:var(--ink);}
+  .sbtn.correct{background:var(--sheet-green-pale); border-color:var(--sheet-green); color:var(--sheet-green-dark);}
+  .sbtn.wrong{background:var(--bad-red-pale); border-color:var(--bad-red); color:var(--bad-red);}
+  #sorterFeedback{margin-top:10px; font-size:13px; color:var(--ink-soft); min-height:18px;}
+
+  /* ---------- Cleaning steps ---------- */
+  .step{
+    border:1px solid var(--grid);
+    border-radius:8px;
+    background:#fff;
+    margin-bottom:18px;
+    overflow:hidden;
+  }
+  .step-head{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:16px 18px;
+    background:var(--paper-dim);
+    border-bottom:1px solid var(--grid);
+  }
+  .step-num{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:700;
+    font-size:14px;
+    width:28px; height:28px;
+    border-radius:50%;
+    background:var(--sheet-green);
+    color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .step-head h3{margin:0; font-size:16px;}
+  .step-head .why{margin:2px 0 0; font-size:13px; color:var(--ink-soft); font-weight:400;}
+  .step-body{padding:18px;}
+
+  .toggle-row{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
+  .cleanbtn{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    font-weight:600;
+    color:#fff;
+    background:var(--ink);
+    border:none;
+    padding:9px 16px;
+    border-radius:5px;
+    cursor:pointer;
+    letter-spacing:0.02em;
+  }
+  .cleanbtn:hover{background:var(--sheet-green-dark);}
+  .cleanbtn.on{background:var(--sheet-green-dark);}
+  .state-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    padding:4px 9px;
+    border-radius:3px;
+    background:var(--bad-red-pale);
+    color:var(--bad-red);
+  }
+  .state-label.clean{background:var(--sheet-green-pale); color:var(--sheet-green-dark);}
+
+  table.sheet{
+    width:100%;
+    border-collapse:collapse;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+  }
+  table.sheet th{
+    background:var(--paper-dim);
+    text-align:left;
+    padding:7px 10px;
+    border:1px solid var(--grid);
+    font-weight:600;
+    color:var(--ink-soft);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+  }
+  table.sheet td{
+    padding:7px 10px;
+    border:1px solid var(--grid);
+    white-space:nowrap;
+  }
+  table.sheet tr.dirty td{color:var(--bad-red);}
+  table.sheet tr.dupe-out td{
+    text-decoration:line-through;
+    opacity:0.4;
+  }
+  .flag{
+    font-family:'Inter',sans-serif;
+    font-size:11px;
+    font-weight:600;
+    padding:2px 6px;
+    border-radius:3px;
+    background:var(--bad-red-pale);
+    color:var(--bad-red);
+  }
+  .flag.ok{background:var(--sheet-green-pale); color:var(--sheet-green-dark);}
+  .impact{
+    margin-top:12px;
+    font-size:13px;
+    background:var(--amber-pale);
+    border-left:3px solid var(--amber);
+    padding:10px 12px;
+    border-radius:0 5px 5px 0;
+  }
+  .impact b{color:#8A4300;}
+
+  /* ---------- Formula playground ---------- */
+  .playground{
+    border:1px solid var(--grid);
+    border-radius:8px;
+    background:#fff;
+    padding:20px;
+  }
+  .pg-input{
+    width:100%;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:15px;
+    padding:11px 14px;
+    border:1.5px solid var(--grid-strong);
+    border-radius:6px;
+    margin-bottom:6px;
+    color:var(--formula-blue);
+    font-weight:600;
+  }
+  .pg-input:focus{outline:none; border-color:var(--sheet-green);}
+  .pg-hint{font-size:12px; color:var(--ink-soft); margin-bottom:18px;}
+  .pg-hint code{background:var(--paper-dim); padding:1px 5px; border-radius:3px;}
+  .pg-out{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+  }
+  @media(max-width:700px){.pg-out{grid-template-columns:1fr;}}
+  .pg-cell{
+    border:1px solid var(--grid);
+    border-radius:6px;
+    padding:10px 12px;
+    background:var(--paper-dim);
+  }
+  .pg-cell .fname{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    font-weight:700;
+    color:var(--formula-blue);
+    display:block;
+    margin-bottom:4px;
+  }
+  .pg-cell .fresult{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:14px;
+    font-weight:600;
+  }
+  .pg-cell .fresult.err{color:var(--bad-red); font-size:12px; font-weight:500;}
+
+  /* ---------- Date lab ---------- */
+  .datelab{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+  }
+  @media(max-width:760px){.datelab{grid-template-columns:1fr;}}
+  .lab-card{
+    border:1px solid var(--grid);
+    border-radius:8px;
+    background:#fff;
+    padding:18px;
+  }
+  .lab-card h4{margin:0 0 12px; font-size:14.5px;}
+  .datefield{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:14px;
+    padding:8px 10px;
+    border:1.5px solid var(--grid-strong);
+    border-radius:5px;
+    width:100%;
+    margin-bottom:8px;
+  }
+  .serialbox{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:var(--paper-dim);
+    border-radius:6px;
+    padding:10px 12px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    margin-top:8px;
+  }
+  .serialbox b{color:var(--sheet-green-dark); font-size:16px;}
+  .unitgrid{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;}
+  .unitpill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    padding:5px 9px;
+    border:1px solid var(--grid-strong);
+    border-radius:14px;
+    cursor:pointer;
+    background:#fff;
+  }
+  .unitpill.active{background:var(--formula-blue-pale); border-color:var(--formula-blue); color:var(--formula-blue);}
+  .dateresult{
+    margin-top:12px;
+    text-align:center;
+    font-size:22px;
+    font-weight:700;
+    font-family:'IBM Plex Mono',monospace;
+    color:var(--ink);
+  }
+  .dateresult span{font-size:12px; font-weight:500; color:var(--ink-soft); display:block; margin-top:2px;}
+
+  /* ---------- Sort demo ---------- */
+  .sortdemo{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  @media(max-width:760px){.sortdemo{grid-template-columns:1fr;}}
+  .sortcard{border:1px solid var(--grid); border-radius:8px; overflow:hidden; background:#fff;}
+  .sortcard .sc-head{
+    padding:10px 14px;
+    font-size:13px;
+    font-weight:700;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .sortcard.bad .sc-head{background:var(--bad-red-pale); color:var(--bad-red);}
+  .sortcard.good .sc-head{background:var(--sheet-green-pale); color:var(--sheet-green-dark);}
+  .sortbtn{
+    display:block;
+    width:calc(100% - 24px);
+    margin:12px auto 0;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    font-weight:600;
+    padding:8px;
+    border-radius:5px;
+    border:1px solid var(--grid-strong);
+    background:var(--paper-dim);
+    cursor:pointer;
+  }
+  .sortbtn:hover{border-color:var(--ink);}
+  .mismatch-tag{color:var(--bad-red); font-weight:700;}
+
+  /* ---------- mistakes ---------- */
+  .mistakes{display:flex; flex-direction:column; gap:12px;}
+  .mistake{
+    border:1px solid var(--grid);
+    border-left:4px solid var(--bad-red);
+    border-radius:0 8px 8px 0;
+    background:#fff;
+    padding:14px 18px;
+  }
+  .mistake h4{margin:0 0 6px; font-size:14.5px; display:flex; align-items:center; gap:8px;}
+  .mistake .no{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    background:var(--bad-red);
+    color:#fff;
+    padding:1px 7px;
+    border-radius:3px;
+  }
+  .mistake p{margin:0; font-size:13.5px; color:var(--ink-soft);}
+  .mistake .fix{color:var(--sheet-green-dark); font-weight:600;}
+
+  /* ---------- quiz ---------- */
+  .quiz{
+    border:1px solid var(--grid);
+    border-radius:8px;
+    background:#fff;
+    padding:18px 20px;
+    margin-bottom:14px;
+  }
+  .quiz .q-head{font-weight:700; font-size:14.5px; margin-bottom:12px;}
+  .qopt{
+    display:block;
+    width:100%;
+    text-align:left;
+    border:1px solid var(--grid-strong);
+    background:#fff;
+    padding:10px 12px;
+    border-radius:6px;
+    margin-bottom:8px;
+    cursor:pointer;
+    font-size:13.5px;
+    font-family:'Inter',sans-serif;
+  }
+  .qopt:hover{border-color:var(--ink);}
+  .qopt.correct{background:var(--sheet-green-pale); border-color:var(--sheet-green); color:var(--sheet-green-dark); font-weight:600;}
+  .qopt.wrong{background:var(--bad-red-pale); border-color:var(--bad-red); color:var(--bad-red);}
+  .qexplain{
+    font-size:13px;
+    color:var(--ink-soft);
+    background:var(--paper-dim);
+    padding:10px 12px;
+    border-radius:6px;
+    margin-top:8px;
+    display:none;
+  }
+  .qexplain.show{display:block;}
+
+  /* helper columns table */
+  .helper-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  .helper-table th{
+    text-align:left; padding:8px 12px; background:var(--paper-dim);
+    border:1px solid var(--grid); font-size:12px; text-transform:uppercase; color:var(--ink-soft);
+  }
+  .helper-table td{padding:8px 12px; border:1px solid var(--grid);}
+  .helper-table code{font-family:'IBM Plex Mono',monospace; color:var(--formula-blue); font-size:12.5px;}
+
+  footer{
+    padding:40px 0 60px;
+    text-align:center;
+  }
+  footer .next{
+    display:inline-block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    border:1px dashed var(--grid-strong);
+    padding:10px 16px;
+    border-radius:20px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/data/">Data analytics</a><span class="t">· Excel 1 · Data cleanup and structure</span><span class="pn"><a href="../MySQL---BigQuery-data-interconverter/" title="MySQL to BigQuery converter">← Prev</a><a href="../Excel-2-postread/" title="Excel 2 · Core formulas">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="colframe">
+  <div class="corner"></div>
+  <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div><div>G</div><div>H</div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <div class="hero">
+    <div class="eyebrow"><span class="dot"></span> Sheets · Lecture 01 · Post-Read</div>
+    <h1 class="title">Cleanup &amp; Structure</h1>
+    <p class="subtitle">A messy export can't answer a manager's question. This is the workflow that turns raw, contradictory rows into a dataset you'd stake a report on — six cleaning steps, the four text functions that scale them, date math, and sorting that won't scramble your rows.</p>
+
+    <div class="fbar">
+      <div class="cellref">A2</div>
+      <div class="fx"><i>fx</i></div>
+      <div class="formula mono"><span id="typedFormula" class="typed"></span></div>
+    </div>
+
+    <div class="pipeline">
+      <div class="stage" id="pstage1"><div class="label">01 · Raw Export</div></div>
+      <div class="arrow">→</div>
+      <div class="stage active" id="pstage2"><div class="label">02 · Clean in Sheets</div></div>
+      <div class="arrow">→</div>
+      <div class="stage" id="pstage3"><div class="label">03 · Analysis-Ready</div></div>
+    </div>
+  </div>
+
+  <!-- ============ DATA TYPES ============ -->
+  <section id="types">
+    <div class="kicker">Foundations</div>
+    <h2 class="h"><span class="rowno">01</span> The four data types</h2>
+    <p class="lede">Every cell in Superstore belongs to one of four types. GSheets guesses the type from what you type — misclassify one, and a downstream SUM or Pivot Table breaks silently, with no error message telling you why.</p>
+
+    <div class="grid4">
+      <div class="typecard t-string">
+        <span class="tag">TEXT</span>
+        <h4>Strings</h4>
+        <p>Labels used for categorization. Never averaged or summed, even if they contain digits.</p>
+        <div class="ex">FUR-CH-10000454</div>
+      </div>
+      <div class="typecard t-number">
+        <span class="tag">123</span>
+        <h4>Numbers</h4>
+        <p>Quantitative values used for calculation. Must be "pure" — no $, no commas, no letters.</p>
+        <div class="ex">731.94</div>
+      </div>
+      <div class="typecard t-date">
+        <span class="tag">DATE</span>
+        <h4>Dates &amp; Times</h4>
+        <p>A special number — days since Dec 30, 1899. Mathematically active, so you can subtract one from another.</p>
+        <div class="ex">09-Jun-2014 → 41799</div>
+      </div>
+      <div class="typecard t-bool">
+        <span class="tag">T/F</span>
+        <h4>Booleans</h4>
+        <p>Binary logic. Usually the output of a test — the foundation of filters and conditional logic.</p>
+        <div class="ex">=Sales &gt; 500</div>
+      </div>
+    </div>
+
+    <div class="sorter">
+      <div class="sorter-head">
+        <div class="title2">Quick check — classify the cell</div>
+        <div class="sorter-score">Score: <span id="sorterScore">0</span>/<span id="sorterTotal">0</span></div>
+      </div>
+      <div id="cellPrompt" class="mono">Loading…</div>
+      <div class="sorter-btns">
+        <button class="sbtn" data-t="string">Text (String)</button>
+        <button class="sbtn" data-t="number">Number</button>
+        <button class="sbtn" data-t="date">Date</button>
+        <button class="sbtn" data-t="bool">Boolean</button>
+      </div>
+      <div id="sorterFeedback"></div>
+    </div>
+  </section>
+
+  <!-- ============ SQL TO SHEETS MAPPING ============ -->
+  <section id="sqlmap">
+    <div class="kicker">Orientation</div>
+    <h2 class="h"><span class="rowno">01a</span> Mapping SQL to Sheets</h2>
+    <p class="lede">You already know this logic from SQL. GSheets is a human-friendly interface for the exact same operations — the syntax changes, the thinking doesn't.</p>
+    <table class="helper-table">
+      <thead><tr><th>SQL concept</th><th>GSheets equivalent</th></tr></thead>
+      <tbody>
+        <tr><td><code>SELECT</code></td><td>Highlighting / selecting columns</td></tr>
+        <tr><td><code>WHERE</code></td><td>Filters (Data → Create a filter)</td></tr>
+        <tr><td><code>GROUP BY</code></td><td>Pivot Tables (Rows / Columns)</td></tr>
+        <tr><td><code>COUNT, SUM, AVG</code></td><td>Pivot Table values / formulas</td></tr>
+        <tr><td><code>CASE WHEN</code></td><td>IF / IFS formulas</td></tr>
+        <tr><td><code>JOIN</code></td><td>VLOOKUP / XLOOKUP</td></tr>
+        <tr><td><code>CTE</code> (Common Table Expression)</td><td>Helper sheets / new tabs</td></tr>
+      </tbody>
+    </table>
+    <div class="impact green" style="margin-top:16px;"><b>Where GSheets sits in the pipeline:</b> Database (SQL) extracts the raw data → GSheets explores, cleans, and finds the patterns → Tableau/Power BI presents the story. It's the fastest tool for the ad-hoc, five-minute questions a manager asks before a meeting — universally readable, zero installation, and good enough for a lightweight departmental dashboard.</div>
+
+    <div class="card" style="margin-top:20px;">
+      <h4 style="margin:0 0 10px;">Importing a messy export</h4>
+      <p style="font-size:13.5px; color:var(--ink-soft); margin:0 0 10px;">Before any cleaning can happen, the raw file has to land in a sheet correctly. Three choices matter on the way in:</p>
+      <table class="helper-table">
+        <thead><tr><th>Import dialog option</th><th>What to pick</th></tr></thead>
+        <tbody>
+          <tr><td>Import location</td><td>"Replace spreadsheet" for a fresh start, or "Insert new sheet(s)" to add it as a tab</td></tr>
+          <tr><td>Separator type</td><td>"Comma" for a standard CSV, or "Detect automatically" if unsure</td></tr>
+          <tr><td>Convert text to numbers, dates, formulas</td><td>Always <b>Yes</b> — this is what lets GSheets recognize dates and numbers instead of leaving everything as text</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ DATA CLEANING ============ -->
+  <section id="cleaning">
+    <div class="kicker">The Workflow</div>
+    <h2 class="h"><span class="rowno">02</span> Data cleaning — 6 steps</h2>
+    <p class="lede">Click each "Apply" button to watch the row transform. Same trick works in real Sheets: Data → Data cleanup, or a formula in a helper column.</p>
+
+    <!-- STEP 1 -->
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">1</div>
+        <div>
+          <h3>Remove duplicates</h3>
+          <p class="why">Identical rows silently double your totals.</p>
+        </div>
+      </div>
+      <div class="step-body">
+        <p class="pg-hint" style="margin:0 0 8px;">In real Sheets: select all data → <b>Data → Data cleanup → Remove duplicates</b> → keep "Data has header row" checked and every column selected, so only rows where <i>every</i> cell matches get dropped.</p>
+        <p style="font-size:12px;color:var(--ink-soft); margin:0 0 8px;">Rows are editable — click a cell and change it, then check for duplicates. Try making them differ by just one character.</p>
+        <table class="sheet" id="s1-table">
+          <thead><tr><th>Order ID</th><th>Cust ID</th><th>City</th><th>Sales</th><th></th></tr></thead>
+          <tbody>
+            <tr class="dirty" id="s1-row1">
+              <td contenteditable="true">CA-2016-152156</td><td contenteditable="true">CG-12520</td><td contenteditable="true">Henderson</td><td contenteditable="true">731.94</td><td><span class="flag" id="s1-flag1">row 1</span></td>
+            </tr>
+            <tr class="dirty" id="s1-row2">
+              <td contenteditable="true">CA-2016-152156</td><td contenteditable="true">CG-12520</td><td contenteditable="true">Henderson</td><td contenteditable="true">731.94</td><td><span class="flag" id="s1-flag2">row 2</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="toggle-row" style="margin-top:12px;">
+          <button class="cleanbtn" onclick="checkDuplicates()">Check for duplicates</button>
+          <button class="cleanbtn" id="s1-removebtn" style="display:none; background:var(--sheet-green-dark);" onclick="removeDuplicateRow()">Remove duplicates</button>
+        </div>
+        <div class="impact" id="s1-impact"><b>Risk if ignored:</b> two exactly matching rows silently double whatever total you sum — click "Check for duplicates" to test your own row.</div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">2</div>
+        <div>
+          <h3>Trim whitespace</h3>
+          <p class="why">A trailing space is invisible to you, but real data to GSheets.</p>
+        </div>
+      </div>
+      <div class="step-body">
+        <p class="pg-hint" style="margin:0 0 8px;">In real Sheets: highlight the text columns (City, Postal_Region, Product ID) → <b>Data → Data cleanup → Trim whitespace</b>. A pop-up tells you exactly how many cells were cleaned.</p>
+        <label style="font-size:12px;color:var(--ink-soft);">Type your own value (try adding spaces before/after, or leading/trailing tabs)</label>
+        <input id="s2-input" class="pg-input" type="text" value="Los Angeles  " spellcheck="false" style="margin-top:6px;">
+        <div class="toggle-row" style="margin-top:12px;">
+          <button class="cleanbtn" onclick="toggleStep(this,'s2')">Apply: =TRIM(cell)</button>
+          <span class="state-label" id="s2-label">13 chars · dirty</span>
+        </div>
+        <table class="sheet">
+          <tbody>
+            <tr><td style="width:40%">Raw value</td><td class="dirty" id="s2-cell">"Los Angeles␣␣"</td></tr>
+            <tr><td>Character count</td><td id="s2-count">13 characters</td></tr>
+            <tr><td>Pivot Table sees it as</td><td id="s2-pivot" style="color:var(--bad-red)">a different city than "Los Angeles"</td></tr>
+          </tbody>
+        </table>
+        <div class="impact" id="s2-impact"><b>Pivot Table impact:</b> Sales for "Los Angeles" get split into two rows — your top-city report is silently broken.</div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">3</div>
+        <div>
+          <h3>Handle missing values</h3>
+          <p class="why">A blank cell is a decision, not a bug — pick a strategy.</p>
+        </div>
+      </div>
+      <div class="step-body">
+        <p class="pg-hint" style="margin:0 0 10px;">In real Sheets: <b>Data → Create a filter</b> → click the filter icon on the column → uncheck everything except "(Blanks)" to isolate the broken rows → highlight them and use <code class="mono">Ctrl+Enter</code> (Windows) / <code class="mono">Cmd+Enter</code> (Mac) to bulk-fill every selected blank at once.</p>
+        <div class="toggle-row">
+          <button class="cleanbtn" onclick="applyBlank('remove')">Try: Removal</button>
+          <button class="cleanbtn" onclick="applyBlank('impute')">Try: Imputation</button>
+          <button class="cleanbtn" onclick="applyBlank('label')">Try: Categorization</button>
+        </div>
+        <table class="sheet">
+          <tbody>
+            <tr><td style="width:40%">City (row 14)</td><td id="s3-cell" class="dirty">(blank)</td></tr>
+            <tr><td>Strategy used</td><td id="s3-strategy" style="color:var(--ink-soft)">— pick one above —</td></tr>
+          </tbody>
+        </table>
+        <div class="impact" id="s3-impact">Removal deletes the row entirely (use when critical info can't be recovered). Imputation estimates from other clues (Postal Code + City/State). Categorization labels it "Unknown" so Pivot Tables show a clean slice instead of a messy blank.</div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">4</div>
+        <div>
+          <h3>Standardize text casing</h3>
+          <p class="why"><code class="mono">=PROPER()</code> collapses fake categories into one real one.</p>
+        </div>
+      </div>
+      <div class="step-body">
+        <p class="pg-hint" style="margin:0 0 8px;">In real Sheets: insert a helper column, write <code class="mono">=PROPER(D2)</code>, drag it down, copy the results, then <b>right-click the original column → Paste Special → Values only</b> before deleting the helper column. Never overwrite raw data with a live formula.</p>
+        <label style="font-size:12px;color:var(--ink-soft);">Type your own case variants, comma-separated (e.g. new york, NEW YORK, New York)</label>
+        <input id="s4-input" class="pg-input" type="text" value="los angeles, LOS ANGELES, Los Angeles" spellcheck="false" style="margin-top:6px;">
+        <div class="toggle-row" style="margin-top:12px;">
+          <button class="cleanbtn" onclick="toggleStep(this,'s4')">Apply: =PROPER(D2)</button>
+          <span class="state-label" id="s4-label">3 rows · fragmented</span>
+        </div>
+        <table class="sheet">
+          <thead><tr><th>Row</th><th>City (raw)</th><th>Sum of Sales</th></tr></thead>
+          <tbody id="s4-body">
+            <tr class="dirty"><td>7</td><td>los angeles</td><td>907.15</td></tr>
+            <tr class="dirty"><td>12</td><td>LOS ANGELES</td><td>2,143.50</td></tr>
+            <tr class="dirty"><td>19</td><td>Los Angeles</td><td>1,706.18</td></tr>
+          </tbody>
+        </table>
+        <div class="impact" id="s4-impact"><b>Fragmented:</b> the Pivot Table shows 3 separate "cities" instead of 1 — <code class="mono">Los Angeles</code> total is invisible.</div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">5</div>
+        <div>
+          <h3>Date transformation</h3>
+          <p class="why">A date stored as text can't be sorted, filtered, or subtracted.</p>
+        </div>
+      </div>
+      <div class="step-body">
+        <p class="pg-hint" style="margin:0 0 8px;">In real Sheets, this is a two-stage fix. <b>Stage 1 — fix the delimiter:</b> select the column, press <code class="mono">Ctrl+H</code> (Windows) / <code class="mono">Cmd+Shift+H</code> (Mac), Find "<code class="mono">.</code>" Replace with "<code class="mono">/</code>", Replace all. <b>Stage 2 — apply a consistent format:</b> select the column → <b>Format → Number → Date</b>.</p>
+        <div class="toggle-row">
+          <button class="cleanbtn" onclick="toggleStep(this,'s5')">Apply: Find "." → Replace "/", then format as Date</button>
+          <span class="state-label" id="s5-label">TEXT · 3 formats</span>
+        </div>
+        <table class="sheet">
+          <thead><tr><th>Row</th><th>Order Date</th><th>Type</th></tr></thead>
+          <tbody id="s5-body">
+            <tr class="dirty"><td>A</td><td>09.06.2014</td><td>TEXT (dots)</td></tr>
+            <tr class="dirty"><td>B</td><td>2014-06-09</td><td>TEXT (ISO)</td></tr>
+            <tr class="dirty"><td>C</td><td>6/9/14</td><td>TEXT (US short)</td></tr>
+          </tbody>
+        </table>
+        <div class="impact" id="s5-impact">Three visually different strings that represent the <b>same</b> logical date. Until normalized, GSheets can't sort them chronologically or run <code class="mono">DATEDIF</code> on them.</div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">6</div>
+        <div>
+          <h3>Text splitting</h3>
+          <p class="why">One column hiding two dimensions — the slash is your delimiter.</p>
+        </div>
+      </div>
+      <div class="step-body">
+        <p class="pg-hint" style="margin:0 0 8px;">In real Sheets: first insert an empty column to the right so the split doesn't overwrite adjacent data, then highlight the column → <b>Data → Split text to columns</b> → change "Detect automatically" to <b>Custom</b> and type your delimiter.</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+          <div style="flex:2; min-width:220px;">
+            <label style="font-size:12px;color:var(--ink-soft);">Rows to split, one per line</label>
+            <textarea id="s6-input" class="pg-input" style="height:78px; resize:vertical; font-size:13px;" spellcheck="false">42420/South
+90032/West
+10009/East</textarea>
+          </div>
+          <div style="flex:1; min-width:120px;">
+            <label style="font-size:12px;color:var(--ink-soft);">Delimiter</label>
+            <input id="s6-delim" class="pg-input" type="text" value="/" maxlength="3" spellcheck="false">
+          </div>
+        </div>
+        <div class="toggle-row">
+          <button class="cleanbtn" onclick="toggleStep(this,'s6')">Apply: Split text to columns</button>
+          <span class="state-label" id="s6-label">1 column · glued</span>
+        </div>
+        <table class="sheet" id="s6-table">
+          <thead><tr id="s6-head"><th>Postal_Region</th></tr></thead>
+          <tbody id="s6-body">
+            <tr class="dirty"><td>42420/South</td></tr>
+            <tr class="dirty"><td>90032/West</td></tr>
+            <tr class="dirty"><td>10009/East</td></tr>
+          </tbody>
+        </table>
+        <div class="impact" id="s6-impact">Can't answer "total sales for the South region" — <code class="mono">South</code> is glued to <code class="mono">42420</code> and can't be filtered or grouped.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TEXT FUNCTIONS PLAYGROUND ============ -->
+  <section id="textfns">
+    <div class="kicker">Formula Toolkit</div>
+    <h2 class="h"><span class="rowno">03</span> Text functions playground</h2>
+    <p class="lede">Menu-driven cleaning is one-off; formulas scale to every new row. Type any value into the cell below — try a Product ID like <code class="mono">FUR-CH-10000454</code> or a messy price like <code class="mono">$261.96</code> — and watch every function recalculate live.</p>
+
+    <table class="helper-table" style="margin-bottom:20px;">
+      <thead><tr><th>Function</th><th>What it does</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr><td><code>LEN</code></td><td>Counts characters in a cell</td><td>The #1 detective tool — if every Customer ID should be 8 characters and LEN returns 7, that row is broken</td></tr>
+        <tr><td><code>LEFT / RIGHT / MID</code></td><td>Slice N characters from the start, end, or middle</td><td>Splits a Product ID like <code class="mono">FUR-CH-10000454</code> into Category, Sub-Category, and Item Code without ever touching the raw column</td></tr>
+        <tr><td><code>FIND / SEARCH</code></td><td>Returns the position of a character inside a cell</td><td>Locates a delimiter dynamically, so <code class="mono">LEFT(text, FIND("/",text)-1)</code> works whether the code is 5 digits or 7</td></tr>
+        <tr><td><code>SUBSTITUTE</code></td><td>Swaps one piece of text for another, non-destructively</td><td>Strips symbols like <code class="mono">$</code> so a price hiding as text can be forced back into a real number</td></tr>
+        <tr><td><code>PROPER / UPPER / LOWER</code></td><td>Standardizes casing</td><td>Collapses "los angeles", "LOS ANGELES", and "Los Angeles" into one real category</td></tr>
+      </tbody>
+    </table>
+
+    <div class="playground">
+      <input id="pgInput" class="pg-input" type="text" value="FUR-CH-10000454" spellcheck="false">
+      <div class="pg-hint">Live cell: <code>F2</code>. All formulas below reference this value.</div>
+      <div class="pg-out">
+        <div class="pg-cell"><span class="fname">=LEN(F2)</span><span class="fresult" id="out-len"></span></div>
+        <div class="pg-cell"><span class="fname">=LEFT(F2,3)</span><span class="fresult" id="out-left"></span></div>
+        <div class="pg-cell"><span class="fname">=MID(F2,5,2)</span><span class="fresult" id="out-mid"></span></div>
+        <div class="pg-cell"><span class="fname">=RIGHT(F2,4)</span><span class="fresult" id="out-right"></span></div>
+        <div class="pg-cell"><span class="fname">=FIND("/",F2)</span><span class="fresult" id="out-find"></span></div>
+        <div class="pg-cell"><span class="fname">=SUBSTITUTE(F2,"-","_")</span><span class="fresult" id="out-sub"></span></div>
+        <div class="pg-cell"><span class="fname">=PROPER(F2)</span><span class="fresult" id="out-proper"></span></div>
+        <div class="pg-cell"><span class="fname">=SUBSTITUTE(F2,"$","")*1</span><span class="fresult" id="out-money"></span></div>
+      </div>
+    </div>
+
+    <div class="impact" style="margin-top:16px;">
+      <b>Interview hook:</b> given only a Product ID column, <code class="mono">LEFT(Product_ID,3)</code> inside a COUNTIF gets you a category count without ever building a Category column.
+    </div>
+    <div class="impact green" style="margin-top:12px;">
+      <b>Sibling functions:</b> <code class="mono">UPPER()</code> and <code class="mono">LOWER()</code> do the same job as <code class="mono">PROPER()</code> for ALL CAPS and all lowercase output. They're most useful for standardizing join keys before a VLOOKUP — two ID columns that look identical to you can still fail to match if one is uppercase and the other isn't.
+    </div>
+    <div class="impact" style="margin-top:12px;">
+      <b>Putting it together:</b> before any deep analysis, build a few helper columns once — <code class="mono">=LEFT(F2,3)</code> for Category Code, <code class="mono">=MID(F2,5,2)</code> for Sub-Category Code, <code class="mono">=LEN(C2)</code> to flag any Customer ID with the wrong length. Three formulas, dragged down once, and the dataset is segmentation-ready. Menu-driven cleaning is one-off — formula-driven cleaning scales every Monday morning.
+    </div>
+  </section>
+
+  <!-- ============ DATE FUNCTIONS ============ -->
+  <section id="dates">
+    <div class="kicker">Formula Toolkit</div>
+    <h2 class="h"><span class="rowno">04</span> Date &amp; time lab</h2>
+    <p class="lede">GSheets stores every date as a serial number — days since December 30, 1899. That single fact is why date subtraction, sorting, and filtering all just work.</p>
+
+    <div class="datelab">
+      <div class="lab-card">
+        <h4>Serial number decoder</h4>
+        <input type="date" class="datefield" id="dateInput" value="2014-06-09">
+        <div class="serialbox">
+          <span>Internally stored as</span>
+          <b id="serialOut">41799</b>
+        </div>
+        <div class="unitgrid">
+          <span class="unitpill" data-part="year">=YEAR() → <b id="pYear">2014</b></span>
+          <span class="unitpill" data-part="month">=MONTH() → <b id="pMonth">6</b></span>
+          <span class="unitpill" data-part="day">=DAY() → <b id="pDay">9</b></span>
+          <span class="unitpill" data-part="weekday">=WEEKDAY(,2) → <b id="pWeekday">1</b></span>
+        </div>
+      </div>
+
+      <div class="lab-card">
+        <h4>DATEDIF calculator</h4>
+        <label style="font-size:12px;color:var(--ink-soft);">Order Date</label>
+        <input type="date" class="datefield" id="dateStart" value="2014-06-09">
+        <label style="font-size:12px;color:var(--ink-soft);">Ship Date</label>
+        <input type="date" class="datefield" id="dateEnd" value="2014-06-13">
+        <div class="unitgrid" id="unitPills">
+          <span class="unitpill active" data-unit="D">"D"</span>
+          <span class="unitpill" data-unit="M">"M"</span>
+          <span class="unitpill" data-unit="Y">"Y"</span>
+        </div>
+        <div class="dateresult" id="datedifResult">4<span>days between order and shipment</span></div>
+      </div>
+    </div>
+
+    <table class="helper-table" style="margin-top:20px;">
+      <thead><tr><th>DATEDIF unit</th><th>Returns</th></tr></thead>
+      <tbody>
+        <tr><td><code>"D"</code></td><td>Difference in days</td></tr>
+        <tr><td><code>"M"</code></td><td>Difference in complete months</td></tr>
+        <tr><td><code>"Y"</code></td><td>Difference in complete years</td></tr>
+        <tr><td><code>"MD"</code></td><td>Days, ignoring months and years</td></tr>
+        <tr><td><code>"YM"</code></td><td>Months, ignoring years</td></tr>
+        <tr><td><code>"YD"</code></td><td>Days, ignoring years</td></tr>
+      </tbody>
+    </table>
+    <div class="impact green" style="margin-top:16px;"><b>Interview reality:</b> a data analyst interview will almost always include a date question — "how many days between order placed and delivered," "what was the average delivery time last quarter," "which day of the week sees the most orders." These aren't optional skills; they're entry-level expectations. Build the helper columns once — <code class="mono">=YEAR(B2)</code> for year-over-year analysis, <code class="mono">=MONTH(B2)</code> for seasonality, <code class="mono">=WEEKDAY(B2,2)</code> for weekday-vs-weekend effects, <code class="mono">=TODAY()-B2</code> for order-aging buckets — and every future date question becomes a one-liner.</div>
+  </section>
+
+  <!-- ============ SORTING ============ -->
+  <section id="sorting">
+    <div class="kicker">Structure</div>
+    <h2 class="h"><span class="rowno">05</span> Sort sheet vs. sort range</h2>
+    <p class="lede">Same button family, opposite outcomes. One keeps every row intact; the other quietly breaks the link between columns.</p>
+    <div class="impact" style="margin-bottom:20px;"><b>Multi-level sorting:</b> real datasets rarely need just one sort key. To find the top 5 sales in each region, use <b>Data → Sort range → Advanced range sorting options</b>, check "Data has header row," sort by Region (A→Z) first, then click "+ Add another sort column" and sort by Sales (Z→A). The first 5 rows of each region block are your answer — a technique that combines cleanly with the fill handle's double-click shortcut to auto-fill down to the last row of data.</div>
+
+    <div class="sortdemo">
+      <div class="sortcard bad">
+        <div class="sc-head">✗ Sort range (Sales column only)</div>
+        <table class="sheet" id="badSortTable">
+          <thead><tr><th>Cust ID</th><th>City</th><th>Sales</th></tr></thead>
+          <tbody>
+            <tr><td contenteditable="true">CG-12520</td><td contenteditable="true">Henderson</td><td class="sortval" contenteditable="true">731.94</td></tr>
+            <tr><td contenteditable="true">BH-11710</td><td contenteditable="true">Los Angeles</td><td class="sortval" contenteditable="true">48.86</td></tr>
+            <tr><td contenteditable="true">AA-10315</td><td contenteditable="true">Unknown</td><td class="sortval" contenteditable="true">2.52</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:11.5px;color:var(--ink-soft);padding:8px 14px 0;margin:0;">Cells are editable — try your own Cust IDs and Sales values, then sort.</p>
+        <button class="sortbtn" onclick="sortRangeOnly()">Sort just the Sales column, Z→A</button>
+        <p style="font-size:12px;color:var(--bad-red);padding:0 14px 14px;margin:8px 0 0;">After sorting: Cust ID / City stay put, Sales moves alone → <span class="mismatch-tag">rows no longer match.</span></p>
+      </div>
+
+      <div class="sortcard good">
+        <div class="sc-head">✓ Sort sheet (whole row moves)</div>
+        <table class="sheet" id="goodSortTable">
+          <thead><tr><th>Cust ID</th><th>City</th><th>Sales</th></tr></thead>
+          <tbody>
+            <tr><td contenteditable="true">CG-12520</td><td contenteditable="true">Henderson</td><td class="sortval" contenteditable="true">731.94</td></tr>
+            <tr><td contenteditable="true">BH-11710</td><td contenteditable="true">Los Angeles</td><td class="sortval" contenteditable="true">48.86</td></tr>
+            <tr><td contenteditable="true">AA-10315</td><td contenteditable="true">Unknown</td><td class="sortval" contenteditable="true">2.52</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:11.5px;color:var(--ink-soft);padding:8px 14px 0;margin:0;">Cells are editable — try your own Cust IDs and Sales values, then sort.</p>
+        <button class="sortbtn" onclick="sortWholeSheet()">Sort sheet by Sales, Z→A</button>
+        <p style="font-size:12px;color:var(--sheet-green-dark);padding:0 14px 14px;margin:8px 0 0;">Every column moves together — Cust ID, City, and Sales stay aligned.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MISTAKES ============ -->
+  <section id="mistakes">
+    <div class="kicker">Field Notes</div>
+    <h2 class="h"><span class="rowno">06</span> 3 beginner mistakes</h2>
+    <div class="mistakes">
+      <div class="mistake">
+        <h4><span class="no">1</span> Sorting only one column</h4>
+        <p>Highlighting just the Sales column and sorting it leaves every other column in its original order. <span class="fix">Fix: always use Data → Sort sheet, not Sort range.</span></p>
+      </div>
+      <div class="mistake">
+        <h4><span class="no">2</span> Forgetting helper columns</h4>
+        <p>Cleaning directly inside the original column overwrites raw data with formula results — nothing to go back to if the formula is wrong. <span class="fix">Fix: build a helper column, verify it, then Paste Special → Values only.</span></p>
+      </div>
+      <div class="mistake">
+        <h4><span class="no">3</span> Formatting numbers instead of converting them</h4>
+        <p>A cell that <i>looks</i> like $261.96 may still be text — left-aligned is the tell. SUM and Pivot Tables will silently return 0. <span class="fix">Fix: =SUBSTITUTE(A2,"$","")*1 forces it back into a real number.</span></p>
+      </div>
+      <div class="mistake">
+        <h4><span class="no">4</span> Cleaning before understanding the data types</h4>
+        <p>Jumping straight into TRIM and PROPER without first checking whether a column is text, a number, a date, or a boolean means the same misclassification keeps resurfacing — a "clean" date column can still silently be text underneath. <span class="fix">Fix: always confirm the data type first (numbers are right-aligned, text is left-aligned) — misclassifying a type breaks every downstream calculation, and no amount of formatting fixes that.</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HELPER COLUMNS SUMMARY ============ -->
+  <section id="helpers">
+    <div class="kicker">Reference</div>
+    <h2 class="h"><span class="rowno">07</span> Helper columns worth building every time</h2>
+    <table class="helper-table">
+      <thead><tr><th>New column</th><th>Formula</th><th>What it gives you</th></tr></thead>
+      <tbody>
+        <tr><td>Category Code</td><td><code>=LEFT(F2,3)</code></td><td>FUR, OFF, TEC</td></tr>
+        <tr><td>Sub-Category Code</td><td><code>=MID(F2,5,2)</code></td><td>CH, LA, ST…</td></tr>
+        <tr><td>Order Year</td><td><code>=YEAR(B2)</code></td><td>Year-over-year analysis</td></tr>
+        <tr><td>Order Month</td><td><code>=MONTH(B2)</code></td><td>Seasonality patterns</td></tr>
+        <tr><td>Day of Week</td><td><code>=WEEKDAY(B2,2)</code></td><td>Weekday vs. weekend effect</td></tr>
+        <tr><td>Days Old</td><td><code>=TODAY()-B2</code></td><td>Order aging buckets</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section id="quiz">
+    <div class="kicker">Check Yourself</div>
+    <h2 class="h"><span class="rowno">08</span> Quick quiz</h2>
+
+    <div class="quiz" data-answer="B">
+      <div class="q-head">1. Why is removing duplicates one of the first steps in data cleaning?</div>
+      <button class="qopt" data-v="A">It improves spreadsheet color formatting</button>
+      <button class="qopt" data-v="B">It prevents inflated calculations and incorrect reporting</button>
+      <button class="qopt" data-v="C">It converts text into numbers</button>
+      <button class="qopt" data-v="D">It increases internet speed in Google Sheets</button>
+      <div class="qexplain">Duplicate rows can silently double-count sales, customers, or transactions — leading to incorrect totals and misleading reports.</div>
+    </div>
+
+    <div class="quiz" data-answer="C">
+      <div class="q-head">2. Which function best standardizes "los angeles" into "Los Angeles"?</div>
+      <button class="qopt" data-v="A">LOWER()</button>
+      <button class="qopt" data-v="B">TRIM()</button>
+      <button class="qopt" data-v="C">PROPER()</button>
+      <button class="qopt" data-v="D">FIND()</button>
+      <div class="qexplain">PROPER() capitalizes the first letter of each word and lowercases the rest, standardizing categorical text fields.</div>
+    </div>
+
+    <div class="quiz" data-answer="A">
+      <div class="q-head">3. What does =DATEDIF(Order_Date, Ship_Date, "D") return?</div>
+      <button class="qopt" data-v="A">Difference between two dates in days</button>
+      <button class="qopt" data-v="B">Difference between two dates in months</button>
+      <button class="qopt" data-v="C">Current date and time</button>
+      <button class="qopt" data-v="D">Day number of the month</button>
+      <div class="qexplain">DATEDIF with unit "D" returns the total number of days between the two dates.</div>
+    </div>
+
+    <div class="quiz" data-answer="D">
+      <div class="q-head">4. What does =YEAR(Order_Date) return for 09-Jun-2014?</div>
+      <button class="qopt" data-v="A">Day number from the date</button>
+      <button class="qopt" data-v="B">Month number from the date</button>
+      <button class="qopt" data-v="C">Current year</button>
+      <button class="qopt" data-v="D">2014</button>
+      <div class="qexplain">YEAR() extracts only the year portion of a date value.</div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="next mono">Next lecture → cell referencing, IF / IFS, and the SUMIFS · COUNTIFS · AVERAGEIFS family</div>
+  </footer>
+
+</div>
+
+<script>
+// ---------- Hero formula typewriter ----------
+const formulas = ['=CLEAN(RAW_EXPORT)', '=PROPER(TRIM(D2))', '=DATEDIF(B2,C2,"D")'];
+let fIdx = 0, cIdx = 0, typingEl = document.getElementById('typedFormula');
+function typeLoop(){
+  const word = formulas[fIdx];
+  if(cIdx <= word.length){
+    typingEl.textContent = word.slice(0, cIdx);
+    cIdx++;
+    setTimeout(typeLoop, 65);
+  } else {
+    setTimeout(()=>{ cIdx=0; fIdx=(fIdx+1)%formulas.length; typeLoop(); }, 1400);
+  }
+}
+typeLoop();
+
+// ---------- Type sorter mini-game ----------
+const cellBank = [
+  {v:'FUR-CH-10000454', t:'string'},
+  {v:'731.94', t:'number'},
+  {v:'09-Jun-2014', t:'date'},
+  {v:'TRUE', t:'bool'},
+  {v:'CG-12520', t:'string'},
+  {v:'=Sales > 500', t:'bool'},
+  {v:'14.62', t:'number'},
+  {v:'Order Date column value', t:'date'},
+  {v:'Henderson', t:'string'},
+  {v:'3', t:'number'},
+];
+let sorterPool = [...cellBank].sort(()=>Math.random()-0.5);
+let sorterIdx = 0, score = 0, total = 0;
+function nextCell(){
+  if(sorterIdx >= sorterPool.length){ sorterPool = [...cellBank].sort(()=>Math.random()-0.5); sorterIdx = 0; }
+  document.getElementById('cellPrompt').textContent = sorterPool[sorterIdx].v;
+  document.getElementById('sorterFeedback').textContent = '';
+  document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('correct','wrong'));
+}
+document.querySelectorAll('.sbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const guess = btn.dataset.t;
+    const correct = sorterPool[sorterIdx].t;
+    total++;
+    document.getElementById('sorterTotal').textContent = total;
+    if(guess === correct){
+      score++;
+      btn.classList.add('correct');
+      document.getElementById('sorterFeedback').textContent = '✓ Correct.';
+    } else {
+      btn.classList.add('wrong');
+      document.querySelectorAll('.sbtn').forEach(b=>{ if(b.dataset.t===correct) b.classList.add('correct'); });
+      document.getElementById('sorterFeedback').textContent = '✗ Not quite — the correct type is highlighted.';
+    }
+    document.getElementById('sorterScore').textContent = score;
+    sorterIdx++;
+    setTimeout(nextCell, 1100);
+  });
+});
+nextCell();
+
+// ---------- Shared helpers ----------
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function toProperCase(str){
+  return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ---------- Step 1 — live duplicate checker ----------
+function getRowCells(rowId){
+  return Array.from(document.querySelectorAll('#'+rowId+' td[contenteditable]')).map(td => td.textContent.trim());
+}
+function checkDuplicates(){
+  const r1 = getRowCells('s1-row1');
+  const r2 = getRowCells('s1-row2');
+  const isDup = r1.length && r1.every((v,i) => v === r2[i]);
+  const impact = document.getElementById('s1-impact');
+  const removeBtn = document.getElementById('s1-removebtn');
+  const flag1 = document.getElementById('s1-flag1');
+  const flag2 = document.getElementById('s1-flag2');
+  document.getElementById('s1-row1').classList.toggle('dirty', isDup);
+  document.getElementById('s1-row2').classList.toggle('dirty', isDup);
+  flag1.textContent = isDup ? 'dupe #1' : 'row 1';
+  flag2.textContent = isDup ? 'dupe #2' : 'row 2';
+  flag1.className = 'flag' + (isDup ? '' : ' ok');
+  flag2.className = 'flag' + (isDup ? '' : ' ok');
+  if(isDup){
+    const salesVal = parseFloat(r1[3].replace(/[^0-9.\-]/g,'')) || 0;
+    impact.innerHTML = `<b>Exact match found:</b> every cell is identical — summing Sales would silently double-count to ₹${(salesVal*2).toFixed(2)} instead of the true ₹${salesVal.toFixed(2)}.`;
+    removeBtn.style.display = 'inline-block';
+  } else {
+    impact.innerHTML = '<b>Not a duplicate:</b> at least one cell differs, so "Remove duplicates" would keep both rows.';
+    removeBtn.style.display = 'none';
+  }
+}
+function removeDuplicateRow(){
+  document.getElementById('s1-row2').style.display = 'none';
+  document.getElementById('s1-row1').classList.remove('dirty');
+  document.getElementById('s1-impact').innerHTML = '<b>Removed:</b> the duplicate row is dropped — only one true record remains.';
+  document.getElementById('s1-removebtn').style.display = 'none';
+}
+
+// ---------- Step 2 — live trim ----------
+let s2Applied = false;
+function renderS2(){
+  const raw = document.getElementById('s2-input').value;
+  const cell = document.getElementById('s2-cell');
+  const count = document.getElementById('s2-count');
+  const pivot = document.getElementById('s2-pivot');
+  if(!s2Applied){
+    cell.textContent = '"' + raw.replace(/ /g,'␣') + '"';
+    cell.classList.add('dirty');
+    count.textContent = raw.length + ' characters';
+    pivot.textContent = 'a different value than its trimmed twin';
+    pivot.style.color = 'var(--bad-red)';
+  } else {
+    const trimmed = raw.trim();
+    cell.textContent = '"' + trimmed + '"';
+    cell.classList.remove('dirty');
+    count.textContent = trimmed.length + ' characters (was ' + raw.length + ')';
+    pivot.textContent = trimmed === raw ? 'no change needed — already clean' : 'grouped correctly with every other clean match';
+    pivot.style.color = 'var(--sheet-green-dark)';
+  }
+}
+document.getElementById('s2-input').addEventListener('input', renderS2);
+renderS2();
+
+// ---------- Step 4 — live PROPER() on a custom list ----------
+let s4Applied = false;
+function renderS4(){
+  const items = document.getElementById('s4-input').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const body = document.getElementById('s4-body');
+  const impact = document.getElementById('s4-impact');
+  if(items.length === 0){
+    body.innerHTML = '<tr><td colspan="3">Type at least one value above</td></tr>';
+    return;
+  }
+  if(!s4Applied){
+    body.innerHTML = items.map((v,i) => `<tr class="dirty"><td>${i+7}</td><td>${escapeHtml(v)}</td><td>raw</td></tr>`).join('');
+    const distinct = new Set(items).size;
+    impact.innerHTML = `<b>Fragmented:</b> ${items.length} raw value(s), ${distinct} of them textually distinct — GSheets treats each as a separate category.`;
+  } else {
+    const properd = items.map(toProperCase);
+    body.innerHTML = properd.map((v,i) => `<tr><td>${i+7}</td><td>${escapeHtml(v)}</td><td><span class="flag ok">clean</span></td></tr>`).join('');
+    const uniqueVals = [...new Set(properd)];
+    impact.innerHTML = `<b>Unified:</b> ${items.length} raw value(s) collapsed into ${uniqueVals.length} real categor${uniqueVals.length===1?'y':'ies'} — ${escapeHtml(uniqueVals.join(', '))}.`;
+  }
+}
+document.getElementById('s4-input').addEventListener('input', renderS4);
+renderS4();
+
+// ---------- Step 6 — live text split ----------
+let s6Applied = false;
+function renderS6(){
+  const rows = document.getElementById('s6-input').value.split('\n').map(r=>r.trim()).filter(Boolean);
+  const delim = document.getElementById('s6-delim').value || '/';
+  const head = document.getElementById('s6-head');
+  const body = document.getElementById('s6-body');
+  if(!s6Applied){
+    head.innerHTML = '<th>Column A (raw)</th>';
+    body.innerHTML = rows.map(r => `<tr class="dirty"><td>${escapeHtml(r)}</td></tr>`).join('') || '<tr><td>Type a row above</td></tr>';
+  } else {
+    head.innerHTML = '<th>Part 1</th><th>Part 2</th>';
+    body.innerHTML = rows.map(r => {
+      const idx = r.indexOf(delim);
+      if(idx === -1) return `<tr><td colspan="2" style="color:var(--bad-red)">"${escapeHtml(r)}" — delimiter "${escapeHtml(delim)}" not found</td></tr>`;
+      const a = r.slice(0, idx), b = r.slice(idx + delim.length);
+      return `<tr><td>${escapeHtml(a)}</td><td>${escapeHtml(b)}</td></tr>`;
+    }).join('') || '<tr><td colspan="2">Type a row above</td></tr>';
+  }
+}
+document.getElementById('s6-input').addEventListener('input', renderS6);
+document.getElementById('s6-delim').addEventListener('input', renderS6);
+renderS6();
+
+// ---------- Step toggles (generic before/after — used by s5, and to flip s2/s4/s6 state) ----------
+const stepData = {
+  s2: {
+    onLabel:'clean', offLabel:'dirty',
+    apply: () => { s2Applied = true; renderS2(); },
+    revert: () => { s2Applied = false; renderS2(); }
+  },
+  s4: {
+    onLabel:'unified', offLabel:'fragmented',
+    apply: () => { s4Applied = true; renderS4(); },
+    revert: () => { s4Applied = false; renderS4(); }
+  },
+  s6: {
+    onLabel:'split', offLabel:'glued',
+    apply: () => { s6Applied = true; renderS6(); },
+    revert: () => { s6Applied = false; renderS6(); }
+  },
+  s5: {
+    onLabel:'DATE · consistent', offLabel:'TEXT · 3 formats',
+    apply: () => {
+      const body = document.getElementById('s5-body');
+      body.innerHTML = `<tr><td>A</td><td>09-Jun-2014</td><td>DATE</td></tr>
+        <tr><td>B</td><td>09-Jun-2014</td><td>DATE</td></tr>
+        <tr><td>C</td><td>09-Jun-2014</td><td>DATE</td></tr>`;
+      document.getElementById('s5-impact').innerHTML = '<b>Calibrated:</b> sortable, subtractable, real — every time-series question becomes a one-liner.';
+    },
+    revert: () => {
+      const body = document.getElementById('s5-body');
+      body.innerHTML = `<tr class="dirty"><td>A</td><td>09.06.2014</td><td>TEXT (dots)</td></tr>
+        <tr class="dirty"><td>B</td><td>2014-06-09</td><td>TEXT (ISO)</td></tr>
+        <tr class="dirty"><td>C</td><td>6/9/14</td><td>TEXT (US short)</td></tr>`;
+      document.getElementById('s5-impact').innerHTML = "Three visually different strings that represent the <b>same</b> logical date. Until normalized, GSheets can't sort them chronologically or run <code class=\"mono\">DATEDIF</code> on them.";
+    }
+  },
+  s6: {
+    onLabel:'2 columns · split', offLabel:'1 column · glued',
+    apply: () => {
+      document.getElementById('s6-head').innerHTML = '<th>Postal Code</th><th>Region</th>';
+      document.getElementById('s6-body').innerHTML = `<tr><td>42420</td><td>South</td></tr>
+        <tr><td>90032</td><td>West</td></tr>
+        <tr><td>10009</td><td>East</td></tr>`;
+      document.getElementById('s6-impact').innerHTML = '<b>Unlocked:</b> "Sum of Sales by Region" is now a one-click Pivot Table.';
+    },
+    revert: () => {
+      document.getElementById('s6-head').innerHTML = '<th>Postal_Region</th>';
+      document.getElementById('s6-body').innerHTML = `<tr class="dirty"><td>42420/South</td></tr>
+        <tr class="dirty"><td>90032/West</td></tr>
+        <tr class="dirty"><td>10009/East</td></tr>`;
+      document.getElementById('s6-impact').innerHTML = "Can't answer \"total sales for the South region\" — <code class=\"mono\">South</code> is glued to <code class=\"mono\">42420</code> and can't be filtered or grouped.";
+    }
+  }
+};
+
+function toggleStep(btn, key){
+  const isOn = btn.classList.toggle('on');
+  const cfg = stepData[key];
+  const label = document.getElementById(key+'-label');
+  if(isOn){
+    cfg.apply();
+    btn.textContent = '↺ Revert';
+    if(label){ label.textContent = cfg.onLabel; label.classList.add('clean'); }
+  } else {
+    cfg.revert();
+    // restore original button captions
+    const originalText = {
+      s2:'Apply: =TRIM(cell)',
+      s4:'Apply: =PROPER(D2)',
+      s5:'Apply: Find "." → Replace "/", then format as Date',
+      s6:'Apply: Split text to columns'
+    };
+    btn.textContent = originalText[key];
+    if(label){ label.textContent = cfg.offLabel; label.classList.remove('clean'); }
+  }
+}
+
+// Step 3 — missing values strategy picker
+function applyBlank(mode){
+  const cell = document.getElementById('s3-cell');
+  const strategy = document.getElementById('s3-strategy');
+  const impact = document.getElementById('s3-impact');
+  if(mode==='remove'){
+    cell.textContent = '— row deleted —';
+    cell.classList.remove('dirty');
+    strategy.textContent = 'Removal: row 14 dropped entirely.';
+    strategy.style.color = 'var(--bad-red)';
+  } else if(mode==='impute'){
+    cell.textContent = 'High Point';
+    cell.classList.remove('dirty');
+    strategy.textContent = 'Imputation: postal code 27265 + state NC → City = High Point.';
+    strategy.style.color = 'var(--sheet-green-dark)';
+  } else {
+    cell.textContent = 'Unknown';
+    cell.classList.remove('dirty');
+    strategy.textContent = 'Categorization: labeled "Unknown" — trackable in every Pivot Table.';
+    strategy.style.color = 'var(--formula-blue)';
+  }
+}
+
+// ---------- Text function playground ----------
+const pgInput = document.getElementById('pgInput');
+function updatePlayground(){
+  const v = pgInput.value;
+  document.getElementById('out-len').textContent = v.length;
+  document.getElementById('out-left').textContent = v.slice(0,3) || '(empty)';
+  document.getElementById('out-mid').textContent = v.slice(4,6) || '(empty)';
+  document.getElementById('out-right').textContent = v.slice(-4) || '(empty)';
+  const slashPos = v.indexOf('/');
+  const findEl = document.getElementById('out-find');
+  if(slashPos === -1){ findEl.textContent = '#VALUE! — no "/" found'; findEl.classList.add('err'); }
+  else { findEl.textContent = slashPos+1; findEl.classList.remove('err'); }
+  document.getElementById('out-sub').textContent = v.split('-').join('_') || '(empty)';
+  document.getElementById('out-proper').textContent = v.toLowerCase().replace(/\b\w/g, c=>c.toUpperCase()) || '(empty)';
+  const moneyEl = document.getElementById('out-money');
+  const cleaned = v.replace(/\$/g,'').replace(/,/g,'');
+  const num = parseFloat(cleaned);
+  if(!isNaN(num) && /^[0-9.]+$/.test(cleaned.trim())){ moneyEl.textContent = num; moneyEl.classList.remove('err'); }
+  else { moneyEl.textContent = '#VALUE! — not numeric'; moneyEl.classList.add('err'); }
+}
+pgInput.addEventListener('input', updatePlayground);
+updatePlayground();
+
+// ---------- Date lab ----------
+function toSerial(d){
+  const epoch = new Date(Date.UTC(1899,11,30));
+  const diff = Math.round((d - epoch) / 86400000);
+  return diff;
+}
+function updateSerial(){
+  const raw = document.getElementById('dateInput').value;
+  if(!raw) return;
+  const d = new Date(raw+'T00:00:00Z');
+  document.getElementById('serialOut').textContent = toSerial(d);
+  document.getElementById('pYear').textContent = d.getUTCFullYear();
+  document.getElementById('pMonth').textContent = d.getUTCMonth()+1;
+  document.getElementById('pDay').textContent = d.getUTCDate();
+  const dow = d.getUTCDay(); // 0=Sun
+  const mondayFirst = dow===0 ? 7 : dow;
+  document.getElementById('pWeekday').textContent = mondayFirst;
+}
+document.getElementById('dateInput').addEventListener('input', updateSerial);
+updateSerial();
+
+let activeUnit = 'D';
+document.querySelectorAll('#unitPills .unitpill').forEach(p=>{
+  p.addEventListener('click', ()=>{
+    document.querySelectorAll('#unitPills .unitpill').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    activeUnit = p.dataset.unit;
+    updateDatedif();
+  });
+});
+function updateDatedif(){
+  const s = document.getElementById('dateStart').value;
+  const e = document.getElementById('dateEnd').value;
+  if(!s || !e) return;
+  const ds = new Date(s+'T00:00:00Z'), de = new Date(e+'T00:00:00Z');
+  const result = document.getElementById('datedifResult');
+  if(de < ds){
+    result.innerHTML = '#NUM!<span>end date must be after start date</span>';
+    return;
+  }
+  if(activeUnit==='D'){
+    const days = Math.round((de-ds)/86400000);
+    result.innerHTML = days + '<span>days between order and shipment</span>';
+  } else if(activeUnit==='M'){
+    let months = (de.getUTCFullYear()-ds.getUTCFullYear())*12 + (de.getUTCMonth()-ds.getUTCMonth());
+    if(de.getUTCDate() < ds.getUTCDate()) months--;
+    result.innerHTML = Math.max(months,0) + '<span>complete months between dates</span>';
+  } else {
+    let years = de.getUTCFullYear()-ds.getUTCFullYear();
+    if(de.getUTCMonth() < ds.getUTCMonth() || (de.getUTCMonth()===ds.getUTCMonth() && de.getUTCDate()<ds.getUTCDate())) years--;
+    result.innerHTML = Math.max(years,0) + '<span>complete years between dates</span>';
+  }
+}
+document.getElementById('dateStart').addEventListener('input', updateDatedif);
+document.getElementById('dateEnd').addEventListener('input', updateDatedif);
+updateDatedif();
+
+// ---------- Sort demo ----------
+function sortRangeOnly(){
+  const table = document.getElementById('badSortTable');
+  const tbody = table.querySelector('tbody');
+  const cells = Array.from(tbody.querySelectorAll('.sortval'));
+  const salesVals = cells.map(c => parseFloat(c.textContent) || 0).sort((a,b) => b-a);
+  cells.forEach((c,i) => { c.textContent = salesVals[i]; c.style.color = 'var(--bad-red)'; c.style.fontWeight = '700'; });
+}
+function sortWholeSheet(){
+  const table = document.getElementById('goodSortTable');
+  const rows = Array.from(table.querySelectorAll('tbody tr'));
+  rows.sort((a,b)=>{
+    const av = parseFloat(a.querySelector('.sortval').textContent);
+    const bv = parseFloat(b.querySelector('.sortval').textContent);
+    return bv-av;
+  });
+  const tbody = table.querySelector('tbody');
+  rows.forEach(r=>{
+    tbody.appendChild(r);
+    r.querySelector('.sortval').style.color = 'var(--sheet-green-dark)';
+    r.querySelector('.sortval').style.fontWeight='700';
+  });
+}
+
+// ---------- Quiz ----------
+document.querySelectorAll('.quiz').forEach(quiz=>{
+  const answer = quiz.dataset.answer;
+  const opts = quiz.querySelectorAll('.qopt');
+  const explain = quiz.querySelector('.qexplain');
+  opts.forEach(opt=>{
+    opt.addEventListener('click', ()=>{
+      if(quiz.dataset.answered) return;
+      quiz.dataset.answered = 'true';
+      opts.forEach(o=>{
+        if(o.dataset.v === answer) o.classList.add('correct');
+        else if(o === opt) o.classList.add('wrong');
+      });
+      explain.classList.add('show');
+    });
+  });
+});
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Excel-1-postread" target="_blank" rel="noopener">github.com/scaler-content/Excel-1-postread</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

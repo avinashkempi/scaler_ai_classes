@@ -1,0 +1,1067 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class 8 Building Agents in n8n</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#fbf9f5; --paper-2:#ffffff; --ink:#1a1a17; --ink-2:#4a4a42; --ink-3:#7a7a70;
+  --rule:#e3ded4; --rule-2:#d2cbbe;
+  --accent:#0f5e55; --accent-2:#0a4a43; --accent-soft:#e6f0ee;
+  --amber:#8a5a00; --amber-soft:#fdf3e0;
+  --violet:#54407f; --violet-soft:#efeaf8;
+  --rose:#8d3a46; --rose-soft:#fbecee;
+  --b1:#0f5e55; --b2:#c98a2e; --b3:#54407f; --b4:#8d3a46; --b5:#3a6b8c;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --sans:'Inter',system-ui,-apple-system,sans-serif;
+  --serif:'Fraunces',Georgia,serif;
+  --shadow:0 1px 2px rgba(26,26,23,.05),0 8px 24px -12px rgba(26,26,23,.12);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#15171a; --paper-2:#1c1f23; --ink:#eceae4; --ink-2:#b4b2aa; --ink-3:#85837c;
+    --rule:#2b2f34; --rule-2:#3a3f45;
+    --accent:#5fc0b2; --accent-2:#8ad6c9; --accent-soft:#16302d;
+    --amber:#e0a94a; --amber-soft:#2e2515;
+    --violet:#b39ae8; --violet-soft:#241e33;
+    --rose:#e095a0; --rose-soft:#2e1c20;
+    --b1:#5fc0b2; --b2:#e0a94a; --b3:#b39ae8; --b4:#e095a0; --b5:#79b3d6;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15171a; --paper-2:#1c1f23; --ink:#eceae4; --ink-2:#b4b2aa; --ink-3:#85837c;
+  --rule:#2b2f34; --rule-2:#3a3f45;
+  --accent:#5fc0b2; --accent-2:#8ad6c9; --accent-soft:#16302d;
+  --amber:#e0a94a; --amber-soft:#2e2515;
+  --violet:#b39ae8; --violet-soft:#241e33;
+  --rose:#e095a0; --rose-soft:#2e1c20;
+  --b1:#5fc0b2; --b2:#e0a94a; --b3:#b39ae8; --b4:#e095a0; --b5:#79b3d6;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:1.5rem}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:17px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- shell ---------- */
+.shell{max-width:1180px;margin:0 auto;padding:0 16px;display:grid;grid-template-columns:230px 1fr;gap:48px}
+@media(max-width:940px){.shell{grid-template-columns:1fr;gap:0}}
+
+aside{
+  position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+  padding:40px 0 60px;border-right:1px solid var(--rule);
+  font-size:13.5px;line-height:1.45;
+}
+@media(max-width:940px){aside{display:none}}
+aside .tocHead{font:600 11px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:0 0 14px}
+aside a{display:flex;gap:8px;align-items:baseline;justify-content:space-between;color:var(--ink-2);text-decoration:none;padding:5px 10px 5px 11px;border-left:2px solid transparent;margin-left:-1px}
+aside a:hover{color:var(--accent);background:var(--accent-soft)}
+aside a.active{color:var(--accent);border-left-color:var(--accent);font-weight:600}
+aside a .mins{flex:0 0 auto;color:var(--ink-3);font:500 11.5px var(--mono)}
+
+main{padding:40px 0 120px;min-width:0;max-width:760px}
+
+/* ---------- masthead ---------- */
+.mast{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:8px}
+.kicker{font:600 11px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+.mast h1{
+  font-family:var(--serif);font-weight:600;font-size:clamp(2.1rem,5.4vw,3.3rem);
+  line-height:1.04;letter-spacing:-.02em;margin:0 0 16px;
+}
+.mast .meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px;color:var(--ink-2)}
+.mast .meta b{color:var(--ink);font-weight:600}
+.pill{
+  display:inline-block;padding:3px 9px;border-radius:999px;
+  background:var(--accent-soft);color:var(--accent);
+  font:600 12px var(--sans);border:1px solid color-mix(in srgb,var(--accent) 22%,transparent);
+}
+
+/* ---------- prose ---------- */
+h2{
+  font-family:var(--serif);font-weight:600;font-size:1.72rem;line-height:1.15;
+  letter-spacing:-.015em;margin:3.1rem 0 .3rem;padding-top:1.5rem;
+  border-top:1px solid var(--rule);
+}
+h2:first-of-type{border-top:0}
+h2 .secn{
+  display:block;font:600 11px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;
+}
+h3{font-family:var(--sans);font-weight:650;font-size:1.13rem;letter-spacing:-.005em;margin:2.1rem 0 .4rem}
+h4{font-family:var(--sans);font-weight:650;font-size:1rem;margin:1.5rem 0 .3rem;color:var(--ink-2)}
+p{margin:.85em 0}
+main>p:first-of-type{font-size:1.04em}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+strong{font-weight:650}
+hr{border:0;border-top:1px solid var(--rule);margin:2.4rem 0}
+img{max-width:100%;height:auto;border-radius:10px;border:1px solid var(--rule);display:block;margin:1.4rem 0;background:var(--paper-2)}
+code{font-family:var(--mono);font-size:.875em;background:var(--paper-2);border:1px solid var(--rule);border-radius:4px;padding:.1em .35em}
+pre{
+  background:var(--paper-2);border:1px solid var(--rule);border-radius:10px;
+  padding:16px 18px;overflow-x:auto;margin:1.4rem 0;box-shadow:var(--shadow);
+  max-width:100%;
+}
+#content{min-width:0}
+main>*,#content>*{min-width:0}
+pre code{background:none;border:0;padding:0;font-size:13.2px;line-height:1.6}
+
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:14.6px;display:block;overflow-x:auto}
+th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--rule);vertical-align:top}
+thead th{
+  font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);
+  border-bottom:1.5px solid var(--rule-2);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:color-mix(in srgb,var(--accent) 4%,transparent)}
+td strong{color:var(--ink)}
+
+ul,ol{padding-left:1.3em;margin:.85em 0}
+li{margin:.3em 0}
+
+/* ---------- labels ---------- */
+.lbl{
+  margin:1.5rem 0;padding:13px 16px 13px 17px;border-radius:0 9px 9px 0;
+  border-left:3px solid var(--rule-2);background:var(--paper-2);font-size:15.5px;line-height:1.6;
+}
+.lbl .tag{
+  display:block;font:600 10.5px/1 var(--sans);letter-spacing:.13em;text-transform:uppercase;
+  margin-bottom:7px;
+}
+.lbl.instructor{border-left-color:var(--violet);background:var(--violet-soft)}
+.lbl.instructor .tag{color:var(--violet)}
+.lbl.ask{border-left-color:var(--accent);background:var(--accent-soft)}
+.lbl.ask .tag{color:var(--accent)}
+.lbl.important{border-left-color:var(--amber);background:var(--amber-soft)}
+.lbl.important .tag{color:var(--amber)}
+.lbl.doubt{border-left-color:var(--b5);background:color-mix(in srgb,var(--b5) 10%,transparent)}
+.lbl.doubt .tag{color:var(--b5)}
+.lbl.question{border-left-color:var(--rose);background:var(--rose-soft)}
+.lbl.question .tag{color:var(--rose)}
+.step{
+  display:flex;gap:13px;margin:.7rem 0;padding:11px 14px;background:var(--paper-2);
+  border:1px solid var(--rule);border-radius:9px;font-size:15.5px;
+}
+.step .n{
+  flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--paper-2);
+  display:grid;place-items:center;font:600 13px var(--mono);
+}
+:root[data-theme="dark"] .step .n,
+html:not([data-theme="light"]) .step .n{color:#0d1114}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .step .n{color:#fff}}
+.step .body{flex:1;min-width:0}
+
+/* ---------- quiz ---------- */
+.quiz{
+  margin:2.2rem 0;border:1px solid var(--rule-2);border-radius:13px;overflow:hidden;
+  background:var(--paper-2);box-shadow:var(--shadow);
+}
+.quiz .qhead{
+  display:flex;align-items:center;gap:10px;padding:13px 18px;
+  border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--accent) 7%,transparent);
+}
+.quiz .qnum{font:600 11px var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--accent)}
+.quiz .qbody{padding:16px 18px 18px}
+.quiz .qtext{font-weight:600;margin:0 0 14px;font-size:16.5px;line-height:1.5}
+.opt{
+  display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;
+  padding:11px 14px;margin:7px 0;border:1px solid var(--rule);border-radius:9px;
+  background:var(--paper);color:var(--ink);font:400 15.5px/1.5 var(--sans);cursor:pointer;
+  transition:border-color .12s,background .12s;
+}
+.opt:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft)}
+.opt:disabled{cursor:default}
+.opt .k{
+  flex:0 0 auto;width:23px;height:23px;border-radius:5px;border:1px solid var(--rule-2);
+  display:grid;place-items:center;font:600 12.5px var(--mono);color:var(--ink-2);background:var(--paper-2);
+}
+.opt.right{border-color:var(--accent);background:var(--accent-soft)}
+.opt.right .k{background:var(--accent);border-color:var(--accent);color:var(--paper-2)}
+.opt.wrong{border-color:var(--rose);background:var(--rose-soft)}
+.opt.wrong .k{background:var(--rose);border-color:var(--rose);color:var(--paper-2)}
+.verdict{margin:14px 0 0;padding:13px 15px;border-radius:9px;font-size:15px;line-height:1.6;display:none}
+.verdict.show{display:block}
+.verdict .vt{font-weight:650;display:block;margin-bottom:5px}
+.verdict.ok{background:var(--accent-soft);border-left:3px solid var(--accent)}
+.verdict.no{background:var(--rose-soft);border-left:3px solid var(--rose)}
+
+/* ---------- visualizers ---------- */
+.viz{
+  margin:2.3rem 0;border:1px solid var(--rule-2);border-radius:13px;background:var(--paper-2);
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.viz .vhead{padding:14px 18px 12px;border-bottom:1px solid var(--rule)}
+.viz .vk{font:600 10.5px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--b2);margin-bottom:7px}
+.viz .vhead h4{margin:0;font-size:1.05rem;color:var(--ink);font-weight:650}
+.viz .vhead p{margin:5px 0 0;font-size:14px;color:var(--ink-2)}
+.viz .vbody{padding:17px 18px 20px}
+.ctl{display:grid;gap:14px;margin-bottom:17px}
+.ctl.two{grid-template-columns:1fr 1fr}
+.ctl.three{grid-template-columns:repeat(3,1fr)}
+@media(max-width:620px){.ctl.two,.ctl.three{grid-template-columns:1fr}}
+.ctl label{display:block;font:600 12px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.ctl label .v{float:right;text-transform:none;letter-spacing:0;font-family:var(--mono);color:var(--accent);font-size:12.5px}
+input[type=range]{width:100%;accent-color:var(--accent);height:22px}
+textarea,select,input[type=number]{
+  width:100%;font-family:var(--mono);font-size:13.5px;padding:9px 11px;
+  border:1px solid var(--rule-2);border-radius:8px;background:var(--paper);color:var(--ink);
+}
+textarea{resize:vertical;min-height:74px;line-height:1.55}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{
+  padding:6px 12px;border:1px solid var(--rule-2);border-radius:7px;background:var(--paper);
+  color:var(--ink-2);font:500 13px var(--sans);cursor:pointer;
+}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:var(--paper-2);font-weight:600}
+
+.toks{display:flex;flex-wrap:wrap;gap:3px;padding:13px;background:var(--paper);border:1px solid var(--rule);border-radius:9px;min-height:54px;align-content:flex-start}
+.tok{font-family:var(--mono);font-size:13px;padding:2px 5px;border-radius:4px;white-space:pre;border:1px solid transparent}
+.tok.c0{background:color-mix(in srgb,var(--b1) 17%,transparent);border-color:color-mix(in srgb,var(--b1) 35%,transparent)}
+.tok.c1{background:color-mix(in srgb,var(--b2) 17%,transparent);border-color:color-mix(in srgb,var(--b2) 35%,transparent)}
+.tok.c2{background:color-mix(in srgb,var(--b3) 17%,transparent);border-color:color-mix(in srgb,var(--b3) 35%,transparent)}
+.tok.c3{background:color-mix(in srgb,var(--b4) 17%,transparent);border-color:color-mix(in srgb,var(--b4) 35%,transparent)}
+.tok.c4{background:color-mix(in srgb,var(--b5) 17%,transparent);border-color:color-mix(in srgb,var(--b5) 35%,transparent)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:1px;margin-top:15px;background:var(--rule);border:1px solid var(--rule);border-radius:9px;overflow:hidden}
+.stat{background:var(--paper-2);padding:11px 13px}
+.stat .sl{font:600 10.5px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px}
+.stat .sv{font:600 1.22rem/1.15 var(--mono);color:var(--ink);letter-spacing:-.01em}
+.stat .sv.a{color:var(--accent)}
+.stat .sv.w{color:var(--amber)}
+.stat .sn{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+
+.bars{display:grid;gap:9px;margin-top:4px}
+.bar{display:grid;grid-template-columns:132px 1fr auto;gap:11px;align-items:center;font-size:13.5px}
+@media(max-width:560px){.bar{grid-template-columns:96px 1fr auto;gap:8px;font-size:12.5px}}
+.bar .bl{color:var(--ink-2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .bt{height:17px;background:color-mix(in srgb,var(--ink) 7%,transparent);border-radius:4px;overflow:hidden}
+.bar .bf{height:100%;border-radius:4px;transition:width .22s ease}
+.bar .bv{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);min-width:52px;text-align:right}
+.bar.hi .bl{color:var(--ink);font-weight:650}
+
+.note{margin-top:15px;padding-top:13px;border-top:1px dashed var(--rule-2);font-size:13.5px;color:var(--ink-3);line-height:1.55}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:12.5px;color:var(--ink-2)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+.theme{
+  position:fixed;right:16px;bottom:16px;z-index:50;
+  width:42px;height:42px;border-radius:50%;border:1px solid var(--rule-2);
+  background:var(--paper-2);color:var(--ink-2);cursor:pointer;box-shadow:var(--shadow);
+  font-size:17px;line-height:1;display:grid;place-items:center;
+}
+.theme:hover{color:var(--accent);border-color:var(--accent)}
+.endnote{margin-top:4rem;padding-top:1.3rem;border-top:2px solid var(--ink);font-size:13.5px;color:var(--ink-3)}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/automation/">No-code automation &amp; chatbots</a><span class="t">· AI Academy 8 · Agents in n8n: tools, memory, approval</span><span class="pn"><a href="../AI-beginners-class12/" title="AI Beginners 12 · Automating with Zapier">← Prev</a><a href="../AI-beginners-class15/" title="AI Beginners 15 · Building agents without code">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="shell">
+  <aside><div class="tocHead">On this page</div><nav id="toc"></nav></aside>
+  <main>
+    <header class="mast">
+      <div class="kicker">AI and Agents &middot; Academy Advanced</div>
+      <h1>Building Agents in n8n: Tools, Memory and a Human Approval</h1>
+      <div class="meta">
+        <span><b>Class 8</b> of 12</span>
+        <span class="pill">112 min + 8 min buffer</span>
+        <span>5 in-class quizzes</span>
+        <span>Two n8n workflows, built live</span>
+      </div>
+    </header>
+    <div id="content"><h2 id="agenda" data-label="Agenda">Agenda</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Section</th>
+<th>Minutes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>From canvas to agent</td>
+<td>4</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Workflow 1: Day-Trip Buddy, an agent with no tools yet</td>
+<td>14</td>
+</tr>
+<tr>
+<td></td>
+<td>Quiz 1</td>
+<td>3</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Give it tools</td>
+<td>20</td>
+</tr>
+<tr>
+<td></td>
+<td>Quiz 2</td>
+<td>3</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Give it memory</td>
+<td>10</td>
+</tr>
+<tr>
+<td></td>
+<td>Quiz 3</td>
+<td>3</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Break it on purpose, then fix it</td>
+<td>12</td>
+</tr>
+<tr>
+<td></td>
+<td>Quiz 4</td>
+<td>3</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Workflow 2: an agent that acts, with a human gate</td>
+<td>22</td>
+</tr>
+<tr>
+<td></td>
+<td>Quiz 5</td>
+<td>3</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Your turn: change one thing and export</td>
+<td>10</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Wrap-up and what is next</td>
+<td>5</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Total</strong></td>
+<td><strong>112</strong></td>
+</tr>
+</tbody>
+</table>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>This class is two builds. Workflow 1 teaches tools and memory with an agent that only reads. Workflow 2 teaches action and control with an agent that sends a message, and a human who has to approve it. Sections 2 to 5 are one continuous build, so do not stop for long explanations. The explanation is short and lives next to the step that needs it.</div>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>An earlier plan for this class included Zapier as a second tool. It was dropped on purpose. Zapier's free plan allows 100 tasks a month and two-step Zaps only, with no Paths, no Filters, no Webhooks and no AI step, so a fair agent demo does not fit in it. Two good workflows in the tool learners already know teach more than one in each of two tools. Do not mention Zapier in class unless someone asks.</div>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>What was checked and what was not. Both workflows were run on 12 November 2026 on a real n8n 2.35.7 install, with a stand-in model that returns scripted tool calls, and with mock weather and Telegram servers. That confirmed: the two weather tools chain correctly; the agent forgets a name without memory and remembers it with Simple Memory, per session; Max Iterations stops a stuck agent with an error; Retry On Fail recovers a flaky tool; the order tools work; the approval gate pauses the agent before the send; Approve sends the message; Decline blocks it and tells the agent. It did not confirm: how the live model behaves through the Groq Chat Model node, the live Open-Meteo responses, real Telegram delivery and the buttons on a phone, or the exact wording of editor buttons, which come from the n8n docs and the node source. Do one full dry run of the whole class on n8n Cloud with a real Groq key and a real bot the day before. It takes about 25 minutes.</div>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Pre-class homework, posted two days ahead. One: start an n8n Cloud free trial. The trial lasts 14 days, so start it this week and Class 9 falls inside it. Check at sign-up whether a card is asked for and tell learners. Two: keep the Groq key from Class 1. Three: keep the Telegram bot token and your chat ID from Class 6. Local n8n works for Sections 2 to 5 but not for Section 6, because the approval buttons are links to your n8n's public address.</div>
+<p>Dataset link — Three workflow files, shared in the class channel before class. They are the rescue copies for anyone who falls behind.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>day_trip_buddy.json</td>
+<td>Workflow 1, finished: tools, memory, a step limit and retry</td>
+</tr>
+<tr>
+<td>support_desk_agent.json</td>
+<td>Workflow 2 without the approval gate</td>
+</tr>
+<tr>
+<td>support_desk_agent_with_approval.json</td>
+<td>Workflow 2 with the approval gate</td>
+</tr>
+</tbody>
+</table>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Groq's free plan limits requests per minute and tokens per minute. One agent run makes several model calls, so a learner who sends many messages quickly can hit a limit. If someone sees a rate-limit error, ask them to wait a minute and try again. It is not a bug in their workflow.</div>
+<h2 id="section-1" data-label="From canvas to agent" data-mins="4"><span class="secn">Section 1 &middot; 4 min</span>From canvas to agent</h2>
+<p>In Class 6 you drew every step. Form, classify, IF, Telegram. You wrote the path. In Class 7 you watched a model choose its own path, but in code.</p>
+<p>Today the same loop lives inside one node on the canvas. It is called the AI Agent node.</p>
+<p>Everything you met last class has a place in it.</p>
+<table>
+<thead>
+<tr>
+<th>In n8n</th>
+<th>In Class 7</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The chat model</td>
+<td>The model that thinks</td>
+</tr>
+<tr>
+<td>The system message</td>
+<td>The instructions</td>
+</tr>
+<tr>
+<td>Tools</td>
+<td>Functions with descriptions</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>The message list that is re-sent</td>
+</tr>
+<tr>
+<td>Max Iterations</td>
+<td>The step limit</td>
+</tr>
+</tbody>
+</table>
+<p>Use the visualizer below. Click each part of the agent node and see which idea from Class 7 it is.</p>
+<div class="lbl ask"><span class="tag">Ask Learners</span>Look back at the Class 6 ticket workflow. If an agent handled the ticket instead, which node would disappear?</div>
+<p>The IF node. You would no longer draw the branch, because the model would decide.</p>
+<div class="lbl important"><span class="tag">Important</span>Flexibility has a price. The more the model decides, the less you control. The first half of today gives the agent abilities. The second half gives you control over it.</div>
+<h2 id="section-2" data-label="Workflow 1: Day-Trip Buddy, an agent with no tools yet" data-mins="14"><span class="secn">Section 2 &middot; 14 min</span>Workflow 1: Day-Trip Buddy, an agent with no tools yet</h2>
+<p>We build an assistant that helps you decide what to do in a city tomorrow. It will end up checking real weather. For now it has nothing but a model.</p>
+<p>Step 1 - Open your n8n Cloud workspace and create a new workflow. Name it Day-Trip Buddy.</p>
+<p>Step 2 - Click Add first step and search for Chat Trigger. On the canvas it appears as "When chat message received". This is the front door: every message you type arrives here.</p>
+<p>Step 3 - Click the plus after the trigger and add an AI Agent node.</p>
+<p>Step 4 - Under the agent you will see a slot called Chat Model. Click its plus and choose Groq Chat Model. Create a new credential and paste your Groq key from Class 1.</p>
+<div class="lbl important"><span class="tag">Important</span>The Groq node's default model is an old one, llama3-8b-8192. Open the Model list and pick <code>openai/gpt-oss-120b</code>, the same model as in Class 7. If you would rather use the OpenAI Chat Model node pointed at Groq, as in Class 6, switch off the option called Use Responses API, because it is on by default.</div>
+<p>Step 5 - Open the AI Agent node, go to Options, add System Message, and paste this.</p>
+<pre><code>You are Day-Trip Buddy, a friendly assistant that helps people decide what to do in a city tomorrow.
+Use find_city to get a city's coordinates, then get_weather to check the forecast, and wikipedia for things to see.
+Never guess a forecast. If a tool fails twice in a row, tell the user the service is unavailable and stop.
+</code></pre>
+<p>Step 6 - Open the chat panel on the canvas and send: Hi, what can you do?</p>
+<p>Step 7 - Now send: Should I carry an umbrella in Jaipur tomorrow?</p>
+<div class="lbl ask"><span class="tag">Ask Learners</span>What did it do: admit it cannot check, or guess a forecast?</div>
+<p>Either answer is the point. The model has no way to look anything up. Everything that follows fixes that.</p>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>The system message names tools that do not exist yet. That is deliberate: the same message is used for the whole build, so nobody has to edit it later. If the model mentions it has no weather tool, that is correct.</div>
+<div class="lbl doubt"><span class="tag">Doubt by Learner</span>"Where is the loop? I do not see any loop on the canvas."</div>
+<p>It is inside the node. The AI Agent node runs think, act, observe for you, and repeats until the model has an answer or hits Max Iterations. You will meet that limit in Section 5.</p>
+<section class="quiz" data-ans="B" data-exp="The model decides what to do next. The node runs the loop and carries out the tool call, but it does not choose. The trigger only starts the run, Max Iterations only caps how many rounds are allowed, and the system message guides the model without listing steps or making the choice for it."><div class="qhead"><span class="qnum">In-class quiz 1</span></div><div class="qbody"><p class="qtext">Inside the AI Agent node, which part decides which tool to call next?</p><div class="opts"><button class="opt" data-k="A"><span class="k">A</span><span>The Chat Trigger, which hands over the first message</span></button><button class="opt" data-k="B"><span class="k">B</span><span>The chat model connected to the Chat Model slot</span></button><button class="opt" data-k="C"><span class="k">C</span><span>The Max Iterations setting, which picks the next tool</span></button><button class="opt" data-k="D"><span class="k">D</span><span>The system message, which lists every step in order</span></button></div><div class="verdict"><span class="vt"></span> <span class="vx"></span></div></div></section>
+<h2 id="section-3" data-label="Give it tools" data-mins="20"><span class="secn">Section 3 &middot; 20 min</span>Give it tools</h2>
+<p>A tool is a function plus a description. In n8n that means a node plus the words you write about it. The model never sees the node's settings. It sees two things only: the node's name and its description.</p>
+<p>Use the visualizer below. Switch tools on and off, ask a question, and see which questions the agent can still answer.</p>
+<h3>A tool with no setup</h3>
+<p>Step 1 - Under the agent, click the plus on Tool and add Wikipedia. It needs no credentials.</p>
+<p>Step 2 - Ask: Tell me one famous place to visit in Jaipur.</p>
+<h3>A tool you configure: find_city</h3>
+<p>The weather service we use is Open-Meteo. It needs no key. But its forecast works from latitude and longitude, not from city names, so we need a second tool that turns a city into coordinates.</p>
+<p>Step 3 - Click the plus on Tool again and add HTTP Request Tool. Rename the node to find_city. Select it and press F2, or double-click the name.</p>
+<p>Step 4 - Set Description to manual and write this.</p>
+<pre><code>Look up a city by name. Returns its latitude and longitude.
+</code></pre>
+<p>Step 5 - Set the URL.</p>
+<pre><code>https://geocoding-api.open-meteo.com/v1/search?count=1
+</code></pre>
+<p>Step 6 - Switch on Send Query Parameters, choose Using Fields Below, and add one parameter. Name: <code>name</code>. For the value, switch the field to Expression and type this.</p>
+<pre><code>{{ $fromAI('city', 'The name of the city, for example Jaipur', 'string') }}
+</code></pre>
+<div class="lbl important"><span class="tag">Important</span><code>$fromAI</code> is how a tool asks the model to fill in a value. The first word, <code>city</code>, is the label. The sentence is what the model reads to know what to put there. It works only on tools connected to an agent. The editor can also generate this for you from a button on the field, but the button's wording changes between versions, so we type the expression.</div>
+<h3>The second tool: get_weather</h3>
+<p>Step 7 - Add another HTTP Request Tool. Rename it get_weather. Description:</p>
+<pre><code>Get the daily weather forecast for a place from its latitude and longitude. Returns the highest and lowest temperature in Celsius and the chance of rain for the next two days.
+</code></pre>
+<p>Step 8 - URL:</p>
+<pre><code>https://api.open-meteo.com/v1/forecast?daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&amp;forecast_days=2&amp;timezone=auto
+</code></pre>
+<p>Step 9 - Switch on Send Query Parameters, Using Fields Below, and add two parameters. Name <code>latitude</code> with this value:</p>
+<pre><code>{{ $fromAI('latitude', 'Latitude of the place, from find_city', 'number') }}
+</code></pre>
+<p>And name <code>longitude</code> with this value:</p>
+<pre><code>{{ $fromAI('longitude', 'Longitude of the place, from find_city', 'number') }}
+</code></pre>
+<div class="lbl important"><span class="tag">Disclaimer</span>Open-Meteo is free for non-commercial use, up to 10,000 calls a day, and asks for attribution under a CC BY 4.0 licence. That is fine for a class. A product you sell would need a paid plan.</div>
+<p>Step 10 - Ask again: Should I carry an umbrella in Jaipur tomorrow? Then open the Logs view, or switch on Return Intermediate Steps in the agent's options, and read the calls in order.</p>
+<div class="lbl ask"><span class="tag">Ask Learners</span>Which tool did it call first, and why could it not start with get_weather?</div>
+<p>Because the forecast tool needs coordinates and only find_city can produce them. Nobody wrote "first this, then that". The model worked out the order from the two descriptions.</p>
+<div class="lbl doubt"><span class="tag">Doubt by Learner</span>"Why two tools? Why not one tool that takes a city?"</div>
+<p>Because the weather service wants coordinates. Splitting the job into small tools with clear descriptions lets the model chain them, and each tool stays easy to test on its own.</p>
+<div class="lbl doubt"><span class="tag">Doubt by Learner (Optional)</span>"What stops it from making up a forecast anyway?"</div>
+<p>Nothing absolute. The system message says never to guess and the tool gives it real data, which makes guessing unnecessary. It is a strong nudge, not a guarantee. That is why Section 5 adds guards that do not depend on the model behaving.</p>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>If a learner's run fails at the Groq model with a tool error, first check they chose <code>openai/gpt-oss-120b</code>. Groq lists tool use as supported for it but not parallel tool calls, and an occasional malformed tool call is a known issue with some models. Re-running the message almost always works.</div>
+<section class="quiz" data-ans="C" data-exp="The model chooses tools from their names and descriptions alone. A vague or misleading description is the most common reason a tool is ignored, and it costs nothing to fix. An outage would produce an error rather than silence, and memory has no effect on which tools are offered."><div class="qhead"><span class="qnum">In-class quiz 2</span></div><div class="qbody"><p class="qtext">A tool is connected to the agent, but the agent never calls it, even for questions it clearly suits. What is the best first thing to check?</p><div class="opts"><button class="opt" data-k="A"><span class="k">A</span><span>Whether the chat model is too small to understand weather</span></button><button class="opt" data-k="B"><span class="k">B</span><span>Whether the weather service is online right now</span></button><button class="opt" data-k="C"><span class="k">C</span><span>The tool&#x27;s name and description, since that is all the model reads</span></button><button class="opt" data-k="D"><span class="k">D</span><span>Whether Simple Memory has been switched on</span></button></div><div class="verdict"><span class="vt"></span> <span class="vx"></span></div></div></section>
+<h2 id="section-4" data-label="Give it memory" data-mins="10"><span class="secn">Section 4 &middot; 10 min</span>Give it memory</h2>
+<p>First, watch the problem. Open a fresh chat and send these two messages, one after the other.</p>
+<pre><code>My name is Aarav.
+</code></pre>
+<pre><code>What is my name?
+</code></pre>
+<div class="lbl ask"><span class="tag">Ask Learners</span>Did it know? Why not?</div>
+<p>It did not, and this does not depend on the model. Each message starts a new run. Nothing carries the first one into the second.</p>
+<p>Step 1 - Under the agent, click the plus on Memory and add Simple Memory. Leave the defaults: the session ID comes from the Chat Trigger, and the Context Window Length is 5.</p>
+<p>Step 2 - Start a fresh chat and send the same two messages.</p>
+<p>This time it knows. Then clear the chat to start a new session and ask the name again. It is gone, because a new session is a new memory.</p>
+<h3>What memory really is</h3>
+<p>Remember the message list from Class 7. Memory is that list, kept between messages. Before each run, n8n takes the last few exchanges for this session and puts them in front of the new message. The model does not remember anything. It is re-reading the recent past every time.</p>
+<p>Use the visualizer below. Slide the window length and the chat length, and see which messages the model can still read.</p>
+<div class="lbl important"><span class="tag">Important</span>Simple Memory lives inside n8n's own memory. It does not survive a restart of n8n, and the docs say it is not for queue mode. It is right for learning and small tests. A product that must remember customers needs memory stored in a database.</div>
+<div class="lbl doubt"><span class="tag">Doubt by Learner</span>"Why not just send the entire chat every time?"</div>
+<p>Cost and limits. Every message you re-send is billed in tokens and counts against Groq's tokens-per-minute limit. A window is a trade: more memory, more cost.</p>
+<section class="quiz" data-ans="D" data-exp="A window keeps only the most recent exchanges. Exchange 1 has fallen outside the last five, so it is not placed in front of the new message and the model cannot see it. Memory does not store facts separately, and a full window quietly drops old exchanges rather than raising an error."><div class="qhead"><span class="qnum">In-class quiz 3</span></div><div class="qbody"><p class="qtext">Context Window Length is 5 and the chat has had 8 exchanges. Aarav gave his name in exchange 1. He now asks, &quot;What is my name?&quot; What happens?</p><div class="opts"><button class="opt" data-k="A"><span class="k">A</span><span>It still knows, because Simple Memory stores the whole session forever</span></button><button class="opt" data-k="B"><span class="k">B</span><span>It still knows, because names are saved apart from the messages</span></button><button class="opt" data-k="C"><span class="k">C</span><span>The run fails with an error because the memory window is full</span></button><button class="opt" data-k="D"><span class="k">D</span><span>It cannot see that exchange, as only the latest five are re-sent</span></button></div><div class="verdict"><span class="vt"></span> <span class="vx"></span></div></div></section>
+<h2 id="section-5" data-label="Break it on purpose, then fix it" data-mins="12"><span class="secn">Section 5 &middot; 12 min</span>Break it on purpose, then fix it</h2>
+<p>Agents fail in predictable ways. We will cause two of them on purpose. Each time the rhythm is the same: break it, apply one fix, show it working.</p>
+<h3>Failure 1: a broken tool</h3>
+<p>Step 1 - In get_weather, change <code>temperature_2m_max</code> in the URL to <code>temperature_2m_maxx</code>. One extra letter, a typo.</p>
+<p>Step 2 - Ask: Should I carry an umbrella in Jaipur tomorrow? Then open the Logs view and read what get_weather returned.</p>
+<p>You will see a short, vague message from the tool, along the lines of "Bad request - please check your parameters". The agent cannot tell what is wrong, because the message does not say. It may try again, or give up and apologise. Either way, the bug is ours.</p>
+<div class="lbl ask"><span class="tag">Ask Learners</span>Whose bug is this, the model's or ours?</div>
+<p>Ours. When an agent misbehaves, look at the tool's output in the logs before touching the prompt.</p>
+<p>Step 3 - Fix it: change the URL back to <code>temperature_2m_max</code>. Ask again. It works.</p>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>The weather service rejects an unknown variable name with a client error, and n8n passes only a generic bad-request message back to the agent. That is why the typo is a reliable failure: it breaks the tool, not the model. Confirm the exact message in your dry run. If a learner sees different words, the lesson is unchanged.</div>
+<h3>Failure 2: a runaway loop</h3>
+<p>Step 4 - Open the AI Agent node, go to Options, add Max Iterations, and set it to 2.</p>
+<p>Step 5 - Ask the umbrella question again.</p>
+<p>It stops with an error that reads "Max iterations (2) reached. The agent could not complete the task within the allowed number of iterations." The task needs three rounds: find the city, get the forecast, write the answer. We gave it two.</p>
+<p>Step 6 - Fix it: set Max Iterations to 6. Ask again. It works.</p>
+<p>The default is 10. A limit matters because every round is a model call. An agent stuck in a loop spends your tokens and your Groq request allowance until something stops it.</p>
+<div class="lbl important"><span class="tag">Important</span>This is the same step limit as Class 7. There you set it in code. Here it is one box in the node. The guard lives outside the model, so it works whatever the model does.</div>
+<h3>Failure 3: a blip</h3>
+<p>Not every failure is a bug or a loop. Sometimes a service is busy for a moment and works a second later.</p>
+<p>Step 7 - Open the get_weather node, go to its Settings tab, switch on Retry On Fail, and set Max Tries to 3 with a wait of 1000 milliseconds between tries.</p>
+<p>Now a short outage is absorbed by the node and the agent never sees it. A real bug still fails after three tries, so retry does not hide it forever.</p>
+<p>Use the visualizer below. Match each failure to the guard that fits it.</p>
+<section class="quiz" data-ans="A" data-exp="A brief outage is a blip, and retrying the same call is exactly what Retry On Fail does, without involving the model at all. Max Iterations caps loops and would stop the run, not rescue it. A careful prompt and a bigger model do nothing about a service that is briefly unavailable."><div class="qhead"><span class="qnum">In-class quiz 4</span></div><div class="qbody"><p class="qtext">The weather service returns a short outage error once, and the very next call would succeed. Which protection fits best?</p><div class="opts"><button class="opt" data-k="A"><span class="k">A</span><span>Retry On Fail on the weather tool</span></button><button class="opt" data-k="B"><span class="k">B</span><span>Max Iterations set to 1</span></button><button class="opt" data-k="C"><span class="k">C</span><span>A system message asking the model to be careful</span></button><button class="opt" data-k="D"><span class="k">D</span><span>Switching to a larger model</span></button></div><div class="verdict"><span class="vt"></span> <span class="vx"></span></div></div></section>
+<h2 id="section-6" data-label="Workflow 2: an agent that acts, with a human gate" data-mins="22"><span class="secn">Section 6 &middot; 22 min</span>Workflow 2: an agent that acts, with a human gate</h2>
+<p>Workflow 1 only reads. Workflow 2 changes something in the world: it sends a message to a customer. That is where control matters.</p>
+<p>Back in Class 6 you built a ticket pipeline with an IF node. Every path was drawn. Use the visualizer below and compare it with an agent on the same task, including a ticket nobody planned for.</p>
+<h3>Load the support desk</h3>
+<p>Step 1 - Import support_desk_agent.json. In n8n, open the workflow menu and choose Import from file.</p>
+<p>Step 2 - Reconnect credentials. The Groq Chat Model needs your Groq credential. The send_reply tool needs your Telegram bot credential, and its Chat ID field needs your own chat ID from Class 6.</p>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Imported workflows name the credentials they need but never contain the keys. This is the Class 6 export skill used in the other direction. Learners will see a credential warning on two nodes. Connecting them is part of the step.</div>
+<h3>What the agent can do</h3>
+<p>Three tools, all small.</p>
+<p>lookup_order is a Code tool that finds an order by its number. The code is plain JavaScript, and the model's input arrives in a variable called <code>query</code>.</p>
+<pre><code class="language-javascript">const orders = {
+  &quot;1001&quot;: &quot;Order 1001: delivered on 5 Nov.&quot;,
+  &quot;1002&quot;: &quot;Order 1002: delayed. The new delivery date is 18 Nov.&quot;,
+  &quot;1003&quot;: &quot;Order 1003: cancelled. A refund was issued.&quot;
+};
+const id = String(query).replace(/[^0-9]/g, &quot;&quot;);
+return orders[id] || &quot;No order found with number &quot; + id;
+</code></pre>
+<p>refund_policy is another Code tool that returns one fixed sentence about refunds.</p>
+<p>send_reply is the Telegram tool. We fixed its Chat ID ourselves, so the model cannot choose who to message. The model only writes the text, through the same <code>$fromAI</code> idea you used in Section 3.</p>
+<div class="lbl important"><span class="tag">Important</span>Notice what we did with the Chat ID. The things that must never change are set by you. The things that should be decided by the model are left to it. That split is a safety decision, not a convenience.</div>
+<h3>Run it with nobody watching</h3>
+<p>Step 3 - Ask: A customer says: where is my order 1002? Find it and message the customer.</p>
+<p>Your Telegram buzzes. The agent looked up the order and sent a message, and nobody approved it.</p>
+<div class="lbl ask"><span class="tag">Ask Learners</span>The agent misreads the order number as 1003 and tells a customer a wrong refund was issued. What would have stopped it?</div>
+<p>Only a human. That is what we add next.</p>
+<h3>Add the gate</h3>
+<p>Step 4 - Open the AI Agent node and go to its Tools. Select send_reply and open Human review. Choose Telegram as the approval channel, pick your credential and Chat ID, and set the message to this.</p>
+<pre><code>The agent wants to send this reply to the customer:
+
+{{ $tool.parameters.text }}
+</code></pre>
+<div class="lbl important"><span class="tag">Important</span><code>$tool.parameters</code> holds what the model filled in for the tool. Our send_reply field is called <code>text</code>, so <code>.text</code> shows exactly the message. Without <code>.text</code> the approver sees a blob instead of the reply.</div>
+<div class="lbl important"><span class="tag">Important</span>The system message already tells the agent that every send needs approval, and that it must not retry if the request is denied. n8n's docs recommend writing the review setup into the system prompt, so the agent is not surprised by it.</div>
+<p>Step 5 - Run the same question again. Telegram now shows the proposed message with Approve and Decline buttons, and nothing has been sent yet.</p>
+<p>Step 6 - Tap Approve. A page opens in your browser to record your answer, and the message goes to your chat.</p>
+<p>Step 7 - Run it once more and tap Decline. Nothing is sent. The agent is told the request was rejected and told to stop.</p>
+<div class="lbl important"><span class="tag">Important</span>The buttons are links to your n8n's public address. That is why this section needs n8n Cloud. A local n8n address cannot be opened from Telegram.</div>
+<p>Use the visualizer below. Step through one request twice, once approved and once declined.</p>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>The Approve and Decline links are meant to be opened by a person. If you test them with a script or a link-preview tool, the page will not record the answer. Open them in a normal browser. Also, the labels in the Human review panel come from the docs. If a learner cannot find the panel, import support_desk_agent_with_approval.json and look at the extra node called Ask for approval, which sits between send_reply and the agent.</div>
+<div class="lbl doubt"><span class="tag">Doubt by Learner</span>"Can the approver change the message before it goes?"</div>
+<p>Not in this setup. The approver can only approve or decline. To change the message, decline it and ask the agent again.</p>
+<div class="lbl doubt"><span class="tag">Doubt by Learner (Optional)</span>"Should every tool have a gate?"</div>
+<p>No. Reading an order is harmless, so it runs freely. Gate the actions that cannot be undone: sending, deleting, paying. Too many gates and nobody will read them.</p>
+<section class="quiz" data-ans="C" data-exp="A decline cancels the tool call before it happens, so no message is sent, and the agent receives a note that the call was rejected so it can stop or explain. The workflow does not crash, the tool is not run first and reported later, and this setup offers no editing, only approve or decline."><div class="qhead"><span class="qnum">In-class quiz 5</span></div><div class="qbody"><p class="qtext">The approver taps Decline on a send_reply request. What happens?</p><div class="opts"><button class="opt" data-k="A"><span class="k">A</span><span>The tool still runs, and the agent is told about the decline afterwards</span></button><button class="opt" data-k="B"><span class="k">B</span><span>The workflow stops with an error and the agent is switched off</span></button><button class="opt" data-k="C"><span class="k">C</span><span>The tool does not run, and the agent is told the request was rejected</span></button><button class="opt" data-k="D"><span class="k">D</span><span>The tool runs once more, using a message the approver edits</span></button></div><div class="verdict"><span class="vt"></span> <span class="vx"></span></div></div></section>
+<h2 id="section-7" data-label="Your turn: change one thing and export" data-mins="10"><span class="secn">Section 7 &middot; 10 min</span>Your turn: change one thing and export</h2>
+<p>Pick one, and do it in about six minutes.</p>
+<p>Option A - In Day-Trip Buddy, change the system message so every answer is exactly three bullets, ending with one packing tip. Ask the umbrella question and see how the answer changes.</p>
+<p>Option B - In the support desk, add an order 1004 to the code of lookup_order, with a status you invent. Ask about it. This is how you give an agent new knowledge: you change a tool, not the model.</p>
+<p>Option C - On paper or in the chat, decide which one tool in your own work would need a human gate, and write the one-line message the approver would see.</p>
+<div class="lbl ask"><span class="tag">Ask Learners</span>Post in the chat what you changed and what the agent did differently.</div>
+<h3>Export your workflows</h3>
+<p>Your trial workspace is temporary, so save your work now.</p>
+<p>Step 1 - Open the workflow menu and choose Download. You get a JSON file. This is the Class 6 export skill.</p>
+<p>Step 2 - Repeat for the other workflow, and keep both files somewhere safe.</p>
+<div class="lbl important"><span class="tag">Important</span>n8n Cloud deletes the instance when the trial ends, and downloads are possible only for a limited time afterwards. Export before the trial ends, and you can import the files into any n8n later.</div>
+<h2 id="section-8" data-label="Wrap-up and what is next" data-mins="5"><span class="secn">Section 8 &middot; 5 min</span>Wrap-up and what is next</h2>
+<p>You started today with a model in a chat box. You end with two agents.</p>
+<p>What you now know. The AI Agent node is the loop from Class 7 in one box. The model chooses, the node runs. A tool is a node plus a description, and the description is the model's only manual. Memory is the recent message list re-sent each time. Guards belong outside the model: Max Iterations for loops, Retry On Fail for blips, and a human gate for actions that cannot be undone.</p>
+<p>What you built. A chat agent that checks real weather and remembers you. A support agent that can act, and cannot act without your tap.</p>
+<div class="lbl ask"><span class="tag">Ask Learners</span>In one line: which of your own tasks would you hand to an agent, and which action would you never let it take without asking you?</div>
+<p>Next class the agent leaves the canvas. You meet OpenClaw, an agent that runs on your own machine and does real work there. The questions you practised today, what can it touch and who approves it, matter even more.</p>
+<h3>Fast-changing facts for this section</h3>
+<div class="lbl instructor"><span class="tag">Note for Instructor</span>Recheck these the week before you teach, and fix them in place.</div>
+<ul>
+<li>That the AI Agent node still has the options named here, and the Human review channels, in the n8n docs</li>
+<li>The Groq model name <code>openai/gpt-oss-120b</code> and the free-plan limits</li>
+<li>Open-Meteo's terms: free for non-commercial use, no key, the daily call limit</li>
+<li>The n8n Cloud trial length and what it asks at sign-up</li>
+</ul>
+<h3>Where these facts come from</h3>
+<table>
+<thead>
+<tr>
+<th>Fact</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AI Agent node, options and Max Iterations</td>
+<td>https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent</td>
+</tr>
+<tr>
+<td>Human review for tool calls, approval channels</td>
+<td>https://docs.n8n.io/advanced-ai/human-in-the-loop-tools</td>
+</tr>
+<tr>
+<td>Simple Memory node and its limits</td>
+<td>https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.memorybufferwindow</td>
+</tr>
+<tr>
+<td>Open-Meteo, free use and terms</td>
+<td>https://open-meteo.com/en/terms</td>
+</tr>
+<tr>
+<td>Groq tool use and free-plan limits</td>
+<td>https://console.groq.com/docs/tool-use/overview</td>
+</tr>
+<tr>
+<td>n8n Cloud free trial</td>
+<td>https://docs.n8n.io/manage-cloud/cloud-free-trial</td>
+</tr>
+<tr>
+<td>Downloading workflows after a trial</td>
+<td>https://docs.n8n.io/deploy/use-n8n-cloud/download-workflows</td>
+</tr>
+<tr>
+<td>Zapier free plan limits</td>
+<td>https://zapier.com/pricing</td>
+</tr>
+</tbody>
+</table></div>
+  </main>
+</div>
+
+<button class="theme" id="themeBtn" title="Switch light and dark" aria-label="Switch light and dark">&#9682;</button>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   0. theme
+   ============================================================ */
+try{
+  var saved=localStorage.getItem("c8-theme");
+  if(saved) document.documentElement.setAttribute("data-theme",saved);
+}catch(e){}
+document.getElementById("themeBtn").addEventListener("click",function(){
+  var cur=document.documentElement.getAttribute("data-theme");
+  if(!cur){
+    cur=window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";
+  }
+  var next=cur==="dark"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",next);
+  try{localStorage.setItem("c8-theme",next);}catch(e){}
+});
+
+/* ============================================================
+   1. content is pre-rendered at build time; bind the quizzes
+   ============================================================ */
+var host=document.getElementById("content");
+
+Array.prototype.slice.call(host.querySelectorAll(".quiz")).forEach(function(box){
+  var ans=box.dataset.ans, exp=box.dataset.exp;
+  var verdict=box.querySelector(".verdict");
+  var opts=Array.prototype.slice.call(box.querySelectorAll(".opt"));
+  opts.forEach(function(btn){
+    btn.addEventListener("click",function(){
+      var correct=btn.dataset.k===ans;
+      opts.forEach(function(b){
+        b.disabled=true;
+        if(b.dataset.k===ans) b.classList.add("right");
+        else if(b===btn) b.classList.add("wrong");
+      });
+      verdict.className="verdict show "+(correct?"ok":"no");
+      verdict.querySelector(".vt").textContent=correct
+        ? "Correct. Answer "+ans+"."
+        : "Not that one. The answer is "+ans+".";
+      verdict.querySelector(".vx").textContent=exp;
+    });
+  });
+});
+
+/* ============================================================
+   4. helpers
+   ============================================================ */
+function el(tag,cls,html){
+  var n=document.createElement(tag);
+  if(cls)n.className=cls;
+  if(html!=null)n.innerHTML=html;
+  return n;
+}
+function viz(kicker,title,sub,bodyHTML){
+  var s=el("section","viz");
+  s.innerHTML='<div class="vhead"><div class="vk">'+kicker+'</div><h4>'+title+'</h4><p>'+sub+'</p></div>'+
+              '<div class="vbody">'+bodyHTML+'</div>';
+  return s;
+}
+// insert a node after the heading whose text starts with `prefix`
+function afterHeading(prefix,node){
+  var hs=host.querySelectorAll("h2,h3");
+  for(var i=0;i<hs.length;i++){
+    if(hs[i].textContent.trim().toLowerCase().indexOf(prefix.toLowerCase())===0){
+      var anchor=hs[i], next=anchor.nextElementSibling;
+      // slip past the first paragraph so the teaching line comes first
+      if(next&&next.tagName==="P") anchor=next;
+      anchor.after(node);
+      return true;
+    }
+  }
+  host.appendChild(node);
+  return false;
+}
+function fmtMoney(v){
+  if(v>=1000) return "$"+Math.round(v).toLocaleString();
+  if(v>=1) return "$"+v.toFixed(2);
+  return "$"+v.toFixed(4);
+}
+
+/* helpers shared by the Class 8 visualizers */
+function afterPara(fragment,node){
+  var ps=host.querySelectorAll("p,.lbl");
+  for(var i=0;i<ps.length;i++){
+    if(ps[i].textContent.indexOf(fragment)!==-1){ ps[i].after(node); return true; }
+  }
+  host.appendChild(node); return false;
+}
+function esc8(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function seg8(root,sel,items,cur,onPick){
+  root.querySelector(sel).innerHTML=items.map(function(t,i){
+    return '<button data-i="'+i+'"'+(i===cur?' class="on"':'')+'>'+esc8(t)+'</button>';
+  }).join("");
+  Array.prototype.slice.call(root.querySelectorAll(sel+" button")).forEach(function(b){
+    b.addEventListener("click",function(){onPick(+b.dataset.i);});
+  });
+}
+var CARD8='border:1px solid var(--rule-2);border-radius:10px;padding:12px 13px;background:var(--paper)';
+var KICK8='font:650 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;';
+
+/* ============================================================
+   VISUALIZER 1 - the parts of the AI Agent node
+   ============================================================ */
+(function(){
+  var PARTS=[
+    {n:"Chat Trigger",what:"The front door. Every message you type starts a run here.",c7:"The start of a task. In Class 6 this was the trigger of a workflow.",who:"You",note:"It only starts the run. It does not decide anything."},
+    {n:"Chat model",what:"The slot where the Groq Chat Model plugs in. This is the part that thinks.",c7:"The model, the thinker in think, act, observe.",who:"The model decides",note:"This is the part that chooses the next tool. The node around it only carries the choice out."},
+    {n:"System message",what:"Written in the node's options. It tells the model who it is and what rules to follow.",c7:"The instructions at the top of the message list.",who:"You",note:"A strong nudge, not a guarantee. A model can still ignore it."},
+    {n:"Tools",what:"Nodes plugged into the Tools slot. Each has a name and a description.",c7:"Functions with descriptions. The description is the model's only manual.",who:"You build, the model chooses",note:"You decide which tools exist. The model decides when to use them."},
+    {n:"Memory",what:"Simple Memory in the Memory slot. It keeps the last few exchanges of a session.",c7:"The message list, re-sent each time.",who:"You",note:"You pick the window length. The model remembers only what is re-sent."},
+    {n:"Max Iterations",what:"An option on the agent node. It caps how many rounds the loop may run.",c7:"The step limit.",who:"You",note:"It sits outside the model, so it holds whatever the model does."}
+  ];
+  var html=
+    '<div class="seg" id="e1Seg" style="margin-bottom:14px"></div>'+
+    '<div id="e1Body" style="'+CARD8+'"></div>'+
+    '<div class="stats" id="e1Stats"></div>'+
+    '<div class="note">Six parts, and only one of them makes decisions. Everything else is something you set, so everything else is where your control lives.</div>';
+  var v=viz("Visualizer 1","The parts of the AI Agent node",
+    "Click a part to see what it is in n8n and which idea from Class 7 it matches.",html);
+  afterPara("Use the visualizer below. Click each part",v);
+  var cur=1;
+  function render(){
+    seg8(v,"#e1Seg",PARTS.map(function(p){return p.n;}),cur,function(i){cur=i;render();});
+    var p=PARTS[cur];
+    v.querySelector("#e1Body").innerHTML=
+      '<div style="'+KICK8+'color:var(--accent)">'+esc8(p.n)+'</div>'+
+      '<div style="font-size:14px;line-height:1.6;color:var(--ink-2);margin-bottom:8px"><b style="color:var(--ink)">In n8n.</b> '+esc8(p.what)+'</div>'+
+      '<div style="font-size:14px;line-height:1.6;color:var(--ink-2);margin-bottom:8px"><b style="color:var(--ink)">In Class 7.</b> '+esc8(p.c7)+'</div>'+
+      '<div style="font-size:13px;color:var(--ink-3)">'+esc8(p.note)+'</div>';
+    v.querySelector("#e1Stats").innerHTML=
+      '<div class="stat"><div class="sl">Part</div><div class="sv" style="font-size:.95rem">'+esc8(p.n)+'</div></div>'+
+      '<div class="stat"><div class="sl">Who controls it</div><div class="sv'+(p.who.indexOf("model")>-1?' w':' a')+'" style="font-size:.95rem">'+esc8(p.who)+'</div></div>';
+  }
+  render();
+})();
+
+/* ============================================================
+   VISUALIZER 2 - which questions can the tools answer
+   ============================================================ */
+(function(){
+  var TOOLS=[
+    {k:"find_city",d:"Turns a city name into coordinates"},
+    {k:"get_weather",d:"Forecast from coordinates"},
+    {k:"wikipedia",d:"Facts about a place"}
+  ];
+  var QS=[
+    {q:"Should I carry an umbrella in Jaipur tomorrow?",need:["find_city","get_weather"]},
+    {q:"Tell me one famous place to visit in Jaipur.",need:["wikipedia"]},
+    {q:"Plan tomorrow in Pune: weather and one place to see.",need:["find_city","get_weather","wikipedia"]},
+    {q:"Who are you and what can you do?",need:[]}
+  ];
+  var html=
+    '<div class="ctl two">'+
+      '<div><label>Question</label><div class="seg" id="e2Q" style="flex-direction:column;align-items:stretch"></div></div>'+
+      '<div><label>Tools connected</label><div id="e2T" style="display:grid;gap:8px"></div></div>'+
+    '</div>'+
+    '<div id="e2Out" style="'+CARD8+'"></div>'+
+    '<div class="stats" id="e2Stats"></div>'+
+    '<div class="note">The order of the calls was never written anywhere. The model works it out from the tool names and descriptions. Switch a tool off and the chain breaks at exactly that link.</div>';
+  var v=viz("Visualizer 2","Which tools does the question need?",
+    "Pick a question and switch tools on and off. See what the agent can still answer.",html);
+  afterPara("Use the visualizer below. Switch tools on and off",v);
+  var cur=0, on={find_city:true,get_weather:true,wikipedia:true};
+  function render(){
+    seg8(v,"#e2Q",QS.map(function(q){return q.q;}),cur,function(i){cur=i;render();});
+    v.querySelector("#e2T").innerHTML=TOOLS.map(function(t){
+      return '<label style="display:flex;gap:9px;align-items:flex-start;text-transform:none;letter-spacing:0;font:500 13.5px var(--sans);color:var(--ink-2);margin:0;cursor:pointer">'+
+        '<input type="checkbox" data-k="'+t.k+'"'+(on[t.k]?' checked':'')+' style="margin-top:3px"> <span><b style="color:var(--ink);font-family:var(--mono);font-size:12.5px">'+t.k+'</b><br><span style="font-size:12.5px;color:var(--ink-3)">'+esc8(t.d)+'</span></span></label>';
+    }).join("");
+    Array.prototype.slice.call(v.querySelectorAll("#e2T input")).forEach(function(c){
+      c.addEventListener("change",function(){on[c.dataset.k]=c.checked;render();});
+    });
+    var q=QS[cur], missing=q.need.filter(function(k){return !on[k];});
+    var calls=q.need.filter(function(k){return on[k];});
+    var ok=missing.length===0, h='';
+    if(q.need.length===0){
+      h='<div style="'+KICK8+'color:var(--accent)">No tool needed</div><div style="font-size:14px;color:var(--ink-2)">The model answers from the instructions it was given. A good agent does not reach for a tool it does not need.</div>';
+    }else{
+      h='<div style="'+KICK8+'color:'+(ok?'var(--accent)':'var(--rose)')+'">'+(ok?'The agent can answer':'The agent cannot finish')+'</div>'+
+        '<ol style="margin:0 0 8px;padding-left:18px;font-size:13.5px;line-height:1.6;color:var(--ink-2)">'+
+        q.need.map(function(k){return '<li style="'+(on[k]?'':'color:var(--rose)')+'"><code>'+k+'</code>'+(on[k]?' called':' is switched off')+'</li>';}).join("")+'</ol>'+
+        '<div style="font-size:13px;color:var(--ink-3)">'+(ok?'Each result feeds the next call, then the model writes the answer.':'Without '+missing.map(esc8).join(" and ")+' it will either say it cannot check, or guess. This is why a missing or badly described tool looks like a model that ignores you.')+'</div>';
+    }
+    v.querySelector("#e2Out").innerHTML=h;
+    v.querySelector("#e2Stats").innerHTML=
+      '<div class="stat"><div class="sl">Tools needed</div><div class="sv">'+q.need.length+'</div></div>'+
+      '<div class="stat"><div class="sl">Tool calls made</div><div class="sv a">'+(ok?calls.length:Math.min(calls.length,Math.max(0,q.need.indexOf(missing[0]))))+'</div></div>'+
+      '<div class="stat"><div class="sl">Result</div><div class="sv'+(ok?' a':' w')+'" style="font-size:.95rem">'+(ok?'Answered':'Stuck')+'</div></div>';
+  }
+  render();
+})();
+
+/* ============================================================
+   VISUALIZER 3 - the memory window
+   ============================================================ */
+(function(){
+  var html=
+    '<div class="ctl three">'+
+      '<div><label>Context window length <span class="v" id="e3Wv"></span></label><input type="range" id="e3W" min="1" max="10" value="5"></div>'+
+      '<div><label>Exchanges so far <span class="v" id="e3Nv"></span></label><input type="range" id="e3N" min="1" max="14" value="8"></div>'+
+      '<div><label>Name given in exchange <span class="v" id="e3Kv"></span></label><input type="range" id="e3K" min="1" max="14" value="1"></div>'+
+    '</div>'+
+    '<div id="e3Row" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>'+
+    '<div style="font-size:12.5px;color:var(--ink-3)">Filled boxes are re-sent to the model with the next message. Greyed boxes are not.</div>'+
+    '<div class="stats" id="e3Stats"></div>'+
+    '<div class="note" id="e3Note"></div>';
+  var v=viz("Visualizer 3","What the model can still read",
+    "Slide the window length and the length of the chat. Watch which exchanges are re-sent.",html);
+  afterPara("Use the visualizer below. Slide the window length",v);
+  var w=v.querySelector("#e3W"),n=v.querySelector("#e3N"),k=v.querySelector("#e3K");
+  function render(){
+    var W=+w.value,N=+n.value,K=Math.min(+k.value,N);
+    v.querySelector("#e3Wv").textContent=W; v.querySelector("#e3Nv").textContent=N; v.querySelector("#e3Kv").textContent=K;
+    var first=Math.max(1,N-W+1), html2='', seen=K>=first;
+    for(var i=1;i<=N;i++){
+      var inWin=i>=first, isK=i===K;
+      html2+='<div style="min-width:34px;text-align:center;padding:7px 6px;border-radius:7px;font:600 12.5px var(--mono);border:1px solid '+(isK?'var(--amber)':'var(--rule-2)')+';'+
+        (inWin?'background:var(--accent-soft);color:var(--accent)':'background:transparent;color:var(--ink-3);opacity:.55')+'">'+i+(isK?'*':'')+'</div>';
+    }
+    v.querySelector("#e3Row").innerHTML=html2;
+    var sent=Math.min(W,N);
+    v.querySelector("#e3Stats").innerHTML=
+      '<div class="stat"><div class="sl">Re-sent exchanges</div><div class="sv a">'+sent+'</div></div>'+
+      '<div class="stat"><div class="sl">Dropped</div><div class="sv w">'+(N-sent)+'</div></div>'+
+      '<div class="stat"><div class="sl">Knows the name?</div><div class="sv'+(seen?' a':' w')+'" style="font-size:.95rem">'+(seen?'Yes':'No')+'</div></div>';
+    v.querySelector("#e3Note").textContent=seen
+      ?"The name is inside the window, so it is placed in front of the new message and the model can read it. A bigger window costs more tokens on every message."
+      :"The exchange with the name (marked *) has slid out of the window. It is not re-sent, so the model cannot see it and will ask again. Nothing errors. The old exchanges are simply left out.";
+  }
+  ["input"].forEach(function(e){w.addEventListener(e,render);n.addEventListener(e,render);k.addEventListener(e,render);});
+  render();
+})();
+
+/* ============================================================
+   VISUALIZER 4 - which guard for which failure
+   ============================================================ */
+(function(){
+  var SC=[
+    {s:"The weather service is busy for two seconds, then works again.",
+     g:[["best","Same call again, no model involved. The blip is absorbed and the agent never sees it."],
+        ["no","It would stop the run, not rescue it."],
+        ["no","Nothing is broken in the tool or the prompt."],
+        ["no","Reading a forecast needs nobody's approval."]]},
+    {s:"The agent keeps calling the same failing tool, round after round.",
+     g:[["no","More tries add more failing calls."],
+        ["best","A hard stop outside the model. It holds whatever the model does."],
+        ["part","Removes this cause, but the next bug would loop again. Still do it."],
+        ["no","The calls are not risky. They are just wasteful."]]},
+    {s:"A typo in the URL makes every call return a bad-request message.",
+     g:[["no","Three tries, three identical failures."],
+        ["part","Stops the waste, but does not make the tool work."],
+        ["best","The bug is in the tool. Correct the URL and it works."],
+        ["no","Nobody can approve a call that was never going to work."]]},
+    {s:"The agent is about to message a customer on your behalf.",
+     g:[["no","Nothing is failing, so there is nothing to retry."],
+        ["no","One message may be one round. It does not check what is sent."],
+        ["no","Nothing is broken. The risk is the action itself."],
+        ["best","The send cannot be undone, so a person approves it first."]]}
+  ];
+  var GU=["Retry On Fail","Max Iterations","Fix the tool or prompt","Human review"];
+  var html=
+    '<div class="seg" id="e4S" style="flex-direction:column;align-items:stretch;margin-bottom:12px"></div>'+
+    '<div class="seg" id="e4G" style="margin-bottom:12px"></div>'+
+    '<div id="e4Out" style="'+CARD8+'"></div>'+
+    '<div class="stats" id="e4Stats"></div>'+
+    '<div class="note">Retry is for blips, a limit is for loops, a fix is for bugs, and a human is for actions that cannot be undone. No single guard covers all four.</div>';
+  var v=viz("Visualizer 4","Match the failure to the guard",
+    "Pick a failure, then try each guard. See which one is the best fit and why.",html);
+  afterPara("Use the visualizer below. Match each failure",v);
+  var cur=0, picked=null, found={};
+  function render(){
+    seg8(v,"#e4S",SC.map(function(s){return s.s;}),cur,function(i){cur=i;picked=null;render();});
+    seg8(v,"#e4G",GU,picked===null?-1:picked,function(i){picked=i;if(SC[cur].g[i][0]==="best")found[cur]=true;render();});
+    var o=v.querySelector("#e4Out");
+    if(picked===null){o.innerHTML='<div style="font-size:14px;color:var(--ink-3)">Choose a guard above.</div>';}
+    else{
+      var r=SC[cur].g[picked], lab={best:"Best fit",part:"Partly helps",no:"Does not help"}[r[0]];
+      var col={best:"var(--accent)",part:"var(--amber)",no:"var(--rose)"}[r[0]];
+      o.innerHTML='<div style="'+KICK8+'color:'+col+'">'+lab+': '+esc8(GU[picked])+'</div><div style="font-size:14px;line-height:1.6;color:var(--ink-2)">'+esc8(r[1])+'</div>';
+    }
+    var nf=Object.keys(found).length;
+    v.querySelector("#e4Stats").innerHTML=
+      '<div class="stat"><div class="sl">Failures matched</div><div class="sv a">'+nf+' / '+SC.length+'</div></div>'+
+      '<div class="stat"><div class="sl">Failure</div><div class="sv" style="font-size:.95rem">'+(cur+1)+' of '+SC.length+'</div></div>';
+  }
+  render();
+})();
+
+/* ============================================================
+   VISUALIZER 5 - a fixed pipeline against an agent
+   ============================================================ */
+(function(){
+  var TK=[
+    {t:"Where is my order 1002?",
+     p:["Form receives the ticket","Model labels it: not urgent","IF node: not urgent, take the plain branch","Drafts a generic reply"],pnote:"Works, but the reply cannot contain the order status, because no step looks it up.",
+     a:["Reads the ticket","Calls lookup_order with 1002","Reads: delayed, new date 18 Nov","Writes the reply with the real date"],anote:"The agent fetched the fact it needed.",
+     pc:4,ac:4,pdone:"Partly",adone:"Yes"},
+    {t:"Order 1002 is late, and can I get a refund?",
+     p:["Form receives the ticket","Model gives one label: urgent","IF node: urgent, alert the team on Telegram"],pnote:"One label, one branch. The refund question is never answered.",
+     a:["Calls lookup_order with 1002","Calls refund_policy","Combines both in one message","Asks a human before sending"],anote:"Two questions, two tools, one reply. Nobody drew this path.",
+     pc:3,ac:4,pdone:"Half",adone:"Yes"},
+    {t:"asdf ???",
+     p:["Form receives the ticket","Model labels it: not urgent","IF node: plain branch","Drafts a generic reply to nonsense"],pnote:"The pipeline always produces something, even when it should not.",
+     a:["Reads the ticket","Tries lookup_order and finds no number","Replies that it needs an order number"],anote:"The agent can notice that it has nothing to work with. It may also guess, which is why it needs guards.",
+     pc:4,ac:3,pdone:"Poorly",adone:"Usually"}
+  ];
+  var html=
+    '<div class="seg" id="e5S" style="margin-bottom:14px"></div>'+
+    '<div id="e5Cols" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"></div>'+
+    '<div class="stats" id="e5Stats"></div>'+
+    '<div class="note">The pipeline is predictable because you drew every path, and blind to anything you did not draw. The agent handles the unplanned ticket, and in exchange you must guard it.</div>';
+  var v=viz("Visualizer 5","The Class 6 pipeline against an agent",
+    "Pick a ticket and compare what each approach does with it.",html);
+  afterPara("compare it with an agent",v);
+  var cur=1;
+  function col(title,steps,note,agent){
+    return '<div style="'+CARD8+'"><div style="'+KICK8+'color:'+(agent?'var(--accent)':'var(--ink-3)')+'">'+title+'</div>'+
+      '<ol style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55;color:var(--ink-2)">'+steps.map(function(s){return '<li style="margin:3px 0">'+esc8(s)+'</li>';}).join("")+'</ol>'+
+      '<div style="margin-top:9px;font-size:12.5px;color:var(--ink-3)">'+esc8(note)+'</div></div>';
+  }
+  function render(){
+    seg8(v,"#e5S",TK.map(function(t){return t.t;}),cur,function(i){cur=i;render();});
+    var t=TK[cur];
+    var c=v.querySelector("#e5Cols");
+    c.innerHTML=col("Fixed pipeline (Class 6)",t.p,t.pnote,false)+col("Agent (today)",t.a,t.anote,true);
+    c.style.gridTemplateColumns=window.innerWidth<620?"1fr":"1fr 1fr";
+    v.querySelector("#e5Stats").innerHTML=
+      '<div class="stat"><div class="sl">Pipeline handled it</div><div class="sv w" style="font-size:.95rem">'+t.pdone+'</div></div>'+
+      '<div class="stat"><div class="sl">Agent handled it</div><div class="sv a" style="font-size:.95rem">'+t.adone+'</div></div>'+
+      '<div class="stat"><div class="sl">Path drawn by you</div><div class="sv" style="font-size:.95rem">Pipeline only</div></div>';
+  }
+  render();
+})();
+
+/* ============================================================
+   VISUALIZER 6 - the approval gate, approved and declined
+   ============================================================ */
+(function(){
+  function steps(approve){
+    var s=[
+      {t:"The agent calls lookup_order",d:"A read. It runs straight away, with no gate.",sent:false,note:"Order 1002: delayed, new date 18 Nov."},
+      {t:"The agent decides to call send_reply",d:"It writes the message text. The Chat ID was fixed by you, so it cannot pick a different customer.",sent:false,note:"The call is made, but it is intercepted before it runs."},
+      {t:"The gate pauses the run",d:"Telegram shows the proposed message with Approve and Decline buttons. The run waits, and send_reply has not run.",sent:false,note:"Waiting for a person."}
+    ];
+    if(approve){
+      s.push({t:"You tap Approve",d:"A page opens in your browser to record the answer. The run resumes.",sent:false,note:"Approved."});
+      s.push({t:"send_reply runs",d:"Now, and only now, the message goes to the chat.",sent:true,note:"Message sent."});
+      s.push({t:"The agent replies in the chat",d:"It tells you the customer has been messaged.",sent:true,note:"Done."});
+    }else{
+      s.push({t:"You tap Decline",d:"The run resumes with a rejection.",sent:false,note:"Declined."});
+      s.push({t:"send_reply does not run",d:"The tool is cancelled. The agent is told the request was rejected and to stop.",sent:false,note:"Nothing was sent."});
+      s.push({t:"The agent replies in the chat",d:"It tells you the reply was not approved.",sent:false,note:"Done."});
+    }
+    return s;
+  }
+  var html=
+    '<div class="seg" style="margin-bottom:12px"><button id="e6A" class="on">You approve</button><button id="e6D">You decline</button></div>'+
+    '<div class="seg" style="margin-bottom:12px"><button id="e6Back">Back</button><button id="e6Next" class="on">Next step</button><button id="e6Reset">Reset</button></div>'+
+    '<div id="e6Out" style="'+CARD8+'"></div>'+
+    '<div class="stats" id="e6Stats"></div>'+
+    '<div class="note">The gate sits between the agent and the one tool that changes the world. A decline is not a crash. The tool simply never runs, and the agent is told.</div>';
+  var v=viz("Visualizer 6","One request, approved and declined",
+    "Choose an outcome and step through what happens, one stage at a time.",html);
+  afterPara("Use the visualizer below. Step through one request",v);
+  var approve=true,pos=0;
+  function render(){
+    var S=steps(approve), s=S[pos];
+    v.querySelector("#e6A").className=approve?"on":""; v.querySelector("#e6D").className=approve?"":"on";
+    v.querySelector("#e6Out").innerHTML=
+      '<div style="'+KICK8+'color:var(--accent)">Stage '+(pos+1)+' of '+S.length+'</div>'+
+      '<div style="font:600 15px var(--sans);color:var(--ink);margin-bottom:6px">'+esc8(s.t)+'</div>'+
+      '<div style="font-size:14px;line-height:1.6;color:var(--ink-2)">'+esc8(s.d)+'</div>';
+    v.querySelector("#e6Stats").innerHTML=
+      '<div class="stat"><div class="sl">Message sent?</div><div class="sv'+(s.sent?' a':' w')+'" id="e6Sent">'+(s.sent?'Yes':'No')+'</div></div>'+
+      '<div class="stat"><div class="sl">Status</div><div class="sv" id="e6Note" style="font-size:.95rem">'+esc8(s.note)+'</div></div>';
+  }
+  v.querySelector("#e6A").addEventListener("click",function(){approve=true;pos=0;render();});
+  v.querySelector("#e6D").addEventListener("click",function(){approve=false;pos=0;render();});
+  v.querySelector("#e6Next").addEventListener("click",function(){pos=Math.min(pos+1,steps(approve).length-1);render();});
+  v.querySelector("#e6Back").addEventListener("click",function(){pos=Math.max(pos-1,0);render();});
+  v.querySelector("#e6Reset").addEventListener("click",function(){pos=0;render();});
+  render();
+})();
+/* ============================================================
+   5. table of contents and scroll state
+   ============================================================ */
+(function(){
+  var hs=Array.prototype.slice.call(host.querySelectorAll("h2"));
+  var toc=document.getElementById("toc");
+
+  hs.forEach(function(h,i){
+    if(!h.id) h.id="s"+i;
+    var label=h.dataset.label||h.textContent.trim();
+    var mins=h.dataset.mins||"";
+    var a=document.createElement("a");
+    a.href="#"+h.id;
+    a.innerHTML=label+(mins?'<span class="mins">'+mins+'m</span>':'');
+    toc.appendChild(a);
+  });
+
+  var links=Array.prototype.slice.call(toc.querySelectorAll("a"));
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(!e.isIntersecting) return;
+        links.forEach(function(l){
+          l.classList.toggle("active",l.getAttribute("href")==="#"+e.target.id);
+        });
+      });
+    },{rootMargin:"-10% 0px -80% 0px"});
+    hs.forEach(function(h){io.observe(h);});
+  }
+})();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Academy-AI-class-8" target="_blank" rel="noopener">github.com/scaler-content/Academy-AI-class-8</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

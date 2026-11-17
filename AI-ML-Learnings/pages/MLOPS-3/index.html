@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Streamlit and Optuna post read</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,340;9..144,440;9..144,560;9..144,620&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --black:#050505;
+  --bg:#0b0b0c;
+  --bg-elev:#131314;
+  --bg-card:#19191b;
+  --bg-card-hi:#202023;
+  --border:#2a2a2d;
+  --border-hi:#3c3c40;
+  --ink:#f4f4f3;
+  --ink-dim:#b9b9ba;
+  --ink-mute:#8c8c8e;
+  --ink-faint:#5c5c5e;
+  --white:#ffffff;
+  --g1:#eaeaea;
+  --g2:#b0b0b0;
+  --g3:#7a7a7a;
+  --g4:#4a4a4c;
+  --serif:'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
+  --sans:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  --maxw:740px;
+  --wide:980px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth; scroll-padding-top:84px;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink-dim);
+  font-family:var(--sans);
+  font-size:16.5px;
+  line-height:1.68;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -5%, rgba(255,255,255,0.05), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 10%, rgba(255,255,255,0.035), transparent 55%);
+  pointer-events:none;
+  z-index:0;
+}
+
+::selection{ background:#3c3c40; color:var(--white); }
+
+a{ color:var(--ink); text-decoration-color:var(--border-hi); text-underline-offset:3px; }
+a:hover{ text-decoration-color:var(--ink); }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible, summary:focus-visible{
+  outline:2px solid var(--ink-dim);
+  outline-offset:3px;
+  border-radius:2px;
+}
+
+h1,h2,h3,h4{
+  font-family:var(--serif);
+  color:var(--ink);
+  font-weight:560;
+  line-height:1.15;
+  letter-spacing:-0.01em;
+  margin:0 0 0.5em;
+}
+
+p{ margin:0 0 1.15em; max-width:66ch; }
+code{ font-family:var(--mono); font-size:0.88em; color:var(--g1); background:rgba(255,255,255,0.06); padding:0.1em 0.4em; border-radius:4px; }
+strong{ color:var(--ink); font-weight:600; }
+em{ color:var(--ink-dim); }
+
+main{ position:relative; z-index:1; }
+
+/* ---------- top progress bar ---------- */
+#progressBar{
+  position:fixed; top:0; left:0; height:2px; width:0%;
+  background:linear-gradient(90deg, var(--g4), var(--g1));
+  z-index:60; transition:width 0.08s linear;
+}
+
+/* ---------- TOC ---------- */
+.toc{
+  position:fixed; top:0; left:0; height:100vh; width:272px;
+  background:var(--bg-elev); border-right:1px solid var(--border);
+  padding:28px 22px; overflow-y:auto; z-index:50;
+  transform:translateX(0);
+  transition:transform 0.28s ease;
+}
+.toc-brand{
+  font-family:var(--mono); font-size:11px; letter-spacing:0.08em;
+  color:var(--ink-faint); margin-bottom:22px; padding-bottom:16px;
+  border-bottom:1px solid var(--border);
+}
+.toc-brand b{ color:var(--ink-mute); display:block; font-size:13px; letter-spacing:0; margin-top:4px; font-family:var(--sans);}
+.toc ol{ list-style:none; margin:0; padding:0; counter-reset:toc; }
+.toc li{ counter-increment:toc; margin-bottom:2px; }
+.toc a{
+  display:block; font-size:13.5px; color:var(--ink-mute); text-decoration:none;
+  padding:7px 10px 7px 8px; border-radius:6px; border-left:2px solid transparent;
+  line-height:1.35;
+}
+.toc a::before{
+  content:counter(toc, decimal-leading-zero) "  ";
+  font-family:var(--mono); color:var(--ink-faint); font-size:11px; margin-right:2px;
+}
+.toc a:hover{ color:var(--ink); background:rgba(255,255,255,0.04); }
+.toc a.active{ color:var(--white); border-left-color:var(--ink-dim); background:rgba(255,255,255,0.05); }
+.toc-foot{ margin-top:20px; padding-top:16px; border-top:1px solid var(--border); font-size:11.5px; color:var(--ink-faint); font-family:var(--mono);}
+
+#tocToggle{
+  display:none; position:fixed; top:16px; left:16px; z-index:70;
+  background:var(--bg-card); border:1px solid var(--border-hi); color:var(--ink);
+  font-family:var(--mono); font-size:12px; letter-spacing:0.04em;
+  padding:9px 13px; border-radius:8px; cursor:pointer;
+}
+
+.content-wrap{ margin-left:272px; }
+
+/* ---------- hero ---------- */
+.hero{
+  padding:96px 64px 64px;
+  max-width:var(--wide); 
+  border-bottom:1px solid var(--border);
+}
+.hero-eyebrow{
+  font-family:var(--mono); font-size:12px; color:var(--ink-faint);
+  letter-spacing:0.06em; margin-bottom:22px; display:flex; align-items:center; gap:10px;
+}
+.hero-eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:var(--ink-faint); display:inline-block;}
+.hero h1{
+  font-size:clamp(38px, 5.4vw, 62px); font-weight:440; max-width:14ch;
+  color:var(--white);
+}
+.hero .sub{
+  font-family:var(--serif); font-style:italic; font-weight:340; font-size:clamp(18px,2.2vw,23px);
+  color:var(--ink-mute); max-width:36ch; margin-top:18px;
+}
+.hero .lede{ margin-top:34px; font-size:16.5px; color:var(--ink-dim); max-width:62ch; }
+.hero .lede strong{ color: var(--ink); }
+
+/* ---------- sections ---------- */
+section.block{
+  padding:64px 64px; max-width:var(--wide);
+  border-bottom:1px solid var(--border);
+}
+section.block > .inner{ max-width:var(--maxw); }
+section.block.wide > .inner{ max-width:var(--wide); }
+
+.kicker{
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); letter-spacing:0.08em;
+  margin-bottom:10px;
+}
+h2.section-title{ font-size:clamp(26px,3vw,34px); margin-bottom:22px; }
+h3.sub-title{ font-size:20px; margin-top:38px; margin-bottom:14px; color:var(--ink);}
+h4.micro-title{ font-family:var(--sans); font-size:13px; text-transform:none; letter-spacing:0.01em; color:var(--ink); font-weight:650; margin-bottom:10px;}
+
+/* pull-quote / manager quote */
+blockquote.quote{
+  margin:28px 0; padding:4px 0 4px 22px; border-left:2px solid var(--border-hi);
+  font-family:var(--serif); font-style:italic; font-size:18px; color:var(--ink);
+  max-width:58ch;
+}
+blockquote.quote cite{ display:block; font-family:var(--mono); font-style:normal; font-size:11.5px; color:var(--ink-faint); margin-top:8px; letter-spacing:0.03em;}
+
+/* callout box */
+.callout{
+  border:1px solid var(--border-hi); background:var(--bg-card);
+  border-radius:10px; padding:20px 22px; margin:26px 0;
+}
+.callout .callout-label{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:0.06em; margin-bottom:8px; }
+.callout p:last-child{ margin-bottom:0; }
+.callout.insight{ border-left:3px solid var(--g2); }
+
+/* two-column card grid */
+.card-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:28px 0; }
+.card{
+  background:var(--bg-card); border:1px solid var(--border); border-radius:10px;
+  padding:20px 20px;
+}
+.card h4{ font-size:14.5px; color:var(--ink); margin-bottom:8px; font-family:var(--sans); font-weight:650;}
+.card p{ font-size:14.5px; margin-bottom:0; color:var(--ink-mute);}
+.card .tag{ font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); letter-spacing:0.05em; margin-bottom:10px; display:inline-block; border:1px solid var(--border-hi); padding:2px 8px; border-radius:20px;}
+
+/* stat row */
+.stat-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:26px 0; }
+.stat{ background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:16px 16px;}
+.stat .num{ font-family:var(--serif); font-size:26px; color:var(--white); font-weight:500;}
+.stat .lbl{ font-size:12px; color:var(--ink-faint); margin-top:4px; }
+
+/* definitions */
+.def-pair{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:26px 0;}
+.def{ border:1px solid var(--border); border-radius:10px; padding:18px 20px; background:var(--bg-elev);}
+.def .term{ font-family:var(--mono); font-size:12px; color:var(--ink-faint); letter-spacing:0.05em; margin-bottom:8px; text-transform:uppercase;}
+.def .word{ font-family:var(--serif); font-size:21px; color:var(--white); margin-bottom:8px; }
+.def p{ font-size:14.5px; margin-bottom:0; color:var(--ink-mute);}
+
+/* code blocks */
+pre.code{
+  background:#101011; border:1px solid var(--border); border-radius:10px;
+  padding:18px 20px; overflow-x:auto; margin:20px 0; font-family:var(--mono);
+  font-size:13px; line-height:1.65; color:var(--ink-dim);
+}
+pre.code .cmt{ color:var(--ink-faint); font-style:italic; }
+pre.code .kw{ color:var(--white); font-weight:600; }
+pre.code .str{ color:var(--g1); }
+.code-cap{ font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); margin:-10px 0 18px; letter-spacing:0.02em;}
+
+/* annotated code */
+.annotated{ margin:26px 0; }
+.annot-item{
+  border:1px solid var(--border); border-radius:10px; margin-bottom:10px; background:var(--bg-card); overflow:hidden;
+}
+.annot-item summary{
+  cursor:pointer; padding:14px 18px; font-family:var(--mono); font-size:13px; color:var(--ink);
+  list-style:none; display:flex; align-items:center; gap:10px;
+}
+.annot-item summary::-webkit-details-marker{ display:none; }
+.annot-item summary::before{ content:"+"; color:var(--ink-faint); font-size:16px; width:14px; }
+.annot-item[open] summary::before{ content:"–"; }
+.annot-item .annot-body{ padding:0 18px 16px 42px; font-size:14.5px; color:var(--ink-mute); }
+
+/* tables */
+.tbl-wrap{ overflow-x:auto; margin:22px 0; border:1px solid var(--border); border-radius:10px; }
+table{ border-collapse:collapse; width:100%; font-size:13.5px; min-width:480px; }
+table caption{ text-align:left; padding:12px 16px; font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:0.04em; border-bottom:1px solid var(--border); background:var(--bg-elev);}
+th,td{ padding:10px 16px; text-align:right; border-bottom:1px solid var(--border); white-space:nowrap; }
+th:first-child, td:first-child{ text-align:left; }
+thead th{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); font-weight:500; letter-spacing:0.03em; text-transform:uppercase; background:var(--bg-elev); }
+tbody tr:last-child td{ border-bottom:none; }
+tbody tr:hover{ background:rgba(255,255,255,0.03); }
+td.hi{ color:var(--white); font-weight:600; }
+td.dim{ color:var(--ink-faint); }
+tr.best td{ background:rgba(255,255,255,0.035); }
+tr.best td:first-child{ box-shadow:inset 3px 0 0 var(--g2); }
+
+/* chart wrappers */
+.chart-block{ margin:28px 0; }
+.chart-title{ font-size:14.5px; color:var(--ink); font-weight:650; margin-bottom:2px;}
+.chart-sub{ font-size:12.5px; color:var(--ink-faint); margin-bottom:14px; }
+.chart-card{ border:1px solid var(--border); border-radius:10px; background:var(--bg-card); padding:20px 22px 14px; }
+svg.chart{ width:100%; height:auto; display:block; overflow:visible; }
+svg.chart text{ font-family:var(--mono); fill:var(--ink-mute); }
+svg.chart .axis-line{ stroke:var(--border-hi); stroke-width:1; }
+svg.chart .gridline{ stroke:var(--border); stroke-width:1; }
+svg.chart .bar{ transition:opacity 0.15s ease; cursor:pointer; }
+svg.chart .bar:hover{ opacity:0.75; }
+svg.chart .val-label{ font-size:11px; fill:var(--ink); font-weight:600; }
+svg.chart .cat-label{ font-size:11px; fill:var(--ink-mute); }
+.chart-legend{ display:flex; gap:18px; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+.legend-item{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-mute); }
+.legend-swatch{ width:11px; height:11px; border-radius:3px; flex:none; }
+.chart-foot-note{ font-size:12px; color:var(--ink-faint); margin-top:10px; }
+.tooltip-svg{ position:absolute; pointer-events:none; background:#0a0a0a; border:1px solid var(--border-hi); border-radius:6px; padding:6px 10px; font-family:var(--mono); font-size:11.5px; color:var(--ink); opacity:0; transition:opacity 0.1s; z-index:10; white-space:nowrap;}
+.chart-frame{ position:relative; }
+
+/* pixel grid */
+.pixel-grids{ display:flex; gap:36px; flex-wrap:wrap; margin:26px 0; align-items:flex-start; }
+.pixel-grid-wrap{ text-align:center; }
+.pixel-grid-wrap .cap{ font-family:var(--mono); font-size:12px; color:var(--ink-mute); margin-top:10px; }
+.pixel-grid{ display:grid; grid-template-columns:repeat(8, 15px); grid-template-rows:repeat(8, 15px); gap:1px; background:var(--border); border:1px solid var(--border-hi); padding:1px; border-radius:4px;}
+.pixel-grid div{ width:15px; height:15px; }
+
+/* tabs */
+.tabs{ margin:26px 0; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.tab-nav{ display:flex; flex-wrap:wrap; background:var(--bg-elev); border-bottom:1px solid var(--border); }
+.tab-btn{
+  font-family:var(--mono); font-size:12px; background:none; border:none; color:var(--ink-faint);
+  padding:12px 16px; cursor:pointer; border-bottom:2px solid transparent; letter-spacing:0.01em;
+}
+.tab-btn:hover{ color:var(--ink-dim); }
+.tab-btn.active{ color:var(--white); border-bottom-color:var(--g2); background:rgba(255,255,255,0.03);}
+.tab-panels{ padding:22px 22px; }
+.tab-panel{ display:none; }
+.tab-panel.active{ display:block; }
+.tab-panel p{ font-size:14px; color:var(--ink-mute); }
+.tab-panel pre.code{ margin-top:14px; margin-bottom:0;}
+
+/* accordion (what goes wrong) */
+.wrong-list{ margin:26px 0; display:flex; flex-direction:column; gap:10px; }
+.wrong-item{ border:1px solid var(--border); border-radius:10px; background:var(--bg-card); overflow:hidden; }
+.wrong-item summary{
+  cursor:pointer; list-style:none; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:14px;
+}
+.wrong-item summary::-webkit-details-marker{ display:none; }
+.wrong-item summary .wl{ display:flex; align-items:center; gap:14px; }
+.wrong-item summary .idx{ font-family:var(--mono); font-size:12px; color:var(--ink-faint); border:1px solid var(--border-hi); border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; flex:none;}
+.wrong-item summary .ttl{ font-size:15.5px; color:var(--ink); font-weight:600; font-family:var(--sans);}
+.wrong-item summary .chev{ color:var(--ink-faint); transition:transform 0.2s; font-family:var(--mono); }
+.wrong-item[open] summary .chev{ transform:rotate(90deg); }
+.wrong-body{ padding:0 20px 22px 60px; }
+.wrong-body p{ font-size:14.5px; color:var(--ink-mute); }
+
+/* comparison toggle */
+.metric-toggle{ display:inline-flex; border:1px solid var(--border-hi); border-radius:8px; overflow:hidden; margin-bottom:18px;}
+.metric-toggle button{ font-family:var(--mono); font-size:12px; padding:8px 14px; background:var(--bg-card); border:none; color:var(--ink-faint); cursor:pointer; border-right:1px solid var(--border-hi); }
+.metric-toggle button:last-child{ border-right:none; }
+.metric-toggle button.active{ background:var(--g4); color:var(--white); }
+
+/* footer */
+footer.site-foot{
+  padding:56px 64px 80px; max-width:var(--wide); color:var(--ink-faint); font-size:13px;
+}
+footer.site-foot .fmark{ font-family:var(--mono); font-size:12px; letter-spacing:0.05em; color:var(--ink-mute); margin-bottom:8px;}
+footer.site-foot .fline{ height:1px; background:var(--border); margin-bottom:24px; }
+
+/* checkpoint box */
+.checkpoint{ border:1px dashed var(--border-hi); border-radius:10px; padding:18px 20px; margin:26px 0; background:rgba(255,255,255,0.015); }
+.checkpoint .cp-label{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:0.05em; margin-bottom:10px; }
+.checkpoint ol{ margin:10px 0 0; padding-left:20px; font-size:14px; color:var(--ink-mute); }
+.checkpoint li{ margin-bottom:6px; }
+
+/* refs */
+.refs-group{ margin-bottom:26px; }
+.refs-group h4{ font-family:var(--mono); font-size:12px; letter-spacing:0.06em; color:var(--ink-faint); text-transform:uppercase; margin-bottom:14px;}
+.ref-item{ font-size:14px; color:var(--ink-mute); margin-bottom:14px; padding-left:18px; border-left:1px solid var(--border); }
+.ref-item .ref-title{ color:var(--ink); font-family:var(--serif); font-style:italic; }
+.ref-item .ref-note{ display:block; margin-top:3px; font-size:12.5px; color:var(--ink-faint); }
+
+/* lifecycle diagram */
+.lifecycle-diagram{ margin:28px 0; }
+
+/* responsive */
+@media (max-width:980px){
+  .content-wrap{ margin-left:0; }
+  .toc{ transform:translateX(-100%); box-shadow:0 0 40px rgba(0,0,0,0.6); }
+  .toc.open{ transform:translateX(0); }
+  #tocToggle{ display:block; }
+  .hero{ padding:88px 26px 44px; }
+  section.block{ padding:48px 24px; }
+  .card-grid{ grid-template-columns:1fr; }
+  .stat-row{ grid-template-columns:1fr 1fr; }
+  .def-pair{ grid-template-columns:1fr; }
+  .pixel-grids{ gap:22px; }
+}
+@media (max-width:520px){
+  .stat-row{ grid-template-columns:1fr; }
+  table{ min-width:0; font-size:12.5px; }
+  th,td{ padding:8px 10px; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{ scroll-behavior:auto !important; transition:none !important; }
+}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/mlops/">MLOps</a><span class="t">· MLOps 3 · Streamlit and Optuna</span><span class="pn"><a href="../MLOPS-2/" title="MLOps 2 · Version control and Git">← Prev</a><a href="../MLOPS-4/" title="MLOps 4 · Serving a model with FastAPI">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progressBar"></div>
+<button id="tocToggle">☰ Contents</button>
+<nav class="toc" id="toc">
+  <div class="toc-brand">POST READ<b>Streamlit &amp; Optuna</b></div>
+  <ol>
+    <li><a href="#preface">Preface</a></li>
+    <li><a href="#two-gaps">The two gaps</a></li>
+    <li><a href="#optuna-adds">What Optuna adds</a></li>
+    <li><a href="#optuna-practice">Optuna in practice</a></li>
+    <li><a href="#reading-honestly">Reading the result honestly</a></li>
+    <li><a href="#streamlit-works">How Streamlit works</a></li>
+    <li><a href="#model-playground">The model playground</a></li>
+    <li><a href="#sharing">Sharing it</a></li>
+    <li><a href="#what-goes-wrong">What goes wrong</a></li>
+    <li><a href="#lifecycle">Where this sits</a></li>
+    <li><a href="#summary">Class summary</a></li>
+    <li><a href="#references">References</a></li>
+  </ol>
+  <div class="toc-foot">12 sections · ~30 min read</div>
+</nav>
+
+<div class="content-wrap">
+<main>
+
+<header class="hero">
+  <div class="hero-eyebrow"><span class="dot"></span>INTERACTIVE POST READ</div>
+  <h1>Streamlit and Optuna</h1>
+  <div class="sub">From static notebooks to interactive, optimized apps</div>
+  <p class="lede">A model that works is not finished. Two things usually happen next, and both are usually done badly: <strong>choosing hyperparameters</strong> honestly, and <strong>letting somebody else touch the model</strong>. This read covers what Optuna and Streamlit actually do about each &mdash; and spends most of its time on the part that isn't easy: reading the numbers they produce without fooling yourself.</p>
+</header>
+
+<article>
+
+<section class="block" id="preface">
+  <div class="inner">
+    <div class="kicker">Preface</div>
+    <h2 class="section-title">Two gaps, one afternoon of API</h2>
+    <p>Last time ended with a repository: code with a history, commits with messages, and a clear answer to which version produced which script. That solved the code half of reproducibility. This session is about the two things that happen immediately after a model starts working.</p>
+    <p>The first is <strong>choosing hyperparameters</strong>. You can already search a space &mdash; <code>GridSearchCV</code> enumerates one, <code>RandomizedSearchCV</code> samples one &mdash; and for a handful of candidate values, neither needs replacing. What neither gives you is a search that uses its own results to decide where to look next, a space that can branch, or a record of the search that outlives the process that ran it. Optuna is those three things, and this session is as much about <em>when they're worth a new dependency</em> as about how to call them.</p>
+    <p>The second is <strong>letting somebody else touch the model</strong>. A notebook is a development environment, not a delivery format. A domain expert who wants to know why the model flagged a particular case cannot read a <code>predict</code> call. Streamlit turns a Python script into a web application with no front-end work, which makes the model something a non-engineer can interrogate.</p>
+    <p>Both tools are easy to use. The part that isn't easy &mdash; the part this session spends most of its time on &mdash; is reading the numbers they produce without fooling yourself. An optimizer will always hand you a best value. Whether that number means anything depends on what you optimized <em>against</em> and what you optimized <em>for</em>, and this post measures the cost of getting either one wrong.</p>
+
+    <div class="callout">
+      <div class="callout-label">BY THE END, YOU WILL BE ABLE TO</div>
+      <p>1&#41; Say what a TPE sampler does that <code>GridSearchCV</code> and <code>RandomizedSearchCV</code> cannot &mdash; and when that difference doesn't justify a new dependency.<br>
+      2&#41; Choose an objective metric that matches the problem, and show why accuracy is the wrong one when the positive class is rare.<br>
+      3&#41; Write an Optuna objective function, run a study, and inspect its trials.</p>
+    </div>
+  </div>
+</section>
+<section class="block" id="two-gaps">
+  <div class="inner">
+    <div class="kicker">01 &mdash; Motivation</div>
+    <h2 class="section-title">The two gaps after a model works</h2>
+    <p>Consider a situation that happens at every company that does ML. You've spent two weeks on a classifier. It reaches 85% accuracy on your held-out set. You send the notebook to your manager.</p>
+    <blockquote class="quote">
+      "I cannot open this. Can you make it so I can type in some numbers and see whether the prediction makes sense? And can we get that accuracy up?"
+      <cite>&mdash; your manager, reading a .ipynb file</cite>
+    </blockquote>
+    <p>Two separate requests, two separate gaps.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag">GAP 1</span>
+        <h4>The interaction gap</h4>
+        <p>A notebook is a development artifact. It assumes a Python kernel, your package versions, your file paths, and a reader who can tell a cell from its output. Everyone who needs to judge whether the model behaves sensibly &mdash; the domain expert, the product manager, the person accountable when it's wrong &mdash; is locked out.</p>
+      </div>
+      <div class="card">
+        <span class="tag">GAP 2</span>
+        <h4>The optimization gap</h4>
+        <p><code>n_estimators=100</code> was not a decision. It was a default that survived because nobody challenged it. There's no record of what else was tried, no evidence the shipped configuration beats one that wasn't tried, and no way to repeat the search.</p>
+      </div>
+    </div>
+
+    <div class="chart-block">
+      <div class="chart-card">
+        <svg class="chart" viewBox="0 0 760 260" role="img" aria-label="Diagram: a working model splits into an interaction gap, closed by Streamlit, and an optimization gap, closed by Optuna.">
+          <!-- center node -->
+          <rect x="300" y="18" width="160" height="46" rx="8" fill="#202023" stroke="#3c3c40"/>
+          <text x="380" y="46" text-anchor="middle" font-size="13" fill="#f4f4f3" font-weight="600">Model that "works"</text>
+
+          <!-- lines down -->
+          <line x1="380" y1="64" x2="140" y2="104" class="axis-line"/>
+          <line x1="380" y1="64" x2="620" y2="104" class="axis-line"/>
+
+          <!-- gap boxes -->
+          <rect x="40" y="104" width="200" height="60" rx="8" fill="#19191b" stroke="#2a2a2d"/>
+          <text x="140" y="128" text-anchor="middle" font-size="12" fill="#f4f4f3" font-weight="600">Interaction gap</text>
+          <text x="140" y="146" text-anchor="middle" font-size="10.5" fill="#8c8c8e">locked in the notebook</text>
+
+          <rect x="520" y="104" width="200" height="60" rx="8" fill="#19191b" stroke="#2a2a2d"/>
+          <text x="620" y="128" text-anchor="middle" font-size="12" fill="#f4f4f3" font-weight="600">Optimization gap</text>
+          <text x="620" y="146" text-anchor="middle" font-size="10.5" fill="#8c8c8e">unchallenged defaults</text>
+
+          <!-- lines to tools -->
+          <line x1="140" y1="164" x2="140" y2="200" class="axis-line"/>
+          <line x1="620" y1="164" x2="620" y2="200" class="axis-line"/>
+
+          <rect x="40" y="200" width="200" height="46" rx="23" fill="none" stroke="#7a7a7a" stroke-width="1.3"/>
+          <text x="140" y="228" text-anchor="middle" font-size="13" fill="#eaeaea" font-weight="600">Streamlit</text>
+
+          <rect x="520" y="200" width="200" height="46" rx="23" fill="none" stroke="#7a7a7a" stroke-width="1.3"/>
+          <text x="620" y="228" text-anchor="middle" font-size="13" fill="#eaeaea" font-weight="600">Optuna</text>
+        </svg>
+      </div>
+      <div class="chart-foot-note">Streamlit closes the interaction gap. Optuna closes the optimization gap. Neither is hard to use &mdash; the rest of this post is mostly about using them without drawing conclusions they don't support.</div>
+    </div>
+  </div>
+</section>
+<section class="block" id="optuna-adds">
+  <div class="inner">
+    <div class="kicker">02 &mdash; Concepts</div>
+    <h2 class="section-title">What Optuna adds to the search you already know</h2>
+    <p>You've already searched a hyperparameter space. <code>GridSearchCV</code> enumerates a grid, <code>RandomizedSearchCV</code> samples from distributions for a fixed budget, and both are two lines of code. The question is narrow: what can a search do that those two cannot?</p>
+
+    <div class="def-pair">
+      <div class="def">
+        <div class="term">Vocabulary</div>
+        <div class="word">Trial</div>
+        <p>One configuration, evaluated once, producing one number. In the vocabulary you already have, a trial is one row of <code>cv_results_</code>.</p>
+      </div>
+      <div class="def">
+        <div class="term">Vocabulary</div>
+        <div class="word">Study</div>
+        <p>A collection of trials pursuing one objective &mdash; the whole table, except an Optuna study is an object in its own right rather than an attribute hanging off a fitted estimator.</p>
+      </div>
+    </div>
+
+    <p>There are three answers, and only the first is about the algorithm.</p>
+
+    <h3 class="sub-title">A search that uses its own results</h3>
+    <p><code>GridSearchCV</code> and <code>RandomizedSearchCV</code> share a property that's easy to miss because it sounds like a virtue: neither looks at its own results. A grid is fully determined before the first fit. A random search draws its ninetieth sample from exactly the distribution it drew the first from &mdash; eighty-nine evaluations of which regions are good change nothing about where the ninetieth lands.</p>
+    <p>Sequential model-based search drops that. Keep a record of every trial and the score it achieved. Split the record into configurations that did well and the ones that didn't, and fit a simple probability density over each group &mdash; call them <code>l(x)</code> for the good ones and <code>g(x)</code> for the rest. To choose the next configuration, sample candidates and keep the one that maximizes the ratio <code>l(x) / g(x)</code>: the point that looks most like what worked and least like what didn't.</p>
+
+    <div class="callout insight">
+      <div class="callout-label">THE TREE-STRUCTURED PARZEN ESTIMATOR (TPE)</div>
+      <p>That's TPE, Optuna's default sampler. It spends its first <code>n_startup_trials</code> sampling at random, because a density fitted to three points is worthless, and concentrates after that. It is not magic &mdash; on a space where every configuration scores about the same, it buys you nothing over random sampling.</p>
+    </div>
+  </div>
+</section>
+<section class="block wide" id="optuna-practice">
+  <div class="inner">
+    <div class="kicker">03 &mdash; Applied</div>
+    <h2 class="section-title">Optuna in practice</h2>
+    <p>The problem: <strong>find the eights.</strong> The <code>digits</code> dataset bundled with scikit-learn is 1,797 hand-written digits as 8&times;8 grayscale images. Treated as a detection problem &mdash; is this an eight or not &mdash; the positive class is rare, at about one image in ten. That's the shape most real classification problems have, and it's where library defaults are genuinely wrong.</p>
+
+    <div class="stat-row">
+      <div class="stat"><div class="num">1,797</div><div class="lbl">total images, 64 pixels each</div></div>
+      <div class="stat"><div class="num">9.7%</div><div class="lbl">of images are an eight (174)</div></div>
+      <div class="stat"><div class="num">1,347</div><div class="lbl">training images (130 eights)</div></div>
+      <div class="stat"><div class="num">450</div><div class="lbl">test images (44 eights)</div></div>
+    </div>
+
+    <h3 class="sub-title">3.1 &nbsp;The data</h3>
+    <p><code>digits</code> is bundled with scikit-learn, so this runs offline. Each image is 64 pixel values from 0 to 16, flattened into 64 columns &mdash; what the model actually receives is a row of 64 numbers, not a picture.</p>
+
+    <div class="pixel-grids">
+      <div class="pixel-grid-wrap">
+        <div class="pixel-grid" id="gridNormal" role="img" aria-label="8 by 8 grayscale pixel grid of a training image, showing the digit eight"><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(96,96,96)"></div><div style="background:rgb(48,48,48)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(207,207,207)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(64,64,64)"></div><div style="background:rgb(16,16,16)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(96,96,96)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(128,128,128)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(128,128,128)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(112,112,112)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(143,143,143)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(239,239,239)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(191,191,191)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div></div>
+        <div class="cap">train row 11 &mdash; an eight</div>
+      </div>
+    </div>
+    <p class="chart-foot-note">What a human needs in order to judge a prediction is the same 64 numbers, drawn. That gap &mdash; between what the model receives and what a person can evaluate &mdash; is exactly what section 6 builds an interface for.</p>
+
+    <h3 class="sub-title">3.2 &nbsp;A baseline to beat, and the trap in the metric</h3>
+    <p>Tuning is only meaningful against a reference. Before the reference, though, "better" has to be defined &mdash; and on a rare-class problem the obvious choice is a trap.</p>
+
+    <div class="chart-block">
+      <div class="chart-title">Dummy classifier vs. default Random Forest</div>
+      <div class="chart-sub">Accuracy, precision, recall and F1 on the held-out test set</div>
+      <div class="chart-card chart-frame">
+        <svg class="chart" id="chartBaseline" viewBox="0 0 700 300" role="img" aria-label="Bar chart comparing accuracy, precision, recall and F1 for a dummy classifier that always predicts not-an-eight, versus the default Random Forest"></svg>
+        <div class="tooltip-svg" id="ttBaseline"></div>
+        <div class="chart-legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:#4a4a4c"></span> always says "not an eight"</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#d8d8d8"></span> default RandomForest</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-label">TWO THINGS THAT DECIDE THE REST OF THE SESSION</div>
+      <p><strong>A model that never predicts an eight scores about 90% accuracy.</strong> It's completely useless &mdash; it finds nothing &mdash; and on the metric most people reach for first, it looks respectable. Accuracy on a 10% positive rate mostly measures the majority class.</p>
+      <p><strong>The default random forest has perfect precision and poor recall.</strong> Everything it calls an eight really is an eight, and it misses roughly a third of the eights that exist. In the real versions of this problem &mdash; the fraud not flagged, the defect that shipped, the disease not caught &mdash; the misses are the expensive half.</p>
+    </div>
+    <p>So the search optimizes <strong>F1</strong>, the harmonic mean of precision and recall, only high when both are. That single decision is worth more than every hyperparameter about to be searched over &mdash; and it's made in the objective function, not anywhere in Optuna's API.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>classification_report &mdash; default RandomForestClassifier on the test set</caption>
+        <thead><tr><th>class</th><th>precision</th><th>recall</th><th>f1-score</th><th>support</th></tr></thead>
+        <tbody>
+          <tr><td>not an eight</td><td>0.9667</td><td>1.0000</td><td>0.9831</td><td>406</td></tr>
+          <tr><td>an eight</td><td>1.0000</td><td class="hi">0.6818</td><td>0.8108</td><td>44</td></tr>
+          <tr><td class="dim">accuracy</td><td class="dim">&mdash;</td><td class="dim">&mdash;</td><td>0.9689</td><td>450</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="block wide">
+  <div class="inner">
+    <h3 class="sub-title">3.3 &nbsp;The objective function</h3>
+    <p>An objective function takes a trial, asks it for hyperparameter values, does the work, and returns one number. That's the entire interface. Two decisions are encoded below, and both matter more than anything Optuna does with them.</p>
+
+    <pre class="code"><span class="cmt"># One configuration -> one cross-validated F1 on the TRAINING set.</span>
+<span class="kw">def</span> objective(trial):
+    params = {
+        <span class="str">"n_estimators"</span>: trial.suggest_int(<span class="str">"n_estimators"</span>, 50, 300),
+        <span class="str">"max_depth"</span>: trial.suggest_int(<span class="str">"max_depth"</span>, 2, 20),
+        <span class="str">"min_samples_leaf"</span>: trial.suggest_int(<span class="str">"min_samples_leaf"</span>, 1, 20),
+        <span class="str">"class_weight"</span>: trial.suggest_categorical(
+            <span class="str">"class_weight"</span>, [None, <span class="str">"balanced"</span>, <span class="str">"balanced_subsample"</span>]
+        ),
+        <span class="str">"random_state"</span>: RANDOM_STATE,
+        <span class="str">"n_jobs"</span>: -1,
+    }
+    model = RandomForestClassifier(**params)
+    cv = StratifiedKFold(n_splits=4, shuffle=<span class="kw">True</span>, random_state=RANDOM_STATE)
+    <span class="kw">return</span> cross_val_score(model, X_train, y_train, cv=cv, scoring=<span class="str">"f1"</span>).mean()</pre>
+
+    <div class="annotated">
+      <details class="annot-item">
+        <summary>Decision 1 &mdash; class_weight is in the space at all</summary>
+        <div class="annot-body">The default forest's problem was recall, and <code>class_weight</code> is the recall knob &mdash; so the search is pointed at the failure the baseline actually has. What that single entry turns out to be worth gets measured in section 4.</div>
+      </details>
+      <details class="annot-item">
+        <summary>Decision 2 &mdash; what the function returns</summary>
+        <div class="annot-body">It returns a cross-validated F1 computed <em>inside the training set</em>, and never touches <code>X_test</code>. That's not a stylistic preference &mdash; the cost of getting it wrong is measured in section 4.2.</div>
+      </details>
+    </div>
+
+    <p>Optuna doesn't care what the number means. It cares only whether to push it up or down, via <code>direction</code>. Return an RMSE and minimize. Return an F1 and maximize. Return a weighted blend of recall and inference latency and maximize that. The objective is where the actual definition of "better" lives.</p>
+
+    <h3 class="sub-title">3.4 &nbsp;Running the study</h3>
+    <div class="callout">
+      <p style="margin-bottom:0">
+      <code>study = optuna.create_study(direction="maximize", sampler=TPESampler(seed=42))</code><br>
+      <code>study.optimize(objective, n_trials=30)</code>
+      </p>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>progress &mdash; best cross-validated F1 so far</caption>
+        <thead><tr><th>checkpoint</th><th>best F1 so far</th></tr></thead>
+        <tbody>
+          <tr><td>trial 10</td><td>0.9060</td></tr>
+          <tr><td>trial 20</td><td>0.9099</td></tr>
+          <tr class="best"><td>trial 30 (final)</td><td class="hi">0.9105</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Best cross-validated F1: <strong>0.9105</strong>, against a default-forest baseline of <strong>0.7472</strong> on the same cross-validation. Best parameters found: <code>n_estimators=167, max_depth=17, min_samples_leaf=4, class_weight="balanced"</code>.</p>
+
+    <div class="callout">
+      <div class="callout-label">A NOTE ON STORAGE</div>
+      <p>By default a study lives in memory and disappears when the kernel restarts. Passing <code>storage="sqlite:///rf_eight.db"</code> with <code>load_if_exists=True</code> persists it, letting a study resume after a crash or several workers contribute to the same study. That's the right choice for a long search on a real problem &mdash; and the wrong choice here, since re-running the cell would silently append another thirty trials. Studies that need to survive belong in a tracking system, the next thing this course builds.</p>
+    </div>
+  </div>
+</section>
+<section class="block wide">
+  <div class="inner">
+    <h3 class="sub-title">3.5 &nbsp;What the tools you already use would have given</h3>
+    <p>A fair question: the same space, searched with <code>GridSearchCV</code> or <code>RandomizedSearchCV</code>, would have taken two lines and no new dependency. What did Optuna actually buy? Measure it rather than argue about it &mdash; the same four parameters, expressed as a grid and as sampling distributions, scored with the same metric and the same folds.</p>
+
+    <div class="chart-block">
+      <div class="chart-title">Best cross-validated F1 vs. model fits required</div>
+      <div class="chart-sub">Grid: 3&times;3&times;3&times;3 = 81 combinations &middot; Random &amp; Optuna: 30 configurations each, 4 folds</div>
+      <div class="chart-card chart-frame">
+        <svg class="chart" id="chartSearchCompare" viewBox="0 0 700 320" role="img" aria-label="Bar chart comparing GridSearchCV, RandomizedSearchCV and Optuna TPE on best cross-validated F1 and number of model fits"></svg>
+        <div class="tooltip-svg" id="ttSearchCompare"></div>
+        <div class="chart-legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:#d8d8d8"></span> best CV F1 (left axis)</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#4a4a4c"></span> model fits required (right axis)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>search method comparison</caption>
+        <thead><tr><th>method</th><th>best CV F1</th><th>configs</th><th>folds</th><th>fits</th><th>seconds</th></tr></thead>
+        <tbody>
+          <tr><td>GridSearchCV</td><td class="hi">0.9112</td><td>81</td><td>4</td><td>324</td><td>240.4</td></tr>
+          <tr><td>RandomizedSearchCV</td><td>0.8864</td><td>30</td><td>4</td><td>120</td><td>88.9</td></tr>
+          <tr class="best"><td>Optuna (TPE)</td><td class="hi">0.9105</td><td>30</td><td>4</td><td>120</td><td>86.5</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Three things, in order of how much they should change your behavior:</p>
+    <div class="card-grid">
+      <div class="card">
+        <h4>Optuna scored highest on a third of the fits the grid needed</h4>
+        <p>The grid has to try every combination &mdash; 3&times;3&times;3&times;3 = 81 configurations, each fitted once per fold. Optuna and random search were both given 30 configurations. That ratio gets worse for the grid as the space grows: a fourth value per parameter takes the grid to 256 configurations while leaving the other two exactly where they are, because their cost is a budget you choose rather than a product you're stuck with.</p>
+      </div>
+      <div class="card">
+        <h4>At an equal budget, TPE beat random sampling</h4>
+        <p>The same 120 fits, a better result. Don't over-read one comparison on one dataset &mdash; on a small space it often doesn't hold when you vary the budget.</p>
+      </div>
+      <div class="card">
+        <h4>None of the three picked class_weight = None</h4>
+        <p>They disagree about <code>n_estimators</code> and <code>max_depth</code>, and agree about the thing that matters. The grid also couldn't express the winning <code>n_estimators=167</code> &mdash; it had to be picked from <code>[50, 150, 300]</code> in advance.</p>
+      </div>
+    </div>
+
+    <h3 class="sub-title">3.6 &nbsp;Inspecting the study</h3>
+    <p>A study is not just its best value. It's a record of everything tried, and that record answers questions the best value cannot.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>top 5 trials, by cross-validated F1</caption>
+        <thead><tr><th>trial #</th><th>value</th><th>class_weight</th><th>max_depth</th><th>min_samples_leaf</th><th>n_estimators</th></tr></thead>
+        <tbody>
+          <tr class="best"><td>24</td><td class="hi">0.9105</td><td>balanced</td><td>17</td><td>4</td><td>167</td></tr>
+          <tr><td>13</td><td>0.9099</td><td>balanced</td><td>17</td><td>4</td><td>128</td></tr>
+          <tr><td>21</td><td>0.9096</td><td>balanced</td><td>13</td><td>5</td><td>108</td></tr>
+          <tr><td>4</td><td>0.9060</td><td>balanced</td><td>16</td><td>4</td><td>164</td></tr>
+          <tr><td>23</td><td>0.9058</td><td>balanced</td><td>13</td><td>4</td><td>94</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <caption>bottom 3 trials</caption>
+        <thead><tr><th>trial #</th><th>value</th><th>class_weight</th><th>max_depth</th><th>min_samples_leaf</th><th>n_estimators</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td class="dim">0.5337</td><td>None</td><td>20</td><td>15</td><td>144</td></tr>
+          <tr><td>6</td><td class="dim">0.6705</td><td>balanced_subsample</td><td>3</td><td>14</td><td>126</td></tr>
+          <tr><td>7</td><td class="dim">0.6923</td><td>None</td><td>19</td><td>6</td><td>58</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The spread between best and worst trial &mdash; <strong>0.3768</strong> &mdash; is the useful number. It's an upper bound on what tuning can possibly buy here, and it's far wider than the flat spread on an easy, balanced dataset. A wide spread means the configuration genuinely matters and the search has something to find.</p>
+  </div>
+</section>
+<section class="block wide">
+  <div class="inner">
+    <h3 class="sub-title">3.7 &nbsp;The importance paradox</h3>
+    <p>Optuna can attribute the variance in trial scores to individual parameters. The result is useful and very easily misread, so this covers both.</p>
+
+    <div class="chart-block">
+      <div class="chart-title">Hyperparameter importance</div>
+      <div class="chart-sub">optuna.importance.get_param_importances(study)</div>
+      <div class="chart-card chart-frame">
+        <svg class="chart" id="chartImportance" viewBox="0 0 700 220" role="img" aria-label="Horizontal bar chart of hyperparameter importances: min_samples_leaf 0.830, n_estimators 0.079, max_depth 0.077, class_weight 0.014"></svg>
+        <div class="tooltip-svg" id="ttImportance"></div>
+      </div>
+    </div>
+
+    <div class="callout insight">
+      <div class="callout-label">READ THIS AGAINST THE TRIAL TABLE ABOVE IT</div>
+      <p><code>class_weight</code> is last, with an importance of essentially zero. Yet every one of the top five trials set it to <code>balanced</code>, and the worst trials in the study are the ones that didn't.</p>
+      <p>Both results are correct &mdash; they answer different questions. Importance is computed <strong>over the trials that actually ran</strong>, attributing variance in the objective to the parameters that varied. TPE settled the <code>class_weight</code> question within its first few trials and then stopped exploring it. A parameter that stops varying stops explaining variance, so the parameter that mattered most sinks to the bottom precisely because the search resolved it immediately and spent the rest of its budget elsewhere.</p>
+    </div>
+    <p>When a parameter looks unimportant, group the trials by it and look at the scores directly before believing it:</p>
+
+    <div class="chart-block">
+      <div class="chart-title">Trial scores, grouped by class_weight</div>
+      <div class="chart-sub">worst / mean / best cross-validated F1 within each group</div>
+      <div class="chart-card chart-frame">
+        <svg class="chart" id="chartClassWeight" viewBox="0 0 700 280" role="img" aria-label="Grouped bar chart of worst, mean and best F1 score for trials using no class weighting, balanced, and balanced subsample"></svg>
+        <div class="tooltip-svg" id="ttClassWeight"></div>
+        <div class="chart-legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:#4a4a4c"></span> worst</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#8c8c8e"></span> mean</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#eaeaea"></span> best</div>
+        </div>
+      </div>
+      <div class="chart-foot-note">Only 3 of 30 trials used <code>None</code> and 8 used <code>balanced_subsample</code> &mdash; TPE spent most of its budget on <code>balanced</code> once that pattern emerged, which is also why the group sizes are so uneven.</div>
+    </div>
+
+    <p>The three trials with no class weighting scored far below the twenty-one that used <code>balanced</code>. That's a large effect, and the importance ranking put it last. So read the importance list as <em>what was still in contention when the search stopped</em>, not <em>what matters</em> &mdash; genuinely useful for that, since parameters at the bottom can often be fixed at the value the search chose to buy more trials elsewhere. The causal question is answered properly by removing a parameter from the space and re-running, which section 4.1 does.</p>
+
+    <h3 class="sub-title">3.8 &nbsp;Did the search converge?</h3>
+    <p><code>plot_optimization_history</code> shows each trial's value and the running best &mdash; how you tell whether a study had converged or was still improving when you stopped it. A flat tail means more trials would have bought nothing; a best-value line still climbing at the right edge means you stopped too early.</p>
+    <div class="chart-block">
+      <div class="chart-card chart-frame">
+        <svg class="chart" id="chartOptHistory" viewBox="0 0 700 240" role="img" aria-label="Line chart of the running best cross-validated F1 across 30 trials, checkpointed at trial 10, 20 and 30, flattening out near 0.91"></svg>
+        <div class="tooltip-svg" id="ttOptHistory"></div>
+      </div>
+      <div class="chart-foot-note">Best-so-far at trial 10: 0.9060 &middot; trial 20: 0.9099 &middot; trial 30: 0.9105. The line is flattening &mdash; most of the gain over the default (0.7472) arrived in the first ten trials.</div>
+    </div>
+
+    <h3 class="sub-title">3.9 &nbsp;Fitting and saving the final model</h3>
+    <p>The study chose hyperparameters. It didn't produce a model &mdash; every model it fitted was thrown away. Refit once on the full training set with the winning configuration, and only now look at the test set.</p>
+
+    <div class="chart-block">
+      <div class="chart-title">Default vs. tuned RandomForest, on the untouched test set</div>
+      <div class="chart-card chart-frame">
+        <svg class="chart" id="chartFinalModel" viewBox="0 0 700 280" role="img" aria-label="Grouped bar chart comparing precision, recall and F1 for the default and tuned random forest on the test set"></svg>
+        <div class="tooltip-svg" id="ttFinalModel"></div>
+        <div class="chart-legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:#4a4a4c"></span> default RandomForest</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#eaeaea"></span> tuned RandomForest</div>
+        </div>
+      </div>
+    </div>
+    <p>That's what tuning bought: <strong>37 of 44 eights found</strong>, up from 30, at some cost in precision (1.000 &rarr; 0.925). Whether that trade is the right one is a question about the problem, not the model &mdash; in screening you usually accept false alarms to avoid misses; in an automated action, you usually don't. The objective function is where the answer gets encoded, which is why this post spent longer on it than on the search itself.</p>
+
+    <pre class="code"><span class="cmt"># the artifact the Streamlit app will load</span>
+joblib.dump(final_model, <span class="str">"rf_eight_best.joblib"</span>)
+
+meta = {
+    <span class="str">"feature_names"</span>: feature_names,   <span class="cmt"># order matters &mdash; see section 8.1</span>
+    <span class="str">"target_digit"</span>: 8,
+    <span class="str">"best_params"</span>: {<span class="str">"n_estimators"</span>: 167, <span class="str">"max_depth"</span>: 17,
+                    <span class="str">"min_samples_leaf"</span>: 4, <span class="str">"class_weight"</span>: <span class="str">"balanced"</span>},
+    <span class="str">"cv_f1"</span>: 0.9105, <span class="str">"test_f1"</span>: 0.8810,
+    <span class="str">"test_recall"</span>: 0.8409, <span class="str">"test_precision"</span>: 0.925,
+}</pre>
+    <div class="code-cap">rf_eight_best.joblib + model_meta.json &mdash; what the Streamlit app in section 6 loads</div>
+
+    <div class="checkpoint">
+      <div class="cp-label">CHECKPOINT 3.1</div>
+      <p style="margin-bottom:8px">Optuna's default sampler is TPE. Whether TPE beats random sampling on <em>your</em> problem is an empirical question, and it's cheap to answer.</p>
+      <ol>
+        <li>Run a second study with <code>sampler=optuna.samplers.RandomSampler(seed=42)</code>, same objective, same 30 trials. Compare the two best values.</li>
+        <li>Run both again with <code>n_trials=8</code>. TPE spends its first <code>n_startup_trials</code> (ten, by default) sampling randomly, so at eight trials you're comparing random search against random search.</li>
+        <li>Print <code>study.best_trial.number</code> for each. A best trial found at trial 3 of 30 tells you something different from one found at trial 28.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+<section class="block wide" id="reading-honestly">
+  <div class="inner">
+    <div class="kicker">04 &mdash; Judgment</div>
+    <h2 class="section-title">Reading the result honestly</h2>
+    <p>There's a tuned model and a number that went up. This section is about whether to believe it &mdash; and about the much worse situation where the number goes up because you made it. This is the part of the session that transfers. Optuna's API takes twenty minutes to learn and you won't think about it again. Deciding whether a reported improvement is real is a judgment you'll make for the rest of your career, usually under pressure from somebody who liked the first number.</p>
+
+    <h3 class="sub-title">4.1 &nbsp;Is the improvement real?</h3>
+    <p>One train/test split gives one number, and that number has a standard error nobody printed. The way to find out whether an improvement survives is to repeat the whole procedure &mdash; split, baseline, tune, evaluate &mdash; across several different splits, then look at the distribution rather than the point. The cell below also runs a <strong>control</strong>: it repeats the identical search with <code>class_weight</code> removed from the space and everything else unchanged. If the gain is really about the search being clever, removing one entry shouldn't matter much.</p>
+
+    <div class="chart-block">
+      <div class="chart-title">Tuned &minus; default F1, across 8 independent splits</div>
+      <div class="chart-sub">with class_weight in the search space, vs. the same search with it removed</div>
+      <div class="chart-card chart-frame">
+        <svg class="chart" id="chartSplits" viewBox="0 0 700 300" role="img" aria-label="Bar chart of the F1 gain from tuning over default, across 8 splits, comparing a search that includes class_weight to a control search that excludes it"></svg>
+        <div class="tooltip-svg" id="ttSplits"></div>
+        <div class="chart-legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:#eaeaea"></span> with class_weight in space</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#4a4a4c"></span> class_weight removed (control)</div>
+        </div>
+      </div>
+      <div class="chart-foot-note">With class_weight: mean gain +0.0611, won 8 of 8 splits. Without it: mean gain &minus;0.0039, won 1, tied 5, lost 2 of 8.</div>
+    </div>
+
+    <div class="callout insight">
+      <div class="callout-label">THE MOST USEFUL SENTENCE IN THIS SESSION</div>
+      <p><strong>A search can only find what is in the space you gave it.</strong> Remove one entry and the gain collapses &mdash; same sampler, same trial budget, same objective, same everything else, and the search no longer reliably beats the default it started from. It's also the answer to the earlier importance paradox: importance describes the trials that ran; removing the parameter and re-running describes what it was worth. Optuna found <code>class_weight="balanced"</code> quickly because it was there to be found. Thirty trials over a space that doesn't contain the fix return the best of thirty near-identical wrong answers &mdash; with a plot that looks exactly like a successful search.</p>
+    </div>
+    <p>Two habits follow: before adding trials, ask whether the space contains anything that could plausibly fix the failure you actually have, and look at <em>how</em> the baseline fails before choosing what to search over. The default model's problem was recall, and <code>class_weight</code> is the recall knob &mdash; a connection available for the cost of reading a classification report.</p>
+
+    <h3 class="sub-title">4.2 &nbsp;The number you optimize is not an estimate</h3>
+    <p>Now the failure that matters, because it's silent and it's everywhere. Suppose the objective function is pointed at the held-out set &mdash; returning F1 on <code>X_test</code> instead of a cross-validated score on the training data. Nothing errors. The code is shorter. The study runs faster, because it fits one model per trial instead of four.</p>
+
+    <div class="stat-row">
+      <div class="stat"><div class="num">700</div><div class="lbl">images to fit on (68 eights)</div></div>
+      <div class="stat"><div class="num">100</div><div class="lbl">images to tune against (10 eights)</div></div>
+      <div class="stat"><div class="num">997</div><div class="lbl">"production" images (96 eights)</div></div>
+    </div>
+
+    <div class="chart-block">
+      <div class="chart-title">Reported score vs. what actually shipped</div>
+      <div class="chart-sub">tuning objective pointed at the holdout ("leaky") vs. cross-validated on the fitting set ("honest")</div>
+      <div class="chart-card chart-frame">
+        <svg class="chart" id="chartLeak" viewBox="0 0 700 300" role="img" aria-label="Bar chart comparing the reported F1 score against the production F1 score, for an untuned baseline, a model tuned on the holdout set, and a model tuned by honest cross validation"></svg>
+        <div class="tooltip-svg" id="ttLeak"></div>
+        <div class="chart-legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:#eaeaea"></span> reported score</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#4a4a4c"></span> score on production data</div>
+        </div>
+      </div>
+    </div>
+
+    <p>Read the columns against each other. The leaky run reports the best number of the three by a wide margin &mdash; a <strong>perfect score</strong>. Every one of the hundred images classified correctly, exactly what you'd expect from a procedure that tried many configurations against those hundred images and kept whichever one happened to get them all. In production, that model does considerably worse: the gap is not a property of the model, it's the price of having selected on those rows.</p>
+    <p>The honest run reports a lower number, and that number survives contact with the production holdout &mdash; it comes in slightly <em>under</em> what the model actually delivers, the direction you want to be wrong in. Notice which model is better in production: the honest one. The leak didn't merely inflate a number, it also selected a worse configuration, because it optimized for the idiosyncrasies of a hundred images rather than for anything that generalizes.</p>
+
+    <div class="callout">
+      <div class="callout-label">A PERFECT SCORE IS A SYMPTOM, NOT AN ACHIEVEMENT</div>
+      <p>When a metric comes back at 1.0, the first hypothesis is not that the model is perfect. It's that the evaluation is broken &mdash; usually by leakage, a duplicated row, or a feature that encodes the label.</p>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>the discipline this session leans on</caption>
+        <thead><tr><th>split</th><th>used for</th><th>touched how often</th></tr></thead>
+        <tbody>
+          <tr><td>Train</td><td>fitting, and cross-validation inside tuning</td><td>every trial</td></tr>
+          <tr><td>Validation</td><td>choosing between finished candidates</td><td>a few times</td></tr>
+          <tr><td>Test</td><td>the number you report</td><td>once, at the end</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="chart-foot-note">The last row is the one that decays. A test set consulted ten times during development is a validation set, and the number it produces is no longer an estimate of anything. If you've looked at it more than once, say so when you report the number.</p>
+  </div>
+</section>
+<section class="block" id="streamlit-works">
+  <div class="inner">
+    <div class="kicker">05 &mdash; Serving</div>
+    <h2 class="section-title">How Streamlit actually works</h2>
+    <p>Streamlit turns a Python script into a web page. The one sentence the rest of it follows from, before any widget syntax:</p>
+
+    <blockquote class="quote">
+      A Streamlit app is a script that is re-executed from the first line to the last, every time anything changes.
+    </blockquote>
+
+    <p>Not a callback. Not a diff. The entire script, top to bottom. A user drags a slider, and Streamlit reruns the file from line one. <code>st.slider</code> returns the new position this time, the code below it recomputes, and the page is rebuilt. Module-level variables are gone and recreated on every rerun.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>three consequences, and how Streamlit answers each</caption>
+        <thead><tr><th>consequence</th><th>the mechanism</th></tr></thead>
+        <tbody>
+          <tr><td>The page is laid out in execution order</td><td class="dim">layout containers</td></tr>
+          <tr><td>Expensive work repeats on every interaction</td><td class="dim">caching</td></tr>
+          <tr><td>Ordinary variables can't hold state</td><td class="dim">session state</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub-title">Six ideas, six scripts</h3>
+    <p>Each idea below is one short script, run the same way and stopped with Ctrl-C: <code>streamlit run snippets/01_hello.py</code>.</p>
+
+    <div class="tabs" id="streamlitTabs">
+      <div class="tab-nav">
+        <button class="tab-btn active" data-tab="t1">01 &middot; smallest app</button>
+        <button class="tab-btn" data-tab="t2">02 &middot; layout order</button>
+        <button class="tab-btn" data-tab="t3">03 &middot; sidebar</button>
+        <button class="tab-btn" data-tab="t4">04 &middot; widgets</button>
+        <button class="tab-btn" data-tab="t5">05 &middot; buttons</button>
+        <button class="tab-btn" data-tab="t6">06 &middot; caching</button>
+      </div>
+      <div class="tab-panels">
+        <div class="tab-panel active" id="t1">
+          <p><code>st.write("This is a simple web app built with Python.")</code> renders below the title, in the order the calls ran.</p>
+          <pre class="code"><span class="kw">import</span> streamlit <span class="kw">as</span> st
+
+st.title(<span class="str">"My First MLOps App"</span>)
+st.write(<span class="str">"This is a simple web app built with Python."</span>)</pre>
+        </div>
+        <div class="tab-panel" id="t2">
+          <p>There's no template and no layout engine. Each <code>st.</code> call appends its element to the page at the moment it executes &mdash; the title renders in the middle, because that's where the call ran.</p>
+          <pre class="code"><span class="kw">import</span> streamlit <span class="kw">as</span> st
+
+st.write(<span class="str">"I appear first"</span>)
+st.title(<span class="str">"Big Title"</span>)
+st.write(<span class="str">"I appear last"</span>)</pre>
+          <p style="margin-top:14px">This is trivial until you try to render a summary above a table whose contents you only compute below it &mdash; at which point you need <code>st.empty()</code> or <code>st.container()</code> to reserve a slot and fill it later.</p>
+        </div>
+        <div class="tab-panel" id="t3">
+          <p><code>st.sidebar</code> writes to a second column that doesn't scroll with the main page. The convention is inputs on the left, results on the right &mdash; worth following, because users have learned it.</p>
+          <pre class="code"><span class="kw">import</span> streamlit <span class="kw">as</span> st
+
+st.title(<span class="str">"Main Page"</span>)
+st.write(<span class="str">"This is the main area"</span>)
+
+st.sidebar.title(<span class="str">"Sidebar"</span>)
+st.sidebar.write(<span class="str">"Controls usually go here"</span>)</pre>
+        </div>
+        <div class="tab-panel" id="t4">
+          <p>A widget call returns the widget's current value. It does not register a callback &mdash; it hands back the value as it stands on this rerun.</p>
+          <pre class="code"><span class="kw">import</span> streamlit <span class="kw">as</span> st
+
+st.header(<span class="str">"User Inputs"</span>)
+username = st.text_input(<span class="str">"What is your name?"</span>, <span class="str">"Student"</span>)
+age = st.slider(<span class="str">"Select your age"</span>, 18, 100, 25)
+
+st.write(<span class="kw">f</span><span class="str">"On this rerun, username={username!r} and age={age}"</span>)</pre>
+        </div>
+        <div class="tab-panel" id="t5">
+          <p><code>st.button</code> is the exception that catches everyone. It returns <code>True</code> only on the rerun immediately following the click, and <code>False</code> on every rerun after that &mdash; a result rendered inside <code>if st.button(...)</code> disappears as soon as the user touches any other widget. Session state is the fix.</p>
+          <pre class="code"><span class="kw">if</span> st.button(<span class="str">"Say Hello"</span>):
+    st.success(<span class="kw">f</span><span class="str">"Hello {username}! You are {age} years old."</span>)
+
+st.header(<span class="str">"Random Data Plot"</span>)
+chart_data = pd.DataFrame(np.random.randn(20, 3), columns=[<span class="str">"a"</span>, <span class="str">"b"</span>, <span class="str">"c"</span>])
+st.line_chart(chart_data)</pre>
+          <p style="margin-top:14px">That chart is also a bug you'll write by accident: <code>np.random.randn</code> runs on every rerun, so it redraws with different data every time the user moves the age slider &mdash; a slider that has nothing to do with the chart.</p>
+        </div>
+        <div class="tab-panel" id="t6">
+          <p><code>@st.cache_data</code> remembers a function's return value, keyed by its arguments. Same arguments on the next rerun, no recomputation.</p>
+          <pre class="code"><span class="cmt"># cache HIT: the draw sits inside the function body</span>
+<span class="kw">@st</span>.cache_data
+<span class="kw">def</span> load_data():
+    time.sleep(3)
+    n = np.random.randint(10)
+    <span class="kw">return</span> <span class="kw">f</span><span class="str">"This is {n}"</span>
+
+<span class="cmt"># cache MISS: the draw happens at the call site &mdash; it's an argument</span>
+<span class="kw">@st</span>.cache_data
+<span class="kw">def</span> load_data(number):
+    time.sleep(3)
+    <span class="kw">return</span> <span class="kw">f</span><span class="str">"This is {number}"</span>
+</pre>
+          <p style="margin-top:14px">The <code>06</code> version waits three seconds on the first click and answers instantly after that, and the number never changes &mdash; the function ran exactly once. The <code>07</code> version waits three seconds <em>every</em> click and shows a different number each time, because the random draw happens at the call site and becomes part of the cache key. A cache whose key changes on every call isn't a cache &mdash; it's a dictionary that only grows, and it's the most common reason an app that "has caching" is still slow.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="checkpoint">
+      <div class="cp-label">CHECKPOINT 5.1</div>
+      <p style="margin-bottom:8px">Before running <code>08_session_state.py</code>, write down what each counter shows after clicking <strong>Increment</strong> three times. Then run it and check.</p>
+      <ol>
+        <li>Explain the plain variable's value in terms of the rerun model, not in terms of Streamlit being unusual.</li>
+        <li>Add <code>st.write("script ran")</code> as the first line after the imports and click around. Count how many times it appears, and work out why it doesn't accumulate.</li>
+        <li>Change the button to an <code>st.checkbox</code> and click it twice. The count behaves differently &mdash; say why, in one sentence about what each widget returns on a rerun.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+<section class="block" id="model-playground">
+  <div class="inner">
+    <div class="kicker">06 &mdash; The interface</div>
+    <h2 class="section-title">The model playground</h2>
+    <p>Now both halves together. <code>app.py</code> loads the artifact trained earlier and lets someone page through the test set, look at each image, and see what the model said about it &mdash; including, and especially, the cases it got wrong.</p>
+    <p>It works immediately, because <code>rf_eight_best.joblib</code> is committed alongside it. The app has three modes; <strong>Review cases</strong> is the one that matters, and the reason the app is worth building at all. A precision and recall pair tells a stakeholder that the model misses some eights. It doesn't tell them <em>which</em> ones &mdash; "show me the ones it missed" is the first thing any domain expert asks, and a table of 64 pixel columns can't answer that. A picture can.</p>
+
+    <div class="pixel-grids">
+      <div class="pixel-grid-wrap">
+        <div class="pixel-grid" id="gridNormal2" role="img" aria-label="the same eight from the pixel grid earlier"><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(96,96,96)"></div><div style="background:rgb(48,48,48)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(207,207,207)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(64,64,64)"></div><div style="background:rgb(16,16,16)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(96,96,96)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(128,128,128)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(128,128,128)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(112,112,112)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(143,143,143)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(239,239,239)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(191,191,191)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div></div>
+        <div class="cap">a badly-written eight</div>
+      </div>
+    </div>
+    <p>The model gave this image a 33% chance of being an eight. A precision and recall pair could never have told you that. Six images in the test set are like it, and a domain expert can now page through all six and judge whether the model is being unreasonable, or the handwriting genuinely is ambiguous &mdash; a question only they can answer, and one they couldn't even be asked before the app existed.</p>
+
+    <p>Switching to auto-tuning and running a search shows the progress bar filling, then the result &mdash; deliberately two numbers rather than one:</p>
+    <div class="callout">
+      <p style="margin-bottom:6px"><code>st.success(f"Best cross-validated F1 (what was optimized): {study.best_value:.4f}")</code></p>
+      <p style="margin-bottom:0"><code>st.info(f"F1 on the held-out test set (not optimized): {test_f1:.4f}")</code></p>
+    </div>
+    <p>The green number is what the search optimized. The blue number is the held-out score it never touched. They're close here &mdash; what honest tuning looks like. When they're far apart, something has leaked, and an app that showed only the green number would give no way to tell the two situations apart. Below the fold, the page also renders the trial table and the Optuna plots.</p>
+
+    <h3 class="sub-title">Four decisions inside app.py</h3>
+    <div class="card-grid">
+      <div class="card">
+        <h4>Named columns on the way in</h4>
+        <p>Every prediction goes through <code>to_row(values)</code>, returning a DataFrame with columns in fitted order. Handing <code>model.predict</code> a bare array works, produces no error, and is wrong the moment pixels arrive in a different order &mdash; measured in section 8.1, where the cost is total.</p>
+      </div>
+      <div class="card">
+        <h4>The right cache decorator for each job</h4>
+        <p><code>load_artifact</code> uses <code>@st.cache_resource</code>; <code>load_split</code> uses <code>@st.cache_data</code>. Without either, every interaction reloads the model from disk and re-splits the dataset.</p>
+      </div>
+      <div class="card">
+        <h4>An in-memory study</h4>
+        <p>A Streamlit script reruns constantly. A study created with <code>storage="sqlite:///..."</code> and a timestamped name would write a new study into that file on every rerun of the page, growing without limit.</p>
+      </div>
+      <div class="card">
+        <h4>Two numbers, labelled differently</h4>
+        <p>The auto-tuning mode reports the cross-validated score it optimized <em>and</em> the test score it didn't. An app that shows only the first is how a tuned-on-the-test-set number reaches a slide deck.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-label">A WARNING</div>
+      <p>Two of the app's three modes retrain from the browser. <strong>Training inside a user-facing app is not how production works.</strong> In production you train offline, save the artifact, and the serving app only ever loads it. Training in the request path means every user pays the training cost, two users training at once compete for the same CPU, and there's no record of which model answered which request. It's there because watching a search run in a browser makes the mechanics concrete &mdash; and it's the first thing you'd remove.</p>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="sharing">
+  <div class="inner">
+    <div class="kicker">07 &mdash; Deployment</div>
+    <h2 class="section-title">Sharing it</h2>
+    <p>Running it locally is enough for you. The point of building it was somebody else, so it needs a URL.</p>
+
+    <h3 class="sub-title">A temporary link from Colab</h3>
+    <p>Colab runs on a Google machine, so <code>localhost:8501</code> is a port on a container you can't reach. A tunnel service gives that port a temporary public URL &mdash; fine for a demo, and not deployment. The link dies with the runtime, there's no authentication in front of it, and anyone holding it reaches your app.</p>
+
+    <h3 class="sub-title">Streamlit Community Cloud</h3>
+    <p>This one is real deployment. It builds from a GitHub repository, gives a persistent public URL, and rebuilds on push &mdash; the first continuous deployment loop any of these models get.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>what it gives you</caption>
+        <thead><tr><th>property</th><th>what it gives you</th></tr></thead>
+        <tbody>
+          <tr><td>Free for public repos</td><td>somewhere to put a portfolio piece</td></tr>
+          <tr><td>Builds from GitHub</td><td>version control is the deployment mechanism</td></tr>
+          <tr><td>Rebuilds on push</td><td>a first, small CI/CD loop</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Two things in the repository are doing work that's easy to miss:</p>
+    <div class="card-grid">
+      <div class="card">
+        <h4>The artifact is committed</h4>
+        <p><code>rf_eight_best.joblib</code> is in the repository, not in a <code>.gitignore</code>. The deployed app loads it and never trains. Git stores a fresh copy on every change, acceptable for a forest this size and not acceptable for long.</p>
+      </div>
+      <div class="card">
+        <h4>The versions are pinned</h4>
+        <p>Unpinned, <code>requirements.txt</code> resolves to whatever is newest on build day, and an app that worked in March fails in June because a library changed a default. A model pickled by one scikit-learn version and loaded by another may warn, or fail outright.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="block" id="what-goes-wrong">
+  <div class="inner">
+    <div class="kicker">08 &mdash; Failure modes</div>
+    <h2 class="section-title">What goes wrong</h2>
+    <p>Four failure modes. The first is the one to spend time on, because it produces confident wrong answers rather than an error message.</p>
+
+    <div class="wrong-list">
+      <details class="wrong-item" open>
+        <summary><span class="wl"><span class="idx">1</span><span class="ttl">Feature order skew</span></span><span class="chev">&#9656;</span></summary>
+        <div class="wrong-body">
+          <p>The model was fitted on a DataFrame whose columns had names and an order. Serve it a plain array, and scikit-learn can't check the names &mdash; it assumes the values arrive in fitted order and predicts on whatever it's given. For image data this isn't hypothetical: an 8&times;8 image is stored as 64 numbers, and whether you flatten it row by row or column by column is a choice somebody's code made once and nobody wrote down. NumPy will do either, the arrays are the same shape, and the model accepts both.</p>
+
+          <div class="pixel-grids">
+            <div class="pixel-grid-wrap">
+              <div class="pixel-grid" id="gridA" role="img" aria-label="correctly oriented pixel grid, predicted as an eight"><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(96,96,96)"></div><div style="background:rgb(48,48,48)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(207,207,207)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(64,64,64)"></div><div style="background:rgb(16,16,16)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(96,96,96)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(128,128,128)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(128,128,128)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(112,112,112)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(143,143,143)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(239,239,239)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(191,191,191)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div></div>
+              <div class="cap">correct orientation &rarr; "an eight"</div>
+            </div>
+            <div class="pixel-grid-wrap">
+              <div class="pixel-grid" id="gridB" role="img" aria-label="transposed pixel grid, same pixels, predicted as not an eight"><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(207,207,207)"></div><div style="background:rgb(96,96,96)"></div><div style="background:rgb(128,128,128)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(143,143,143)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(96,96,96)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(128,128,128)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(48,48,48)"></div><div style="background:rgb(64,64,64)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(32,32,32)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(16,16,16)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(112,112,112)"></div><div style="background:rgb(175,175,175)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(0,0,0)"></div><div style="background:rgb(80,80,80)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(239,239,239)"></div><div style="background:rgb(191,191,191)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div><div style="background:rgb(255,255,255)"></div></div>
+              <div class="cap">flattened the other way &rarr; "not an eight"</div>
+            </div>
+          </div>
+          <p>Same pixels, same dtype, same shape &mdash; transposed. No exception, no warning in the UI. The model finds not a single eight, and nothing anywhere reports a problem.</p>
+
+          <div class="stat-row">
+            <div class="stat"><div class="num">41 / 450</div><div class="lbl">predictions changed</div></div>
+            <div class="stat"><div class="num">38 / 44</div><div class="lbl">true eights changed</div></div>
+            <div class="stat"><div class="num">0.8941</div><div class="lbl">F1, correct orientation</div></div>
+            <div class="stat"><div class="num">0.0000</div><div class="lbl">F1, transposed</div></div>
+          </div>
+
+          <p>This is the failure mode worth carrying out of this session, because of how it presents. It doesn't look like a bug &mdash; it looks like the model being worse than you thought, and teams have spent weeks investigating it as a data-quality problem before someone checked the serving code.</p>
+          <p>The fix costs one line: pass a DataFrame with named columns, and scikit-learn checks them for you.</p>
+          <pre class="code">&gt;&gt;&gt; final_model.predict(pd.DataFrame([transposed_row], columns=mislabelled))
+ValueError: The feature names should match those that were passed during fit.</pre>
+          <p>That's why <code>app.py</code> has <code>to_row</code>, why the feature order is written into <code>model_meta.json</code>, and why a served model should be handed named columns rather than a positional array. The check costs nothing and converts a silent, weeks-long failure into an exception on the first request.</p>
+        </div>
+      </details>
+
+      <details class="wrong-item">
+        <summary><span class="wl"><span class="idx">2</span><span class="ttl">Recomputing everything on every interaction</span></span><span class="chev">&#9656;</span></summary>
+        <div class="wrong-body">
+          <p>The default state of a Streamlit app is that every user interaction reloads the data and reloads the model, because the script reruns from line one. Survivable on a small forest, fatal on anything real &mdash; a 200&nbsp;MB model reloaded from disk on every click.</p>
+          <p>The symptom is an app that gets slower the more the user interacts with it. The fix is <code>@st.cache_resource</code> on anything expensive that's read-only, and <code>@st.cache_data</code> on the frames.</p>
+        </div>
+      </details>
+
+      <details class="wrong-item">
+        <summary><span class="wl"><span class="idx">3</span><span class="ttl">The artifact that is not in the repository</span></span><span class="chev">&#9656;</span></summary>
+        <div class="wrong-body">
+          <p>The single most common Streamlit Cloud failure. The app works locally, the deploy goes green, and the app crashes on first load with <code>FileNotFoundError: rf_eight_best.joblib</code>. Almost always the <code>.joblib</code> was produced locally and never committed, or was caught by a <code>.gitignore</code> rule meant for something else. Check with <code>git ls-files</code> rather than <code>ls</code> &mdash; the question is what the repository contains, not what your laptop contains.</p>
+        </div>
+      </details>
+
+      <details class="wrong-item">
+        <summary><span class="wl"><span class="idx">4</span><span class="ttl">A search that stopped early</span></span><span class="chev">&#9656;</span></summary>
+        <div class="wrong-body">
+          <p>Thirty trials over a four-parameter space is not a thorough search. It's a sample. If <code>plot_optimization_history</code> still slopes upward at the right edge, the study hadn't converged and the "best parameters" are simply the best of a short look. Report the trial budget alongside the result &mdash; a best value without a trial count isn't interpretable.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="checkpoint">
+      <div class="cp-label">CHECKPOINT 8.1</div>
+      <p style="margin-bottom:8px">Reproduce the feature-order bug from the serving side, which is where you'll actually meet it.</p>
+      <ol>
+        <li>Run <code>app.py</code> and review a case in <strong>Review cases</strong> mode. Record what the model says and its confidence.</li>
+        <li>Edit <code>to_row</code> to transpose the pixel array before building the DataFrame, simulating the same bug from the app's entry point.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+<section class="block" id="lifecycle">
+  <div class="inner">
+    <div class="kicker">09 &mdash; Context</div>
+    <h2 class="section-title">Where this sits in the lifecycle</h2>
+    <p>Both tools attach to the experimentation stage of the lifecycle, and both have a clear boundary where something else takes over.</p>
+
+    <div class="chart-block">
+      <div class="chart-card">
+        <svg class="chart" viewBox="0 0 760 180" role="img" aria-label="Diagram: Optuna searches during experimentation, producing a joblib artifact and model metadata, which a Streamlit app or an API then serves.">
+          <rect x="10" y="60" width="170" height="60" rx="8" fill="#19191b" stroke="#2a2a2d"/>
+          <text x="95" y="86" text-anchor="middle" font-size="12" fill="#f4f4f3" font-weight="600">Experimentation</text>
+          <text x="95" y="104" text-anchor="middle" font-size="10.5" fill="#8c8c8e">Optuna searches</text>
+
+          <line x1="180" y1="90" x2="260" y2="90" class="axis-line" marker-end="url(#arrow)"/>
+
+          <rect x="264" y="60" width="220" height="60" rx="8" fill="none" stroke="#7a7a7a" stroke-width="1.3"/>
+          <text x="374" y="82" text-anchor="middle" font-size="12" fill="#eaeaea" font-weight="600">.joblib + model_meta.json</text>
+          <text x="374" y="100" text-anchor="middle" font-size="10.5" fill="#8c8c8e">the artifact, committed to the repo</text>
+
+          <line x1="484" y1="90" x2="564" y2="90" class="axis-line" marker-end="url(#arrow)"/>
+
+          <rect x="568" y="60" width="180" height="60" rx="8" fill="#19191b" stroke="#2a2a2d"/>
+          <text x="658" y="82" text-anchor="middle" font-size="12" fill="#f4f4f3" font-weight="600">Serving</text>
+          <text x="658" y="100" text-anchor="middle" font-size="10.5" fill="#8c8c8e">Streamlit app / an API</text>
+
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7a7a7a"/></marker>
+          </defs>
+        </svg>
+      </div>
+      <div class="chart-foot-note">Training produces an artifact, and serving consumes it. That separation is the structural idea the rest of the course builds on.</div>
+    </div>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4>Optuna searches. It does not remember.</h4>
+        <p>A study holds every trial while it exists, and when the kernel restarts you have hyperparameters and no context &mdash; no record of which dataset version they were found on, which commit produced the training script, or what the resulting model scored in production. "These parameters gave 0.96" is only useful alongside the data and code that produced it. Storing that association is experiment tracking, the next thing this course builds.</p>
+      </div>
+      <div class="card">
+        <h4>Streamlit serves a human. It is not a serving layer for software.</h4>
+        <p>A Streamlit app talks to a browser and holds per-session state. Another service that needs predictions wants an HTTP endpoint with a schema, a latency budget, and no UI. The two coexist &mdash; the API serves the product, and the Streamlit app gives humans a window onto the same model. A Streamlit app is still not the thing you put behind a load balancer.</p>
+      </div>
+    </div>
+    <p>What today changed about the workflow is narrower than it looks, and worth stating plainly: the model is no longer the last artifact you produce. There's now a <code>.joblib</code> file that something else loads, a <code>model_meta.json</code> that records what it expects, and a repository whose contents determine what is deployed.</p>
+  </div>
+</section>
+
+<section class="block" id="summary">
+  <div class="inner">
+    <div class="kicker">10 &mdash; Class summary</div>
+    <h2 class="section-title">A model that works is not finished</h2>
+    <p>You could already search a hyperparameter space. What Optuna adds is a sampler that uses its own history, a space that can branch, and a study that outlives the process. On this problem it reached a better configuration than an exhaustive grid while fitting a third as many models. The API is small, and you'll have it in an afternoon. The honest caveat travels with it: for a dozen combinations searched once, <code>GridSearchCV</code> is still the right answer.</p>
+    <p>The judgment is the part that lasts, and this session measured three pieces of it.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4>What you optimize for decides everything</h4>
+        <p>On a problem where one image in ten is positive, a model that finds nothing scores about 90% accuracy. The default forest had perfect precision and missed a third of the eights. Neither fact is visible if accuracy is the number on the dashboard, and no amount of searching fixes a metric pointed at the wrong thing.</p>
+      </div>
+      <div class="card">
+        <h4>A search can only find what is in the space you gave it</h4>
+        <p>Tuning beat the default on every split, and with <code>class_weight</code> removed from the search space the same sampler with the same budget stopped winning. The gain was never TPE being clever &mdash; the space contained the one setting that addressed the failure the baseline actually had, known because the classification report was read before choosing what to search over.</p>
+      </div>
+      <div class="card">
+        <h4>The number you optimize is not an estimate of anything</h4>
+        <p>A search pointed at the holdout reported a perfect score and delivered considerably less, while also selecting a worse configuration than the honest run. A metric that comes back at 1.0 is a symptom to investigate, not a result to report.</p>
+      </div>
+    </div>
+
+    <p>Streamlit closes the other gap, and the whole of it follows from one sentence: the script reruns top to bottom on every interaction. Layout is execution order because of it, caching exists because of it, and session state exists because of it.</p>
+  </div>
+</section>
+
+<section class="block" id="references">
+  <div class="inner">
+    <div class="kicker">11 &mdash; Further reading</div>
+    <h2 class="section-title">References and further reading</h2>
+
+    <div class="refs-group">
+      <h4>Foundational</h4>
+      <div class="ref-item"><span class="ref-title">Random Search for Hyper-Parameter Optimization</span> &mdash; Bergstra &amp; Bengio, JMLR 2012.<span class="ref-note">The argument for why RandomizedSearchCV usually beats GridSearchCV at equal budget.</span></div>
+      <div class="ref-item"><span class="ref-title">Algorithms for Hyper-Parameter Optimization</span> &mdash; Bergstra, Bardenet, Bengio &amp; K&eacute;gl, NeurIPS 2011.<span class="ref-note">The paper that introduced TPE.</span></div>
+      <div class="ref-item"><span class="ref-title">On Over-fitting in Model Selection and Subsequent Selection Bias in Performance Evaluation</span> &mdash; Cawley &amp; Talbot, JMLR 2010.<span class="ref-note">The formal treatment of why a selected score is a biased score. Read this one if you read only one.</span></div>
+    </div>
+
+    <div class="refs-group">
+      <h4>Practitioner</h4>
+      <div class="ref-item"><span class="ref-title">Optuna: A Next-generation Hyperparameter Optimization Framework</span> &mdash; Akiba et al., KDD 2019.<span class="ref-note">The design rationale, including why the search space is defined by the suggest_* calls.</span></div>
+      <div class="ref-item">Optuna documentation &mdash; optuna.readthedocs.io<span class="ref-note">The pruning and distributed-optimization sections cover what this session didn't.</span></div>
+      <div class="ref-item">Streamlit documentation &mdash; docs.streamlit.io<span class="ref-note">The caching and session state pages are the two worth reading in full.</span></div>
+      <div class="ref-item">scikit-learn, Metrics and scoring &mdash; scikit-learn.org<span class="ref-note">The reference for choosing an objective, the decision this session leaned on hardest.</span></div>
+    </div>
+
+    <div class="refs-group">
+      <h4>Living resources</h4>
+      <div class="ref-item">Streamlit gallery &mdash; streamlit.io/gallery<span class="ref-note">The fastest way to find the widget you half-remember.</span></div>
+      <div class="ref-item">Optuna dashboard &mdash; github.com/optuna/optuna-dashboard<span class="ref-note">A real-time UI over a stored study, for a long search.</span></div>
+    </div>
+  </div>
+</section>
+
+</article>
+
+<footer class="site-foot">
+  <div class="fline"></div>
+  <div class="fmark">STREAMLIT AND OPTUNA POST READ</div>
+  <div>From static notebooks to interactive, optimized apps.</div>
+</footer>
+
+</main>
+</div>
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- progress bar + scrollspy ---------------- */
+  var progressBar = document.getElementById('progressBar');
+  var tocLinks = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var sections = tocLinks.map(function(a){ return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
+
+  function onScroll(){
+    var doc = document.documentElement;
+    var scrollTop = window.scrollY || doc.scrollTop;
+    var height = doc.scrollHeight - doc.clientHeight;
+    var pct = height > 0 ? (scrollTop/height)*100 : 0;
+    progressBar.style.width = pct + '%';
+
+    var activeIdx = 0;
+    for (var i=0;i<sections.length;i++){
+      var rect = sections[i].getBoundingClientRect();
+      if (rect.top <= 140) activeIdx = i;
+    }
+    tocLinks.forEach(function(a,i){ a.classList.toggle('active', i===activeIdx); });
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  window.addEventListener('resize', onScroll);
+  onScroll();
+
+  /* ---------------- mobile TOC toggle ---------------- */
+  var tocEl = document.getElementById('toc');
+  var tocToggle = document.getElementById('tocToggle');
+  tocToggle.addEventListener('click', function(){
+    tocEl.classList.toggle('open');
+  });
+  tocLinks.forEach(function(a){
+    a.addEventListener('click', function(){ tocEl.classList.remove('open'); });
+  });
+
+  /* ---------------- tabs ---------------- */
+  document.querySelectorAll('.tabs').forEach(function(tabGroup){
+    var btns = tabGroup.querySelectorAll('.tab-btn');
+    var panels = tabGroup.querySelectorAll('.tab-panel');
+    btns.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        btns.forEach(function(b){ b.classList.remove('active'); });
+        panels.forEach(function(p){ p.classList.remove('active'); });
+        btn.classList.add('active');
+        tabGroup.querySelector('#'+btn.getAttribute('data-tab')).classList.add('active');
+      });
+    });
+  });
+
+  /* ================= SVG chart helpers ================= */
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs){
+    var e = document.createElementNS(SVGNS, tag);
+    for (var k in attrs){ e.setAttribute(k, attrs[k]); }
+    return e;
+  }
+  function fmt(v){ return (Math.round(v*10000)/10000).toString(); }
+
+  function attachTip(shape, svgEl, tipEl, text){
+    shape.addEventListener('mousemove', function(evt){
+      var rect = svgEl.parentElement.getBoundingClientRect();
+      tipEl.style.opacity = 1;
+      tipEl.textContent = text;
+      tipEl.style.left = (evt.clientX - rect.left + 14) + 'px';
+      tipEl.style.top = (evt.clientY - rect.top - 30) + 'px';
+    });
+    shape.addEventListener('mouseleave', function(){ tipEl.style.opacity = 0; });
+  }
+
+  var GRAYS = ["#4a4a4c","#d8d8d8","#eaeaea","#8c8c8e","#6e6e6e"];
+
+  function groupedBar(svgId, ttId, categories, series, opts){
+    opts = opts || {};
+    var svg = document.getElementById(svgId);
+    var tip = document.getElementById(ttId);
+    if(!svg) return;
+    var W = svg.viewBox.baseVal.width, H = svg.viewBox.baseVal.height;
+    var padL = opts.padL!=null?opts.padL:40, padR = opts.padR!=null?opts.padR:12,
+        padT = opts.padT!=null?opts.padT:14, padB = opts.padB!=null?opts.padB:opts.rotate?56:36;
+    var plotW = W-padL-padR, plotH = H-padT-padB;
+    var allVals = [];
+    series.forEach(function(s){ s.values.forEach(function(v){ if(v!=null) allVals.push(v); }); });
+    var ymax = opts.ymax || Math.max.apply(null, allVals) * 1.18;
+    var ticks = opts.yTicks || 4;
+    var unit = opts.unit || '';
+
+    for (var i=0;i<=ticks;i++){
+      var yy = padT + plotH - (i/ticks)*plotH;
+      var val = (i/ticks)*ymax;
+      svg.appendChild(el('line',{x1:padL,y1:yy,x2:padL+plotW,y2:yy,class:i===0?'axis-line':'gridline'}));
+      var t = el('text',{x:padL-8,y:yy+3,class:'cat-label','text-anchor':'end'});
+      t.textContent = (opts.pct? Math.round(val*100)+'%' : (val>=100? Math.round(val): val.toFixed(2)));
+      svg.appendChild(t);
+    }
+
+    var groupW = plotW/categories.length;
+    var n = series.length;
+    var barGap = opts.barGap!=null?opts.barGap:groupW*0.14;
+    var innerGap = opts.innerGap!=null?opts.innerGap:2;
+    var barW = (groupW - barGap*2 - innerGap*(n-1))/n;
+
+    categories.forEach(function(cat, ci){
+      var gx = padL + ci*groupW;
+      series.forEach(function(s, si){
+        var v = s.values[ci];
+        if (v==null) return;
+        var h = Math.max((v/ymax)*plotH, 1);
+        var x = gx + barGap + si*(barW+innerGap);
+        var y = padT + plotH - h;
+        var r = el('rect', {x:x, y:y, width:barW, height:h, fill:s.color||GRAYS[si%GRAYS.length], class:'bar', rx:2});
+        svg.appendChild(r);
+        attachTip(r, svg, tip, cat + ' \u2014 ' + s.name + ': ' + (opts.pct? Math.round(v*100)+'%' : fmt(v)) + unit);
+        if (opts.showVal && barW > 16){
+          var lt = el('text', {x:x+barW/2, y:y-5, class:'val-label', 'text-anchor':'middle'});
+          lt.textContent = opts.pct? Math.round(v*100)+'%' : v.toFixed(opts.decimals!=null?opts.decimals:3);
+          svg.appendChild(lt);
+        }
+      });
+      var clabel = el('text', {x:gx+groupW/2, y:padT+plotH+ (opts.rotate?16:20), class:'cat-label', 'text-anchor':'middle'});
+      if (opts.rotate){
+        clabel.setAttribute('transform','rotate(-28 '+(gx+groupW/2)+' '+(padT+plotH+16)+')');
+        clabel.setAttribute('text-anchor','end');
+      }
+      clabel.textContent = cat;
+      svg.appendChild(clabel);
+    });
+  }
+
+  function horizontalBar(svgId, ttId, items){
+    var svg = document.getElementById(svgId);
+    var tip = document.getElementById(ttId);
+    if(!svg) return;
+    var W = svg.viewBox.baseVal.width, H = svg.viewBox.baseVal.height;
+    var padL = 150, padR = 60, padT = 14, padB = 14;
+    var plotW = W-padL-padR, plotH = H-padT-padB;
+    var rowH = plotH/items.length;
+    var xmax = Math.max.apply(null, items.map(function(d){return d.value;})) * 1.15;
+
+    svg.appendChild(el('line',{x1:padL,y1:padT,x2:padL,y2:padT+plotH,class:'axis-line'}));
+
+    items.forEach(function(d,i){
+      var y = padT + i*rowH + rowH*0.22;
+      var h = rowH*0.56;
+      var w = Math.max((d.value/xmax)*plotW,2);
+      var r = el('rect',{x:padL, y:y, width:w, height:h, fill:GRAYS[i%GRAYS.length], class:'bar', rx:2});
+      svg.appendChild(r);
+      attachTip(r, svg, tip, d.label+': '+d.value.toFixed(3));
+      var lbl = el('text', {x:padL-10, y:y+h/2+4, class:'cat-label', 'text-anchor':'end'});
+      lbl.textContent = d.label;
+      svg.appendChild(lbl);
+      var vlbl = el('text', {x:padL+w+8, y:y+h/2+4, class:'val-label'});
+      vlbl.textContent = d.value.toFixed(3);
+      svg.appendChild(vlbl);
+    });
+  }
+
+  function lineChart(svgId, ttId, points, opts){
+    opts = opts || {};
+    var svg = document.getElementById(svgId);
+    var tip = document.getElementById(ttId);
+    if(!svg) return;
+    var W = svg.viewBox.baseVal.width, H = svg.viewBox.baseVal.height;
+    var padL=44, padR=20, padT=20, padB=36;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var xmax = opts.xmax || Math.max.apply(null, points.map(function(p){return p.x;}));
+    var ymin = opts.ymin!=null?opts.ymin:0;
+    var ymax = opts.ymax || Math.max.apply(null, points.map(function(p){return p.y;}))*1.08;
+
+    var ticks=4;
+    for(var i=0;i<=ticks;i++){
+      var yy = padT+plotH-(i/ticks)*plotH;
+      var val = ymin + (i/ticks)*(ymax-ymin);
+      svg.appendChild(el('line',{x1:padL,y1:yy,x2:padL+plotW,y2:yy,class:i===0?'axis-line':'gridline'}));
+      var t = el('text',{x:padL-8,y:yy+3,class:'cat-label','text-anchor':'end'}); t.textContent=val.toFixed(2);
+      svg.appendChild(t);
+    }
+    function px(x){ return padL + (x/xmax)*plotW; }
+    function py(y){ return padT + plotH - ((y-ymin)/(ymax-ymin))*plotH; }
+
+    if (opts.refLine!=null){
+      var ry = py(opts.refLine);
+      svg.appendChild(el('line',{x1:padL,y1:ry,x2:padL+plotW,y2:ry,stroke:'#5c5c5e','stroke-width':1,'stroke-dasharray':'4 4'}));
+      var rt = el('text',{x:padL+plotW-4,y:ry-6,class:'cat-label','text-anchor':'end'});
+      rt.textContent = 'default baseline '+opts.refLine.toFixed(4);
+      svg.appendChild(rt);
+    }
+
+    var d = points.map(function(p,i){ return (i===0?'M':'L')+px(p.x)+','+py(p.y); }).join(' ');
+    svg.appendChild(el('path',{d:d, fill:'none', stroke:'#eaeaea', 'stroke-width':2}));
+
+    points.forEach(function(p){
+      var c = el('circle',{cx:px(p.x), cy:py(p.y), r:5, fill:'#eaeaea', stroke:'#0b0b0c','stroke-width':2, class:'bar'});
+      svg.appendChild(c);
+      attachTip(c, svg, tip, 'trial '+p.x+' \u2014 best so far: '+p.y.toFixed(4));
+      var lbl = el('text',{x:px(p.x), y:py(p.y)-12, class:'val-label','text-anchor':'middle'});
+      lbl.textContent = p.y.toFixed(4);
+      svg.appendChild(lbl);
+      var xlbl = el('text',{x:px(p.x), y:padT+plotH+18, class:'cat-label','text-anchor':'middle'});
+      xlbl.textContent = 'trial '+p.x;
+      svg.appendChild(xlbl);
+    });
+  }
+
+  function divergingBar(svgId, ttId, categories, series, opts){
+    opts = opts||{};
+    var svg = document.getElementById(svgId);
+    var tip = document.getElementById(ttId);
+    if(!svg) return;
+    var W=svg.viewBox.baseVal.width, H=svg.viewBox.baseVal.height;
+    var padL=48,padR=12,padT=16,padB=32;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var allVals=[]; series.forEach(function(s){ s.values.forEach(function(v){allVals.push(v);}); });
+    var absmax = Math.max.apply(null, allVals.map(Math.abs))*1.2;
+    var zeroY = padT+plotH/2;
+    var scaleY = (plotH/2)/absmax;
+
+    svg.appendChild(el('line',{x1:padL,y1:zeroY,x2:padL+plotW,y2:zeroY,class:'axis-line'}));
+    [absmax*0.5, absmax].forEach(function(v){
+      [1,-1].forEach(function(sign){
+        var yy=zeroY-sign*v*scaleY;
+        svg.appendChild(el('line',{x1:padL,y1:yy,x2:padL+plotW,y2:yy,class:'gridline'}));
+        var t=el('text',{x:padL-8,y:yy+3,class:'cat-label','text-anchor':'end'});
+        t.textContent=(sign*v>=0?'+':'')+ (sign*v).toFixed(2);
+        svg.appendChild(t);
+      });
+    });
+
+    var groupW = plotW/categories.length;
+    var n=series.length; var barGap=groupW*0.18; var innerGap=2;
+    var barW=(groupW-barGap*2-innerGap*(n-1))/n;
+    categories.forEach(function(cat,ci){
+      var gx=padL+ci*groupW;
+      series.forEach(function(s,si){
+        var v=s.values[ci];
+        var h=Math.max(Math.abs(v)*scaleY,1.5);
+        var x=gx+barGap+si*(barW+innerGap);
+        var y= v>=0? zeroY-h : zeroY;
+        var r=el('rect',{x:x,y:y,width:barW,height:h,fill:s.color,class:'bar',rx:2});
+        svg.appendChild(r);
+        attachTip(r,svg,tip,'split '+cat+' \u2014 '+s.name+': '+(v>=0?'+':'')+v.toFixed(4));
+      });
+      var clabel=el('text',{x:gx+groupW/2,y:padT+plotH+18,class:'cat-label','text-anchor':'middle'});
+      clabel.textContent=cat;
+      svg.appendChild(clabel);
+    });
+  }
+
+  function searchCompareChart(svgId, ttId){
+    var svg = document.getElementById(svgId);
+    var tip = document.getElementById(ttId);
+    if(!svg) return;
+    var W=svg.viewBox.baseVal.width, H=svg.viewBox.baseVal.height;
+    var padL=48,padR=48,padT=16,padB=56;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var cats = ['GridSearchCV','RandomizedSearchCV','Optuna (TPE)'];
+    var f1 = [0.9112,0.8864,0.9105];
+    var fits = [324,120,120];
+    var f1max = 1.0, fitsmax = 380;
+
+    var ticks=4;
+    for(var i=0;i<=ticks;i++){
+      var yy=padT+plotH-(i/ticks)*plotH;
+      svg.appendChild(el('line',{x1:padL,y1:yy,x2:padL+plotW,y2:yy,class:i===0?'axis-line':'gridline'}));
+      var lt=el('text',{x:padL-8,y:yy+3,class:'cat-label','text-anchor':'end'});
+      lt.textContent=((i/ticks)*f1max).toFixed(2);
+      svg.appendChild(lt);
+      var rt=el('text',{x:padL+plotW+8,y:yy+3,class:'cat-label'});
+      rt.textContent=Math.round((i/ticks)*fitsmax);
+      svg.appendChild(rt);
+    }
+    var lbl1=el('text',{x:padL,y:padT-4,class:'cat-label'}); lbl1.textContent='F1';
+    svg.appendChild(lbl1);
+    var lbl2=el('text',{x:padL+plotW,y:padT-4,class:'cat-label','text-anchor':'end'}); lbl2.textContent='fits';
+    svg.appendChild(lbl2);
+
+    var groupW=plotW/cats.length;
+    var barW=groupW*0.28, gap=groupW*0.10;
+    cats.forEach(function(cat,ci){
+      var gx=padL+ci*groupW+groupW*0.18;
+      var h1=(f1[ci]/f1max)*plotH;
+      var r1=el('rect',{x:gx,y:padT+plotH-h1,width:barW,height:h1,fill:'#d8d8d8',class:'bar',rx:2});
+      svg.appendChild(r1);
+      attachTip(r1,svg,tip,cat+' \u2014 best CV F1: '+f1[ci].toFixed(4));
+      var v1=el('text',{x:gx+barW/2,y:padT+plotH-h1-6,class:'val-label','text-anchor':'middle'}); v1.textContent=f1[ci].toFixed(3);
+      svg.appendChild(v1);
+
+      var gx2=gx+barW+gap;
+      var h2=(fits[ci]/fitsmax)*plotH;
+      var r2=el('rect',{x:gx2,y:padT+plotH-h2,width:barW,height:h2,fill:'#4a4a4c',class:'bar',rx:2});
+      svg.appendChild(r2);
+      attachTip(r2,svg,tip,cat+' \u2014 fits: '+fits[ci]);
+      var v2=el('text',{x:gx2+barW/2,y:padT+plotH-h2-6,class:'val-label','text-anchor':'middle'}); v2.textContent=fits[ci];
+      svg.appendChild(v2);
+
+      var clabel=el('text',{x:gx+barW+gap/2,y:padT+plotH+18,class:'cat-label','text-anchor':'middle'});
+      clabel.textContent=cat;
+      if (cat.length > 14){
+        clabel.setAttribute('transform','rotate(-18 '+(gx+barW+gap/2)+' '+(padT+plotH+18)+')');
+      }
+      svg.appendChild(clabel);
+    });
+  }
+
+  /* ================= render all charts ================= */
+
+  groupedBar('chartBaseline', 'ttBaseline',
+    ['Accuracy','Precision','Recall','F1'],
+    [
+      {name:'always says "not an eight"', values:[0.9022,0.0000,0.0000,0.0000], color:'#4a4a4c'},
+      {name:'default RandomForest', values:[0.9689,1.0000,0.6818,0.8108], color:'#d8d8d8'}
+    ],
+    {ymax:1.05, showVal:true, decimals:3}
+  );
+
+  searchCompareChart('chartSearchCompare','ttSearchCompare');
+
+  horizontalBar('chartImportance','ttImportance',[
+    {label:'min_samples_leaf', value:0.830},
+    {label:'n_estimators', value:0.079},
+    {label:'max_depth', value:0.077},
+    {label:'class_weight', value:0.014}
+  ]);
+
+  groupedBar('chartClassWeight','ttClassWeight',
+    ['None (3 trials)','balanced (20 trials)','balanced_subsample (8 trials)'],
+    [
+      {name:'worst', values:[0.5337,0.7402,0.6705], color:'#4a4a4c'},
+      {name:'mean', values:[0.6130,0.8663,0.8311], color:'#8c8c8e'},
+      {name:'best', values:[0.6923,0.9105,0.8640], color:'#eaeaea'}
+    ],
+    {ymax:1.0, rotate:true, padB:60}
+  );
+
+  lineChart('chartOptHistory','ttOptHistory',
+    [{x:10,y:0.9060},{x:20,y:0.9099},{x:30,y:0.9105}],
+    {xmax:32, ymin:0.85, ymax:0.93, refLine:0.7472}
+  );
+
+  groupedBar('chartFinalModel','ttFinalModel',
+    ['Precision','Recall','F1'],
+    [
+      {name:'default RandomForest', values:[1.0000,0.6818,0.8108], color:'#4a4a4c'},
+      {name:'tuned RandomForest', values:[0.9250,0.8409,0.8810], color:'#eaeaea'}
+    ],
+    {ymax:1.05, showVal:true, decimals:3}
+  );
+
+  divergingBar('chartSplits','ttSplits',
+    ['0','1','2','3','4','5','6','7'],
+    [
+      {name:'with class_weight', values:[0.0128,0.1549,0.0078,0.0297,0.0622,0.1004,0.0736,0.0476], color:'#eaeaea'},
+      {name:'control (no class_weight)', values:[0.0000,0.0188,0.0000,0.0000,-0.0159,0.0000,0.0000,-0.0340], color:'#4a4a4c'}
+    ]
+  );
+
+  groupedBar('chartLeak','ttLeak',
+    ['untuned baseline','tuned on holdout','tuned by honest CV'],
+    [
+      {name:'reported', values:[null,1.0000,0.8436], color:'#eaeaea'},
+      {name:'production', values:[0.7771,0.8352,0.8427], color:'#4a4a4c'}
+    ],
+    {ymax:1.08, showVal:true, decimals:3, rotate:true, padB:56}
+  );
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/MLOPS-3" target="_blank" rel="noopener">github.com/scaler-content/MLOPS-3</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logistic Regression — Lecture Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-page:      #F5FAFB;
+    --bg-card:      #FFFFFF;
+    --bg-card-alt:  #EFF8FA;
+    --bg-input:     #F2F9FA;
+    --border:       #DCEDF1;
+    --border-light: #C2E0E6;
+    --sidebar-bg:   #FFFFFF;
+    --text-primary: #1C333A;
+    --text-muted:   #52757D;
+    --text-dim:     #94AFB4;
+    --accent:       #0C7B93;   /* cyan accent */
+    --highlight:    #085C6E;
+    --glow:         #22D3EE;
+    /* semantic colours — stay subtle */
+    --green:        #1E8E5A;
+    --green-dim:    #E7F5EC;
+    --green-border: #B8E0C8;
+    --red:          #C7284C;
+    --red-dim:      #FCE9EE;
+    --red-border:   #F2B9C7;
+    --amber:        #A8710E;
+    --amber-dim:    #FBF1DA;
+    --amber-border: #EDD696;
+    --blue:         #1D74C6;
+    --blue-dim:     #EAF2FC;
+    --blue-border:  #C1DBF6;
+    --purple:       #6D4FB0;
+    --purple-dim:   #F1ECFB;
+    --sidebar-w:    280px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    position: fixed; top: 0; left: 0;
+    height: 100vh; overflow-y: auto;
+    z-index: 100; display: flex; flex-direction: column;
+    transition: transform .3s ease;
+  }
+  #sidebar::-webkit-scrollbar { width: 3px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+  .sidebar-header {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+    background: var(--sidebar-bg); z-index: 1;
+  }
+  .sidebar-header .course-label {
+    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--text-dim); font-weight: 600; margin-bottom: 7px;
+  }
+  .sidebar-header h1 {
+    font-family: 'Lora', serif; font-size: 15px;
+    color: var(--highlight); font-weight: 600; line-height: 1.4;
+  }
+
+  .progress-bar-wrap { padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  .progress-label { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .progress-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--glow), var(--accent)); border-radius: 2px; transition: width .4s ease; width: 0%; }
+
+  .nav-list { list-style: none; padding: 10px 0 80px; }
+  .nav-item a {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 20px; text-decoration: none;
+    color: var(--text-dim); font-size: 12px; line-height: 1.4;
+    transition: all .2s; border-left: 2px solid transparent;
+  }
+  .nav-item a:hover { color: var(--text-primary); background: rgba(12,123,147,.05); }
+  .nav-item.active a { color: var(--highlight); border-left-color: var(--accent); background: rgba(12,123,147,.08); font-weight: 500; }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid currentColor; flex-shrink: 0; margin-top: 5px; transition: background .3s; }
+  .nav-item.visited .nav-dot { background: var(--accent); border-color: var(--accent); }
+  .nav-item .nav-type { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); margin-top: 2px; opacity: .8; }
+
+  /* ── MAIN ────────────────────────────────────────── */
+  #main { margin-left: var(--sidebar-w); flex: 1; max-width: 860px; padding: 48px 52px 120px; }
+
+  /* ── SECTION CARDS ───────────────────────────────── */
+  .section-card {
+    background: var(--bg-card); border-radius: 10px;
+    border: 1px solid var(--border); margin-bottom: 32px;
+    overflow: hidden; scroll-margin-top: 32px;
+    box-shadow: 0 2px 10px rgba(18,64,76,.06);
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .section-card:hover { border-color: var(--border-light); box-shadow: 0 6px 20px rgba(18,64,76,.10); }
+
+  .card-header {
+    padding: 20px 26px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 14px;
+    background: var(--bg-card-alt);
+  }
+  .card-icon {
+    width: 34px; height: 34px; border-radius: 7px;
+    background: #FFFFFF; display: flex;
+    align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 15px;
+    border: 1px solid var(--border-light);
+  }
+  .card-meta { flex: 1; }
+  .card-type { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); font-weight: 600; margin-bottom: 4px; }
+  .card-title { font-family: 'Lora', serif; font-size: 19px; font-weight: 700; color: var(--highlight); line-height: 1.3; }
+  .card-duration { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .card-body { padding: 22px 26px 26px; }
+
+  /* ── TYPOGRAPHY ──────────────────────────────────── */
+  .card-body h2 { font-family: 'Lora', serif; font-size: 17px; color: var(--accent); margin: 26px 0 11px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .card-body h3 { font-family: 'Lora', serif; font-size: 15px; color: var(--highlight); margin: 20px 0 9px; font-style: italic; }
+  .card-body h4 { font-size: 13.5px; color: var(--accent); margin: 14px 0 7px; font-weight: 600; letter-spacing: .02em; }
+  .card-body p { margin-bottom: 11px; font-size: 14px; color: var(--text-primary); }
+  .card-body ul, .card-body ol { margin: 8px 0 13px 20px; font-size: 14px; }
+  .card-body li { margin-bottom: 5px; color: var(--text-primary); }
+  .card-body strong { color: var(--highlight); font-weight: 600; }
+  .card-body em { color: var(--accent); font-style: italic; }
+
+  /* ── CALLOUTS ────────────────────────────────────── */
+  .callout-ask {
+    background: rgba(12,123,147,.05); border-left: 2px solid var(--accent);
+    border-radius: 0 7px 7px 0; padding: 11px 14px;
+    margin: 14px 0; font-size: 13px; color: var(--text-primary);
+  }
+  .callout-ask .callout-label { font-weight: 600; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  .callout-note {
+    background: rgba(34,211,238,.08); border-left: 2px solid var(--glow);
+    border-radius: 0 7px 7px 0; padding: 11px 14px;
+    margin: 14px 0; font-size: 13px; color: var(--text-primary);
+  }
+  .callout-note .callout-label { font-weight: 600; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--highlight); margin-bottom: 4px; }
+  .callout-viz {
+    background: rgba(12,123,147,.06); border: 1px dashed var(--border-light);
+    border-radius: 8px; padding: 13px 16px; margin: 14px 0;
+    font-size: 13px; color: var(--text-primary);
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .callout-viz .viz-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .callout-viz .viz-body { flex: 1; }
+  .callout-viz .viz-label { font-weight: 600; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  .callout-viz a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; }
+
+  /* ── TABLE ───────────────────────────────────────── */
+  .card-body table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 14px 0; border-radius: 7px; overflow: hidden; border: 1px solid var(--border); }
+  .card-body th { background: var(--border-light); color: var(--highlight); padding: 9px 12px; text-align: left; font-weight: 600; font-size: 11.5px; letter-spacing: .04em; }
+  .card-body td { padding: 8px 12px; border-top: 1px solid var(--border); color: var(--text-primary); }
+  .card-body tr:nth-child(even) td { background: rgba(12,123,147,.03); }
+
+  /* ── CODE ────────────────────────────────────────── */
+  .card-body pre {
+    background: var(--bg-input); border: 1px solid var(--border);
+    color: #16414B; border-radius: 7px; padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; overflow-x: auto; margin: 12px 0; line-height: 1.65;
+  }
+  .card-body code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg-input); border: 1px solid var(--border);
+    color: var(--highlight); padding: 2px 6px; border-radius: 4px; font-size: 12px;
+  }
+  .card-body pre code { background: none; border: none; color: inherit; padding: 0; }
+
+  .output-wrap { margin: -4px 0 12px; }
+  .output-label { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); font-weight: 600; margin-bottom: 4px; }
+  .output-block {
+    background: #FBFEFE; border: 1px solid var(--border);
+    border-radius: 7px; padding: 11px 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+    color: var(--text-muted); line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+  }
+
+  /* ── EQUATION ────────────────────────────────────── */
+  .equation {
+    background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 7px; padding: 13px 18px; margin: 13px 0;
+    text-align: center; font-family: 'Lora', serif;
+    font-size: 15.5px; font-style: italic; color: var(--highlight); letter-spacing: .02em;
+  }
+
+  /* ── QUIZ ────────────────────────────────────────── */
+  .quiz-card .card-icon { background: #FFFFFF; }
+  .quiz-question { font-family: 'Lora', serif; font-size: 15.5px; font-weight: 600; color: var(--highlight); margin-bottom: 18px; line-height: 1.5; }
+  .quiz-options { list-style: none; margin: 0; }
+  .quiz-option {
+    display: flex; align-items: center; gap: 11px;
+    padding: 11px 14px; border: 1px solid var(--border);
+    border-radius: 7px; margin-bottom: 8px;
+    cursor: pointer; font-size: 13.5px;
+    transition: all .2s; user-select: none;
+    background: var(--bg-card-alt); color: var(--text-primary);
+  }
+  .quiz-option:hover { border-color: var(--border-light); background: rgba(12,123,147,.06); }
+  .quiz-option.selected-correct { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+  .quiz-option.selected-wrong   { border-color: var(--red);   background: var(--red-dim);   color: var(--red); }
+  .quiz-option.reveal-correct   { border-color: var(--green); background: var(--green-dim); }
+  .quiz-circle {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 1.5px solid var(--border-light); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; transition: all .2s;
+  }
+  .selected-correct .quiz-circle { border-color: var(--green); background: var(--green); color: #fff; }
+  .selected-wrong .quiz-circle   { border-color: var(--red);   background: var(--red);   color: #fff; }
+  .reveal-correct .quiz-circle   { border-color: var(--green); background: var(--green-dim); }
+  .quiz-feedback { margin-top: 12px; padding: 11px 14px; border-radius: 7px; font-size: 13px; font-weight: 500; display: none; }
+  .quiz-feedback.correct { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); display: block; }
+  .quiz-feedback.wrong   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-border);   display: block; }
+
+  /* ── SUMMARY GRID ────────────────────────────────── */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 12px; }
+  .summary-item {
+    background: var(--bg-card-alt); border: 1px solid var(--border);
+    border-radius: 7px; padding: 9px 12px;
+    font-size: 12.5px; color: var(--text-primary);
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .summary-item::before { content: '▸'; color: var(--accent); font-size: 10px; margin-top: 3px; flex-shrink: 0; }
+
+  /* ── AGENDA LIST ─────────────────────────────────── */
+  .agenda-list { margin: 8px 0 4px 0; }
+  .agenda-list ul { margin-left: 18px; }
+
+  /* ── HAMBURGER ───────────────────────────────────── */
+  #hamburger {
+    display: none; position: fixed; top: 16px; left: 16px;
+    z-index: 200; background: var(--bg-card-alt);
+    border: 1px solid var(--border); border-radius: 7px;
+    padding: 8px 10px; cursor: pointer;
+    flex-direction: column; gap: 5px;
+  }
+  #hamburger span { display: block; width: 18px; height: 2px; background: var(--text-primary); border-radius: 1px; }
+  #overlay { display: none; }
+
+  @media (max-width: 768px) {
+    #hamburger { display: flex; }
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; padding: 24px 18px 80px; max-width: 100%; }
+    #overlay { display: block; position: fixed; inset: 0; background: rgba(15,35,40,.45); z-index: 99; opacity: 0; pointer-events: none; transition: opacity .3s; }
+    #overlay.active { opacity: 1; pointer-events: all; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .card-body { padding: 16px 16px 20px; }
+    .card-header { padding: 16px 16px 13px; }
+  }
+
+  /* ── BACK TO TOP ─────────────────────────────────── */
+  #back-top {
+    position: fixed; bottom: 30px; right: 30px;
+    background: #FFFFFF; color: var(--accent);
+    border: 1px solid var(--border-light); border-radius: 50%;
+    width: 42px; height: 42px; font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(18,64,76,.18);
+    opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 50;
+  }
+  #back-top.visible { opacity: 1; pointer-events: all; }
+  #back-top:hover { background: var(--bg-card-alt); }
+
+  .card-body a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; }
+  .card-body a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations 5 · Logistic regression</span><span class="pn"><a href="../ML-with-AI-workflows-11/" title="ML with AI 11 · Logistic regression from zero">← Prev</a><a href="../ML-with-AI-workflows-9/" title="ML with AI 9 · Classification metrics beyond accuracy">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><button id="hamburger" aria-label="Open menu" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</button>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="course-label">ML Foundations · Lecture 5</div>
+    <h1>Logistic Regression</h1>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-label"><span>Progress</span><span id="progress-pct">0%</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item" data-target="s-agenda"><a href="#s-agenda"><span class="nav-dot"></span><span><div>Agenda</div><div class="nav-type">Overview</div></span></a></li>
+    <li class="nav-item" data-target="s-recap"><a href="#s-recap"><span class="nav-dot"></span><span><div>Recap & Problem Setup</div><div class="nav-type">Review</div></span></a></li>
+    <li class="nav-item" data-target="s-intuition"><a href="#s-intuition"><span class="nav-dot"></span><span><div>Logistic Regression Intuition</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-hyperplanes"><a href="#s-hyperplanes"><span class="nav-dot"></span><span><div>Hyperplanes</div><div class="nav-type">Math</div></span></a></li>
+    <li class="nav-item" data-target="q1"><a href="#q1"><span class="nav-dot"></span><span><div>Quiz 1 — Distance & Confidence</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-sigmoid"><a href="#s-sigmoid"><span class="nav-dot"></span><span><div>Sigmoid Function & Thresholding</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-sigmoid-code"><a href="#s-sigmoid-code"><span class="nav-dot"></span><span><div>Code: Sigmoid Function</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-name"><a href="#s-name"><span class="nav-dot"></span><span><div>Why "Logistic Regression"?</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="q2"><a href="#q2"><span class="nav-dot"></span><span><div>Quiz 2 — Sigmoid Output</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-compare"><a href="#s-compare"><span class="nav-dot"></span><span><div>Comparing y vs ŷ</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-logloss"><a href="#s-logloss"><span class="nav-dot"></span><span><div>Log-Loss Intuition</div><div class="nav-type">Math</div></span></a></li>
+    <li class="nav-item" data-target="s-logloss-combine"><a href="#s-logloss-combine"><span class="nav-dot"></span><span><div>Combining Both Cases</div><div class="nav-type">Math</div></span></a></li>
+    <li class="nav-item" data-target="s-logloss-code"><a href="#s-logloss-code"><span class="nav-dot"></span><span><div>Implement Log-Loss</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="q3"><a href="#q3"><span class="nav-dot"></span><span><div>Quiz 3 — Confident Predictions</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-optimization"><a href="#s-optimization"><span class="nav-dot"></span><span><div>Optimization</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-regularization"><a href="#s-regularization"><span class="nav-dot"></span><span><div>Regularisation</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="q4"><a href="#q4"><span class="nav-dot"></span><span><div>Quiz 4 — Cancer Threshold</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-accuracy"><a href="#s-accuracy"><span class="nav-dot"></span><span><div>Performance — Accuracy Metric</div><div class="nav-type">Metric</div></span></a></li>
+    <li class="nav-item" data-target="q5"><a href="#q5"><span class="nav-dot"></span><span><div>Quiz 5 — Accuracy Calculation</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-sklearn-impl"><a href="#s-sklearn-impl"><span class="nav-dot"></span><span><div>Sklearn Implementation</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-eda"><a href="#s-eda"><span class="nav-dot"></span><span><div>EDA</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-split"><a href="#s-split"><span class="nav-dot"></span><span><div>Train Test Split</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-reg-impl"><a href="#s-reg-impl"><span class="nav-dot"></span><span><div>Regularization Implementation</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-predictproba"><a href="#s-predictproba"><span class="nav-dot"></span><span><div>predict_proba</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-pipeline"><a href="#s-pipeline"><span class="nav-dot"></span><span><div>Sklearn Pipeline</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="q6"><a href="#q6"><span class="nav-dot"></span><span><div>Quiz 6 — Best λ</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-outliers"><a href="#s-outliers"><span class="nav-dot"></span><span><div>Impact of Outliers</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="q7"><a href="#q7"><span class="nav-dot"></span><span><div>Quiz 7 — Outliers Effect</div><div class="nav-type">Quiz</div></span></a></li>
+    <li class="nav-item" data-target="s-wrap"><a href="#s-wrap"><span class="nav-dot"></span><span><div>Wrap Up</div><div class="nav-type">Summary</div></span></a></li>
+  </ul>
+</nav>
+
+<main id="main">
+
+  <!-- AGENDA -->
+  <section class="section-card" id="s-agenda">
+    <div class="card-header">
+      <div class="card-icon">🗂️</div>
+      <div class="card-meta">
+        <div class="card-type">Overview</div>
+        <div class="card-title">Agenda</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body agenda-list">
+      <p><strong>Logistic Regression Intuition</strong></p>
+      <ul>
+        <li>Approach, Hyperplanes, Thresholding</li>
+        <li>Code implementation of the sigmoid function</li>
+        <li>Why is it called "regression" if we are doing classification?</li>
+      </ul>
+      <p>Comparing <strong>y</strong> vs <strong>ŷ</strong>:</p>
+      <ul>
+        <li>Log-loss intuition, combining both cases into one equation, implementing log-loss</li>
+      </ul>
+      <p><strong>Optimization</strong></p>
+      <ul>
+        <li>Regularisation</li>
+        <li>Performance — Accuracy Metric</li>
+      </ul>
+      <p><strong>Scikit-Learn Implementation of Logistic Regression</strong></p>
+      <ul>
+        <li>EDA, Train/Test Split, Regularization implementation</li>
+        <li><code>predict_proba</code> function from sklearn, sklearn pipeline</li>
+      </ul>
+      <p><strong>Impact of outliers</strong></p>
+    </div>
+  </section>
+
+  <!-- RECAP & PROBLEM SETUP -->
+  <section class="section-card" id="s-recap">
+    <div class="card-header">
+      <div class="card-icon">🔁</div>
+      <div class="card-meta">
+        <div class="card-type">Review</div>
+        <div class="card-title">Recap, Problem Setup & Data</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>In the previous module, we covered:</p>
+      <ul>
+        <li>Introduction to Supervised Learning</li>
+        <li>Linear Regression & Gradient Descent</li>
+        <li>Multiple Linear Regression</li>
+        <li>Model Evaluation (R² & Adjusted R²)</li>
+        <li>Assumptions of Linear Regression</li>
+        <li>Bias-Variance Tradeoff</li>
+        <li>Regularization (Ridge, Lasso & Elastic Net)</li>
+        <li>Cross Validation</li>
+      </ul>
+
+      <h3>Key Takeaways</h3>
+      <ul>
+        <li>Supervised learning uses labeled data to learn patterns.</li>
+        <li>Regression is used when the target variable is continuous.</li>
+        <li>Building a good ML model involves preprocessing, training, evaluation, and validation.</li>
+        <li>Techniques like regularization and cross-validation help improve model generalization.</li>
+      </ul>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Today's Focus</div>
+        So far, we've learned how to predict continuous values. Now we shift focus to <strong>Classification</strong>, where the goal is to predict discrete categories such as Spam/Not Spam, Fraud/Not Fraud, or Disease/No Disease.
+      </div>
+
+      <h3>Problem Statement — Telecom Churn Analysis</h3>
+      <p><strong>Churn</strong> (loss of customers to competition) is an expensive problem for telecom companies, since acquiring a new customer costs far more than retaining an existing one.</p>
+      <p>Existing customers typically consume more services and generate additional referrals, which is why businesses invest heavily in measuring and predicting churn.</p>
+
+      <h3>Business Objective</h3>
+      <p>Customer retention is best achieved by truly knowing the customer. The vast volumes of data collected can be used to build churn prediction models, so the company can prioritize focused marketing on the customers most likely to defect.</p>
+      <p>As a Data Analyst, the task is to build ML algorithms that predict and automate churn detection.</p>
+
+      <h3>Data Description</h3>
+      <p><strong>Records:</strong> 5700 &nbsp;·&nbsp; <strong>Features:</strong> 21</p>
+      <table>
+        <tr><th>Feature</th><th>Description</th></tr>
+        <tr><td>state</td><td>2-letter code of the US state of customer residence</td></tr>
+        <tr><td>account_length</td><td>Number of months the customer has been with the current telco provider</td></tr>
+        <tr><td>area_code</td><td>string="area_code_AAA" where AAA = 3 digit area code</td></tr>
+        <tr><td>intl_plan</td><td>The customer has international plan</td></tr>
+        <tr><td>vmail_plan</td><td>The customer has voice mail plan</td></tr>
+        <tr><td>vmail_messages</td><td>Number of voice-mail messages</td></tr>
+        <tr><td>day_mins / day_calls / day_charge</td><td>Total minutes, count and charge of day calls</td></tr>
+        <tr><td>eve_mins / eve_calls / eve_charge</td><td>Total minutes, count and charge of evening calls</td></tr>
+        <tr><td>night_mins / night_calls / night_charge</td><td>Total minutes, count and charge of night calls</td></tr>
+        <tr><td>intl_mins / intl_calls / intl_charge</td><td>Total minutes, count and charge of international calls</td></tr>
+        <tr><td>customer_service_calls</td><td>Number of calls to customer service</td></tr>
+        <tr><td>phone</td><td>10 digit number</td></tr>
+        <tr><td>churn</td><td>Customer churn — <strong>target variable</strong></td></tr>
+      </table>
+
+      <h3>Initial Setup</h3>
+      <pre><code># Necessary Imports
+import numpy as np
+import matplotlib.pyplot as plt</code></pre>
+
+      <pre><code># Downloading the Dataset
+!gdown 1uUt7uL-VuF_5cpodYRiriEwhsldeEp3m</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Downloading...
+From: https://drive.google.com/uc?id=1uUt7uL-VuF_5cpodYRiriEwhsldeEp3m
+To: /content/churn_logistic.csv
+100% 494k/494k [00:00&lt;00:00, 28.0MB/s]</div>
+      </div>
+
+      <pre><code>import pandas as pd
+churn = pd.read_csv("churn_logistic.csv")
+churn.head()</code></pre>
+      <p>The first rows show columns like <code>Account Length</code>, <code>Day Mins</code>, <code>CustServ Calls</code>, <code>Intl Plan</code>, <code>State</code>, and the target <code>Churn</code> (0/1).</p>
+    </div>
+  </section>
+
+  <!-- LOGISTIC REGRESSION INTUITION -->
+  <section class="section-card" id="s-intuition">
+    <div class="card-header">
+      <div class="card-icon">💡</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Logistic Regression Intuition</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <h3>Linear Regression, Revisited</h3>
+      <p>In linear regression we fit a line or plane to most of the points, then use that line to predict values for future inputs — like predicting the price of a car from its age. That plot looked like a good fit.</p>
+
+      <h3>Now the Problem Changes</h3>
+      <p>We want to identify <strong>classes</strong>, not continuous values. We have data points for two classes: class 1 (dot, means churned) and class 2 (cross, means not churned).</p>
+      <p>Given some new, unlabeled data points, how do we identify which class they belong to?</p>
+
+      <h3>Approach</h3>
+      <ul>
+        <li>Observe the target variable: two different classes → this is a case of <strong>classification</strong>.</li>
+        <li>The simplest approach is to draw a <strong>line</strong> that separates the datapoints between the two classes.</li>
+        <li>Points on one side of the line are class 0; points on the other side are class 1.</li>
+      </ul>
+      <p>We want a line (or plane) such that points fall on either side of it. This gives us the <strong>hyperplane</strong>:</p>
+      <div class="equation">z = w₀ + w₁x₁ + w₂x₂ + … + w_d x_d</div>
+      <p>You can also check how this plane separates the classes in 3D.</p>
+    </div>
+  </section>
+
+  <!-- HYPERPLANES -->
+  <section class="section-card" id="s-hyperplanes">
+    <div class="card-header">
+      <div class="card-icon">📐</div>
+      <div class="card-meta">
+        <div class="card-type">Math</div>
+        <div class="card-title">Hyperplanes</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>A hyperplane is an n-dimensional generalization of a plane — an affine subspace of dimension <em>n − 1</em> that splits an <em>n</em>-dimensional space.</p>
+      <p>In 3D space, a hyperplane is one dimension less than 3, i.e. a 2D plane. In 2D space, one dimension less is a single-dimensional line, and so on. Hyperplanes are the general entity — line, plane, or higher-dimensional separator depending on the number of dimensions.</p>
+
+      <h3>Distance Implies Confidence</h3>
+      <p>If we consider the line/plane as the separator, which points are more probable of being in class 1? The points that are <strong>farther away</strong> from the separator are more probable of being in that class.</p>
+      <p>So, the more the distance from the separator, the more the probability of belonging to that class.</p>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 From Distance to Probability</div>
+        A hyperplane gives us a distance score, telling us how far a point lies from the decision boundary. But distance alone is hard to interpret in business terms. Saying "there is an 85% chance this customer will churn" is far more useful than "distance = 4.2" — that's exactly why we need a function that converts raw scores into probabilities.
+      </div>
+
+      <p>Can we use the linear function directly for predictions? Note that the true values <em>yᵢ</em> are {0, 1}, but our linear function <em>z</em> ranges over {−∞ to +∞}.</p>
+      <p>We need a filter/function to compress that range into 0–1. That function is the <strong>sigmoid function</strong> — also called the <strong>logistic function</strong>.</p>
+    </div>
+  </section>
+
+  <!-- QUIZ 1 -->
+  <section class="section-card quiz-card" id="q1">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 1</div>
+        <div class="card-title">Distance from the Decision Boundary</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">The farther a point is from the line or hyperplane, the lower the chances that it belongs to a specific class.</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>True</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>False</li>
+      </ul>
+      <div class="quiz-feedback" id="q1-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        It's the opposite. Distance and confidence are directly proportional — the farther a point lies from the hyperplane, the <strong>higher</strong> the probability that it belongs to that class, not lower.
+      </div>
+    </div>
+  </section>
+
+  <!-- SIGMOID -->
+  <section class="section-card" id="s-sigmoid">
+    <div class="card-header">
+      <div class="card-icon">🌀</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Sigmoid Function & Thresholding</div>
+        <div class="card-duration">⏱ 6 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>We take the input <em>z</em> = w₀ + w₁x₁ + w₂x₂ + … + w_d x_d and pass it through the sigmoid (logistic) function, so the output lies between 0 and 1.</p>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          See how the sigmoid function compresses any input value:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/sigmoid-function-input-output-transformation/" target="_blank">Sigmoid Function — Input/Output Transformation →</a>
+        </div>
+      </div>
+
+      <p>The sigmoid function is probabilistic in nature — its output between 0 and 1 can be interpreted as the probability of belonging to class 1.</p>
+      <ul>
+        <li>Sigmoid output of <strong>0.7</strong> → 70% probability of being in class 1</li>
+        <li>Sigmoid output of <strong>0.2</strong> → 20% probability of class 1, i.e. 80% probability of class 0</li>
+      </ul>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 From Probability to Decision</div>
+        The model gives us probabilities, which is useful. But most business problems eventually need a hard yes/no decision — so we need a rule to convert probabilities into final class labels.
+      </div>
+
+      <h3>Thresholding</h3>
+      <p>The actual labels <em>yᵢ</em> are exactly 0 or 1. But the predicted value <em>ŷᵢ</em> is somewhere between 0 and 1 — it may be 0.7, 0.2, or 0.34.</p>
+      <p>So we set a <strong>threshold</strong>, above which we assign one class and below which we assign the other.</p>
+      <p>The threshold is not always 0.5 — it can depend on the use case.</p>
+    </div>
+  </section>
+
+  <!-- SIGMOID CODE -->
+  <section class="section-card" id="s-sigmoid-code">
+    <div class="card-header">
+      <div class="card-icon">💻</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Code Implementation of the Sigmoid Function</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <pre><code>import math  # A library that manages mathematics</code></pre>
+
+      <pre><code>def sigmoid(x):
+    return 1/(1+np.e**-x)</code></pre>
+
+      <pre><code>x = np.linspace(-10, 10, 20) # 20 equidistant points between -10 and 10
+z = sigmoid(x)
+
+plt.plot(x, z)
+plt.xlabel("x")
+plt.ylabel("Sigmoid(X)")
+plt.grid()
+plt.show();</code></pre>
+
+      <h3>Output Plot Analysis</h3>
+      <ul>
+        <li>When σ(x) is close to 0.5, the rate at which the sigmoid value increases/decreases is very fast.</li>
+        <li>As σ(x) moves further away from 0.5 toward 1 or 0, the rate of change plateaus.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- WHY THE NAME -->
+  <section class="section-card" id="s-name">
+    <div class="card-header">
+      <div class="card-icon">🏷️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Why Is It Called "Logistic Regression" if We Are Doing Classification?</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>The term "logistic regression" comes from the logistic (sigmoid) function.</p>
+      <ul>
+        <li>At its base, it's doing <strong>regression</strong> only — we output a real value between 0 and 1 that we treat as a probability.</li>
+        <li>On top of that regression, we apply the <strong>logistic function</strong> — hence, logistic regression.</li>
+        <li>The true labels <em>yᵢ</em> are 0 or 1, but our predicted <em>ŷᵢ</em> ranges continuously between 0 and 1.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- QUIZ 2 -->
+  <section class="section-card quiz-card" id="q2">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 2</div>
+        <div class="card-title">Interpreting the Sigmoid Output</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">In logistic regression, the output of the sigmoid function is interpreted as:</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>Class probabilities</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Raw scores</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Error rates</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Regression coefficients</li>
+      </ul>
+      <div class="quiz-feedback" id="q2-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        The sigmoid squashes the linear score <em>z</em> into [0, 1], and this value is interpreted as the probability of the input belonging to class 1.
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARING Y VS YHAT -->
+  <section class="section-card" id="s-compare">
+    <div class="card-header">
+      <div class="card-icon">⚖️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Comparing yᵢ vs ŷᵢ</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="callout-note">
+        <div class="callout-label">📌 Beyond Predicting Probabilities</div>
+        Predicting probabilities is only half of model training. The next question is: how does the model know whether its predictions are good or bad during training?
+      </div>
+      <p>We use <strong>Log-Loss</strong> as the loss function for classification.</p>
+      <div class="callout-ask">
+        <div class="callout-label">📎 Reference</div>
+        Log-loss comes from the principle of Maximum Likelihood Estimation. We won't derive it from probability theory here — instead we'll build intuition for why it makes sense and how it behaves.
+      </div>
+    </div>
+  </section>
+
+  <!-- LOG LOSS INTUITION -->
+  <section class="section-card" id="s-logloss">
+    <div class="card-header">
+      <div class="card-icon">📉</div>
+      <div class="card-meta">
+        <div class="card-type">Math</div>
+        <div class="card-title">Log-Loss Intuition</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Let's plot a graph between error and ŷ.</p>
+
+      <h3>Case: yᵢ = 1</h3>
+      <ul>
+        <li>If ŷᵢ = 1 → error is very low, near 0.</li>
+        <li>If ŷᵢ = 0 → error is very high (say, infinity).</li>
+        <li>If ŷᵢ = 0.99 → error is slightly greater than when ŷᵢ was 1.</li>
+        <li>If ŷᵢ = 0.01 → error is slightly lesser than infinity.</li>
+      </ul>
+      <p>This is exactly the plot of the equation:</p>
+      <div class="equation">−log(ŷ)</div>
+      <p>We don't worry about the part of the curve below ŷ = 0, since ŷᵢ is always between 0 and 1 — so the loss is always positive.</p>
+
+      <h3>Case: yᵢ = 0</h3>
+      <ul>
+        <li>If ŷᵢ = 0 → error ≈ 0.</li>
+        <li>If ŷᵢ = 1 → error = ∞.</li>
+      </ul>
+      <p>This curve is the plot of the equation:</p>
+      <div class="equation">−log(1 − ŷ)</div>
+
+      <p>So mathematically, we can define log-loss using these two cases:</p>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 One Equation, Not Two</div>
+        We now have two separate loss equations — one for when the actual class is 1, another for when it's 0. For optimization, working with a single unified equation is much more convenient.
+      </div>
+    </div>
+  </section>
+
+  <!-- COMBINING BOTH CASES -->
+  <section class="section-card" id="s-logloss-combine">
+    <div class="card-header">
+      <div class="card-icon">➕</div>
+      <div class="card-meta">
+        <div class="card-type">Math</div>
+        <div class="card-title">Combining Both Cases into One Equation</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Using a small piece of clever math, we can combine both log-loss cases by simply adding them — one of the two terms always evaluates to zero for a given sample:</p>
+      <div class="equation">L = −y·log(ŷ) − (1−y)·log(1−ŷ)</div>
+      <p>When y = 1, the second term vanishes and we're left with −log(ŷ). When y = 0, the first term vanishes and we're left with −log(1−ŷ) — exactly the two cases we derived earlier.</p>
+    </div>
+  </section>
+
+  <!-- IMPLEMENT LOG LOSS -->
+  <section class="section-card" id="s-logloss-code">
+    <div class="card-header">
+      <div class="card-icon">💻</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Implement Log-Loss</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Case 1: yᵢ = 1, ŷᵢ = 0.9</h3>
+      <pre><code>import math
+
+y = 1
+yhat = 0.9
+print(-y*math.log(yhat)-(1-y)*math.log(1-yhat))</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">0.10536051565782628</div></div>
+      <p>The loss is almost 0.1 — close to 0. Let's bring ŷᵢ even closer to 1.</p>
+
+      <h3>Case 2: yᵢ = 1, ŷᵢ = 0.99</h3>
+      <pre><code>y = 1
+yhat = 0.99
+print(-y*math.log(yhat)-(1-y)*math.log(1-yhat))</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">0.01005033585350145</div></div>
+      <p>Just incrementing ŷᵢ by 0.09 causes a drastic decrease in loss. Now let's see what happens as ŷᵢ moves closer to 0.</p>
+
+      <h3>Case 3: yᵢ = 1, ŷᵢ = 0.1</h3>
+      <pre><code>y = 1
+yhat = 0.1
+print(-y*math.log(yhat)-(1-y)*math.log(1-yhat))</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">2.3025850929940455</div></div>
+      <p>Notice how much higher the log-loss is. Let's bring ŷᵢ even closer to 0.</p>
+
+      <h3>Case 4: yᵢ = 1, ŷᵢ = 0.01</h3>
+      <pre><code>y = 1
+yhat = 0.01
+print(-y*math.log(yhat)-(1-y)*math.log(1-yhat))</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">4.605170185988091</div></div>
+      <p>A small variation in ŷᵢ causes a drastic increase in loss. Now let's look at the scenario when the actual label is 0.</p>
+
+      <h3>Case 5: yᵢ = 0, ŷᵢ = 0.1</h3>
+      <pre><code>y = 0
+yhat = 0.1
+print(-y*math.log(yhat)-(1-y)*math.log(1-yhat))</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">0.10536051565782628</div></div>
+      <p>A small loss, identical to Case 1. Now let's bring ŷᵢ closer to 0.</p>
+
+      <h3>Case 6: yᵢ = 0, ŷᵢ = 0.01</h3>
+      <pre><code>y = 0
+yhat = 0.01
+print(-y*math.log(yhat)-(1-y)*math.log(1-yhat))</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">0.01005033585350145</div></div>
+      <p>Loss decreased, similar to Case 2.</p>
+
+      <h3>Case 7: yᵢ = 0, ŷᵢ = 0.9</h3>
+      <pre><code>y = 0
+yhat = 0.9
+print(-y*math.log(yhat)-(1-y)*math.log(1-yhat))</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">2.302585092994046</div></div>
+      <p>As expected, the loss is high.</p>
+
+      <h3>Summary</h3>
+      <ul>
+        <li>Log-loss <strong>decreases</strong> as ŷᵢ gets closer to yᵢ.</li>
+        <li>Log-loss <strong>increases</strong> as ŷᵢ gets farther from yᵢ.</li>
+        <li>This means we can use optimization techniques, like gradient descent, on the log-loss function to find the optimal weights of the logistic regression model.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- QUIZ 3 -->
+  <section class="section-card quiz-card" id="q3">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 3</div>
+        <div class="card-title">Log-Loss for a Confident, Correct Prediction</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Suppose the actual label is y = 1 and the predicted probability is ŷ = 0.8. What will the log-loss be?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Log-loss will be a very high value.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>Log-loss will be a very low value.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Log-loss will be 0.</li>
+      </ul>
+      <div class="quiz-feedback" id="q3-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        Since ŷ = 0.8 is fairly close to the actual label y = 1, the −log(ŷ) term stays small. The closer ŷ gets to y, the closer the log-loss gets to 0 — but it never reaches exactly 0 unless ŷ = 1.
+      </div>
+    </div>
+  </section>
+
+  <!-- OPTIMIZATION -->
+  <section class="section-card" id="s-optimization">
+    <div class="card-header">
+      <div class="card-icon">🎯</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Optimization</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>So far we've only seen log-loss for the <em>i</em>-th sample. We define the full loss function for logistic regression as the sum of log-loss over all <em>n</em> samples:</p>
+      <div class="equation">L_all = Σᵢ [ −y·log(ŷᵢ) − (1−y)·log(1−ŷᵢ) ]</div>
+      <p>We use gradient descent to optimize this equation.</p>
+      <div class="callout-note">
+        <div class="callout-label">📌 Better Predictions → Lower Loss</div>
+        Minimizing loss helps us fit the training data well — but fitting too well can become a problem of its own. This is where regularization, which we saw in linear regression, comes back into play.
+      </div>
+    </div>
+  </section>
+
+  <!-- REGULARISATION -->
+  <section class="section-card" id="s-regularization">
+    <div class="card-header">
+      <div class="card-icon">🛡️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Regularisation</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Similar to regression, logistic regression can also use a regularizer. We optimize the weights (w_j) using the same regularization parameter λ.</p>
+      <div class="callout-note">
+        <div class="callout-label">📌 In Code</div>
+        Sklearn takes a parameter <code>C</code>, which is the <strong>inverse</strong> of λ.
+      </div>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Ask Yourself</div>
+        <p>If there is no non-linear feature, should we still use regularization when performing min L?</p>
+        <p><strong>Yes</strong> — to avoid overfitting the model.</p>
+      </div>
+
+      <p>We add an L2 regularization term to the loss function L. Gradient descent now performs gradients on:</p>
+      <div class="equation">min Σᵢ [ L + λ Σⱼ wⱼ² ]</div>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          See how regularization affects the decision boundary:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/regularization-effect-on-decision-boundary/" target="_blank">Regularization — Effect on Decision Boundary →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 4 -->
+  <section class="section-card quiz-card" id="q4">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 4</div>
+        <div class="card-title">Choosing a Threshold for Cancer Detection</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">You are building a model to predict whether a person has cancer. Your goal is to avoid missing any cancer patient, even if it means identifying some healthy people as cancer-positive. Which threshold should you choose?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>If predicted probability &gt; 0.5, classify as having cancer.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>If predicted probability &gt; 0.7, classify as having cancer.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>If predicted probability &gt; 0.9, classify as having cancer.</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>If predicted probability &gt; 0.3, classify as having cancer.</li>
+      </ul>
+      <div class="quiz-feedback" id="q4-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        Lowering the threshold makes it "easier" for a data point to be classified as cancer-positive. This increases recall — fewer actual cancer patients slip through as false negatives — at the cost of flagging more healthy people as false positives, which is an acceptable tradeoff here.
+      </div>
+    </div>
+  </section>
+
+  <!-- ACCURACY -->
+  <section class="section-card" id="s-accuracy">
+    <div class="card-header">
+      <div class="card-icon">✅</div>
+      <div class="card-meta">
+        <div class="card-type">Metric</div>
+        <div class="card-title">Performance Metric — Accuracy</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="callout-note">
+        <div class="callout-label">📌 From Training to Evaluation</div>
+        So far, we've focused on training the model correctly. Once training is complete, the next question is: how do we evaluate whether the model is actually performing well?
+      </div>
+      <p>Accuracy is calculated by dividing the number of correct predictions by the total number of samples.</p>
+      <p>Given data where <em>y</em> is the correct label, <em>ŷ</em> is the predicted output, and <code>y-pred</code> is the model's raw scalar output (before sigmoid) — entries where <em>y</em> and <em>ŷ</em> differ are called <strong>misclassifications</strong>.</p>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Suppose 100 data points, 10 misclassified</div>
+        <p><strong>How many are accurate?</strong> 90.</p>
+        <p><strong>What is the accuracy?</strong> 90/100 = correct predictions / total predictions.</p>
+      </div>
+      <div class="equation">Accuracy = Correct Predictions / Total Predictions</div>
+    </div>
+  </section>
+
+  <!-- QUIZ 5 -->
+  <section class="section-card quiz-card" id="q5">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 5</div>
+        <div class="card-title">Calculating Classification Accuracy</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">Suppose you have 1500 samples, with 750 samples in Class 1 and 750 samples in Class 2. A logistic regression model correctly predicts 450 samples from Class 1 and 350 samples from Class 2. What is the accuracy of the model?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>0.53</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>1.06</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>0.60</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>0.46</li>
+      </ul>
+      <div class="quiz-feedback" id="q5-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        Accuracy = (450 + 350) / 1500 = 800 / 1500 ≈ <strong>0.53</strong>.
+      </div>
+    </div>
+  </section>
+
+  <!-- SKLEARN IMPLEMENTATION -->
+  <section class="section-card" id="s-sklearn-impl">
+    <div class="card-header">
+      <div class="card-icon">🧪</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Scikit-Learn Implementation of Logistic Regression</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="callout-note">
+        <div class="callout-label">📌 From Theory to Code</div>
+        We've now covered the theory behind logistic regression — from intuition to optimization and evaluation. Let's move into implementation and build this model on a real dataset using sklearn.
+      </div>
+      <pre><code># Churn prediction in telecom.
+import numpy as np
+import matplotlib.pyplot as plt</code></pre>
+
+      <pre><code># Downloading the file
+!gdown 1uUt7uL-VuF_5cpodYRiriEwhsldeEp3m</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">Downloading...
+From: https://drive.google.com/uc?id=1uUt7uL-VuF_5cpodYRiriEwhsldeEp3m
+To: /content/churn_logistic.csv
+100% 494k/494k [00:00&lt;00:00, 53.6MB/s]</div></div>
+
+      <pre><code>import pandas as pd
+churn = pd.read_csv("churn_logistic.csv")
+churn.head()</code></pre>
+
+      <p>Let's see how many samples the churn data has:</p>
+      <pre><code>churn.info()</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">&lt;class 'pandas.core.frame.DataFrame'&gt;
+RangeIndex: 5700 entries, 0 to 5699
+Data columns (total 21 columns):
+ #   Column          Non-Null Count  Dtype
+---  ------          --------------  -----
+ 0   Account Length  5700 non-null   int64
+ 1   VMail Message   5700 non-null   int64
+ 2   Day Mins        5700 non-null   float64
+ ...
+ 19  Phone           5700 non-null   object
+ 20  Churn           5700 non-null   int64
+dtypes: float64(8), int64(11), object(2)
+memory usage: 935.3+ KB</div>
+      </div>
+      <p>5700 samples — quite enough for training the logistic regression model.</p>
+
+      <pre><code>churn["Churn"].value_counts()</code></pre>
+      <table>
+        <tr><th>Churn</th><th>Count</th></tr>
+        <tr><td>0</td><td>2850</td></tr>
+        <tr><td>1</td><td>2850</td></tr>
+      </table>
+      <p>The data is <strong>balanced</strong> — equal samples for customers who churned and who did not.</p>
+    </div>
+  </section>
+
+  <!-- EDA -->
+  <section class="section-card" id="s-eda">
+    <div class="card-header">
+      <div class="card-icon">🔍</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Exploratory Data Analysis (EDA)</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Let's check how each feature relates to churn with a quick univariate EDA.</p>
+
+      <pre><code>import seaborn as sns
+sns.boxplot(x='Churn', y='Day Mins', data = churn)</code></pre>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 What Can We See from the Boxplot?</div>
+        Churned customers have a higher median <code>Day Mins</code> than non-churned customers — customers who spend more time on day calls tend to churn. This shows <code>Day Mins</code> is an important feature.
+      </div>
+
+      <p>Now let's check for collinearity with <code>Day Mins</code>:</p>
+      <pre><code>sns.pairplot(data=churn, y_vars=["Day Mins"], x_vars=['Account Length', 'VMail Message' , 'Eve Mins', 'Night Mins',
+       'Intl Mins', 'CustServ Calls', 'Churn', 'Intl Plan', 'VMail Plan',
+       'Day Calls', 'Day Charge', 'Eve Calls', 'Eve Charge', 'Night Calls',
+       'Night Charge', 'Intl Calls', 'Intl Charge'], height=4, aspect=1)
+plt.show()</code></pre>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Which Feature Is Highly Correlated with Day Mins?</div>
+        <code>Day Charge</code> is highly correlated — as <code>Day Mins</code> increases, so does <code>Day Charge</code>. We drop one of them. Notice we're doing the same feature-selection steps as in linear regression, since logistic regression is still training a linear model in log-odds space.
+      </div>
+
+      <p>Now let's check <code>Account Length</code>:</p>
+      <pre><code>sns.boxplot(x = 'Churn', y= 'Account Length', data = churn)</code></pre>
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Is Account Length Relevant?</div>
+        The medians for both classes are quite similar — this feature has no real significance and can be dropped.
+      </div>
+
+      <h3>What EDA Can Do</h3>
+      <ul>
+        <li>Remove useless features</li>
+        <li>Remove highly correlated features</li>
+      </ul>
+      <p>We select a few features (not necessarily the best) to move forward with:</p>
+      <pre><code>cols = ['Day Mins', 'Eve Mins', 'CustServ Calls', 'Intl Plan','VMail Message']
+y = churn["Churn"]
+X = churn[cols]
+X.shape</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">(5700, 5)</div></div>
+    </div>
+  </section>
+
+  <!-- TRAIN TEST SPLIT -->
+  <section class="section-card" id="s-split">
+    <div class="card-header">
+      <div class="card-icon">✂️</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Train Test Split</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>We split the data as done in linear regression: <strong>80%</strong> training, <strong>20%</strong> test. Since we know the importance of validation data, we split the 80% further into <strong>60% training</strong> and <strong>20% cross-validation</strong>.</p>
+
+      <pre><code>from sklearn.model_selection import train_test_split
+
+X_tr_cv, X_test, y_tr_cv, y_test = train_test_split(X, y, test_size=0.2, random_state=4)
+X_train, X_val, y_train, y_val = train_test_split(X_tr_cv, y_tr_cv, test_size=0.25,random_state=4)
+X_train.shape</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">(3420, 5)</div></div>
+
+      <h3>Standardization</h3>
+      <p>The scaler is fit <strong>only</strong> on the training data, then used to transform train, validation and test data.</p>
+      <pre><code>from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+scaler.fit(X_train)
+
+X_train = scaler.transform(X_train)
+X_val = scaler.transform(X_val)
+X_test = scaler.transform(X_test)</code></pre>
+
+      <pre><code># print X_train
+X_train</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">array([[-1.3401872 , -2.29116555, -0.52179332,  2.19011647, -0.5352414 ],
+       [-0.37273287, -1.19169576, -1.15081453, -0.45659672, -0.5352414 ],
+       [ 1.54289097,  0.33984637, -0.52179332, -0.45659672, -0.5352414 ],
+       ...,
+       [ 0.83417443,  0.52694913, -1.15081453, -0.45659672, -0.5352414 ],
+       [-0.58807985, -0.12887496,  1.3652703 , -0.45659672, -0.5352414 ],
+       [-0.45469329,  1.42195611,  0.73624909,  2.19011647,  1.68255781]])</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REGULARIZATION IMPLEMENTATION -->
+  <section class="section-card" id="s-reg-impl">
+    <div class="card-header">
+      <div class="card-icon">⚙️</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Regularization Implementation</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>LogisticRegression Using Scikit-Learn</h3>
+      <ul>
+        <li>L2 regularization is applied by <strong>default</strong>.</li>
+        <li>Sklearn exposes <code>C</code>, the <strong>inverse</strong> of the regularization parameter λ, instead of λ directly.</li>
+      </ul>
+      <div class="callout-note">
+        <div class="callout-label">📌 ElasticNet's l1_ratio</div>
+        Sklearn's <code>l1_ratio</code> hyperparameter ranges 0 ≤ l1_ratio ≤ 1:
+        <ul style="margin-top:6px">
+          <li><code>l1_ratio = 0</code> is equivalent to <code>penalty='l2'</code></li>
+          <li><code>l1_ratio = 1</code> is equivalent to <code>penalty='l1'</code></li>
+          <li>0 &lt; l1_ratio &lt; 1 → combination of L1 and L2</li>
+        </ul>
+      </div>
+
+      <pre><code>from sklearn.linear_model import LogisticRegression
+model = LogisticRegression() # C = 1, lambda = 1
+model.fit(X_train, y_train)</code></pre>
+
+      <p>Let's inspect the weights of each feature (excluding w₀, the intercept):</p>
+      <pre><code>model.coef_</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">array([[ 0.78674301,  0.31084942,  0.94070165,  0.86919545, -0.31809071]])</div></div>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 What Can We Say About CustServ Calls?</div>
+        Feature 3, <code>CustServ Calls</code>, has the highest weight. Since the data is standardized, this large positive value means customers with more customer-service calls are more likely to churn.
+      </div>
+      <p>Next highest weight is <code>Intl Plan</code> — customers on an international plan churn more, suggesting an issue with the company's international plans.</p>
+
+      <pre><code>model.intercept_</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">array([0.05297365])</div></div>
+
+      <pre><code>y_pred=model.predict(X_val)
+print(y_pred)</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">[0 0 1 ... 0 0 0]</div></div>
+      <p>We get the class labels for each input using <code>predict()</code>.</p>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 predict() vs predict_proba()</div>
+        <code>predict()</code> gives only the final class labels. But logistic regression internally works with probabilities first, and those probabilities often provide deeper insight into model confidence.
+      </div>
+    </div>
+  </section>
+
+  <!-- PREDICT PROBA -->
+  <section class="section-card" id="s-predictproba">
+    <div class="card-header">
+      <div class="card-icon">🎲</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">predict_proba Function from Sklearn</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p><code>predict_proba()</code> returns the class probabilities for each data point. It accepts the input data and returns an array of lists containing the class probabilities, ordered by class label.</p>
+
+      <pre><code>y_pred_prob=model.predict_proba(X_val)
+print(y_pred_prob)</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">[[0.70985217 0.29014783]
+ [0.8681417  0.1318583 ]
+ [0.45621812 0.54378188]
+ ...
+ [0.95273524 0.04726476]
+ [0.60128439 0.39871561]
+ [0.81202669 0.18797331]]</div>
+      </div>
+      <p>Each row is the probability of that data point being in each class — and the probabilities in a row always add up to 1.</p>
+
+      <p>Checking accuracy score on train and validation data:</p>
+      <pre><code>print(f'Train Accuracy:{model.score(X_train,y_train)}, Val Accuracy:{model.score(X_val,y_val) }' )</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">Train Accuracy:0.7564327485380117, Val Accuracy:0.7578947368421053</div></div>
+      <p>Both train and validation accuracy are quite low. Let's tune the hyperparameter C = 1/λ to improve performance.</p>
+    </div>
+  </section>
+
+  <!-- SKLEARN PIPELINE -->
+  <section class="section-card" id="s-pipeline">
+    <div class="card-header">
+      <div class="card-icon">🔗</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Sklearn Pipeline</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>A <code>Pipeline</code> chains multiple processing steps into a single scikit-learn estimator, with the same <code>fit</code>, <code>predict</code> and <code>score</code> methods as any other estimator.</p>
+
+      <pre><code>from sklearn.pipeline import make_pipeline
+train_scores = []
+val_scores = []
+scaler = StandardScaler()
+for la in np.arange(0.01, 12000.0, 100): # range of values of Lambda
+  scaled_lr = make_pipeline( scaler, LogisticRegression(C=1/la))
+  scaled_lr.fit(X_train, y_train)
+  train_score = scaled_lr.score(X_train, y_train)
+  val_score = scaled_lr.score(X_val, y_val)
+  train_scores.append(train_score)
+  val_scores.append(val_score)</code></pre>
+
+      <ol>
+        <li>Initialize the range of values for λ.</li>
+        <li>For each value of λ, create a pipeline of standardization + logistic regression.</li>
+        <li>Fit the training data to the model.</li>
+        <li>Record the train and validation scores.</li>
+      </ol>
+      <div class="callout-note">
+        <div class="callout-label">📌 Note</div>
+        The default scoring metric here is <strong>Accuracy</strong>.
+      </div>
+
+      <pre><code>len(val_scores)</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">120</div></div>
+
+      <p>Let's plot the graph and pick the λ that gives the best validation score:</p>
+      <pre><code>plt.figure()
+plt.plot(list(np.arange(0.01, 12000.0, 100)), train_scores, label="train")
+plt.plot(list(np.arange(0.01, 12000.0, 100)), val_scores, label="val")
+plt.legend(loc='lower right')
+
+plt.xlabel("Regularization Parameter(λ)")
+plt.ylabel("Accuracy")
+plt.grid()
+plt.show()</code></pre>
+      <p>Validation accuracy rises to a peak and then decreases. As regularization increases, accuracy keeps decreasing since the model moves toward <strong>underfitting</strong>.</p>
+
+      <h3>Picking the Best λ</h3>
+      <p>We pick the λ where the validation score is maximum:</p>
+      <pre><code>np.argmax(val_scores)</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">np.int64(23)</div></div>
+      <pre><code>val_scores[23]</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">0.762280701754386</div></div>
+      <p>Validation score is maximum (76.2%) at index 23, so our best λ is:</p>
+      <div class="equation">l_best = 0.01 + 23 × 100</div>
+      <p>(since we step by 100 in each iteration). Let's train the final model with this best λ:</p>
+      <pre><code>scaled_lr = make_pipeline( scaler, LogisticRegression(C=1/l_best))
+scaled_lr.fit(X_train, y_train)</code></pre>
+
+      <p>Now let's test this best model on the held-out test data:</p>
+      <pre><code>test_score = scaled_lr.score(X_test,y_test)
+print(test_score)</code></pre>
+      <div class="output-wrap"><div class="output-label">Output</div><div class="output-block">0.7684210526315789</div></div>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 On the Scaler in the Pipeline</div>
+        The scaler performs scaling first, then logistic regression runs. It uses the training data's mean and standard deviation during fit, and continues using those same statistics for validation and test data — since we only call <code>.score()</code> on them, never <code>.fit()</code>.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ 6 -->
+  <section class="section-card quiz-card" id="q6">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 6</div>
+        <div class="card-title">Choosing the Best Regularization Parameter</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">When using different values of λ, the model produces the following results. Which is the best value of λ?</div>
+      <table>
+        <tr><th>λ</th><th>Train Accuracy</th><th>Test Accuracy</th></tr>
+        <tr><td>1</td><td>0.90</td><td>0.78</td></tr>
+        <tr><td>0.1</td><td>0.98</td><td>0.99</td></tr>
+        <tr><td>0.01</td><td>0.93</td><td>0.97</td></tr>
+      </table>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>1</li>
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>0.1</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>0.01</li>
+      </ul>
+      <div class="quiz-feedback" id="q6-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        Test accuracy is maximum when λ = 0.1, and the gap between train and test accuracy is very small — showing the model neither overfits nor underfits at this value. At λ = 1, both accuracies drop and the train-test gap widens, a sign of underfitting from too much regularization.
+      </div>
+    </div>
+  </section>
+
+  <!-- IMPACT OF OUTLIERS -->
+  <section class="section-card" id="s-outliers">
+    <div class="card-header">
+      <div class="card-icon">⚠️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Impact of Outliers</div>
+        <div class="card-duration">⏱ 3 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <h3>Case I — Outlier on the Correct Side</h3>
+      <p>Here ŷ = σ(zᵢ), and since the point sits on the correct side of the boundary, the loss is very small — the impact of this outlier is <strong>very low</strong>.</p>
+
+      <h3>Case II — Outlier on the Wrong Side</h3>
+      <p>Say zᵢ = −4.3, so ŷ becomes 0.01. Then:</p>
+      <div class="equation">L = −log(0.01) ≈ 4.6</div>
+      <p>This is a very large loss value — so the impact of this outlier on training is <strong>very high</strong>. It pulls the decision boundary toward itself in order to reduce that loss.</p>
+      <p>The best approach is to find such outliers and remove them, to get more accurate and stable results.</p>
+    </div>
+  </section>
+
+  <!-- QUIZ 7 -->
+  <section class="section-card quiz-card" id="q7">
+    <div class="card-header">
+      <div class="card-icon">❓</div>
+      <div class="card-meta">
+        <div class="card-type">Quiz 7</div>
+        <div class="card-title">Effect of Outliers on the Decision Boundary</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="quiz-question">How do outliers affect the classification boundaries in logistic regression?</div>
+      <ul class="quiz-options">
+        <li class="quiz-option" data-correct="true"><span class="quiz-circle"></span>Outliers shift the classification boundaries closer to the outlier values.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Outliers have no effect on the classification boundaries.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Outliers widen the gap between the classification boundaries.</li>
+        <li class="quiz-option" data-correct="false"><span class="quiz-circle"></span>Outliers make the classification boundaries more sensitive to minor changes.</li>
+      </ul>
+      <div class="quiz-feedback" id="q7-feedback"></div>
+      <div class="callout-note" style="margin-top:14px">
+        <div class="callout-label">💡 Explanation</div>
+        When an outlier lands on the wrong side of the boundary, its log-loss becomes very large (e.g. ≈4.6). During gradient descent, this large loss contributes a strong gradient that pulls the decision boundary toward that point to reduce its loss.
+      </div>
+    </div>
+  </section>
+
+  <!-- WRAP UP -->
+  <section class="section-card" id="s-wrap">
+    <div class="card-header">
+      <div class="card-icon">✅</div>
+      <div class="card-meta">
+        <div class="card-type">Summary</div>
+        <div class="card-title">Wrapping Up</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Everything we've seen so far assumes binary classification — only two classes. But many real-world problems involve more than two possible outcomes.</p>
+      <div class="summary-grid">
+        <div class="summary-item">Classification predicts discrete classes, not continuous values</div>
+        <div class="summary-item">A hyperplane z = w₀ + w₁x₁ + … separates classes</div>
+        <div class="summary-item">Sigmoid squashes z ∈ (−∞,∞) into a probability ∈ (0,1)</div>
+        <div class="summary-item">A threshold (not always 0.5) converts probability → class label</div>
+        <div class="summary-item">Log-loss: −y·log(ŷ) − (1−y)·log(1−ŷ)</div>
+        <div class="summary-item">Log-loss is minimized via gradient descent</div>
+        <div class="summary-item">L2 regularization (parameter C = 1/λ) prevents overfitting</div>
+        <div class="summary-item">Accuracy = correct predictions / total predictions</div>
+        <div class="summary-item"><code>predict_proba</code> exposes the underlying probabilities</div>
+        <div class="summary-item">Sklearn pipelines chain scaling + model into one estimator</div>
+        <div class="summary-item">Best λ maximizes validation accuracy while keeping train/test close</div>
+        <div class="summary-item">Outliers on the wrong side of the boundary distort it — remove them</div>
+      </div>
+      <blockquote style="border-left:2px solid var(--accent); padding:10px 14px; margin:18px 0 0; background:rgba(34,211,238,.05); border-radius:0 7px 7px 0; font-family:'Lora',serif; font-style:italic; color:var(--highlight); font-size:14px;">
+        That is what we'll tackle in the upcoming lecture: multi-class classification, followed by evaluating classification models with accuracy, precision, recall, and more.
+      </blockquote>
+    </div>
+  </section>
+
+</main>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script>
+  // ── QUIZ ───────────────────────────────────────────
+  document.querySelectorAll('.quiz-options').forEach(list => {
+    list.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const card = list.closest('.section-card');
+        if (card.dataset.answered) return;
+        card.dataset.answered = '1';
+        const isCorrect = opt.dataset.correct === 'true';
+        const feedback = list.closest('.card-body').querySelector('.quiz-feedback');
+        list.querySelectorAll('.quiz-option').forEach(o => { o.style.cursor = 'default'; });
+        if (isCorrect) {
+          opt.classList.add('selected-correct');
+          opt.querySelector('.quiz-circle').textContent = '✓';
+          feedback.textContent = '✅ Correct.';
+          feedback.className = 'quiz-feedback correct';
+        } else {
+          opt.classList.add('selected-wrong');
+          opt.querySelector('.quiz-circle').textContent = '✗';
+          feedback.textContent = '❌ Not quite — check the explanation below.';
+          feedback.className = 'quiz-feedback wrong';
+          list.querySelectorAll('.quiz-option[data-correct="true"]').forEach(o => {
+            o.classList.add('reveal-correct');
+            o.querySelector('.quiz-circle').textContent = '✓';
+          });
+        }
+      });
+    });
+  });
+
+  // ── SCROLL / PROGRESS ─────────────────────────────
+  const sections    = document.querySelectorAll('.section-card');
+  const navItems    = document.querySelectorAll('.nav-item');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct  = document.getElementById('progress-pct');
+  const visited = new Set();
+
+  function onScroll() {
+    let current = '';
+    sections.forEach(sec => {
+      if (sec.getBoundingClientRect().top <= 120) { current = sec.id; visited.add(sec.id); }
+    });
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.target === current);
+      if (visited.has(item.dataset.target)) item.classList.add('visited');
+    });
+    const pct = Math.round((visited.size / sections.length) * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent  = pct + '%';
+    document.getElementById('back-top').classList.toggle('visible', window.scrollY > 400);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // ── MOBILE SIDEBAR ─────────────────────────────────
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('active');
+  }
+  document.querySelectorAll('.nav-item a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth <= 768) toggleSidebar(); });
+  });
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/logistic-regression" target="_blank" rel="noopener">github.com/scaler-content/logistic-regression</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

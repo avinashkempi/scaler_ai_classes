@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hierarchical clustering post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFFCF3;
+    --bg-soft:#FFF6DC;
+    --card:#FFFEFA;
+    --ink:#221A08;
+    --ink-soft:#5B4B22;
+    --ink-faint:#8A7A48;
+    --line:#EAD98A;
+    --line-soft:#F1E4B0;
+    --yellow:#F5C518;
+    --yellow-deep:#C99000;
+    --yellow-ink:#4A3600;
+    --amber:#8C5A00;
+    --good:#3F7D20;
+    --good-bg:#EAF3D9;
+    --good-line:#C4DB9E;
+    --bad:#AA3B1F;
+    --bad-bg:#FBE7DD;
+    --bad-line:#EEC1AA;
+    --code-bg:#2A2004;
+    --code-ink:#F3E7B4;
+    --shadow: 0 1px 0 rgba(34,26,8,0.05);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.7;
+    font-size:17px;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--yellow); color:var(--yellow-ink);}
+  a{color:var(--amber);}
+  img{max-width:100%; display:block; border-radius:10px; border:1px solid var(--line);}
+  h1,h2,h3,h4{font-family:var(--serif); color:var(--ink); font-weight:600; line-height:1.2; margin:0 0 0.5em;}
+  p{margin:0 0 1.1em;}
+  code, pre{font-family:var(--mono);}
+
+  /* ---------- Layout shell ---------- */
+  .shell{display:flex; max-width:1200px; margin:0 auto; position:relative;}
+  .rail{
+    width:230px; flex-shrink:0; position:sticky; top:0; height:100vh;
+    padding:2.5rem 0 2rem 2.2rem;
+    display:flex; flex-direction:column;
+  }
+  .rail-brand{font-family:var(--serif); font-size:15px; font-weight:600; color:var(--ink); margin-bottom:2rem; letter-spacing:0.01em;}
+  .rail-brand .dot{color:var(--yellow-deep);}
+  .spine{position:relative; padding-left:20px; overflow-y:auto; flex:1; margin:0; padding-right:0.5rem;}
+  .spine::before{content:""; position:absolute; left:5px; top:6px; bottom:6px; width:1px; background:var(--line);}
+  .spine a{
+    display:block; position:relative; text-decoration:none; color:var(--ink-faint);
+    font-size:13px; padding:6px 0 6px 14px; transition:color .15s ease;
+  }
+  .spine a::before{
+    content:""; position:absolute; left:-19px; top:50%; transform:translateY(-50%);
+    width:9px; height:9px; border-radius:50%; background:var(--bg); border:1.5px solid var(--line); transition:all .15s ease;
+  }
+  .spine a:hover{color:var(--ink);}
+  .spine a.active{color:var(--amber); font-weight:600;}
+  .spine a.active::before{background:var(--yellow); border-color:var(--yellow-deep); box-shadow:0 0 0 3px rgba(245,197,24,0.25);}
+
+  .topbar{display:none;}
+
+  main{flex:1; min-width:0; padding:0 3rem 6rem 3rem;}
+  .content{max-width:720px; margin:0 auto;}
+
+  /* ---------- Hero ---------- */
+  .hero{padding:4.5rem 0 2.5rem; max-width:720px; margin:0 auto;}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:12px; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--amber); background:var(--yellow); padding:5px 12px; border-radius:20px; margin-bottom:1.4rem;
+  }
+  .hero h1{font-size:clamp(2.1rem, 4vw, 3.1rem); letter-spacing:-0.01em; max-width:11ch;}
+  .hero .lede{font-size:1.2rem; color:var(--ink-soft); max-width:56ch; margin-top:1rem;}
+  .hero-merge{margin:2.5rem 0 1rem;}
+
+  /* ---------- Section scaffolding ---------- */
+  section{padding:3.2rem 0; border-top:1px solid var(--line-soft);}
+  section:first-of-type{border-top:none;}
+  .kicker{font-family:var(--mono); font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--yellow-deep); margin-bottom:0.6rem; font-weight:500;}
+  h2{font-size:1.7rem;}
+  h3{font-size:1.25rem; margin-top:1.8rem;}
+  .standfirst{font-size:1.05rem; color:var(--ink-soft);}
+
+  /* ---------- Cards / callouts ---------- */
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1.5rem 1.7rem; margin:1.5rem 0; box-shadow:var(--shadow);}
+  .callout{
+    background:var(--bg-soft); border:1px solid var(--line); border-left:4px solid var(--yellow-deep);
+    border-radius:10px; padding:1.1rem 1.4rem; margin:1.6rem 0; font-size:0.98rem;
+  }
+  .callout strong{color:var(--amber);}
+  figure{margin:1.6rem 0;}
+  figcaption{font-size:0.87rem; color:var(--ink-faint); margin-top:0.6rem; text-align:center;}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:1.4rem 0; font-size:0.93rem; background:var(--card); border-radius:10px; overflow:hidden; border:1px solid var(--line);}
+  th, td{padding:10px 14px; text-align:left; border-bottom:1px solid var(--line-soft); vertical-align:top;}
+  th{background:var(--bg-soft); font-weight:600; color:var(--amber); font-family:var(--sans); font-size:0.82rem; text-transform:uppercase; letter-spacing:0.03em;}
+  tr:last-child td{border-bottom:none;}
+
+  /* ---------- Formula card ---------- */
+  .formula{
+    background:var(--code-bg); color:var(--code-ink); font-family:var(--mono);
+    border-radius:10px; padding:1rem 1.3rem; margin:1rem 0; font-size:1.02rem; overflow-x:auto;
+  }
+  .formula .vars{margin-top:0.6rem; font-size:0.82rem; color:#C9B978; font-family:var(--sans);}
+
+  /* ---------- Details / code toggle ---------- */
+  details.code-toggle{margin:1.2rem 0; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--card);}
+  details.code-toggle summary{
+    cursor:pointer; padding:0.7rem 1.1rem; font-size:0.88rem; font-weight:500; color:var(--amber);
+    background:var(--bg-soft); list-style:none; display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.code-toggle summary::-webkit-details-marker{display:none;}
+  details.code-toggle summary::before{content:"▸"; font-size:0.75rem; transition:transform .15s;}
+  details.code-toggle[open] summary::before{transform:rotate(90deg);}
+  details.code-toggle pre{margin:0; padding:1rem 1.2rem; background:var(--code-bg); color:var(--code-ink); font-size:0.83rem; overflow-x:auto; line-height:1.6;}
+  details.code-toggle .out-label{font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-faint); padding:0.6rem 1.2rem 0; background:var(--card);}
+
+  /* ---------- Quiz ---------- */
+  .quiz{background:var(--card); border:1.5px solid var(--yellow-deep); border-radius:14px; padding:1.6rem 1.8rem; margin:1.8rem 0;}
+  .quiz-tag{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:var(--yellow-deep); font-weight:600; margin-bottom:0.6rem;}
+  .quiz-q{font-family:var(--serif); font-size:1.15rem; font-weight:600; margin-bottom:1rem;}
+  .quiz-choices{display:flex; flex-direction:column; gap:0.6rem;}
+  .quiz-choice{
+    text-align:left; border:1px solid var(--line); background:var(--bg); border-radius:9px; padding:0.7rem 1rem;
+    font-size:0.96rem; font-family:var(--sans); cursor:pointer; transition:all .12s ease; color:var(--ink);
+  }
+  .quiz-choice:hover{border-color:var(--yellow-deep); background:var(--bg-soft);}
+  .quiz-choice.correct{background:var(--good-bg); border-color:var(--good-line); color:#2C5813; font-weight:600;}
+  .quiz-choice.incorrect{background:var(--bad-bg); border-color:var(--bad-line); color:#7A2712; font-weight:600;}
+  .quiz-choice[disabled]{cursor:default;}
+  .quiz-feedback{margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--line); font-size:0.95rem; color:var(--ink-soft); display:none;}
+  .quiz-feedback.show{display:block;}
+  .quiz-feedback .verdict{font-weight:700; display:block; margin-bottom:0.4rem;}
+  .quiz-feedback .verdict.right{color:var(--good);}
+  .quiz-feedback .verdict.wrong{color:var(--bad);}
+
+  /* ---------- Reveal button (scenario) ---------- */
+  .reveal-btn{
+    font-family:var(--sans); font-weight:600; font-size:0.92rem; color:var(--yellow-ink); background:var(--yellow);
+    border:none; border-radius:8px; padding:0.6rem 1.1rem; cursor:pointer; transition:background .15s;
+  }
+  .reveal-btn:hover{background:var(--yellow-deep); color:#fff;}
+  .reveal-panel{display:none; margin-top:1rem;}
+  .reveal-panel.show{display:block;}
+
+  /* ---------- Linkage tabs ---------- */
+  .tabs{display:flex; flex-wrap:wrap; gap:0.5rem; margin:1.5rem 0 0;}
+  .tab-btn{
+    font-family:var(--sans); font-size:0.9rem; font-weight:600; color:var(--ink-soft); background:var(--bg-soft);
+    border:1px solid var(--line); border-radius:20px; padding:0.5rem 1.1rem; cursor:pointer; transition:all .12s;
+  }
+  .tab-btn:hover{border-color:var(--yellow-deep);}
+  .tab-btn.active{background:var(--yellow); color:var(--yellow-ink); border-color:var(--yellow-deep);}
+  .tab-panel{display:none; margin-top:1.4rem;}
+  .tab-panel.active{display:block; animation:fadein .2s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+  .char-list{margin:0.8rem 0 0; padding-left:1.2rem;}
+  .char-list li{margin-bottom:0.35rem; color:var(--ink-soft);}
+
+  /* ---------- Toy walkthrough stepper ---------- */
+  .stepper{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1.6rem; margin:1.6rem 0;}
+  .stepper-grid{display:grid; grid-template-columns:1fr 1fr; gap:1.6rem; align-items:center;}
+  .stepper-controls{display:flex; align-items:center; justify-content:space-between; margin-top:1.2rem;}
+  .step-dots{display:flex; gap:6px;}
+  .step-dot{width:8px; height:8px; border-radius:50%; background:var(--line);}
+  .step-dot.active{background:var(--yellow-deep);}
+  .step-btn{
+    font-family:var(--sans); font-weight:600; font-size:0.85rem; color:var(--amber); background:none;
+    border:1px solid var(--line); border-radius:7px; padding:0.4rem 0.9rem; cursor:pointer;
+  }
+  .step-btn:hover{background:var(--bg-soft);}
+  .step-btn:disabled{opacity:0.35; cursor:not-allowed;}
+  .step-label{font-family:var(--serif); font-weight:600; font-size:1.05rem; margin-bottom:0.4rem;}
+  .step-desc{font-size:0.94rem; color:var(--ink-soft); min-height:64px;}
+
+  /* ---------- Cut-height explorer ---------- */
+  .explorer{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1.6rem 1.8rem; margin:1.6rem 0;}
+  .explorer-readout{display:flex; align-items:baseline; gap:1.6rem; margin-bottom:0.8rem; flex-wrap:wrap;}
+  .explorer-readout .big{font-family:var(--serif); font-size:2.2rem; font-weight:600; color:var(--amber);}
+  .explorer-readout .lbl{font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-faint);}
+  input[type=range]{width:100%; accent-color:var(--yellow-deep); margin:0.8rem 0;}
+  .bars{display:flex; align-items:flex-end; gap:10px; height:140px; margin-top:1.2rem; border-bottom:1px solid var(--line);}
+  .bar-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
+  .bar{width:100%; max-width:42px; background:var(--line); border-radius:4px 4px 0 0; transition:all .2s ease;}
+  .bar.active{background:var(--yellow-deep);}
+  .bar-val{font-size:0.72rem; color:var(--ink-faint); margin-bottom:4px;}
+  .bar-tick{font-size:0.72rem; color:var(--ink-faint); margin-top:6px; font-family:var(--mono);}
+
+  /* ---------- Real world grid ---------- */
+  .apps-grid{display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1.4rem;}
+  .app-card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:1.2rem 1.3rem;}
+  .app-card .tag{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--yellow-deep); font-weight:600;}
+  .app-card p{margin:0.4rem 0 0; font-size:0.93rem; color:var(--ink-soft);}
+
+  /* ---------- Visualizer embed ---------- */
+  .viz-embed{margin:1.6rem 0; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--card);}
+  .viz-embed-head{padding:0.9rem 1.3rem; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;}
+  .viz-embed-head .t{font-weight:600; font-size:0.95rem;}
+  .viz-embed-head a{font-size:0.82rem; text-decoration:none; color:var(--amber); font-weight:600;}
+  .viz-embed iframe{width:100%; height:560px; border:none; display:block; background:#fff;}
+
+  /* ---------- Comparison toggle ---------- */
+  .vs-wrap{display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1.2rem;}
+  .vs-card{border:1px solid var(--line); border-radius:12px; padding:1.2rem 1.3rem; background:var(--card);}
+  .vs-card h4{margin:0 0 0.5rem; font-size:1.02rem;}
+  .vs-card.win{border-color:var(--yellow-deep); background:var(--bg-soft);}
+  .pill{display:inline-block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; background:var(--yellow); color:var(--yellow-ink); padding:2px 9px; border-radius:12px; margin-bottom:0.5rem;}
+
+  /* ---------- Wrap up ---------- */
+  .recap-list{list-style:none; margin:1.4rem 0 0; padding:0; display:flex; flex-direction:column; gap:0.9rem;}
+  .recap-list li{display:flex; gap:0.9rem; align-items:flex-start; font-size:0.98rem;}
+  .recap-num{flex-shrink:0; width:26px; height:26px; border-radius:50%; background:var(--yellow); color:var(--yellow-ink); font-weight:700; font-size:0.8rem; display:flex; align-items:center; justify-content:center; font-family:var(--mono);}
+
+  footer{
+    text-align:center; padding:3rem 1rem 4rem; font-family:var(--serif); color:var(--ink-faint); font-size:0.95rem;
+    border-top:1px solid var(--line-soft); max-width:720px; margin:0 auto;
+  }
+
+  @media (max-width:960px){
+    .rail{display:none;}
+    .topbar{
+      display:flex; position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--line);
+      padding:0.8rem 1.2rem; align-items:center; justify-content:space-between; gap:1rem;
+    }
+    .topbar .brand{font-family:var(--serif); font-weight:600; font-size:0.95rem;}
+    .topbar select{
+      font-family:var(--sans); font-size:0.85rem; border:1px solid var(--line); border-radius:8px; padding:0.4rem 0.6rem;
+      background:var(--card); color:var(--ink); max-width:52vw;
+    }
+    main{padding:0 1.2rem 4rem;}
+    .hero{padding:2.2rem 0 1.5rem;}
+    .stepper-grid{grid-template-columns:1fr;}
+    .apps-grid{grid-template-columns:1fr;}
+    .vs-wrap{grid-template-columns:1fr;}
+    .viz-embed iframe{height:460px;}
+  }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Clustering · Hierarchical clustering and dendrograms</span><span class="pn"><a href="../K-means-and-K-means-Clustering/" title="Clustering · K-means limits and K-means++">← Prev</a><a href="../DBSCAN/" title="Clustering · DBSCAN density-based clustering">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div class="topbar">
+  <span class="brand">Hierarchical clustering post read</span>
+  <select id="mobile-nav" aria-label="Jump to section"></select>
+</div>
+
+<div class="shell">
+  <nav class="rail" aria-label="Section navigation">
+    <div class="rail-brand">Hierarchical clustering<span class="dot">.</span></div>
+    <ol class="spine" id="spine"></ol>
+  </nav>
+
+  <main>
+    <div class="content">
+
+      <div class="hero">
+        <span class="eyebrow">Unsupervised learning</span>
+        <h1>Hierarchical clustering</h1>
+        <p class="lede">A way to group data by repeatedly merging the most similar things together — no centroids, and no need to decide how many groups you want before you start.</p>
+      </div>
+
+      <section id="intro">
+        <div class="kicker">Where this picks up</div>
+        <h2>A different starting point for grouping data</h2>
+        <p>Centroid-based clustering methods like K-Means work by picking centers and assigning each point to the nearest one. That approach is fast, but it comes with a catch: it assumes clusters are roughly round, and it forces you to decide up front how many groups, <em>K</em>, you're looking for. Neither assumption holds for every dataset — crescent-shaped groups, rings, and uneven densities all break the "assign to nearest center" idea.</p>
+        <p>Hierarchical (agglomerative) clustering takes a completely different approach: <strong>no centers, no fixed K upfront — just repeated merging.</strong> Instead of finding centers and assigning points to the nearest one, it starts by treating every point as its own tiny cluster, then repeatedly joins the two most similar clusters together, one pair at a time, until everything has merged into a single group. "Agglomerative" simply means <em>building up by merging.</em></p>
+        <div class="callout"><strong>The core question this answers:</strong> what's a way to group similar data points without relying on the idea of a "center" at all?</div>
+      </section>
+
+      <section id="big-idea">
+        <div class="kicker">Section 1</div>
+        <h2>A different way to think about clustering</h2>
+        <p>The core idea, in one flow: start with every point alone, repeatedly merge the closest pair of clusters, and keep going until you've built a full hierarchy — a tree of merges from individual points up to one giant cluster.</p>
+        <figure>
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/382/original/Screenshot_2026-08-07_220549.png?1786125047" alt="Diagram showing the agglomerative clustering flow: individual points progressively merge into larger clusters until one cluster remains.">
+          <figcaption>Agglomerative clustering builds a hierarchy by merging, rather than assigning points to fixed centers.</figcaption>
+        </figure>
+        <div class="callout"><strong>Quick check:</strong> do you have to decide the number of clusters, K, before you start — the way you do with K-Means? <strong>No.</strong> That's the central payoff of this approach, and it becomes much clearer once you see a dendrogram later in this article.</div>
+      </section>
+
+      <section id="mechanics">
+        <div class="kicker">Section 2</div>
+        <h2>Agglomerative mechanics: a toy walkthrough</h2>
+        <p>Before working with real customer data, it helps to watch the merging happen on a tiny, obvious dataset: six points arranged as three clearly-paired dots.</p>
+        <figure>
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/385/original/Screenshot_2026-08-07_220557.png?1786125109" alt="Scatter plot of six points labeled P0 through P5, arranged as three visually separated pairs.">
+          <figcaption>Toy dataset: six points, three obvious pairs.</figcaption>
+        </figure>
+        <details class="code-toggle">
+          <summary>View the code that generated this dataset</summary>
+          <pre>toy_points = np.array([
+    [1.0, 1.0],   # P0
+    [1.2, 0.9],   # P1
+    [5.0, 5.0],   # P2
+    [5.3, 4.8],   # P3
+    [1.0, 5.0],   # P4
+    [1.3, 5.2],   # P5
+])</pre>
+        </details>
+
+        <h3>The algorithm, in four steps</h3>
+        <p>Step through it below using the exact toy coordinates above.</p>
+
+        <div class="stepper" id="toy-stepper">
+          <div class="stepper-grid">
+            <svg viewBox="0 0 260 240" width="100%" role="img" aria-label="Animated scatter plot showing points merging into clusters step by step" id="toy-svg">
+              <line x1="20" y1="20" x2="20" y2="220" stroke="#EAD98A" stroke-width="1"/>
+              <line x1="20" y1="220" x2="240" y2="220" stroke="#EAD98A" stroke-width="1"/>
+            </svg>
+            <div>
+              <div class="step-label" id="step-label">Step 1 — Start</div>
+              <div class="step-desc" id="step-desc">Every point is its own cluster. Six points, six clusters.</div>
+            </div>
+          </div>
+          <div class="stepper-controls">
+            <button class="step-btn" id="step-prev">← Back</button>
+            <div class="step-dots" id="step-dots"></div>
+            <button class="step-btn" id="step-next">Next →</button>
+          </div>
+        </div>
+
+        <p>On nicely separated, spherical blobs like this one, agglomerative clustering usually agrees with K-Means. The real differences show up on messier data — and on how much control you get over <em>how</em> clusters merge, which is exactly what linkage criteria decide.</p>
+      </section>
+
+      <section id="quiz1"></section>
+
+      <section id="linkage">
+        <div class="kicker">Section 3</div>
+        <h2>Linkage criteria and how they compare</h2>
+        <p>"Merge the two closest clusters" sounds simple enough — but once a cluster has more than one point in it, how do you measure the distance <em>between two clusters</em>? That choice is called the <strong>linkage criterion</strong>, and it determines the order in which clusters merge, which can dramatically change the final structure.</p>
+
+        <table>
+          <thead><tr><th>Linkage</th><th>Distance between two clusters is defined as</th></tr></thead>
+          <tbody>
+            <tr><td>Single</td><td>the distance between their closest pair of points</td></tr>
+            <tr><td>Complete</td><td>the distance between their farthest pair of points</td></tr>
+            <tr><td>Average</td><td>the average distance across all pairs of points</td></tr>
+            <tr><td>Ward</td><td>the increase in total within-cluster variance after merging</td></tr>
+          </tbody>
+        </table>
+
+        <p>To see the difference clearly, picture two natural blobs of points connected by a thin "bridge" of noisy points running between them:</p>
+        <figure>
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/387/original/Screenshot_2026-08-07_220640.png?1786125156" alt="Four scatter plots comparing single, complete, average, and Ward linkage results on two blobs connected by a noisy bridge, part one.">
+        </figure>
+        <figure>
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/389/original/Screenshot_2026-08-07_220650.png?1786125201" alt="Four scatter plots comparing single, complete, average, and Ward linkage results on two blobs connected by a noisy bridge, part two.">
+          <figcaption>Same two blobs, same noisy bridge — four different linkage rules, four different outcomes.</figcaption>
+        </figure>
+
+        <p>The only thing that changes between these four methods is <strong>how the distance between two clusters is defined.</strong> Explore each one below.</p>
+
+        <div class="tabs" role="tablist" id="linkage-tabs">
+          <button class="tab-btn active" data-tab="single">Single</button>
+          <button class="tab-btn" data-tab="complete">Complete</button>
+          <button class="tab-btn" data-tab="average">Average</button>
+          <button class="tab-btn" data-tab="ward">Ward</button>
+        </div>
+
+        <div class="tab-panel active" data-panel="single">
+          <p><strong>Single linkage (nearest neighbor)</strong> defines the distance between two clusters as the smallest distance between any pair of points, one from each cluster.</p>
+          <div class="formula">D(A,B) = min<sub>a∈A, b∈B</sub> d(a,b)<div class="vars">A and B are two clusters; d(a,b) is the distance — usually Euclidean — between points a and b.</div></div>
+          <p>Since it only cares about the single closest pair of points, even one "bridge" of nearby observations is enough to justify merging two otherwise large, separate clusters.</p>
+          <ul class="char-list">
+            <li>Produces elongated, chain-like clusters</li>
+            <li>Sensitive to noise and outliers</li>
+            <li>Can merge clusters earlier than expected</li>
+          </ul>
+          <figure><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/391/original/Screenshot_2026-08-07_220700.png?1786125272" alt="Scatter plot of the noisy-bridge dataset clustered with single linkage, showing a long chain-like cluster."></figure>
+          <p><strong>Retail analogy:</strong> two shopper groups count as "close" as soon as one customer from each group behaves similarly — even if the rest of the customers are very different, the groups merge. This often creates one large, stretched-out loyalty tier connected by only a few similar shoppers.</p>
+        </div>
+
+        <div class="tab-panel" data-panel="complete">
+          <p><strong>Complete linkage (farthest neighbor)</strong> measures the distance between two clusters using the largest distance between any pair of points.</p>
+          <div class="formula">D(A,B) = max<sub>a∈A, b∈B</sub> d(a,b)</div>
+          <p>Instead of looking for the closest points, complete linkage ensures that <em>every</em> point in both clusters is reasonably close before allowing a merge.</p>
+          <ul class="char-list">
+            <li>Produces compact, well-separated clusters</li>
+            <li>Resistant to the chaining effect seen in single linkage</li>
+            <li>Can split naturally large clusters into multiple smaller ones</li>
+          </ul>
+          <figure><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/393/original/Screenshot_2026-08-07_220708.png?1786125371" alt="Scatter plot of the noisy-bridge dataset clustered with complete linkage, showing tight, compact clusters."></figure>
+          <p><strong>Retail analogy:</strong> complete linkage is much stricter — two groups only merge when even the most different customers across them are still reasonably similar. The result is smaller, tighter, more clearly separated loyalty tiers.</p>
+        </div>
+
+        <div class="tab-panel" data-panel="average">
+          <p><strong>Average linkage</strong> computes the average distance between every pair of points across the two clusters.</p>
+          <div class="formula">D(A,B) = 1 / (|A|·|B|) · Σ<sub>a∈A</sub> Σ<sub>b∈B</sub> d(a,b)<div class="vars">|A| and |B| are the number of points in each cluster.</div></div>
+          <p>Rather than focusing only on the nearest or farthest pair, average linkage considers the overall relationship between the two groups.</p>
+          <ul class="char-list">
+            <li>More balanced than single or complete linkage</li>
+            <li>Less affected by outliers</li>
+            <li>Often produces intuitive clusters on real-world data</li>
+          </ul>
+          <figure><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/395/original/Screenshot_2026-08-07_220717.png?1786125438" alt="Scatter plot of the noisy-bridge dataset clustered with average linkage, showing balanced clusters."></figure>
+          <p><strong>Retail analogy:</strong> average linkage considers the typical similarity across all customers in both groups. Instead of focusing on extreme cases, it weighs the overall relationship — a good compromise between single and complete linkage.</p>
+        </div>
+
+        <div class="tab-panel" data-panel="ward">
+          <p><strong>Ward linkage</strong> takes a different approach entirely. Rather than directly measuring distances between clusters, it asks: <em>if we merge these two clusters, how much will the total within-cluster variance increase?</em> The pair causing the smallest increase in variance gets merged.</p>
+          <div class="formula">Δ(A,B) = (|A|·|B| / (|A|+|B|)) · ‖μ<sub>A</sub> − μ<sub>B</sub>‖²<div class="vars">μA and μB are the centroids of the two clusters; ‖·‖² is squared Euclidean distance.</div></div>
+          <p>Because it minimizes variance after every merge, Ward linkage tends to create clusters that are balanced, compact, and similar in size.</p>
+          <ul class="char-list">
+            <li>Produces compact, spherical clusters</li>
+            <li>Usually performs very well on numerical data</li>
+            <li>Most similar in philosophy to K-Means, which also minimizes within-cluster variance</li>
+          </ul>
+          <figure><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/396/original/Screenshot_2026-08-07_220724.png?1786125492" alt="Scatter plot of the noisy-bridge dataset clustered with Ward linkage, showing compact, balanced clusters."></figure>
+          <p><strong>Retail analogy:</strong> Ward linkage asks, "if these two customer groups merge, how much more diverse does the resulting tier become?" It merges only when that increase is small — producing balanced, cohesive segments that are often the easiest to interpret.</p>
+        </div>
+
+        <h3>Comparing the four methods</h3>
+        <table>
+          <thead><tr><th>Method</th><th>Uses</th><th>Typical shape</th><th>Main weakness</th></tr></thead>
+          <tbody>
+            <tr><td>Single</td><td>Minimum pairwise distance</td><td>Long, chain-like</td><td>Very sensitive to noisy bridge points</td></tr>
+            <tr><td>Complete</td><td>Maximum pairwise distance</td><td>Compact and tight</td><td>Can over-separate large clusters</td></tr>
+            <tr><td>Average</td><td>Mean pairwise distance</td><td>Balanced</td><td>Computationally more expensive</td></tr>
+            <tr><td>Ward</td><td>Increase in variance</td><td>Compact, balanced</td><td>Works best with Euclidean distance</td></tr>
+          </tbody>
+        </table>
+
+        <div class="viz-embed">
+          <div class="viz-embed-head">
+            <span class="t">Interactive: linkage &amp; distance measurement</span>
+            <a href="https://aiml-vizs-new.vercel.app/un-supervised-learning/linkage-distance-measurement-comparison/" target="_blank" rel="noopener">Open in new tab ↗</a>
+          </div>
+          <iframe src="https://aiml-vizs-new.vercel.app/un-supervised-learning/linkage-distance-measurement-comparison/" title="Linkage and distance measurement comparison visualizer" loading="lazy"></iframe>
+        </div>
+      </section>
+
+      <section id="quiz2"></section>
+
+      <section id="dendrograms">
+        <div class="kicker">Section 4</div>
+        <h2>Reading dendrograms and choosing a cut</h2>
+        <p>With K-Means, you must pick K before running the algorithm. Hierarchical clustering gives you something better: a <strong>dendrogram</strong> — a tree you can "cut" at any height to choose K <em>after</em> seeing the full merge structure.</p>
+        <figure>
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/397/original/Screenshot_2026-08-07_220737.png?1786125590" alt="Dendrogram built with Ward linkage on a 60-point, four-center blob dataset, with a dashed red line marking a cut at height 15.">
+          <figcaption>Dendrogram from Ward linkage on a 60-point dataset with four natural centers. The dashed line marks one possible cut, at height 15.</figcaption>
+        </figure>
+
+        <h3>How to read it</h3>
+        <ul class="char-list">
+          <li><strong>Leaves</strong> (bottom) — individual data points</li>
+          <li><strong>Branches</strong> — merges between clusters</li>
+          <li><strong>Height of a merge</strong> — how dissimilar the two merged groups were</li>
+          <li><strong>A horizontal cut</strong> — your choice of K. Cut low for more clusters, cut high for fewer.</li>
+        </ul>
+
+        <p>For this particular dataset, cutting the dendrogram at different heights produces the following cluster counts:</p>
+
+        <div class="explorer">
+          <div class="explorer-readout">
+            <div><div class="big" id="explorer-count">10</div><div class="lbl">clusters</div></div>
+            <div><div class="big" id="explorer-height">3</div><div class="lbl">cut height</div></div>
+          </div>
+          <input type="range" id="height-slider" min="0" max="5" step="1" value="0" aria-label="Select a cut height">
+          <div class="bars" id="explorer-bars"></div>
+        </div>
+
+        <p>Notice what happens as the cut height approaches zero: you get closer and closer to every point being its own cluster again — technically valid, but not useful. Beyond a certain height (5 in this example), the count stabilizes at 4 clusters and stays there all the way up to height 25, because the four underlying groups are cleanly separated: the dendrogram doesn't tell you the single "right" K, it shows you every option at once so you can choose.</p>
+
+        <details class="code-toggle">
+          <summary>View the code behind these numbers</summary>
+          <pre>def clusters_at_height(Z, height):
+    return len(set(fcluster(Z, t=height, criterion='distance')))
+
+for h in [3, 5, 10, 15, 20, 25]:
+    print(f"Cut height={h:>2}  ->  {clusters_at_height(Z_blobs, h)} clusters")</pre>
+          <div class="out-label">Output</div>
+          <pre>Cut height= 3  ->  10 clusters
+Cut height= 5  ->   4 clusters
+Cut height=10  ->   4 clusters
+Cut height=15  ->   4 clusters
+Cut height=20  ->   4 clusters
+Cut height=25  ->   4 clusters</pre>
+        </details>
+      </section>
+
+      <section id="quiz3"></section>
+
+      <section id="divisive">
+        <div class="kicker">The other direction</div>
+        <h2>Divisive (top-down) hierarchical clustering</h2>
+        <p>Everything covered so far has been <strong>agglomerative</strong> — bottom-up. There's a mirror-image approach called <strong>divisive clustering</strong>: start with every point in one giant cluster and keep splitting the least cohesive cluster in two, until every point is its own cluster.</p>
+        <p>Divisive clustering is far less common in practice, for a computational reason. Agglomerative only needs to find the closest pair of <em>existing</em> clusters at each step, which is cheap. Divisive needs to find the <em>best way to split</em> a cluster in two — a much harder search problem — so most implementations approximate it with K-Means rather than solving it exactly.</p>
+
+        <details class="code-toggle">
+          <summary>View a bisecting-K-Means implementation of divisive clustering</summary>
+          <pre>def bisecting_divisive(X, n_clusters):
+    """Divisive clustering: repeatedly split the highest-variance
+    cluster into 2, using K-Means as the splitter."""
+    clusters = {0: np.arange(len(X))}
+    next_id = 1
+    history = []
+
+    while len(clusters) < n_clusters:
+        target_id = max(
+            clusters,
+            key=lambda cid: X[clusters[cid]].var(axis=0).sum()
+                             if len(clusters[cid]) > 1 else -1
+        )
+        idx = clusters[target_id]
+        if len(idx) <= 1:
+            break
+        km = KMeans(n_clusters=2, n_init=10, random_state=0).fit(X[idx])
+        left, right = idx[km.labels_ == 0], idx[km.labels_ == 1]
+        del clusters[target_id]
+        clusters[next_id], clusters[next_id + 1] = left, right
+        history.append((target_id, next_id, next_id + 1, len(left), len(right)))
+        next_id += 2
+
+    labels = np.zeros(len(X), dtype=int)
+    for new_label, idx in enumerate(clusters.values()):
+        labels[idx] = new_label
+    return labels, history</pre>
+          <div class="out-label">Output on the toy dataset, splitting into 3 clusters</div>
+          <pre>Split order (parent -> child_a, child_b | sizes):
+Step 1: cluster 0 -> 1 & 2  |  sizes 4, 2
+Step 2: cluster 1 -> 3 & 4  |  sizes 2, 2</pre>
+        </details>
+
+        <figure>
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/400/original/Screenshot_2026-08-07_220758.png?1786125732" alt="Side-by-side scatter plots of the toy dataset clustered by agglomerative (bottom-up) versus divisive (top-down, bisecting) approaches.">
+          <figcaption>On this cleanly separated toy dataset, agglomerative and divisive clustering land on the same groups — they just get there from opposite directions.</figcaption>
+        </figure>
+
+        <table>
+          <thead><tr><th></th><th>Agglomerative (bottom-up)</th><th>Divisive (top-down)</th></tr></thead>
+          <tbody>
+            <tr><td>Starting point</td><td>Every point its own cluster</td><td>One giant cluster</td></tr>
+            <tr><td>Direction</td><td>Merge upward</td><td>Split downward</td></tr>
+            <tr><td>Computational cost</td><td>Cheaper — compares existing clusters</td><td>Expensive — searches for the best split at each level</td></tr>
+            <tr><td>Common in practice?</td><td>Yes — the default choice</td><td>Rarely — mainly when only the top of the tree is needed</td></tr>
+            <tr><td>Library support</td><td><code>scipy</code> / <code>sklearn</code> built-in</td><td>No dedicated function — usually approximated with recursive K-Means</td></tr>
+          </tbody>
+        </table>
+
+        <p>On this toy dataset, both approaches roughly agree, because the clusters are cleanly separated. On messier data they can diverge more: divisive clustering's early splits lock in decisions that can't be undone, so a bad split near the top distorts everything below it.</p>
+
+        <div class="viz-embed">
+          <div class="viz-embed-head">
+            <span class="t">Interactive: agglomerative vs. divisive direction</span>
+            <a href="https://aiml-vizs-new.vercel.app/un-supervised-learning/agglomerative-vs-divisive-direction-comparison/" target="_blank" rel="noopener">Open in new tab ↗</a>
+          </div>
+          <iframe src="https://aiml-vizs-new.vercel.app/un-supervised-learning/agglomerative-vs-divisive-direction-comparison/" title="Agglomerative vs divisive direction comparison visualizer" loading="lazy"></iframe>
+        </div>
+      </section>
+
+      <section id="real-world">
+        <div class="kicker">Beyond the dataset</div>
+        <h2>Where hierarchical clustering shows up in real life</h2>
+        <p>"Build a tree by merging similar things" shows up far outside retail segmentation:</p>
+        <div class="apps-grid">
+          <div class="app-card"><div class="tag">Biology</div><p>Grouping genes or species by similarity produces a tree of relatedness — this is literally how evolutionary family trees are built, using the same merge-by-similarity idea.</p></div>
+          <div class="app-card"><div class="tag">Document organization</div><p>Grouping news articles or support tickets into nested topics and sub-topics — "Billing" → "Refunds" → "Late refund complaints" — is a dendrogram in disguise.</p></div>
+          <div class="app-card"><div class="tag">Social networks</div><p>Finding communities within a friend or follower network, where tight-knit friend groups merge into looser social circles, is agglomerative clustering applied to relationships instead of coordinates.</p></div>
+          <div class="app-card"><div class="tag">Org charts</div><p>Read in reverse, a company's org chart is a dendrogram top-down: individual employees roll up into teams, into departments, into the whole company.</p></div>
+        </div>
+        <p style="margin-top:1.2rem;">In every one of these examples, "no fixed K upfront" isn't a limitation — it's the entire point. Nobody knows in advance exactly how many species, topics, communities, or departments there "should" be.</p>
+      </section>
+
+      <section id="clustermart">
+        <div class="kicker">Section 5</div>
+        <h2>Applying it: customer segmentation revisited</h2>
+        <p>Back to the underlying business problem: segmenting customers by annual income against spending score. A centroid-based approach previously produced compact, roughly spherical customer segments. Here's what hierarchical clustering does with the exact same data.</p>
+        <figure>
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/401/original/Screenshot_2026-08-07_220816.png?1786125817" alt="Side-by-side scatter plots comparing K-Means++ and Ward-linkage hierarchical clustering on the same income-versus-spending customer dataset, showing four similar segments.">
+          <figcaption>K-Means++ (left) versus hierarchical clustering with Ward linkage (right) on the same customer dataset.</figcaption>
+        </figure>
+        <p>Both algorithms land on similar segments here — expected, since this data is cleanly separated. The difference is <em>how</em> they got there:</p>
+        <div class="vs-wrap">
+          <div class="vs-card"><h4>K-Means++</h4><p>Assigns each customer to the nearest centroid, producing compact, roughly spherical groups.</p></div>
+          <div class="vs-card"><h4>Hierarchical clustering</h4><p>Builds groups up by successive merging, with no centroids involved at all — and without knowing K=4 in advance, the dendrogram would have revealed that choice instead of forcing a guess upfront.</p></div>
+        </div>
+      </section>
+
+      <section id="full-circle">
+        <div class="kicker">Where centroids fall short</div>
+        <h2>Full circle: where K-Means struggles, hierarchical clustering can help</h2>
+        <p>Consider the category of shapes that break centroid-based clustering entirely: moons, circles, and blobs of unequal density. Here's what changes once the "must be roughly spherical" assumption is dropped.</p>
+        <figure>
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/403/original/Screenshot_2026-08-07_220842.png?1786125964" alt="Comparison of K-Means and single-linkage hierarchical clustering on moon-shaped and circular datasets.">
+        </figure>
+        <figure>
+          <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/217/404/original/Screenshot_2026-08-07_220852.png?1786125997" alt="Comparison of K-Means and single-linkage hierarchical clustering on an unequal-density blob dataset.">
+          <figcaption>Across moons, circles, and unequal-density blobs, single-linkage hierarchical clustering (right column) follows the true shape where K-Means (left column) slices straight through it.</figcaption>
+        </figure>
+        <p>K-Means assigns points to the nearest centroid — a strategy that assumes clusters are roughly round blobs of similar size. It has no way to represent a crescent or a ring, so it cuts right through them.</p>
+        <p>Hierarchical clustering with single linkage doesn't think in centroids at all — it only ever asks "what's the closest pair of points?" Along a curved, densely packed shape like a moon, that means it keeps chaining neighboring points together along the curve. This is the same "long, chain-like clusters" behavior flagged earlier as a weakness on the noisy-bridge dataset — here, that same behavior is exactly why it works.</p>
+        <div class="callout">No linkage — or algorithm — is universally "better." Single linkage's chaining tendency was a liability on the noisy-bridge dataset and is the winning feature here. The right tool depends on the shape of the problem.</div>
+      </section>
+
+      <section id="choosing">
+        <div class="kicker">Section 6</div>
+        <h2>Choosing the right algorithm</h2>
+        <table>
+          <thead><tr><th></th><th>K-Means (++)</th><th>Hierarchical</th></tr></thead>
+          <tbody>
+            <tr><td>Speed</td><td>Fast, scales to large data</td><td>Slower, doesn't scale as well</td></tr>
+            <tr><td>Need K upfront?</td><td>Yes</td><td>No — decide from the dendrogram</td></tr>
+            <tr><td>Cluster shape</td><td>Spherical / convex only</td><td>Handles more complex structures</td></tr>
+            <tr><td>Best for</td><td>Large, frequently-refreshed datasets</td><td>Smaller, exploratory analysis</td></tr>
+          </tbody>
+        </table>
+
+        <h3>A scenario to test the trade-off</h3>
+        <p>A retailer has 5 million customer records, updated every night, and the team already knows they want exactly 6 customer segments. Which algorithm is the better production choice?</p>
+        <div class="card">
+          <p style="margin-bottom:0.8rem;"><strong>A.</strong> Hierarchical clustering, because it doesn't require specifying the number of clusters upfront.<br><strong>B.</strong> K-Means++, because it scales to large, frequently-updated data and K is already known.</p>
+          <button class="reveal-btn" id="scenario-reveal">Reveal the answer</button>
+          <div class="reveal-panel" id="scenario-panel">
+            <p style="margin:1rem 0 0;"><strong>Answer: B — K-Means++.</strong> When K is already known and the data is large and refreshed frequently, K-Means++'s speed wins outright. Hierarchical clustering's main advantage — not needing K upfront — isn't even needed here, so choosing it would mean paying its scaling cost for a benefit that isn't being used.</p>
+          </div>
+        </div>
+
+        <p>The general recommendation follows from this: continue using K-Means++ for large-scale, day-to-day segmentation, since it's fast and reliable. But for smaller, exploratory analyses where the right number of segments isn't known yet, hierarchical clustering — and its dendrogram — gives room to explore before committing to a number.</p>
+      </section>
+
+      <section id="quiz4"></section>
+
+      <section id="wrap-up">
+        <div class="kicker">Recap</div>
+        <h2>Wrap-up</h2>
+        <ol class="recap-list">
+          <li><span class="recap-num">1</span><span><strong>The big idea:</strong> hierarchical clustering builds clusters by merging (agglomerative) or splitting (divisive), instead of assigning points to centroids.</span></li>
+          <li><span class="recap-num">2</span><span><strong>Linkage criteria</strong> — single, complete, average, Ward — control how the distance between two clusters is measured: single chains, complete tightens, average balances, Ward minimizes variance growth.</span></li>
+          <li><span class="recap-num">3</span><span><strong>Dendrograms</strong> let you choose K after seeing the full merge structure, instead of committing to it upfront the way K-Means requires.</span></li>
+          <li><span class="recap-num">4</span><span><strong>Divisive clustering</strong> is the top-down mirror image of everything else here — rarer in practice, because finding the best split is harder than finding the closest pair.</span></li>
+          <li><span class="recap-num">5</span><span><strong>Where it wins:</strong> non-spherical, non-convex shapes — moons, circles, uneven density — that break K-Means's centroid assumption.</span></li>
+          <li><span class="recap-num">6</span><span><strong>Where K-Means still wins:</strong> large, frequently-refreshed datasets where K is already known and speed matters.</span></li>
+        </ol>
+        <p style="margin-top:1.6rem;">Two tools, two very different jobs: K-Means++ for large, fast, known-K production work, and hierarchical clustering for smaller, exploratory analysis where the right K isn't known yet.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<footer>Hierarchical clustering post read</footer>
+
+<script>
+(function(){
+  var sections = [
+    {id:'intro', label:'Introduction'},
+    {id:'big-idea', label:'1 · A different way to think'},
+    {id:'mechanics', label:'2 · Agglomerative mechanics'},
+    {id:'quiz1', label:'Quiz · Basics'},
+    {id:'linkage', label:'3 · Linkage criteria'},
+    {id:'quiz2', label:'Quiz · Linkage'},
+    {id:'dendrograms', label:'4 · Reading dendrograms'},
+    {id:'quiz3', label:'Quiz · Dendrograms'},
+    {id:'divisive', label:'Divisive clustering'},
+    {id:'real-world', label:'Real-world uses'},
+    {id:'clustermart', label:'5 · Applying it'},
+    {id:'full-circle', label:'Where it wins'},
+    {id:'choosing', label:'6 · Choosing an algorithm'},
+    {id:'quiz4', label:'Quiz · Choosing'},
+    {id:'wrap-up', label:'Wrap-up'}
+  ];
+
+  var spine = document.getElementById('spine');
+  var mobileNav = document.getElementById('mobile-nav');
+  sections.forEach(function(s){
+    var li = document.createElement('li');
+    li.style.listStyle = 'none';
+    var a = document.createElement('a');
+    a.href = '#' + s.id;
+    a.textContent = s.label;
+    a.dataset.target = s.id;
+    li.appendChild(a);
+    spine.appendChild(li);
+
+    var opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.label;
+    mobileNav.appendChild(opt);
+  });
+
+  mobileNav.addEventListener('change', function(){
+    var el = document.getElementById(this.value);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+
+  var links = spine.querySelectorAll('a');
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        links.forEach(function(l){ l.classList.remove('active'); });
+        var match = spine.querySelector('a[data-target="'+entry.target.id+'"]');
+        if(match) match.classList.add('active');
+        mobileNav.value = entry.target.id;
+      }
+    });
+  }, {rootMargin: '-15% 0px -70% 0px', threshold: 0});
+  sections.forEach(function(s){
+    var el = document.getElementById(s.id);
+    if(el) observer.observe(el);
+  });
+
+  function buildQuiz(container, data){
+    var wrap = document.createElement('div');
+    wrap.className = 'quiz';
+    wrap.innerHTML =
+      '<div class="quiz-tag">' + data.tag + '</div>' +
+      '<div class="quiz-q">' + data.q + '</div>' +
+      '<div class="quiz-choices"></div>' +
+      '<div class="quiz-feedback"><span class="verdict"></span><span class="explain"></span></div>';
+    var choicesEl = wrap.querySelector('.quiz-choices');
+    var feedback = wrap.querySelector('.quiz-feedback');
+    var verdict = wrap.querySelector('.verdict');
+    var explain = wrap.querySelector('.explain');
+
+    data.choices.forEach(function(choice, i){
+      var btn = document.createElement('button');
+      btn.className = 'quiz-choice';
+      btn.textContent = choice.text;
+      btn.addEventListener('click', function(){
+        var allBtns = choicesEl.querySelectorAll('.quiz-choice');
+        allBtns.forEach(function(b){ b.disabled = true; });
+        if(choice.correct){
+          btn.classList.add('correct');
+          verdict.textContent = 'Correct.';
+          verdict.className = 'verdict right';
+        } else {
+          btn.classList.add('incorrect');
+          verdict.textContent = 'Not quite.';
+          verdict.className = 'verdict wrong';
+          var correctBtn = Array.prototype.find.call(allBtns, function(b, idx){ return data.choices[idx].correct; });
+          if(correctBtn) correctBtn.classList.add('correct');
+        }
+        explain.textContent = data.explain;
+        feedback.classList.add('show');
+      });
+      choicesEl.appendChild(btn);
+    });
+
+    container.appendChild(wrap);
+  }
+
+  buildQuiz(document.getElementById('quiz1'), {
+    tag: 'Quiz · Agglomerative basics',
+    q: 'What is the core mechanic that drives agglomerative hierarchical clustering?',
+    choices: [
+      {text:'Randomly initialize K centroids and reassign points until convergence.', correct:false},
+      {text:'Repeatedly merge the two closest clusters, starting from every point as its own cluster.', correct:true},
+      {text:'Draw circles of increasing radius around a fixed center.', correct:false},
+      {text:'Randomly split the dataset into K equal groups.', correct:false}
+    ],
+    explain: 'The first choice describes K-Means, not this. The third and fourth options aren\'t real clustering mechanics — pure distractors. Agglomerative clustering has no centroids and no randomness: it starts with every point alone and repeatedly merges the two closest clusters until it reaches one giant cluster, or however many clusters you choose to stop at.'
+  });
+
+  buildQuiz(document.getElementById('quiz2'), {
+    tag: 'Quiz · Linkage methods',
+    q: 'Which linkage method is most likely to produce long, chain-like clusters when noisy data connects two otherwise separate groups?',
+    choices: [
+      {text:'Ward linkage', correct:false},
+      {text:'Complete linkage', correct:false},
+      {text:'Single linkage', correct:true},
+      {text:'Average linkage', correct:false}
+    ],
+    explain: 'Single linkage only needs one close pair of points to justify a merge. A single noisy "bridge" point is enough to chain two otherwise-separate groups into one long, stringy cluster. Complete linkage is the opposite extreme — it needs the farthest points to be close — which is why it tends to produce tight, compact clusters instead.'
+  });
+
+  buildQuiz(document.getElementById('quiz3'), {
+    tag: 'Quiz · Dendrograms',
+    q: 'In a dendrogram, what does the height at which two branches merge represent?',
+    choices: [
+      {text:'The number of customers in each branch.', correct:false},
+      {text:'How dissimilar (far apart) the two merged clusters were.', correct:true},
+      {text:'The order in which customers signed up.', correct:false},
+      {text:'The value of K that must be used for K-Means.', correct:false}
+    ],
+    explain: 'Merge height directly encodes dissimilarity: low merges join near-identical points or clusters, high merges join groups that were quite different. It has nothing to do with cluster size, signup order, or K-Means, which doesn\'t use dendrograms at all.'
+  });
+
+  buildQuiz(document.getElementById('quiz4'), {
+    tag: 'Quiz · Choosing an approach',
+    q: 'A data science team is exploring a brand-new, messy dataset for the first time. They don\'t yet know how many natural segments exist, and the dataset is small enough to process without performance concerns. Which approach — and which linkage method — best fits this situation?',
+    choices: [
+      {text:'K-Means++, because it\'s always the safer default.', correct:false},
+      {text:'Hierarchical clustering with single linkage, to keep things simple.', correct:false},
+      {text:'Hierarchical clustering with Ward linkage, so they can explore the dendrogram before committing to K.', correct:true},
+      {text:'K-Means++ with K = 1, then increase K manually until it "looks right."', correct:false}
+    ],
+    explain: 'This is exactly the exploratory, small-data, unknown-K scenario hierarchical clustering is built for. Ward linkage is the natural default — closest in spirit to K-Means\' variance-minimizing goal, and it generally produces the most balanced, interpretable dendrograms. Single linkage risks the chaining problem seen earlier. The two K-Means options both smuggle K-Means back in despite not knowing K, which is the whole reason to reach for hierarchical clustering in the first place.'
+  });
+
+  document.getElementById('scenario-reveal').addEventListener('click', function(){
+    document.getElementById('scenario-panel').classList.toggle('show');
+    this.textContent = document.getElementById('scenario-panel').classList.contains('show') ? 'Hide the answer' : 'Reveal the answer';
+  });
+
+  var steps = [
+    {label:'Step 1 — Start', desc:'Every point is its own cluster. Six points, six clusters.', groups:[[0],[1],[2],[3],[4],[5]]},
+    {label:'Step 2 — Find the closest pair', desc:'Find the two closest clusters. P0–P1, P2–P3, and P4–P5 are each the nearest pair to one another.', groups:[[0],[1],[2],[3],[4],[5]], highlightPairs:[[0,1],[2,3],[4,5]]},
+    {label:'Step 3 — Merge', desc:'Merge each closest pair into one cluster. Six clusters become three.', groups:[[0,1],[2,3],[4,5]]},
+    {label:'Step 4 — Repeat (or stop)', desc:'Repeat steps 2–3 until only K clusters remain — or, if you don\'t stop early, keep merging until everything is one cluster.', groups:[[0,1,2,3,4,5]]}
+  ];
+  var toyPoints = [[1.0,1.0],[1.2,0.9],[5.0,5.0],[5.3,4.8],[1.0,5.0],[1.3,5.2]];
+  var colors = ['#F5C518','#C99000','#8C5A00','#3F7D20'];
+
+  function scaleX(x){ return 30 + (x - 0.7) / (5.6 - 0.7) * 190; }
+  function scaleY(y){ return 200 - (y - 0.6) / (5.4 - 0.6) * 170; }
+
+  var svg = document.getElementById('toy-svg');
+  var stepIdx = 0;
+
+  function renderStep(){
+    var s = steps[stepIdx];
+    document.getElementById('step-label').textContent = s.label;
+    document.getElementById('step-desc').textContent = s.desc;
+
+    while(svg.children.length > 2){ svg.removeChild(svg.lastChild); }
+
+    s.groups.forEach(function(group, gi){
+      if(group.length > 1){
+        var xs = group.map(function(i){ return scaleX(toyPoints[i][0]); });
+        var ys = group.map(function(i){ return scaleY(toyPoints[i][1]); });
+        var cx = (Math.min.apply(null,xs) + Math.max.apply(null,xs)) / 2;
+        var cy = (Math.min.apply(null,ys) + Math.max.apply(null,ys)) / 2;
+        var rx = (Math.max.apply(null,xs) - Math.min.apply(null,xs)) / 2 + 18;
+        var ry = (Math.max.apply(null,ys) - Math.min.apply(null,ys)) / 2 + 18;
+        var ellipse = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+        ellipse.setAttribute('cx', cx); ellipse.setAttribute('cy', cy);
+        ellipse.setAttribute('rx', rx); ellipse.setAttribute('ry', ry);
+        ellipse.setAttribute('fill', colors[gi % colors.length]);
+        ellipse.setAttribute('fill-opacity', '0.16');
+        ellipse.setAttribute('stroke', colors[gi % colors.length]);
+        ellipse.setAttribute('stroke-width', '1.5');
+        svg.appendChild(ellipse);
+      }
+    });
+
+    if(s.highlightPairs){
+      s.highlightPairs.forEach(function(pair){
+        var line = document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.setAttribute('x1', scaleX(toyPoints[pair[0]][0]));
+        line.setAttribute('y1', scaleY(toyPoints[pair[0]][1]));
+        line.setAttribute('x2', scaleX(toyPoints[pair[1]][0]));
+        line.setAttribute('y2', scaleY(toyPoints[pair[1]][1]));
+        line.setAttribute('stroke', '#C99000');
+        line.setAttribute('stroke-width', '2');
+        line.setAttribute('stroke-dasharray', '4 3');
+        svg.appendChild(line);
+      });
+    }
+
+    toyPoints.forEach(function(p, i){
+      var groupIdx = 0;
+      s.groups.forEach(function(g, gi){ if(g.indexOf(i) !== -1) groupIdx = gi; });
+      var circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circle.setAttribute('cx', scaleX(p[0]));
+      circle.setAttribute('cy', scaleY(p[1]));
+      circle.setAttribute('r', 7);
+      circle.setAttribute('fill', colors[groupIdx % colors.length]);
+      circle.setAttribute('stroke', '#221A08');
+      circle.setAttribute('stroke-width', '1');
+      svg.appendChild(circle);
+
+      var text = document.createElementNS('http://www.w3.org/2000/svg','text');
+      text.setAttribute('x', scaleX(p[0]));
+      text.setAttribute('y', scaleY(p[1]) - 12);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('font-size', '10');
+      text.setAttribute('font-family', 'IBM Plex Mono, monospace');
+      text.setAttribute('fill', '#5B4B22');
+      text.textContent = 'P' + i;
+      svg.appendChild(text);
+    });
+
+    var dotsEl = document.getElementById('step-dots');
+    dotsEl.innerHTML = '';
+    steps.forEach(function(_, i){
+      var d = document.createElement('div');
+      d.className = 'step-dot' + (i === stepIdx ? ' active' : '');
+      dotsEl.appendChild(d);
+    });
+    document.getElementById('step-prev').disabled = stepIdx === 0;
+    document.getElementById('step-next').disabled = stepIdx === steps.length - 1;
+  }
+
+  document.getElementById('step-prev').addEventListener('click', function(){ if(stepIdx > 0){ stepIdx--; renderStep(); } });
+  document.getElementById('step-next').addEventListener('click', function(){ if(stepIdx < steps.length - 1){ stepIdx++; renderStep(); } });
+  renderStep();
+
+  var heightData = [
+    {h:3, c:10}, {h:5, c:4}, {h:10, c:4}, {h:15, c:4}, {h:20, c:4}, {h:25, c:4}
+  ];
+  var barsEl = document.getElementById('explorer-bars');
+  var maxC = Math.max.apply(null, heightData.map(function(d){ return d.c; }));
+  heightData.forEach(function(d, i){
+    var col = document.createElement('div');
+    col.className = 'bar-col';
+    var val = document.createElement('div');
+    val.className = 'bar-val';
+    val.textContent = d.c;
+    var bar = document.createElement('div');
+    bar.className = 'bar' + (i === 0 ? ' active' : '');
+    bar.style.height = Math.max(6, (d.c / maxC) * 100) + '%';
+    bar.id = 'bar-' + i;
+    var tick = document.createElement('div');
+    tick.className = 'bar-tick';
+    tick.textContent = 'h=' + d.h;
+    col.appendChild(val);
+    col.appendChild(bar);
+    col.appendChild(tick);
+    barsEl.appendChild(col);
+  });
+
+  var slider = document.getElementById('height-slider');
+  var countEl = document.getElementById('explorer-count');
+  var heightEl = document.getElementById('explorer-height');
+  slider.addEventListener('input', function(){
+    var idx = parseInt(this.value, 10);
+    var d = heightData[idx];
+    countEl.textContent = d.c;
+    heightEl.textContent = d.h;
+    heightData.forEach(function(_, i){
+      document.getElementById('bar-' + i).classList.toggle('active', i === idx);
+    });
+  });
+
+  var linkTabs = document.querySelectorAll('#linkage-tabs .tab-btn');
+  linkTabs.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      linkTabs.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('#linkage .tab-panel').forEach(function(p){ p.classList.remove('active'); });
+      document.querySelector('#linkage .tab-panel[data-panel="' + btn.dataset.tab + '"]').classList.add('active');
+    });
+  });
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Hierarchical-Clustering" target="_blank" rel="noopener">github.com/scaler-content/Hierarchical-Clustering</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Random Forest — Interactive Post-Read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#fff3ea;
+    --paper:#fffaf5;
+    --paper-tint:#ffe8d6;
+    --sand:#f7dcc4;
+    --sand-line: rgba(180,90,50,0.16);
+    --sand-line-strong: rgba(180,90,50,0.28);
+
+    --royal:#e2703f;
+    --royal-deep:#b8532e;
+    --royal-light:#ff9868;
+    --royal-soft: rgba(226,112,63,0.10);
+    --royal-soft-strong: rgba(226,112,63,0.18);
+
+    --amber:#dc9a34;
+    --amber-soft: rgba(220,154,52,0.14);
+    --terracotta:#a34a1a;
+    --plum:#b1567c;
+
+    --good:#2f8f5f;
+    --good-soft: rgba(47,143,95,0.1);
+    --bad:#c34a3d;
+    --bad-soft: rgba(195,74,61,0.08);
+
+    --ink:#231d14;
+    --ink-soft:#6b5a4c;
+    --ink-faint:#a08b7a;
+
+    --shadow: 0 18px 50px -22px rgba(180,90,50,0.3);
+    --radius: 18px;
+    --sidebar-w: 300px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 550px at 88% -8%, rgba(226,112,63,0.12), transparent 60%),
+      radial-gradient(800px 460px at -8% 15%, rgba(220,154,52,0.14), transparent 55%),
+      var(--cream);
+    color:var(--ink);
+    font-family:'Inter', -apple-system, sans-serif;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{ font-family:'Fraunces', serif; letter-spacing:-0.01em; }
+
+  a{ color:inherit; }
+
+  ::selection{ background:var(--royal-light); color:#fff8ea; }
+
+  /* ---------- Progress bar ---------- */
+  #progress-track{
+    position:fixed; top:0; left:0; right:0; height:3px; z-index:100;
+    background:rgba(120,90,40,0.08);
+  }
+  #progress-fill{
+    height:100%; width:0%;
+    background:linear-gradient(90deg, var(--amber), var(--royal), var(--royal-deep));
+    transition:width .12s linear;
+    box-shadow:0 0 12px rgba(226,112,63,0.30);
+  }
+
+  /* ---------- Layout ---------- */
+  .layout{
+    display:flex;
+    max-width:1240px;
+    margin:0 auto;
+    align-items:flex-start;
+  }
+
+  /* ---------- Sidebar ---------- */
+  #sidebar{
+    position:sticky; top:0;
+    height:100vh;
+    width:var(--sidebar-w);
+    flex-shrink:0;
+    padding:28px 14px 28px 28px;
+    display:flex;
+    flex-direction:column;
+    z-index:20;
+    background:
+      radial-gradient(420px 260px at 100% 0%, rgba(255,255,255,0.10), transparent 60%),
+      linear-gradient(190deg, var(--royal-deep), var(--royal) 65%, #9c4326 100%);
+    color:#eef1ff;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:6px;
+  }
+  .brand-mark{
+    width:34px; height:34px; border-radius:10px;
+    background:linear-gradient(135deg, var(--amber), #f0b768);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces'; font-weight:700; font-size:16px; color:#2a1c05;
+    box-shadow:0 8px 18px -6px rgba(0,0,0,0.35);
+    flex-shrink:0;
+  }
+  .brand-text{ font-family:'Fraunces'; font-weight:700; font-size:16px; color:#fff; }
+  .brand-sub{ font-size:11px; color:rgba(238,241,255,0.62); letter-spacing:.08em; text-transform:uppercase; margin-top:1px;}
+
+  .sidebar-meta{
+    margin:20px 0 18px 0;
+    padding:14px 16px;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.16);
+    border-radius:14px;
+    font-size:12.5px;
+    color:rgba(238,241,255,0.85);
+    backdrop-filter: blur(6px);
+  }
+  .sidebar-meta .meta-row{ display:flex; justify-content:space-between; padding:3px 0; }
+  .sidebar-meta .meta-row b{ color:#fff; font-weight:600; }
+
+  #nav{
+    overflow-y:auto;
+    padding-right:6px;
+    flex:1;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.25) transparent;
+  }
+  #nav::-webkit-scrollbar{ width:5px; }
+  #nav::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.25); border-radius:4px; }
+
+  .nav-link{
+    display:flex; align-items:center; gap:10px;
+    text-decoration:none;
+    padding:8px 10px;
+    border-radius:10px;
+    font-size:13px;
+    color:rgba(238,241,255,0.68);
+    margin-bottom:2px;
+    position:relative;
+    border-left:2px solid transparent;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .nav-link:hover{ background:rgba(255,255,255,0.09); color:#fff; }
+  .nav-link.active{
+    color:#fff;
+    background:rgba(255,255,255,0.14);
+    border-left:2px solid #fff;
+  }
+  .nav-link.nav-quiz.active{
+    border-left:2px solid var(--amber);
+    background:rgba(255,191,92,0.16);
+  }
+  .nav-num{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    color:rgba(238,241,255,0.5);
+    width:22px;
+    flex-shrink:0;
+  }
+  .nav-link.active .nav-num{ color:#fff; }
+  .nav-link.nav-quiz.active .nav-num{ color:var(--amber); }
+  .nav-title{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  #sidebar-footer{
+    padding-top:14px; margin-top:10px;
+    border-top:1px solid rgba(255,255,255,0.16);
+    font-size:11px; color:rgba(238,241,255,0.55);
+  }
+
+  /* ---------- Main content ---------- */
+  main{
+    flex:1;
+    min-width:0;
+    padding:56px 48px 120px 40px;
+  }
+
+  .hero{
+    margin-bottom:56px;
+  }
+  .hero-badge{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:11.5px; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--royal-deep);
+    background:var(--royal-soft);
+    border:1px solid var(--royal-soft-strong);
+    padding:6px 12px; border-radius:999px;
+    margin-bottom:22px;
+  }
+  .hero-badge .dot{ width:6px; height:6px; border-radius:50%; background:var(--royal); box-shadow:0 0 8px var(--royal-light); }
+  .hero h1{
+    font-size:clamp(38px, 5vw, 60px);
+    font-weight:700;
+    line-height:1.05;
+    margin:0 0 18px 0;
+    color:var(--ink);
+  }
+  .hero h1 em{
+    font-style:italic;
+    color:var(--royal);
+  }
+  .hero p.lede{
+    font-size:17px; color:var(--ink-soft); max-width:640px; margin:0 0 28px 0;
+  }
+  .hero-stats{ display:flex; gap:28px; flex-wrap:wrap; }
+  .hero-stat{ display:flex; flex-direction:column; gap:2px; }
+  .hero-stat .num{ font-family:'Fraunces'; font-weight:700; font-size:22px; color:var(--royal-deep); }
+  .hero-stat .lab{ font-size:11.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em; }
+
+  /* ---------- Cards ---------- */
+  .card{
+    background:var(--paper);
+    border:1px solid var(--sand-line);
+    border-radius:var(--radius);
+    padding:36px 40px;
+    margin-bottom:22px;
+    box-shadow:var(--shadow);
+    scroll-margin-top:24px;
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:0;
+    background:radial-gradient(460px 190px at 100% 0%, rgba(226,112,63,0.06), transparent 60%);
+    pointer-events:none;
+  }
+
+  .card-eyebrow{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .eyebrow-num{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; color:var(--royal-deep);
+    background:var(--royal-soft);
+    border:1px solid var(--royal-soft-strong);
+    padding:3px 9px; border-radius:7px;
+  }
+  .eyebrow-line{ flex:1; height:1px; background:linear-gradient(90deg, var(--sand-line-strong), transparent); }
+
+  /* prose (rendered lecture markdown) */
+  .prose h2{ font-size:23px; margin:26px 0 14px; font-weight:600; color:var(--ink); }
+  .prose h2:first-child{ margin-top:0; }
+  .prose h3{ font-size:14px; margin:20px 0 8px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; font-family:'Inter'; }
+  .prose p{ margin:0 0 14px; color:var(--ink-soft); font-size:15.5px; }
+  .prose p:last-child{ margin-bottom:0; }
+  .prose strong{ color:var(--ink); font-weight:650; }
+  .prose ul, .prose ol{ margin:0 0 14px; padding-left:22px; color:var(--ink-soft); font-size:15.5px; }
+  .prose li{ margin-bottom:6px; }
+  .prose li strong{ color:var(--ink); }
+  .prose img{
+    max-width:100%; border-radius:12px; margin:14px 0 18px;
+    border:1px solid var(--sand-line); display:block;
+    background:#fff;
+  }
+  .prose code{
+    font-family:'JetBrains Mono', monospace; font-size:13px;
+    background:var(--sand); padding:2px 6px; border-radius:5px; color:var(--royal-deep);
+  }
+  .prose pre{
+    background:#211a10; border:1px solid var(--sand-line); border-radius:12px;
+    padding:16px 18px; overflow-x:auto; margin:0 0 16px;
+  }
+  .prose pre code{
+    background:none; padding:0; color:#f2ecdd; font-size:13px; line-height:1.6;
+  }
+  .prose table{ width:100%; border-collapse:collapse; margin:8px 0 18px; font-size:14.5px; }
+  .prose th{
+    text-align:left; color:var(--ink); font-weight:600; font-size:12.5px;
+    text-transform:uppercase; letter-spacing:.04em;
+    border-bottom:1px solid var(--sand-line-strong); padding:8px 12px;
+  }
+  .prose td{ padding:10px 12px; border-bottom:1px solid var(--sand-line); color:var(--ink-soft); }
+  .prose tr:last-child td{ border-bottom:none; }
+
+  /* the content sets inline color:skyblue / violet / yellow spans, authored for a dark
+     surface. Remapped here (via attribute match, not by touching the markup) so the same
+     emphasis reads clearly on the warm light surface. */
+  .prose span[style*="skyblue"]{ color: var(--royal) !important; font-weight:600; }
+  .prose span[style*="violet"]{ color: var(--plum) !important; }
+  .prose span[style*="color: yellow"]{ color: var(--terracotta) !important; font-weight:600; }
+  .prose .inline-link{
+    display:inline-block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+    color:var(--royal-deep);
+    background:var(--royal-soft);
+    border:1px solid var(--royal-soft-strong);
+    padding:2px 8px;
+    border-radius:6px;
+    text-decoration:none;
+    word-break:break-all;
+  }
+  .prose .inline-link:hover{ background:var(--royal-soft-strong); }
+
+  /* ---------- Visualization CTA ---------- */
+  .viz-cta{
+    display:flex; align-items:center; gap:14px;
+    margin-top:22px;
+    padding:16px 18px;
+    background:linear-gradient(120deg, var(--royal-soft), var(--amber-soft));
+    border:1px solid var(--royal-soft-strong);
+    border-radius:14px;
+    text-decoration:none;
+    color:var(--ink);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .viz-cta:hover{ transform:translateY(-1px); box-shadow:0 10px 24px -14px rgba(226,112,63,0.40); }
+  .viz-cta-icon{
+    flex-shrink:0; width:34px; height:34px; border-radius:50%;
+    background:var(--royal); color:#fff8ea;
+    display:flex; align-items:center; justify-content:center; font-size:12px;
+  }
+  .viz-cta-copy{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .viz-cta-label{ font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--royal-deep); font-weight:700; }
+  .viz-cta-desc{ font-size:14px; color:var(--ink-soft); }
+  .viz-cta-arrow{ color:var(--royal); font-size:16px; flex-shrink:0; }
+
+  /* ---------- Quiz cards ---------- */
+  .quiz-card{
+    border-color: rgba(220,154,52,0.35);
+    background:linear-gradient(165deg, var(--paper-tint), var(--paper) 65%);
+  }
+  .quiz-tag{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--terracotta);
+    margin-bottom:16px;
+    font-weight:600;
+  }
+  .ballot-icon{ font-size:14px; }
+  .quiz-question{ margin-bottom:20px; }
+  .quiz-question p{ font-size:17px; color:var(--ink); }
+
+  .choices{ display:flex; flex-direction:column; gap:10px; }
+  .choice{
+    display:flex; align-items:center; gap:14px;
+    text-align:left;
+    background:var(--paper);
+    border:1px solid var(--sand-line-strong);
+    border-radius:12px;
+    padding:14px 16px;
+    color:var(--ink);
+    font-family:'Inter'; font-size:14.5px;
+    cursor:pointer;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .choice:hover{ background:var(--royal-soft); border-color:var(--royal-soft-strong); }
+  .choice:active{ transform: scale(0.995); }
+  .choice-mark{
+    flex-shrink:0; width:26px; height:26px; border-radius:8px;
+    background:var(--sand); border:1px solid var(--sand-line-strong);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--ink-soft);
+  }
+  .choice-text{ flex:1; }
+  .choice-icon{ width:18px; height:18px; flex-shrink:0; }
+
+  .choices.answered .choice{ cursor:default; }
+  .choices.answered .choice:hover{ background:var(--paper); }
+  .choice.is-correct{
+    border-color: var(--good); background:var(--good-soft);
+  }
+  .choice.is-correct .choice-mark{ background:var(--good); color:#f4fbf6; border-color:var(--good); }
+  .choice.is-correct .choice-icon::after{ content:"✓"; color:var(--good); font-weight:700; }
+  .choice.is-wrong{
+    border-color: var(--bad); background:var(--bad-soft);
+  }
+  .choice.is-wrong .choice-mark{ background:var(--bad); color:#fdf5f4; border-color:var(--bad); }
+  .choice.is-wrong .choice-icon::after{ content:"✕"; color:var(--bad); font-weight:700; }
+  .choices.answered .choice:not(.is-correct):not(.is-wrong){ opacity:.5; }
+
+  .quiz-feedback{
+    margin-top:16px; font-size:14px; font-weight:600;
+    min-height:0; display:none;
+    align-items:center; gap:8px;
+    padding:12px 16px; border-radius:12px;
+  }
+  .quiz-feedback.show{ display:flex; }
+  .quiz-feedback.correct{ background:var(--good-soft); color:var(--good); border:1px solid rgba(47,143,95,0.3); }
+  .quiz-feedback.wrong{ background:var(--bad-soft); color:var(--bad); border:1px solid rgba(195,74,61,0.25); }
+
+  .explanation{
+    margin-top:18px; padding-top:18px; border-top:1px dashed var(--sand-line-strong);
+    display:none;
+  }
+  .explanation.show{ display:block; animation: fadeIn .35s ease; }
+  .explanation-label{
+    font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--plum);
+    margin-bottom:8px; font-weight:700;
+  }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:translateY(0);} }
+
+  /* ---------- Footer ---------- */
+  .end-note{
+    text-align:center; color:var(--ink-faint); font-size:13px;
+    margin-top:40px; padding-top:24px; border-top:1px solid var(--sand-line);
+  }
+
+  /* ---------- Mobile ---------- */
+  #sidebar-toggle{ display:none; }
+  @media (max-width: 960px){
+    .layout{ display:block; }
+    #sidebar{
+      position:fixed; inset:0 auto 0 0; transform:translateX(-100%);
+      width:82vw; max-width:320px;
+      background:
+        radial-gradient(420px 260px at 100% 0%, rgba(255,255,255,0.10), transparent 60%),
+        linear-gradient(190deg, var(--royal-deep), var(--royal) 65%, #9c4326 100%);
+      border-right:1px solid rgba(255,255,255,0.16);
+      transition: transform .25s ease;
+      padding:22px;
+    }
+    #sidebar.open{ transform:translateX(0); }
+    #sidebar-scrim{
+      display:none; position:fixed; inset:0; background:rgba(40,30,10,0.35); z-index:19;
+    }
+    #sidebar-scrim.show{ display:block; }
+    #sidebar-toggle{
+      display:flex; align-items:center; gap:8px;
+      position:fixed; top:14px; left:14px; z-index:21;
+      background:var(--paper); border:1px solid var(--sand-line-strong);
+      color:var(--ink); font-family:'Fraunces'; font-weight:600; font-size:12px;
+      padding:9px 14px; border-radius:999px; cursor:pointer;
+      box-shadow:0 6px 16px -8px rgba(180,90,50,0.28);
+    }
+    main{ padding:80px 20px 100px; }
+    .card{ padding:26px 22px; }
+  }
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml/">Machine learning: supervised</a><span class="t">· ML Foundations · Random forest and bagging</span><span class="pn"><a href="../Ensembles/" title="ML Foundations · Ensemble learning">← Prev</a><a href="../boosting/" title="ML Foundations · Boosting">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><div id="progress-track"><div id="progress-fill"></div></div>
+
+<button id="sidebar-toggle" type="button" aria-expanded="false">☰ Contents</button>
+<div id="sidebar-scrim"></div>
+
+<div class="layout">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">R</div>
+      <div>
+        <div class="brand-text">Random Forest</div>
+        <div class="brand-sub">Interactive Post-Read</div>
+      </div>
+    </div>
+
+    <div class="sidebar-meta">
+      <div class="meta-row"><span>Sections</span><b id="meta-sections">20</b></div>
+      <div class="meta-row"><span>Checkpoints</span><b id="meta-quizzes">7</b></div>
+      <div class="meta-row"><span>Progress</span><b id="meta-progress">0%</b></div>
+    </div>
+
+    <nav id="nav">
+<a href="#s0-recap-and-today-s-focus" class="nav-link" data-target="s0-recap-and-today-s-focus"><span class="nav-num">01</span><span class="nav-title">Recap and Today's Focus</span></a>
+<a href="#s1-quiz-1" class="nav-link nav-quiz" data-target="s1-quiz-1"><span class="nav-num">Q1</span><span class="nav-title">Quiz 1</span></a>
+<a href="#s2-why-random-forest" class="nav-link" data-target="s2-why-random-forest"><span class="nav-num">02</span><span class="nav-title">Why Random Forest</span></a>
+<a href="#s3-can-we-make-an-ensemble-from-decision-trees" class="nav-link" data-target="s3-can-we-make-an-ensemble-from-decision-trees"><span class="nav-num">03</span><span class="nav-title">Can we make an Ensemble from Decision Trees?</span></a>
+<a href="#s4-quiz-2" class="nav-link nav-quiz" data-target="s4-quiz-2"><span class="nav-num">Q2</span><span class="nav-title">Quiz 2</span></a>
+<a href="#s5-how-to-make-base-learners-different" class="nav-link" data-target="s5-how-to-make-base-learners-different"><span class="nav-num">04</span><span class="nav-title">How to Make Base Learners Different</span></a>
+<a href="#s6-quiz-3" class="nav-link nav-quiz" data-target="s6-quiz-3"><span class="nav-num">Q3</span><span class="nav-title">Quiz 3</span></a>
+<a href="#s7-why-bagging-reduces-variance" class="nav-link" data-target="s7-why-bagging-reduces-variance"><span class="nav-num">05</span><span class="nav-title">Why Bagging Reduces Variance</span></a>
+<a href="#s8-out-of-bag-oob-points" class="nav-link" data-target="s8-out-of-bag-oob-points"><span class="nav-num">06</span><span class="nav-title">Out-of-Bag (OOB) Points</span></a>
+<a href="#s9-oob-score-calculation-and-usage" class="nav-link" data-target="s9-oob-score-calculation-and-usage"><span class="nav-num">07</span><span class="nav-title">OOB Score Calculation and Usage</span></a>
+<a href="#s10-quiz-4" class="nav-link nav-quiz" data-target="s10-quiz-4"><span class="nav-num">Q4</span><span class="nav-title">Quiz 4</span></a>
+<a href="#s11-quiz-5" class="nav-link nav-quiz" data-target="s11-quiz-5"><span class="nav-num">Q5</span><span class="nav-title">Quiz 5</span></a>
+<a href="#s12-bias-variance-tradeoff-in-random-forest" class="nav-link" data-target="s12-bias-variance-tradeoff-in-random-forest"><span class="nav-num">08</span><span class="nav-title">Bias-Variance Tradeoff in Random Forest</span></a>
+<a href="#s13-quiz-6" class="nav-link nav-quiz" data-target="s13-quiz-6"><span class="nav-num">Q6</span><span class="nav-title">Quiz 6</span></a>
+<a href="#s14-cost-complexity-pruning-ccpalpha" class="nav-link" data-target="s14-cost-complexity-pruning-ccpalpha"><span class="nav-num">09</span><span class="nav-title">Cost Complexity Pruning (ccpalpha)</span></a>
+<a href="#s15-sklearn-code-walkthrough-introduction-and-data-understanding" class="nav-link" data-target="s15-sklearn-code-walkthrough-introduction-and-data-understanding"><span class="nav-num">10</span><span class="nav-title">Sklearn Code Walkthrough Introduction and Data Understanding</span></a>
+<a href="#s16-sklearn-code-walkthrough-data-preparation-and-default-model" class="nav-link" data-target="s16-sklearn-code-walkthrough-data-preparation-and-default-model"><span class="nav-num">11</span><span class="nav-title">Sklearn Code Walkthrough Data Preparation and Default Model</span></a>
+<a href="#s17-sklearn-code-walkthrough-model-diagnosis-with-ai" class="nav-link" data-target="s17-sklearn-code-walkthrough-model-diagnosis-with-ai"><span class="nav-num">12</span><span class="nav-title">Sklearn Code Walkthrough Model Diagnosis with AI</span></a>
+<a href="#s18-hyperparameter-tuning-introduction-and-max-depth" class="nav-link" data-target="s18-hyperparameter-tuning-introduction-and-max-depth"><span class="nav-num">13</span><span class="nav-title">Hyperparameter Tuning Introduction and max depth</span></a>
+<a href="#s19-hyperparameter-tuning-n-estimators-and-min-samples-leaf" class="nav-link" data-target="s19-hyperparameter-tuning-n-estimators-and-min-samples-leaf"><span class="nav-num">14</span><span class="nav-title">Hyperparameter Tuning n estimators and min samples leaf</span></a>
+<a href="#s20-hyperparameter-tuning-grid-search-and-final-model" class="nav-link" data-target="s20-hyperparameter-tuning-grid-search-and-final-model"><span class="nav-num">15</span><span class="nav-title">Hyperparameter Tuning Grid Search and Final Model</span></a>
+<a href="#s21-quiz-7" class="nav-link nav-quiz" data-target="s21-quiz-7"><span class="nav-num">Q7</span><span class="nav-title">Quiz 7</span></a>
+<a href="#s22-randomized-search" class="nav-link" data-target="s22-randomized-search"><span class="nav-num">16</span><span class="nav-title">Randomized Search</span></a>
+<a href="#s23-interview-questions" class="nav-link" data-target="s23-interview-questions"><span class="nav-num">17</span><span class="nav-title">Interview Questions</span></a>
+<a href="#s24-looking-ahead-to-boosting" class="nav-link" data-target="s24-looking-ahead-to-boosting"><span class="nav-num">18</span><span class="nav-title">Looking Ahead to Boosting</span></a>
+<a href="#s25-boosting-intuition-how-to-combine-base-learners" class="nav-link" data-target="s25-boosting-intuition-how-to-combine-base-learners"><span class="nav-num">19</span><span class="nav-title">Boosting Intuition How to Combine Base Learners</span></a>
+<a href="#s26-wrap-up" class="nav-link" data-target="s26-wrap-up"><span class="nav-num">20</span><span class="nav-title">Wrap-Up</span></a>
+    </nav>
+
+    <div id="sidebar-footer">Scroll or tap a section to jump there. Your progress isn't saved between visits.</div>
+  </aside>
+
+  <main>
+    <div class="hero">
+      <div class="hero-badge"><span class="dot"></span> Post-read &middot; Bagging &amp; Random Forests</div>
+      <h1>Random Forest</h1>
+      <p class="lede">A self-paced walkthrough of how Random Forest actually works — bootstrap sampling, random feature selection, Out-of-Bag error, the bias&ndash;variance tradeoff, and tuning a real model with Scikit-learn. Read through, and answer the checkpoints as you go.</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><span class="num">20</span><span class="lab">Sections</span></div>
+        <div class="hero-stat"><span class="num">7</span><span class="lab">Checkpoints</span></div>
+        <div class="hero-stat"><span class="num">~25 min</span><span class="lab">Read time</span></div>
+      </div>
+    </div>
+
+
+    <section class="card read-card" id="s0-recap-and-today-s-focus" data-nav="s0-recap-and-today-s-focus">
+      <div class="card-eyebrow"><span class="eyebrow-num">01</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Recap</span></h2>
+<p>In the previous lecture, we introduced <strong>Ensemble Learning</strong>, where multiple models are combined to build a stronger predictor than an individual learner.</p>
+<p>We explored the three major ensemble techniques:</p>
+<ul>
+<li><strong>Bagging</strong></li>
+<li><strong>Boosting</strong></li>
+<li><strong>Stacking</strong></li>
+</ul>
+<p>We also understood how <strong>Bagging</strong> trains learners independently, while <strong>Boosting</strong> trains them sequentially. Through a hands-on comparison of a Decision Tree, Bagging Classifier, and AdaBoost Classifier, we observed how ensemble methods can often improve predictive performance. Finally, we introduced <strong>Random Forest</strong>, one of the most popular Bagging algorithms, and saw that it combines the predictions of multiple Decision Trees using majority voting or averaging.</p>
+<h3>Key Takeaways</h3>
+<ul>
+<li><strong>Ensemble Learning</strong> combines multiple learners to improve predictions.</li>
+<li>Bagging creates independent learners, while Boosting learns sequentially.</li>
+<li>Random Forest is an ensemble of multiple Decision Trees built using the <code>Bagging</code> approach.</li>
+</ul>
+<h2><span style="color: skyblue;">Today's Focus</span></h2>
+<p>Today, we will move beyond the high-level intuition and study <strong>how Random Forest actually works</strong>. We will learn how Random Forest creates diverse Decision Trees using <strong>bootstrap sampling</strong> and <strong>random feature selection</strong>, understand why this improves generalization, and finally build and tune a Random Forest model using Scikit-learn.</p>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s1-quiz-1" data-nav="s1-quiz-1">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 1</div>
+      <div class="quiz-question prose"><p>Which of the following are <strong>types of Ensemble Methods</strong>?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="true"><span class="choice-mark">A</span><span class="choice-text">Bagging, Stacking</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">B</span><span class="choice-text">Collecting</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">Standardizing</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">Selecting</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card read-card" id="s2-why-random-forest" data-nav="s2-why-random-forest">
+      <div class="card-eyebrow"><span class="eyebrow-num">02</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Why Random Forest?</span></h2>
+<h3>Real Scenario:</h3>
+<p>Suppose you want to buy a new iPhone.</p>
+<ul>
+<li>You aren't sure whether you should or not.</li>
+</ul>
+<p>So you ask your friends and family for opinion.</p>
+<ul>
+<li>First person is your friend who is a microprocessor engineer.</li>
+<li>Second person is your cousin who works as a cinematographer.</li>
+<li>Third is your mother.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/336/original/Screenshot_2026-07-31_155347.png?1785493446"></p>
+<p>You got a mixed responses:</p>
+<ul>
+<li>Your friend says <strong>yes</strong> as the chipset performance is great.</li>
+<li>Cousin also says <strong>yes</strong> as he loves the cinematic mode.</li>
+<li>But your mother says <strong>No</strong> as it's expensive and a waste of money.</li>
+</ul>
+<p>So, in order to simplify things, you decide to take <strong>majority vote</strong>.</p>
+<ul>
+<li>2 yes and 1 no comes out to be <strong>YES</strong>.</li>
+</ul>
+<p>This is what <code>Bagging</code> does.</p>
+<p>Instead of training one model on data, we train multiple models on data.</p>
+<p>Let us learn a special Bagging model first, later we will also learn more about the other kinds of ensembles.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s3-can-we-make-an-ensemble-from-decision-trees" data-nav="s3-can-we-make-an-ensemble-from-decision-trees">
+      <div class="card-eyebrow"><span class="eyebrow-num">03</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Can we make an Ensemble from DTs? - Random Forest</span></h2>
+<p>Although, Bagging can be done using models from different ML algorithms, let's try to make a <code>Bagging</code> model just using <strong>Decision Trees</strong>. This is a special case of Bagging, known as the <strong>Random Forest</strong> (<code>RF</code>) model.</p>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s4-quiz-2" data-nav="s4-quiz-2">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 2</div>
+      <div class="quiz-question prose"><p>How many <strong>Decision Trees</strong> are there in a <strong>Random Forest</strong>?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text">A Random Forest consists of a single Decision Tree.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">B</span><span class="choice-text">A Random Forest is a collection of Decision Trees.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">None of the above.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card read-card" id="s5-how-to-make-base-learners-different" data-nav="s5-how-to-make-base-learners-different">
+      <div class="card-eyebrow"><span class="eyebrow-num">04</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">How to make base learners as different as possible?</span></h2>
+<p>Here, the major thing is that the <code>k</code> models should be different from one another as there is no use if all the models are same.</p>
+<h3>Is making the models "different" really important?</h3>
+<p>To further understand this, assume that instead of people with different expertise (engineer, photographer, mother),</p>
+<ul>
+<li>you called 3 friends who are all <code>iPhone</code> die hard fans.</li>
+<li>If all of them have very similar opinions, the 2 extra experts don't add much value.</li>
+<li>
+<p>It is important that each expert has a different "take" on the issue and the combined decision can then be expected to be more reliable and robust.</p>
+</li>
+<li>
+<p><span style="color: violet;">Interview Question: What is "random" in random forests?</span></p>
+</li>
+<li>
+<p>Answer: Each tree has been trained on a random subset of rows and columns against the target column.</p>
+</li>
+</ul>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s6-quiz-3" data-nav="s6-quiz-3">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 3</div>
+      <div class="quiz-question prose"><p>What is the reason for introducing <strong>Row/Column Sampling</strong> in <strong>Random Forests</strong>?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text">To decrease the training time of Random Forests.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">B</span><span class="choice-text">To tackle the problem of underfitting in base learners.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">To deal with missing values.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">D</span><span class="choice-text">To tackle the problem of overfitting in base learners.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card read-card" id="s7-why-bagging-reduces-variance" data-nav="s7-why-bagging-reduces-variance">
+      <div class="card-eyebrow"><span class="eyebrow-num">05</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Why Bagging Reduces Variance</span></h2>
+<ul>
+<li>In statistical Machine learning the error of a model can be represented as:</li>
+<li><code>Error = Bias^2 + Variance + Irreducible error.</code></li>
+<li>Here we saw due to aggregation, the variance decreases without trading-off to bias, due to which the overall error of the model decreases.</li>
+<li>Therefore the error of the random forest reduces.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/335/original/Screenshot_2026-07-31_155225.png?1785493360"></p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s8-out-of-bag-oob-points" data-nav="s8-out-of-bag-oob-points">
+      <div class="card-eyebrow"><span class="eyebrow-num">06</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Out-of-Bag (OOB) Points</span></h2>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/334/original/Screenshot_2026-07-31_155138.png?1785493313"></p>
+<p>We had <code>n</code> datapoints. And we sampled <code>m</code> points with replacement.</p>
+<p>These <code>m</code> points are used for training model instance <code>i</code>.</p>
+<h4>But, what about leftover <code>n-m</code> points?</h4>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/325/original/Screenshot_2026-07-31_150908.png?1785490768"></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/333/original/Screenshot_2026-07-31_155101.png?1785493277"></p>
+<p>The remaining <code>n-m</code> rows can be used as validation data.</p>
+<ul>
+<li>For <code>D_n-m = D_n - D_i_m</code>, is <code>Set Difference</code>.</li>
+<li>This is referred to as <strong>Out Of Bag (OOB)</strong>.</li>
+<li>So, we train the models on (<code>D_1_m</code>, <code>D_2_m</code>....<code>D_k_m</code>) these data sets and validate them on (<code>D_1_n-m</code>, <code>D_2_n-m</code>,....<code>D_k_n-m</code>) this data which is <code>OOB</code> sample.</li>
+<li>If some data points are not present in any of the train data sets, they will be in every validation data chunk (low chance of this happening).</li>
+</ul>
+<p>For example:</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/324/original/Screenshot_2026-07-31_150723.png?1785490663" width=400></p>
+<p><strong>Note that it is still useful to do an overall cross Validation just like we do for other models</strong>. Just for random forests, we have OOB data as well to get some insight on individual trees performance.</p>
+      </div>
+        <a class="viz-cta" href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/bootstrap-sampling-and-oob-split/" target="_blank" rel="noopener">
+          <span class="viz-cta-icon" aria-hidden="true">&#9654;</span>
+          <span class="viz-cta-copy">
+            <span class="viz-cta-label">Interactive visualization</span>
+            <span class="viz-cta-desc">The Bootstrap splitting</span>
+          </span>
+          <span class="viz-cta-arrow" aria-hidden="true">&#8599;</span>
+        </a>
+    </section>
+
+    <section class="card read-card" id="s9-oob-score-calculation-and-usage" data-nav="s9-oob-score-calculation-and-usage">
+      <div class="card-eyebrow"><span class="eyebrow-num">07</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">OOB Score</span></h2>
+<p>Using these OOB points, we calculate OOB score/ OOB error.</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/323/original/Screenshot_2026-07-31_150643.png?1785490618"></p>
+<h3>How to calculate <code>OOB</code> error?</h3>
+<ol>
+<li>Find all models (or trees, in the case of a random forest) that are not trained by the OOB instance.<ul>
+<li><em>For example:</em> In above figure, <code>Point C</code> will be OOB point for <code>M1</code> and <code>M3</code>.</li>
+</ul>
+</li>
+<li>Take the majority vote of these models' result for the OOB instance <ul>
+<li>and compare it to the true value of the OOB instance.</li>
+<li><em>For example:</em> After training the RF, we pass <code>Point C</code> through M1 and M3 and take majority vote/mean of its prediction.</li>
+<li>Then we compare the prediction with actual value of label for <code>Point C</code>.</li>
+</ul>
+</li>
+</ol>
+<p>Similarly, we do this for all the points and calculate the OOB error.</p>
+<h3>When to use OOB Score?</h3>
+<p>Cross validation score is more reliable. However, <strong>occasionally the dataset is not big enough and hence set aside a part of it for validation is unaffordable</strong>.</p>
+<p>So, if we have less data: Random Forests, inherently keep some data aside for each tree, so we can utilise this and try to get an estimate of performance by measuring individual tree performance on OOB data.</p>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s10-quiz-4" data-nav="s10-quiz-4">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 4</div>
+      <div class="quiz-question prose"><p>If a dataset contains <strong>n</strong> rows, and <strong>m</strong> of these rows are sampled to train the base learners in a <strong>Random Forest</strong>, what will be the <strong>Out-of-Bag (OOB)</strong> data for each model?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text">The total dataset (<strong>n</strong> rows).</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">B</span><span class="choice-text">A part of the <strong>m</strong> sampled rows.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">C</span><span class="choice-text">The remaining <strong>n − m</strong> rows after sampling.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">A part of the total dataset will be used for all models.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card quiz-card" id="s11-quiz-5" data-nav="s11-quiz-5">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 5</div>
+      <div class="quiz-question prose"><p>The <strong>target attribute</strong> in a <strong>Random Forest</strong> model indicates the value of which of the following?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="true"><span class="choice-mark">A</span><span class="choice-text">Leaf Node</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">B</span><span class="choice-text">Decision Node</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">Path</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">Root Node</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card read-card" id="s12-bias-variance-tradeoff-in-random-forest" data-nav="s12-bias-variance-tradeoff-in-random-forest">
+      <div class="card-eyebrow"><span class="eyebrow-num">08</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Bias-Variance Tradeoff in RF</span></h2>
+<h3>1. Number of Trees (<code>k</code>) (important)</h3>
+<p><strong>What happens if number of base learners (<code>k</code>) increases?</strong></p>
+<ul>
+<li>As <code>k</code> increases, we Aggregate more number of base learners.</li>
+<li>We already saw that, Aggregation decreases the variance without any significant increase in the bias.</li>
+<li>Hence, we can say that we avoid overfitting.</li>
+</ul>
+<p><strong>What if my base learners underfit instead being overfit?</strong></p>
+<ul>
+<li>If the base learners underfit, the variance is already low.</li>
+<li>Hence the aggregation which should reduce the variance doesn't work as expected.</li>
+</ul>
+<h3>2. Row sample size (<code>m</code>)</h3>
+<ul>
+<li>In some libraries <code>m/n</code> is also considered where this value becomes maximum i.e 1, when <code>m=n</code>.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/322/original/Screenshot_2026-07-31_150543.png?1785490557"></p>
+<p><strong>What happens when <code>m=n</code>? (<code>d=d'</code>)</strong></p>
+<ul>
+<li>All Base learners overfit on the whole data and they be similar.</li>
+<li>So, as the <code>m/n</code> increases the over-fitting of the model increases.</li>
+</ul>
+<h3>3. Number of columns Sampled (<code>d'</code>)</h3>
+<ul>
+<li>Consider <code>m=n</code>.</li>
+</ul>
+<p><strong>What happens when <code>d'</code> is close to <code>d</code>?</strong></p>
+<ul>
+<li>As <code>d'/d</code> increases, then all the features are being used by each of the tree.</li>
+<li>This implies the overfitting increases i.e the variance increases.</li>
+</ul>
+<h3>4. Depth of Base learners</h3>
+<ul>
+<li>As depth increases, the overfitting increases.</li>
+<li>When the ratios <code>m/n</code> and <code>d'/d</code> are very less, that is when the base learners are seeing very few columns and rows, and when the number of trees increases (<code>k</code>) the overfitting chances are low.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/321/original/Screenshot_2026-07-31_150508.png?1785490522"></p>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s13-quiz-6" data-nav="s13-quiz-6">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 6</div>
+      <div class="quiz-question prose"><p>Which one of the following is <strong>not</strong> a <strong>hyperparameter</strong> of a <strong>Random Forest</strong>?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text">Number of base learners.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">B</span><span class="choice-text">Sample size.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">C</span><span class="choice-text">Number of features in the complete dataset.</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">Depth of base learners.</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+    </section>
+
+    <section class="card read-card" id="s14-cost-complexity-pruning-ccpalpha" data-nav="s14-cost-complexity-pruning-ccpalpha">
+      <div class="card-eyebrow"><span class="eyebrow-num">09</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;"><code>ccp_alpha</code> - cost complexity pruning</span></h2>
+<ul>
+<li><strong>PRUNING: Sometimes after we make a tree using the greedy approach and maximising information gain at each step, we eventually end up with some redundant or very less useful branches. Hence after the tree is completed, we can now go back and merge / remove some paths / subtrees inside the tree making it simpler and efficient. This is called Pruning</strong>.</li>
+<li>This is basically used for pruning the base learners.</li>
+<li>We can control the overfitting and underfitting of the base learners using the value <code>α</code>, this is almost similar to <code>λ</code> which we used in linear and logistic regression.</li>
+<li>So the idea here is to minimise the loss associated with the decision tree and <code>α</code> times the number of terminal nodes (leaves) which controls overfitting.</li>
+<li><code>min(loss + α * number of leaves in the tree)</code></li>
+<li>As the depth of tree increases we know the loss decreases, where the number of leaf nodes increases, this trade-off between the loss and number of leaves can be controlled using <code>α</code> like regularisation.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/286/original/Screenshot_2026-07-31_130036.png?1785483052"><br />
+<img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/285/original/Screenshot_2026-07-31_125954.png?1785483012"></p>
+<p>Now that we have a solid understanding of the theory behind Random Forest, let us see it in action. We will use a real-world credit default dataset and build a Random Forest model using sklearn. First, let us understand the data, then build a default model, and finally tune the hyperparameters one by one.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s15-sklearn-code-walkthrough-introduction-and-data-understanding" data-nav="s15-sklearn-code-walkthrough-introduction-and-data-understanding">
+      <div class="card-eyebrow"><span class="eyebrow-num">10</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Sklearn Code Walkthrough</span></h2>
+<h3>Usecase: Credit Default Prediction</h3>
+<p>Credit default is one of the most important problems in the banking and risk analytics industry.</p>
+<ul>
+<li>There are various attributes which can be used to predict default, such as:<br />
+        -   demographic data (age, income, employment status, etc.),<br />
+        -   behavioural data (past loans, payment, number of times a credit payment has been delayed by the customer etc.).</li>
+</ul>
+<p>Let's look into the data.</p>
+<h3>Data Understanding and Cleaning</h3>
+<h3>Code</h3>
+<pre><code class="language-python"># Importing the required libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+%matplotlib inline
+
+# To ignore warnings
+import warnings
+warnings.filterwarnings(&quot;ignore&quot;)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">!curl -L -o credit-card-default.csv https://drive.google.com/uc?id=1qobd8ZdTaKHhYOoQjzhgsgh4VTmcKmR9
+</code></pre>
+<h3>Output</h3>
+<pre><code>  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100 2829k  100 2829k    0     0  1003k      0  0:00:02  0:00:02 --:--:-- 1144k
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># Reading the csv file and putting it into 'df' object.
+df = pd.read_csv('credit-card-default.csv')
+df.head()
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/284/original/Screenshot_2026-07-31_125855.png?1785482970"></p>
+<h3>Code</h3>
+<pre><code class="language-python"># Let's understand the type of columns
+df.info()
+</code></pre>
+<h3>Output</h3>
+<pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
+RangeIndex: 30000 entries, 0 to 29999
+Data columns (total 25 columns):
+ #   Column     Non-Null Count  Dtype
+---  ------     --------------  -----
+ 0   ID         30000 non-null  int64
+ 1   LIMIT_BAL  30000 non-null  int64
+ 2   SEX        30000 non-null  int64
+ 3   EDUCATION  30000 non-null  int64
+ 4   MARRIAGE   30000 non-null  int64
+ 5   AGE        30000 non-null  int64
+ 6   PAY_0      30000 non-null  int64
+ 7   PAY_2      30000 non-null  int64
+ 8   PAY_3      30000 non-null  int64
+ 9   PAY_4      30000 non-null  int64
+ 10  PAY_5      30000 non-null  int64
+ 11  PAY_6      30000 non-null  int64
+ 12  BILL_AMT1  30000 non-null  int64
+ 13  BILL_AMT2  30000 non-null  int64
+ 14  BILL_AMT3  30000 non-null  int64
+ 15  BILL_AMT4  30000 non-null  int64
+ 16  BILL_AMT5  30000 non-null  int64
+ 17  BILL_AMT6  30000 non-null  int64
+ 18  PAY_AMT1   30000 non-null  int64
+ 19  PAY_AMT2   30000 non-null  int64
+ 20  PAY_AMT3   30000 non-null  int64
+ 21  PAY_AMT4   30000 non-null  int64
+ 22  PAY_AMT5   30000 non-null  int64
+ 23  PAY_AMT6   30000 non-null  int64
+ 24  defaulted  30000 non-null  int64
+dtypes: int64(25)
+memory usage: 5.7 MB
+</code></pre>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>ID</code></td>
+<td style="text-align: left;"><code>ID</code> of each client</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>LIMIT_BAL</code></td>
+<td style="text-align: left;">Amount of given credit in <code>NT</code> dollars (includes individual and family/supplementary credit</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>SEX</code></td>
+<td style="text-align: left;">Gender (1=male, 2=female)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>EDUCATION</code></td>
+<td style="text-align: left;">(1=graduate school, 2=university, 3=high school, 4=others, 5=unknown, 6=unknown)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>MARRIAGE</code></td>
+<td style="text-align: left;">Marital status (1=married, 2=single, 3=others)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>AGE</code></td>
+<td style="text-align: left;">Age in years</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_0</code></td>
+<td style="text-align: left;">Repayment status in September, 2005 (-1=pay duly, 1=payment delay for one month, 2=payment delay for two months, … 8=payment delay for eight months, 9=payment delay for nine months and above)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_2</code></td>
+<td style="text-align: left;">Repayment status in August, 2005 (scale same as above)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_3</code></td>
+<td style="text-align: left;">Repayment status in July, 2005 (scale same as above)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_4</code></td>
+<td style="text-align: left;">Repayment status in June, 2005 (scale same as above)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_5</code></td>
+<td style="text-align: left;">Repayment status in May, 2005 (scale same as above)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_6</code></td>
+<td style="text-align: left;">Repayment status in April, 2005 (scale same as above)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>BILL_AMT1</code></td>
+<td style="text-align: left;">Amount of bill statement in September, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>BILL_AMT2</code></td>
+<td style="text-align: left;">Amount of bill statement in August, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>BILL_AMT3</code></td>
+<td style="text-align: left;">Amount of bill statement in July, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>BILL_AMT4</code></td>
+<td style="text-align: left;">Amount of bill statement in June, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>BILL_AMT5</code></td>
+<td style="text-align: left;">Amount of bill statement in May, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>BILL_AMT6</code></td>
+<td style="text-align: left;">Amount of bill statement in April, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_AMT1</code></td>
+<td style="text-align: left;">Amount of previous payment in September, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_AMT2</code></td>
+<td style="text-align: left;">Amount of previous payment in August, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_AMT3</code></td>
+<td style="text-align: left;">Amount of previous payment in July, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_AMT4</code></td>
+<td style="text-align: left;">Amount of previous payment in June, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_AMT5</code></td>
+<td style="text-align: left;">Amount of previous payment in May, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PAY_AMT6</code></td>
+<td style="text-align: left;">Amount of previous payment in April, 2005</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>defaulted</code></td>
+<td style="text-align: left;">Default payment (1=yes, 0=no)</td>
+</tr>
+</tbody>
+</table>
+<p>In this case, we know that there are no major data quality issues, so we'll go ahead and build the model.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s16-sklearn-code-walkthrough-data-preparation-and-default-model" data-nav="s16-sklearn-code-walkthrough-data-preparation-and-default-model">
+      <div class="card-eyebrow"><span class="eyebrow-num">11</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Data Preparation and Model Building</span></h2>
+<h3>Code</h3>
+<pre><code class="language-python"># Importing test_train_split from sklearn library
+from sklearn.model_selection import train_test_split
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># Putting feature variable to X
+X = df.drop('defaulted',axis=1)
+
+# Putting response variable to y
+y = df['defaulted']
+
+# Splitting the data into train and test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=101)
+</code></pre>
+<h3>Default Hyperparameters</h3>
+<p>Let's first fit a <code>random forest</code> model with default hyperparameters.</p>
+<h3>Code</h3>
+<pre><code class="language-python"># Importing random forest classifier from sklearn library
+from sklearn.ensemble import RandomForestClassifier
+
+# Running the random forest with default parameters.
+rfc = RandomForestClassifier()
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># fit
+rfc.fit(X_train,y_train)
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/282/original/Screenshot_2026-07-31_125751.png?1785482888"></p>
+<h3>Code</h3>
+<pre><code class="language-python"># Making predictions
+predictions = rfc.predict(X_test)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># Importing classification report and confusion matrix from sklearn metrics
+from sklearn.metrics import classification_report,confusion_matrix, accuracy_score
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># Let's check the report of our default model
+print(classification_report(y_test,predictions))
+</code></pre>
+<h3>Output</h3>
+<pre><code>              precision    recall  f1-score   support
+
+           0       0.84      0.95      0.89      7058
+           1       0.65      0.35      0.46      1942
+
+    accuracy                           0.82      9000
+   macro avg       0.75      0.65      0.68      9000
+weighted avg       0.80      0.82      0.80      9000
+</code></pre>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s17-sklearn-code-walkthrough-model-diagnosis-with-ai" data-nav="s17-sklearn-code-walkthrough-model-diagnosis-with-ai">
+      <div class="card-eyebrow"><span class="eyebrow-num">12</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Using AI to Diagnose Your Model</span></h2>
+<p>Take the classification report we just got:</p>
+<pre><code>          precision    recall  f1-score   support
+
+       0       0.84      0.96      0.90      7058
+       1       0.69      0.35      0.47      1942
+</code></pre>
+<p>"My Random Forest model for credit default prediction gives recall of 0.35 for the defaulter class (class 1). The dataset has 7058 non-defaulters and 1942 defaulters. What are 3 specific things I can do to improve recall for class 1?"</p>
+<p>Gemini will suggest a few things that we can try to improve the model.</p>
+<p>These are actionable suggestions you can directly apply to your model. Try implementing one or two of these and re-run the model to see if the <code>recall</code> for class 1 improves."</p>
+<h3>Code</h3>
+<pre><code class="language-python"># Printing confusion matrix
+print(confusion_matrix(y_test,predictions))
+</code></pre>
+<h3>Output</h3>
+<pre><code>[[6691  367]
+ [1254  688]]
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">print(accuracy_score(y_test,predictions))
+</code></pre>
+<h3>Output</h3>
+<pre><code>0.8198888888888889
+</code></pre>
+<p>So far so good, let's now look at the list of hyperparameters which we can tune to improve model performance.</p>
+<p>Our default model gave us 82% accuracy. Not bad, but we can do better. Remember, Random Forest has many knobs we can turn. Each one corresponds to a concept we discussed in the theory section: depth controls overfitting of individual trees, n_estimators controls how many trees we aggregate, max_features controls column sampling, and so on. Let us tune them one at a time and observe the effect on training and test accuracy.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s18-hyperparameter-tuning-introduction-and-max-depth" data-nav="s18-hyperparameter-tuning-introduction-and-max-depth">
+      <div class="card-eyebrow"><span class="eyebrow-num">13</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Hyperparameter Tuning</span></h2>
+<p>sklearn documentation: <a href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html" target="_blank" rel="noopener" class="inline-link">https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html</a></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/281/original/Screenshot_2026-07-31_125630.png?1785482828"></p>
+<p>The following hyperparameters are present in a random forest classifier. Note that most of these hyperparameters are actually of the decision trees that are in the forest.</p>
+<ul>
+<li><strong>n_estimators</strong>: integer, optional (default=10): The number of trees in the forest.</li>
+<li><strong>criterion</strong>: string, optional (default=”gini”)The function to measure the quality of a split. Supported criteria are “gini” for the Gini impurity and “entropy” for the information gain. Note: this parameter is tree-specific.</li>
+<li><strong>max_features</strong>: int, float, string or None, optional (default=”auto”)The number of features to consider when looking for the best split:<ul>
+<li>If int, then consider max_features features at each split.</li>
+<li>If float, then max_features is a percentage and int(max_features * n_features) features are considered at each split.</li>
+<li>If “auto”, then max_features=sqrt(n_features).</li>
+<li>If “sqrt”, then max_features=sqrt(n_features) (same as “auto”).</li>
+<li>If “log2”, then max_features=log2(n_features).</li>
+<li>If None, then max_features=n_features.</li>
+<li><em>Note:</em> the search for a split does not stop until at least one valid partition of the node samples is found, even if it requires to effectively inspect more than max_features features.</li>
+</ul>
+</li>
+<li><strong>max_depth</strong>: integer or None, optional (default=None)The maximum depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.</li>
+<li><strong>min_samples_split</strong>: int, float, optional (default=2)The minimum number of samples required to split an internal node:<ul>
+<li>If int, then consider min_samples_split as the minimum number.</li>
+<li>If float, then min_samples_split is a percentage and ceil(min_samples_split, n_samples) are the minimum number of samples for each split.</li>
+</ul>
+</li>
+<li><strong>min_samples_leaf</strong>: int, float, optional (default=1)The minimum number of samples required to be at a leaf node:<ul>
+<li><strong>If int, then consider min_samples_leaf as the minimum number</strong>.</li>
+<li><strong>If float, then min_samples_leaf is a percentage and ceil(min_samples_leaf * n_samples) are the minimum number of samples for each node</strong>.</li>
+</ul>
+</li>
+<li><strong>min_weight_fraction_leaf</strong>: float, optional (default=0.)The minimum weighted fraction of the sum total of weights (of all the input samples) required to be at a leaf node. Samples have equal weight when sample_weight is not provided.</li>
+<li><strong>max_leaf_nodes</strong>: int or None, optional (default=None)Grow trees with max_leaf_nodes in best-first fashion. Best nodes are defined as relative reduction in impurity. If None then unlimited number of leaf nodes.</li>
+<li>
+<p><strong>min_impurity_split</strong>: float, Threshold for early stopping in tree growth. A node will split if its impurity is above the threshold, otherwise it is a leaf.</p>
+</li>
+<li>
+<p>The following code takes a lot of time to run.</p>
+</li>
+<li>Run it in advance and show the results to learners.</li>
+</ul>
+<h3>Tuning max_depth</h3>
+<p>Let's try to find the optimum values for <code>max_depth</code> and understand how the value of max_depth impacts the overall accuracy of the ensemble.</p>
+<h3>Code</h3>
+<pre><code class="language-python"># GridSearchCV to find optimal n_estimators
+from sklearn.model_selection import KFold
+from sklearn.model_selection import GridSearchCV
+
+# specify number of folds for k-fold CV
+n_folds = 5
+
+# parameters to build the model on
+parameters = {'max_depth': range(2, 20, 5)}
+
+# instantiate the model
+rf = RandomForestClassifier()
+
+# fit tree on training data
+rf = GridSearchCV(rf, parameters,
+                    cv=n_folds,
+                   scoring=&quot;accuracy&quot;,return_train_score=True)
+rf.fit(X_train, y_train)
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/280/original/Screenshot_2026-07-31_125503.png?1785482720"></p>
+<h3>Code</h3>
+<pre><code class="language-python"># scores of GridSearch CV
+scores = rf.cv_results_
+pd.DataFrame(scores).head()
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/279/original/Screenshot_2026-07-31_125420.png?1785482685"></p>
+<h3>Code</h3>
+<pre><code class="language-python"># plotting accuracies with max_depth
+plt.figure()
+plt.plot(scores[&quot;param_max_depth&quot;],
+         scores[&quot;mean_train_score&quot;],
+         label=&quot;training accuracy&quot;)
+plt.plot(scores[&quot;param_max_depth&quot;],
+         scores[&quot;mean_test_score&quot;],
+         label=&quot;test accuracy&quot;)
+plt.xlabel(&quot;max_depth&quot;)
+plt.ylabel(&quot;Accuracy&quot;)
+plt.legend()
+plt.show()
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/276/original/Screenshot_2026-07-31_125128.png?1785482502"></p>
+<p>You can see that as we increase the value of max_depth, both train and test scores increase till a point, but after that test score starts to decrease. The ensemble tries to overfit as we increase the max_depth.</p>
+<p>Thus, controlling the depth of the constituent trees will help reduce overfitting in the forest.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s19-hyperparameter-tuning-n-estimators-and-min-samples-leaf" data-nav="s19-hyperparameter-tuning-n-estimators-and-min-samples-leaf">
+      <div class="card-eyebrow"><span class="eyebrow-num">14</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Tuning n_estimators</span></h2>
+<p>Let's try to find the optimum values for n_estimators and understand how the value of n_estimators impacts the overall accuracy. Notice that we'll specify an appropriately low value of max_depth, so that the trees do not overfit.</p>
+<h3>Code</h3>
+<pre><code class="language-python"># GridSearchCV to find optimal n_estimators
+from sklearn.model_selection import KFold
+from sklearn.model_selection import GridSearchCV
+
+# specify number of folds for k-fold CV
+n_folds = 5
+
+# parameters to build the model on
+parameters = {'n_estimators': range(100, 1500, 400)}
+
+# instantiate the model (note we are specifying a max_depth)
+rf = RandomForestClassifier(max_depth=4)
+
+# fit tree on training data
+rf = GridSearchCV(rf, parameters,
+                    cv=n_folds,
+                   scoring=&quot;accuracy&quot;,return_train_score=True)
+rf.fit(X_train, y_train)
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/275/original/Screenshot_2026-07-31_125025.png?1785482452"></p>
+<h3>Code</h3>
+<pre><code class="language-python"># scores of GridSearch CV
+scores = rf.cv_results_
+pd.DataFrame(scores).head()
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/274/original/Screenshot_2026-07-31_124954.png?1785482410"></p>
+<h3>Code</h3>
+<pre><code class="language-python"># plotting accuracies with n_estimators
+plt.figure()
+plt.plot(scores[&quot;param_n_estimators&quot;],
+         scores[&quot;mean_train_score&quot;],
+         label=&quot;training accuracy&quot;)
+plt.plot(scores[&quot;param_n_estimators&quot;],
+         scores[&quot;mean_test_score&quot;],
+         label=&quot;test accuracy&quot;)
+plt.xlabel(&quot;n_estimators&quot;)
+plt.ylabel(&quot;Accuracy&quot;)
+plt.legend()
+plt.show()
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/273/original/Screenshot_2026-07-31_124916.png?1785482369"></p>
+<h2><span style="color: skyblue;">Tuning min_samples_leaf</span></h2>
+<p>The hyperparameter <strong>min_samples_leaf</strong> is the minimum number of samples required to be at a leaf node:</p>
+<ul>
+<li>If int, then consider min_samples_leaf as the minimum number.</li>
+<li>If float, then min_samples_leaf is a percentage and ceil(min_samples_leaf * n_samples) are the minimum number of samples for each node.</li>
+</ul>
+<p>Let's now check the optimum value for min samples leaf in our case.</p>
+<h3>Code</h3>
+<pre><code class="language-python"># GridSearchCV to find optimal min_samples_leaf
+from sklearn.model_selection import KFold
+from sklearn.model_selection import GridSearchCV
+
+# specify number of folds for k-fold CV
+n_folds = 5
+
+# parameters to build the model on
+parameters = {'min_samples_leaf': range(100, 400, 50)}
+
+# instantiate the model
+rf = RandomForestClassifier()
+
+# fit tree on training data
+rf = GridSearchCV(rf, parameters,
+                    cv=n_folds,
+                   scoring=&quot;accuracy&quot;,return_train_score=True)
+rf.fit(X_train, y_train)
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/271/original/Screenshot_2026-07-31_124839.png?1785482334"></p>
+<h3>Code</h3>
+<pre><code class="language-python"># scores of GridSearch CV
+scores = rf.cv_results_
+pd.DataFrame(scores).head()
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/269/original/Screenshot_2026-07-31_124802.png?1785482301"></p>
+<h3>Code</h3>
+<pre><code class="language-python"># plotting accuracies with min_samples_leaf
+plt.figure()
+plt.plot(scores[&quot;param_min_samples_leaf&quot;],
+         scores[&quot;mean_train_score&quot;],
+         label=&quot;training accuracy&quot;)
+plt.plot(scores[&quot;param_min_samples_leaf&quot;],
+         scores[&quot;mean_test_score&quot;],
+         label=&quot;test accuracy&quot;)
+plt.xlabel(&quot;min_samples_leaf&quot;)
+plt.ylabel(&quot;Accuracy&quot;)
+plt.legend()
+plt.show()
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/265/original/Screenshot_2026-07-31_124545.png?1785482160"></p>
+<p>You can see that the model starts of overfit as you decrease the value of min_samples_leaf.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s20-hyperparameter-tuning-grid-search-and-final-model" data-nav="s20-hyperparameter-tuning-grid-search-and-final-model">
+      <div class="card-eyebrow"><span class="eyebrow-num">15</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Grid Search to Find Optimal Hyperparameters</span></h2>
+<p>We can now find the optimal hyperparameters using GridSearchCV.</p>
+<h3>Code</h3>
+<pre><code class="language-python"># Create the parameter grid based on the results of random search
+param_grid = {
+    'max_depth': [4,8,10],
+    'min_samples_leaf': range(100, 400, 200),
+    'min_samples_split': range(200, 500, 200),
+    'n_estimators': [100,200, 300],
+    'max_features': [5, 10]
+}
+# Create a based model
+rf = RandomForestClassifier()
+# Instantiate the grid search model
+grid_search = GridSearchCV(estimator = rf, param_grid = param_grid,
+                          cv = 3, n_jobs = -1,verbose = 1)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># Fit the grid search to the data
+grid_search.fit(X_train, y_train)
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/263/original/Screenshot_2026-07-31_124512.png?1785482127"></p>
+<h3>Code</h3>
+<pre><code class="language-python"># printing the optimal accuracy score and hyperparameters
+print('We can get accuracy of',grid_search.best_score_,'using',grid_search.best_params_)
+</code></pre>
+<h3>Output</h3>
+<pre><code>We can get accuracy of 0.8182380952380952 using {'max_depth': 4, 'max_features': 10, 'min_samples_leaf': 100, 'min_samples_split': 400, 'n_estimators': 100}
+</code></pre>
+<p><strong>Fitting the final model with the best parameters obtained from grid search</strong>.</p>
+<h3>Code</h3>
+<pre><code class="language-python"># model with the best hyperparameters
+from sklearn.ensemble import RandomForestClassifier
+rfc = RandomForestClassifier(bootstrap=True,
+                             max_depth=10,
+                             min_samples_leaf=100,
+                             min_samples_split=200,
+                             max_features=10,
+                             n_estimators=100)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># fit
+rfc.fit(X_train,y_train)
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/262/original/Screenshot_2026-07-31_124440.png?1785482094"></p>
+<h3>Code</h3>
+<pre><code class="language-python"># predict
+predictions = rfc.predict(X_test)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># evaluation metrics
+from sklearn.metrics import classification_report,confusion_matrix
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">print(classification_report(y_test,predictions))
+</code></pre>
+<h3>Output</h3>
+<pre><code>              precision    recall  f1-score   support
+
+           0       0.84      0.96      0.90      7058
+           1       0.70      0.35      0.47      1942
+
+    accuracy                           0.83      9000
+   macro avg       0.77      0.66      0.68      9000
+weighted avg       0.81      0.83      0.80      9000
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python">print(confusion_matrix(y_test,predictions))
+</code></pre>
+<h3>Output</h3>
+<pre><code>[[6764  294]
+ [1256  686]]
+</code></pre>
+      </div>
+    </section>
+
+    <section class="card quiz-card" id="s21-quiz-7" data-nav="s21-quiz-7">
+      <div class="quiz-tag"><span class="ballot-icon">&#9776;</span> Cast your vote &middot; Quiz 7</div>
+      <div class="quiz-question prose"><p>If you're performing <strong>GridSearchCV</strong> on a <strong>Random Forest</strong> model with:</p>
+<ul>
+<li><strong><code>max_depth</code></strong> having <strong>3</strong> values,</li>
+<li><strong><code>min_samples</code></strong> having <strong>4</strong> values, and</li>
+<li><strong>10-fold cross-validation</strong>,</li>
+</ul>
+<p>how many times will <strong><code>model.fit()</code></strong> be called?</p></div>
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button class="choice" type="button" data-correct="false"><span class="choice-mark">A</span><span class="choice-text">1440</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="true"><span class="choice-mark">B</span><span class="choice-text">120</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">C</span><span class="choice-text">40</span><span class="choice-icon" aria-hidden="true"></span></button><button class="choice" type="button" data-correct="false"><span class="choice-mark">D</span><span class="choice-text">30</span><span class="choice-icon" aria-hidden="true"></span></button>
+      </div>
+      <div class="quiz-feedback" data-feedback aria-live="polite"></div>
+      
+        <div class="explanation" data-explanation>
+          <div class="explanation-label">Why</div>
+          <div class="prose"><p>Exp: For one pair of hyper-params, since we have 10 folds we will call model.fit() 10 times, and there are 3*4 = 12 params. So 12*10 = 120.</p>
+<p>Grid Search works well, but it can be very slow when we have many hyperparameters and many values to try. For example, if we had 5 hyperparameters with 10 values each, that is 100,000 combinations. There is a faster alternative called Randomized Search that tries random combinations instead of all combinations. It often finds a good-enough solution in a fraction of the time. Let us see how it works.</p></div>
+        </div>
+    </section>
+
+    <section class="card read-card" id="s22-randomized-search" data-nav="s22-randomized-search">
+      <div class="card-eyebrow"><span class="eyebrow-num">16</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Randomized Search</span></h2>
+<p>Just like Grid Search which is an exhaustive brute force search, we can use a Random Search as well, which will try hyper-parameters randomly from a finite list of options, or from a distribution.</p>
+<p>It can be used when you want to try a hyper-parameter within a certain range with some associated probability.</p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/259/original/Screenshot_2026-07-31_124321.png?1785482019"></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/261/original/Screenshot_2026-07-31_124357.png?1785482054"></p>
+<h3>Code</h3>
+<pre><code class="language-python">from sklearn.model_selection import RandomizedSearchCV
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># Create the parameter grid based on the results of random search
+param_grid = {
+    'max_depth': [4,8,10],
+    'min_samples_leaf': range(100, 400, 200),
+    'min_samples_split': range(200, 500, 200),
+    'n_estimators': [100,200, 300],
+    'max_features': [5, 10]
+}
+# Create a based model
+rf = RandomForestClassifier()
+# Instantiate the grid search model
+random_search = RandomizedSearchCV(estimator = rf, param_distributions= param_grid,
+                          cv = 3, n_jobs = -1,verbose = 1)
+</code></pre>
+<h3>Code</h3>
+<pre><code class="language-python"># Fit the grid search to the data
+random_search.fit(X_train, y_train)
+</code></pre>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/258/original/Screenshot_2026-07-31_124240.png?1785481974"></p>
+<h3>Code</h3>
+<pre><code class="language-python"># printing the optimal accuracy score and hyperparameters
+print('We can get accuracy of',random_search.best_score_,'using',random_search.best_params_)
+</code></pre>
+<h3>Output</h3>
+<pre><code>We can get accuracy of 0.8182857142857142 using {'n_estimators': 300, 'min_samples_split': 400, 'min_samples_leaf': 100, 'max_features': 10, 'max_depth': 4}
+</code></pre>
+      </div>
+        <a class="viz-cta" href="https://aiml-vizs-new.vercel.app/supervised-learning-classification/grid-search-vs-randomized-search-coverage-hidden-peak-hunt/" target="_blank" rel="noopener">
+          <span class="viz-cta-icon" aria-hidden="true">&#9654;</span>
+          <span class="viz-cta-copy">
+            <span class="viz-cta-label">Interactive visualization</span>
+            <span class="viz-cta-desc">The difference between grid search CV and randomized search CV</span>
+          </span>
+          <span class="viz-cta-arrow" aria-hidden="true">&#8599;</span>
+        </a>
+    </section>
+
+    <section class="card read-card" id="s23-interview-questions" data-nav="s23-interview-questions">
+      <div class="card-eyebrow"><span class="eyebrow-num">17</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Interview Questions</span></h2>
+<p><span style="color: violet;">Question: How does Feature importance in a Random Forest work?</span></p>
+<p>Answer: A simple way of finding the feature importance in Random Forest is by computing the feature importance of a feature in each Decision Tree and take the average of these values.</p>
+<p><span style="color: violet;">Follow up Question: What if some base learners don't have the feature?</span></p>
+<ul>
+<li>The importance of that feature will be considered 0, in that Base learner. </li>
+<li>Even if we take average of trees in which the feature is not present, it does not affect much because all the features have equal importance of being chosen. </li>
+<li>Let's assume there are 100 trees and column sampling rate is 0.1, so a feature f10 will approximately be in 10 base learners, same happens with all other features also. </li>
+<li>So dividing by 10 or 100 doesn't matter.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/257/original/Screenshot_2026-07-31_124152.png?1785481938"></p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s24-looking-ahead-to-boosting" data-nav="s24-looking-ahead-to-boosting">
+      <div class="card-eyebrow"><span class="eyebrow-num">18</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Looking Ahead</span></h2>
+<p>Random Forest showed us that combining many independently trained Decision Trees can significantly improve predictive performance.</p>
+<p>But this naturally raises an interesting question:</p>
+<p><span style="color: violet;">What if, instead of training all trees independently, we trained them one after another, allowing each new model to learn from the mistakes of the previous one?</span></p>
+<p>This idea forms the foundation of <strong>Boosting</strong>, another powerful ensemble technique that follows a very different learning strategy.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s25-boosting-intuition-how-to-combine-base-learners" data-nav="s25-boosting-intuition-how-to-combine-base-learners">
+      <div class="card-eyebrow"><span class="eyebrow-num">19</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Boosting Intuition - How do we combine base learners?</span></h2>
+<p>Say, we have a regression problem i.e. target variable is continuous.</p>
+<p>Let's say we have dataset D and on that we'll start off by training a simplest model.</p>
+<h3>Stage 0:</h3>
+<ul>
+<li>This mean model gives same average value for each datapoint.</li>
+<li>We represent mean model as <code>h0(x)</code>.</li>
+<li><code>h0(x)</code> will predict <code>y^</code>.</li>
+</ul>
+<p><span style="color: violet;">Question: What will be the error for each datapoint?</span></p>
+<p>Answer: <code>e0i = yi - y^</code></p>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/255/original/Screenshot_2026-07-31_124039.png?1785481857"></p>
+<h3>Stage 1:</h3>
+<ul>
+<li>Here our base learner would be <code>h1(x)</code>, which will be a shallow DT.</li>
+<li>For <code>h1(x)</code> our dataset would be <code>{xi, err0i}</code>.</li>
+<li>Let's create a table to understand this from <strong>Stage0</strong>.</li>
+<li>At <strong>stage0</strong> we had a mean model, which will give 16 as <code>y^</code> for each datapoint.</li>
+<li>Column <code>ei</code> is having errors from stage0, which <code>h1(x)</code> will try to fit on.</li>
+<li>That means errors from previous stage will act as actual <code>y</code> value for base learners, in this case <code>h1(x)</code>.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/252/original/Screenshot_2026-07-31_123955.png?1785481817"></p>
+<ul>
+<li>Let's consider <code>x4</code> datapoint from the table.</li>
+<li><code>h1(x)</code> will try to predict and come close to value 4, but here we saw <code>y^</code> comes out to be 1.</li>
+<li>The error, <code>e1i</code> for stage1 would be <code>4-1 = 3</code>.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/251/original/Screenshot_2026-07-31_122508.png?1785481749"></p>
+<ul>
+<li>Now we combine our base learners using this equation:<br />
+<code>F1(x) = α0 * h0(x) + α1 * h1(x)</code></li>
+<li>This is our model after Stage 1, where <code>α0</code> and <code>α1</code> are weights which help in controlling overfit underfit tradeoff.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/232/original/Screenshot_2026-07-31_122139.png?1785480737"></p>
+<ul>
+<li>Using <code>F1(x) = α0 * h0(x) + α1 * h1(x)</code> equation, let's calculate error after stage1.</li>
+<li>Again we are considering datapoint <code>x4</code>.</li>
+<li>Considering <code>alpha(s) = 1</code> and replacing values from the table.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/230/original/Screenshot_2026-07-31_122037.png?1785480662"></p>
+<h3>Stage 2:</h3>
+<ul>
+<li>In stage2, our base learner would be <code>h2(x)</code>, which will try to fit on the dataset <code>{xi, err1i}</code>.</li>
+<li>Again we will combine our base learners to get <code>F2(x)</code>.</li>
+<li><code>F2(x) = α0 * h0(x) + α1 * h1(x) + α2 * h2(x)</code></li>
+<li>After each iteration of stage we are decreasing our error, and ideally we want error to be zero, but if that happens for each datapoint, then it will lead to overfitting.</li>
+<li>Since we are fitting so many base learners, there are high chances that our boosting algo will overfit.</li>
+</ul>
+<p><img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/215/227/original/Screenshot_2026-07-31_121612.png?1785480396"></p>
+<h3>Stage M</h3>
+<p>If we keep building the models in this way,</p>
+<p>After <code>M</code> Stages, the final model will be:</p>
+<ul>
+<li><code>FM(x) = ∑Mi=0 αihi(x)</code></li>
+</ul>
+<p>Here, <code>h(x)</code> is:</p>
+<ul>
+<li>either a very simple mean model [for <code>h0(x)</code>]</li>
+<li>a shallow tree which are underfit</li>
+</ul>
+<p>And these weights (<code>α</code>'s) are calculated using optimization.</p>
+      </div>
+    </section>
+
+    <section class="card read-card" id="s26-wrap-up" data-nav="s26-wrap-up">
+      <div class="card-eyebrow"><span class="eyebrow-num">20</span><span class="eyebrow-line"></span></div>
+      <div class="card-body prose">
+        <h2><span style="color: skyblue;">Wrap-Up</span></h2>
+<p>In this lecture, we explored the internal working of <strong>Random Forest</strong>, one of the most popular Bagging algorithms. We learned how <strong>bootstrap sampling</strong> and <strong>random feature selection</strong> create diverse Decision Trees, allowing the ensemble to produce more accurate and robust predictions than a single tree.</p>
+<p>We also studied the concept of <strong>Out-of-Bag (OOB) Error</strong>, understood the impact of important hyperparameters, built a Random Forest model using <strong>Scikit-learn</strong>, and performed hyperparameter tuning using <strong>Grid Search</strong> and <strong>Randomized Search</strong>. Finally, we developed an intuition for <strong>Boosting</strong>, where learners are trained sequentially, with each new learner attempting to improve upon the mistakes made by its predecessors.</p>
+<p>In the next lecture, we will build on this intuition to understand <strong>how Boosting actually works</strong>. We will explore the step-by-step learning process, see how each learner identifies and corrects previous errors, and study the algorithms that make Boosting one of the most powerful ensemble techniques.</p>
+      </div>
+    </section>
+
+    <div class="end-note">You've reached the end of the post-read. Next lecture: Boosting, in depth.</div>
+  </main>
+</div>
+
+<script>
+(function(){
+  // ---- Sidebar mobile toggle ----
+  var sidebar = document.getElementById('sidebar');
+  var toggle = document.getElementById('sidebar-toggle');
+  var scrim = document.getElementById('sidebar-scrim');
+  function closeSidebar(){ sidebar.classList.remove('open'); scrim.classList.remove('show'); toggle.setAttribute('aria-expanded','false'); }
+  function openSidebar(){ sidebar.classList.add('open'); scrim.classList.add('show'); toggle.setAttribute('aria-expanded','true'); }
+  toggle.addEventListener('click', function(){
+    sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+  });
+  scrim.addEventListener('click', closeSidebar);
+  document.querySelectorAll('.nav-link').forEach(function(a){
+    a.addEventListener('click', function(){ if(window.innerWidth <= 960){ closeSidebar(); } });
+  });
+
+  // ---- Progress bar + active nav tracking ----
+  var fill = document.getElementById('progress-fill');
+  var metaProgress = document.getElementById('meta-progress');
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sections = navLinks.map(function(a){ return document.getElementById(a.dataset.target); }).filter(Boolean);
+
+  function onScroll(){
+    var doc = document.documentElement;
+    var scrollTop = doc.scrollTop || document.body.scrollTop;
+    var height = doc.scrollHeight - doc.clientHeight;
+    var pct = height > 0 ? Math.min(100, Math.max(0, (scrollTop / height) * 100)) : 0;
+    fill.style.width = pct + '%';
+    metaProgress.textContent = Math.round(pct) + '%';
+
+    var activeIdx = 0;
+    var probe = scrollTop + window.innerHeight * 0.28;
+    for(var i=0;i<sections.length;i++){
+      if(sections[i].offsetTop <= probe) activeIdx = i;
+    }
+    navLinks.forEach(function(a){ a.classList.remove('active'); });
+    if(navLinks[activeIdx]) navLinks[activeIdx].classList.add('active');
+  }
+  document.addEventListener('scroll', onScroll, { passive:true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+
+  // ---- Quiz interactivity ----
+  document.querySelectorAll('.quiz-card').forEach(function(card){
+    var group = card.querySelector('.choices');
+    var feedback = card.querySelector('[data-feedback]');
+    var explanation = card.querySelector('[data-explanation]');
+    var answered = false;
+
+    group.querySelectorAll('.choice').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(answered) return;
+        answered = true;
+        group.classList.add('answered');
+        var isCorrect = btn.dataset.correct === 'true';
+
+        group.querySelectorAll('.choice').forEach(function(b){
+          if(b.dataset.correct === 'true'){ b.classList.add('is-correct'); }
+          else if(b === btn){ b.classList.add('is-wrong'); }
+        });
+
+        feedback.classList.add('show');
+        if(isCorrect){
+          feedback.classList.add('correct');
+          feedback.textContent = '✓ Correct — the ensemble agrees with you.';
+        } else {
+          feedback.classList.add('wrong');
+          feedback.textContent = '✕ Not quite — the correct answer is highlighted above.';
+        }
+        if(explanation){ explanation.classList.add('show'); }
+      });
+    });
+  });
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/bagging" target="_blank" rel="noopener">github.com/scaler-content/bagging</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

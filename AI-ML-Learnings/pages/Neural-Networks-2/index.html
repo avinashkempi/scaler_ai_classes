@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neural Network 2 post read</title>
+<meta name="description" content="How a network's weights actually get there: gradient descent, backpropagation through a hidden layer, learning rate failure modes, momentum, overfitting, and dying ReLU.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --maroon-900:#3a0b13;
+    --maroon-800:#4e0f1a;
+    --maroon-700:#6e1423;
+    --maroon-600:#8a1c2e;
+    --maroon-500:#a3374a;
+    --maroon-300:#c97d8c;
+    --maroon-150:#e9cdd3;
+    --maroon-100:#f3e2e5;
+    --maroon-050:#faf2f3;
+    --ink:#271215;
+    --ink-soft:#5f474b;
+    --ink-faint:#8a7276;
+    --paper:#fffdfc;
+    --paper-dim:#fbf6f6;
+    --border:#e7d6d9;
+    --border-strong:#d8bec3;
+    --good:#2f5d3a;
+    --good-bg:#e9f1ea;
+    --bad:#7a2020;
+    --bad-bg:#f8e9e9;
+    --amber:#8a5a1c;
+    --amber-bg:#f6ecdd;
+    --radius-s:4px;
+    --radius-m:10px;
+    --serif:"Spectral", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans:"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono:"IBM Plex Mono", "SFMono-Regular", Consolas, Menlo, monospace;
+    --maxw:740px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth; scroll-padding-top:96px;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+  }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:17px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  img{max-width:100%; height:auto; display:block;}
+
+  .skip-link{
+    position:absolute; left:-999px; top:0;
+    background:var(--maroon-700); color:#fff; padding:10px 16px;
+    z-index:999; border-radius:0 0 var(--radius-s) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  a{color:var(--maroon-700);}
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-visible{
+    outline:3px solid var(--maroon-500);
+    outline-offset:2px;
+  }
+
+  h1,h2,h3,h4{
+    font-family:var(--serif);
+    font-weight:600;
+    color:var(--maroon-900);
+    line-height:1.22;
+    margin:0 0 .5em;
+  }
+
+  p{margin:0 0 1.1em;}
+  ul,ol{margin:0 0 1.1em; padding-left:1.3em;}
+  li{margin-bottom:.4em;}
+
+  code, pre, kbd{font-family:var(--mono);}
+  code{
+    background:var(--maroon-050);
+    border:1px solid var(--border);
+    padding:.1em .35em;
+    border-radius:var(--radius-s);
+    font-size:.9em;
+    color:var(--maroon-800);
+  }
+
+  /* ===== Masthead ===== */
+  .masthead{
+    background:linear-gradient(165deg, var(--maroon-900) 0%, var(--maroon-700) 58%, var(--maroon-600) 100%);
+    color:#fff;
+    padding:4.5rem 1.5rem 3.5rem;
+    position:relative;
+    overflow:hidden;
+  }
+  .masthead::after{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      repeating-linear-gradient(115deg, rgba(255,255,255,0.045) 0px, rgba(255,255,255,0.045) 1px, transparent 1px, transparent 68px);
+    pointer-events:none;
+  }
+  .masthead-inner{max-width:var(--maxw); margin:0 auto; position:relative;}
+  .masthead-kicker{
+    font-family:var(--mono);
+    font-size:.78rem;
+    letter-spacing:.03em;
+    color:var(--maroon-150);
+    margin:0 0 1.1em;
+    display:flex; align-items:center; gap:.6em;
+  }
+  .masthead-kicker::before{
+    content:""; width:28px; height:1px; background:var(--maroon-300); display:inline-block;
+  }
+  .masthead h1{
+    color:#fff;
+    font-size:clamp(2.1rem, 5vw, 3.1rem);
+    margin-bottom:.32em;
+    letter-spacing:-0.01em;
+  }
+  .masthead .deck{
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:1.22rem;
+    color:var(--maroon-100);
+    max-width:34em;
+    margin-bottom:1.4em;
+    font-weight:400;
+  }
+  .masthead .lede{
+    color:rgba(255,255,255,.88);
+    font-size:1.02rem;
+    max-width:38em;
+  }
+  .masthead .lede strong{color:#fff;}
+
+  /* ===== TOC nav ===== */
+  .toc-wrap{
+    position:sticky; top:0; z-index:50;
+    background:rgba(255,253,252,.93);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+  }
+  .toc{
+    max-width:var(--maxw); margin:0 auto;
+    display:flex; gap:.45rem;
+    overflow-x:auto;
+    padding:.65rem 1.5rem;
+    scrollbar-width:thin;
+  }
+  .toc::-webkit-scrollbar{height:4px;}
+  .toc::-webkit-scrollbar-thumb{background:var(--border-strong); border-radius:4px;}
+  .toc a{
+    flex:0 0 auto;
+    font-family:var(--sans);
+    font-size:.82rem;
+    font-weight:600;
+    text-decoration:none;
+    color:var(--ink-soft);
+    background:transparent;
+    border:1px solid var(--border);
+    padding:.4em .85em;
+    border-radius:999px;
+    white-space:nowrap;
+    transition:background .15s, color .15s, border-color .15s;
+  }
+  .toc a:hover{border-color:var(--maroon-500); color:var(--maroon-700);}
+  .toc a.active{background:var(--maroon-700); color:#fff; border-color:var(--maroon-700);}
+
+  /* ===== Main layout ===== */
+  main{max-width:var(--maxw); margin:0 auto; padding:0 1.5rem;}
+  section{padding:3.4rem 0; border-bottom:1px solid var(--border);}
+  section:last-of-type{border-bottom:none;}
+  .section-num{
+    font-family:var(--mono); font-size:.78rem; color:var(--maroon-500);
+    margin:0 0 .6em; font-weight:600;
+  }
+  section h2{font-size:1.72rem;}
+  section h3{font-size:1.2rem; margin-top:1.6em;}
+  .intro-text{font-size:1.07rem; color:var(--ink-soft);}
+
+  figure{margin:1.6em 0;}
+  figure img{border:1px solid var(--border); border-radius:var(--radius-m);}
+  figcaption{
+    font-family:var(--mono);
+    font-size:.8rem;
+    color:var(--ink-faint);
+    margin-top:.6em;
+    line-height:1.5;
+  }
+  .fig-grid{display:grid; gap:1rem; grid-template-columns:1fr;}
+  @media(min-width:560px){.fig-grid.cols-2{grid-template-columns:1fr 1fr;}}
+
+  blockquote{
+    margin:1.6em 0;
+    padding:.2em 0 .2em 1.1em;
+    border-left:3px solid var(--maroon-500);
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:1.12rem;
+    color:var(--maroon-800);
+  }
+
+  /* ===== Callout boxes ===== */
+  .box{
+    border:1px solid var(--border);
+    border-radius:var(--radius-m);
+    padding:1.2rem 1.35rem;
+    margin:1.6em 0;
+    background:var(--paper-dim);
+  }
+  .box-title{
+    font-family:var(--mono);
+    font-size:.74rem;
+    font-weight:600;
+    letter-spacing:.02em;
+    color:var(--maroon-600);
+    margin:0 0 .6em;
+    display:flex; align-items:center; gap:.5em;
+  }
+  .box-title .dot{width:7px; height:7px; border-radius:50%; background:var(--maroon-500); display:inline-block;}
+  .box p:last-child{margin-bottom:0;}
+
+  .box.insight{border-color:var(--maroon-150); background:var(--maroon-050);}
+  .box.insight .box-title{color:var(--maroon-700);}
+  .box.case{background:#fff; border:1px solid var(--border-strong);}
+  .box.note{background:var(--paper-dim);}
+  .box.warn{background:var(--amber-bg); border-color:#e4cfa0;}
+  .box.warn .box-title{color:var(--amber);}
+  .box.warn .box-title .dot{background:var(--amber);}
+
+  pre.code{
+    background:var(--maroon-900);
+    color:#f3e4e6;
+    border-radius:var(--radius-m);
+    padding:1.05rem 1.15rem;
+    overflow-x:auto;
+    margin:1.1em 0;
+    font-size:.82rem;
+    line-height:1.6;
+  }
+  pre.code .c{color:#c9a4ac;}
+  .out{
+    background:var(--ink);
+    color:#eadfe0;
+    border-radius:var(--radius-m);
+    padding:.9rem 1.1rem;
+    font-family:var(--mono);
+    font-size:.8rem;
+    overflow-x:auto;
+    margin:-0.4em 0 1.1em;
+    white-space:pre;
+  }
+  .out-label{
+    font-family:var(--mono); font-size:.72rem; color:var(--ink-faint);
+    margin:0 0 .3em; letter-spacing:.03em;
+  }
+
+  table{width:100%; border-collapse:collapse; margin:1.2em 0; font-size:.92rem;}
+  th,td{text-align:left; padding:.55em .7em; border-bottom:1px solid var(--border);}
+  th{font-family:var(--mono); font-size:.72rem; color:var(--maroon-600); font-weight:600; letter-spacing:.02em;}
+  tr:last-child td{border-bottom:none;}
+  td.num, th.num{text-align:right; font-family:var(--mono);}
+
+  /* ===== Interview checkpoint ===== */
+  .checkpoint{
+    border:1px solid var(--border-strong);
+    border-radius:var(--radius-m);
+    margin:1.6em 0;
+    overflow:hidden;
+    background:#fff;
+  }
+  .checkpoint summary{
+    list-style:none;
+    cursor:pointer;
+    padding:1rem 1.2rem;
+    display:flex; gap:.8em; align-items:flex-start;
+    font-family:var(--serif);
+    font-weight:600;
+    color:var(--maroon-800);
+    background:var(--maroon-050);
+  }
+  .checkpoint summary::-webkit-details-marker{display:none;}
+  .checkpoint summary::before{
+    content:"Q";
+    flex:0 0 auto;
+    background:var(--maroon-700); color:#fff;
+    font-family:var(--mono); font-size:.72rem; font-weight:700;
+    width:22px; height:22px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    margin-top:.1em;
+  }
+  .checkpoint .chev{margin-left:auto; color:var(--maroon-500); font-size:.85rem; transition:transform .18s;}
+  .checkpoint[open] .chev{transform:rotate(180deg);}
+  .checkpoint-body{padding:1.1rem 1.2rem 1.2rem 2.8rem;}
+  .checkpoint-body .weak{color:var(--ink-faint); font-size:.9rem; margin-bottom:.9em;}
+  .checkpoint-body .weak em{font-style:normal; font-weight:600;}
+  .checkpoint-body .strong-label{
+    font-family:var(--mono); font-size:.72rem; color:var(--good); font-weight:600; letter-spacing:.02em; margin-bottom:.4em;
+  }
+
+  /* ===== Quiz ===== */
+  .quiz{
+    border:1px solid var(--maroon-150);
+    border-radius:var(--radius-m);
+    margin:1.8em 0;
+    padding:1.3rem 1.3rem 1.4rem;
+    background:linear-gradient(180deg, var(--maroon-050), #fff 70%);
+  }
+  .quiz-label{
+    font-family:var(--mono); font-size:.72rem; font-weight:700; color:var(--maroon-600);
+    letter-spacing:.03em; margin-bottom:.7em; display:block;
+  }
+  .quiz-q{font-family:var(--serif); font-size:1.05rem; color:var(--ink); margin-bottom:1em; font-weight:500;}
+  .quiz-opts{display:flex; flex-direction:column; gap:.55em; margin-bottom:0;}
+  .quiz-opt{
+    text-align:left;
+    border:1px solid var(--border-strong);
+    background:#fff;
+    border-radius:var(--radius-s);
+    padding:.65em .85em;
+    font-family:var(--sans);
+    font-size:.92rem;
+    color:var(--ink);
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+  }
+  .quiz-opt:hover:not(:disabled){border-color:var(--maroon-500);}
+  .quiz-opt:disabled{cursor:default;}
+  .quiz-opt.correct{border-color:var(--good); background:var(--good-bg); font-weight:600;}
+  .quiz-opt.incorrect{border-color:var(--bad); background:var(--bad-bg);}
+  .quiz-exp{
+    margin-top:1em; padding-top:1em; border-top:1px dashed var(--border-strong);
+    font-size:.92rem; color:var(--ink-soft); display:none;
+  }
+  .quiz-exp.show{display:block;}
+  .quiz-exp .verdict{font-weight:700; font-family:var(--serif); display:block; margin-bottom:.35em;}
+  .quiz-exp .verdict.ok{color:var(--good);}
+  .quiz-exp .verdict.no{color:var(--bad);}
+
+  /* ===== generic widget shell ===== */
+  .widget{
+    border:1px solid var(--border-strong);
+    border-radius:var(--radius-m);
+    padding:1.4rem;
+    margin:1.8em 0;
+    background:#fff;
+  }
+  .widget-label{font-family:var(--mono); font-size:.72rem; font-weight:700; color:var(--maroon-600); letter-spacing:.03em; margin-bottom:1em; display:block;}
+  .widget-note{font-size:.85rem; color:var(--ink-faint); margin-bottom:1em;}
+  .ctrl{margin-bottom:1.1em;}
+  .ctrl label{
+    display:flex; justify-content:space-between; font-size:.86rem; font-weight:600; margin-bottom:.4em; color:var(--ink);
+  }
+  .ctrl label .val{font-family:var(--mono); color:var(--maroon-700);}
+  input[type=range]{width:100%; accent-color:var(--maroon-600); height:4px;}
+  .btn-row{display:flex; gap:.6em; flex-wrap:wrap; margin-top:.8em;}
+  .btn{
+    font-family:var(--sans); font-weight:600; font-size:.84rem;
+    border:1px solid var(--maroon-700); background:var(--maroon-700); color:#fff;
+    padding:.55em 1.1em; border-radius:999px; cursor:pointer;
+  }
+  .btn.secondary{background:#fff; color:var(--maroon-700);}
+  .btn:hover{opacity:.92;}
+  .toggle-row{display:flex; gap:.5em; flex-wrap:wrap; margin-bottom:1em;}
+  .toggle-btn{
+    font-family:var(--sans); font-weight:600; font-size:.84rem;
+    border:1px solid var(--border-strong); background:#fff; color:var(--ink-soft);
+    padding:.5em 1em; border-radius:999px; cursor:pointer;
+  }
+  .toggle-btn.active{background:var(--maroon-700); color:#fff; border-color:var(--maroon-700);}
+
+  svg.chart{width:100%; height:auto; background:var(--paper-dim); border-radius:var(--radius-s);}
+  .grid-line{stroke:var(--border); stroke-width:1;}
+  .axis-line{stroke:var(--ink-faint); stroke-width:1;}
+  .fn-path{fill:none; stroke:var(--maroon-700); stroke-width:2.2;}
+  .fn-path.alt{stroke:var(--maroon-300); stroke-dasharray:4 3;}
+  .fn-dot{fill:var(--maroon-700); stroke:#fff; stroke-width:1.5;}
+  .fn-dot.alt{fill:var(--maroon-300);}
+  .readout{
+    margin-top:1.1em; display:flex; gap:1.6em; flex-wrap:wrap; font-family:var(--mono); font-size:.84rem; color:var(--ink-soft);
+  }
+  .readout b{color:var(--maroon-700);}
+  .readout .big{font-size:1.4rem; color:var(--maroon-700); font-weight:700; font-family:var(--serif);}
+  .legend{display:flex; gap:1.4em; font-family:var(--mono); font-size:.78rem; color:var(--ink-soft); margin-top:.6em; flex-wrap:wrap;}
+  .legend span{display:flex; align-items:center; gap:.4em;}
+  .legend i{width:16px; height:2px; display:inline-block; background:var(--maroon-700);}
+  .legend i.alt{background:var(--maroon-300); border-top:2px dashed var(--maroon-300); background:none; height:0;}
+
+  .verdict-banner{
+    border-radius:var(--radius-s); padding:.7em 1em; margin-top:1em; font-weight:600; font-size:.9rem;
+  }
+  .verdict-banner.ok{background:var(--good-bg); color:var(--good);}
+  .verdict-banner.warn{background:var(--amber-bg); color:var(--amber);}
+  .verdict-banner.bad{background:var(--bad-bg); color:var(--bad);}
+
+  /* ===== diagrams ===== */
+  .diagram-wrap{margin:1.8em 0; text-align:center;}
+  svg.diagram{width:100%; height:auto; max-width:100%;}
+  .diagram-caption{font-family:var(--mono); font-size:.8rem; color:var(--ink-faint); margin-top:.7em; line-height:1.5;}
+
+  /* ===== dead-neuron bar ===== */
+  .deadbar-track{height:26px; border-radius:999px; background:var(--good-bg); overflow:hidden; display:flex; border:1px solid var(--border-strong); margin:1em 0;}
+  .deadbar-dead{background:var(--bad); height:100%; display:flex; align-items:center; justify-content:center; color:#fff; font-family:var(--mono); font-size:.72rem;}
+  .deadbar-alive{background:var(--good); height:100%; display:flex; align-items:center; justify-content:center; color:#fff; font-family:var(--mono); font-size:.72rem;}
+
+  /* ===== takeaways / self-check ===== */
+  .takeaways{list-style:none; padding:0; margin:0;}
+  .takeaways li{display:flex; gap:1em; padding:1rem 0; border-bottom:1px solid var(--border);}
+  .takeaways li:last-child{border-bottom:none;}
+  .takeaways .n{font-family:var(--serif); font-weight:700; color:var(--maroon-500); font-size:1.3rem; line-height:1; flex:0 0 auto;}
+
+  .selfcheck details{border-bottom:1px solid var(--border); padding:.9rem 0;}
+  .selfcheck summary{cursor:pointer; font-weight:600; color:var(--ink); list-style:none; display:flex; justify-content:space-between; gap:1em;}
+  .selfcheck summary::-webkit-details-marker{display:none;}
+  .selfcheck summary::after{content:"+"; font-family:var(--mono); color:var(--maroon-500); font-weight:700;}
+  .selfcheck details[open] summary::after{content:"\2212";}
+  .selfcheck .ans{margin-top:.7em; color:var(--ink-soft); font-size:.94rem;}
+
+  .extlink-row{display:flex; flex-direction:column; gap:.6em; margin:1.2em 0;}
+  .extlink{
+    display:flex; align-items:center; justify-content:space-between; gap:1em;
+    border:1px solid var(--border-strong); border-radius:var(--radius-m);
+    padding:.85em 1.1em; text-decoration:none; background:var(--paper-dim);
+  }
+  .extlink:hover{border-color:var(--maroon-500);}
+  .extlink .t{font-weight:600; color:var(--ink); font-size:.92rem;}
+  .extlink .arrow{color:var(--maroon-600); font-family:var(--mono);}
+
+  /* ===== footer ===== */
+  footer{background:var(--maroon-900); color:var(--maroon-150); padding:3rem 1.5rem 2.5rem; margin-top:0;}
+  .footer-inner{max-width:var(--maxw); margin:0 auto; text-align:center;}
+  footer .f-title{font-family:var(--serif); color:#fff; font-size:1.2rem; margin-bottom:.4em;}
+  footer .f-sub{font-size:.85rem; color:var(--maroon-300);}
+
+  .visually-hidden{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
+
+  ::selection{background:var(--maroon-150); color:var(--maroon-900);}
+</style>
+</head>
+<body>
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/deep-learning/">Deep learning &amp; neural networks</a><span class="t">· Neural Networks 2 · Backpropagation and training</span><span class="pn"><a href="../Neural-Networks-1/" title="Neural Networks 1 · Neurons and activation functions">← Prev</a><a href="../Neural-Networks-3/" title="Neural Networks 3 · Tensor shape, dtype, device and grad">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar --><a class="skip-link" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <p class="masthead-kicker">Neural networks, from first principles — part two</p>
+    <h1>Neural Network 2 post read</h1>
+    <p class="deck">Part one built a network capable of solving the spiral. It never explained how its weights got there. This is the read that closes that loop.</p>
+    <p class="lede">By the end, you'll be able to derive the error signal for a single layer by hand, extend it through a hidden layer with the chain rule, train that exact network from scratch, and diagnose the failures that show up the moment real training starts: a learning rate that's wrong in either direction, overfitting, and <strong>dying ReLU</strong>.</p>
+  </div>
+</header>
+
+<div class="toc-wrap">
+  <nav class="toc" aria-label="Jump to section" id="tocNav">
+    <a href="#descent">Gradient descent</a>
+    <a href="#backprop1">Backprop — one layer</a>
+    <a href="#backprop2">Backprop — hidden layer</a>
+    <a href="#train">Build &amp; train</a>
+    <a href="#lr">Learning rate</a>
+    <a href="#optimizers">Optimizers</a>
+    <a href="#overfitting">Overfitting</a>
+    <a href="#dyingrelu">Dying ReLU</a>
+    <a href="#takeaways">Takeaways</a>
+  </nav>
+</div>
+
+<main id="main">
+
+  <!-- ============ SECTION: HOOK + GRADIENT DESCENT ============ -->
+  <section id="descent" aria-labelledby="descent-h">
+    <p class="section-num">01 — Introduction</p>
+    <h2 id="descent-h">The gap part one left open</h2>
+    <p class="intro-text">The previous read ended with a working network: two hidden layers, trained with a library, reaching about 98.7% accuracy on the spiral dataset. It's easy to describe that network's architecture confidently — neurons, layers, activation functions. It's much harder to explain, honestly, how its weights ended up in the right place. Not what the network does. How it got there. That's the gap this read closes.</p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/243/423/original/29-2-1.png?1790681522" alt="Scatter plot of the spiral dataset from part one, two interleaved spiral arms in orange and blue.">
+      <figcaption>The same spiral from part one. Same architecture shape, same data — this time, built and trained by hand.</figcaption>
+    </figure>
+
+    <h3>The loss landscape</h3>
+    <p>Picture the loss as hilly terrain, and the current weights as a position on that terrain. The goal is the lowest point. The whole landscape isn't visible — only the slope underfoot. That slope is the <strong>gradient</strong>. Walking downhill, opposite to the slope, is <strong>gradient descent</strong>. How big a step is taken each time is the <strong>learning rate</strong>. A derivative gives exactly that: the slope at the current position, nothing more.</p>
+
+    <h3>A toy example before any network is involved</h3>
+    <p>The simplest possible loss to minimize: <code>f(w) = (w − 3)²</code>. The minimum is obviously at w = 3, so it's possible to watch gradient descent find something already known.</p>
+
+    <pre class="code">def f(w):
+    return (w - 3) ** 2
+
+def grad_f(w):
+    return 2 * (w - 3)
+
+def gradient_descent_1d(lr, steps, w0=-5.0):
+    w = w0
+    history = [w]
+    for _ in range(steps):
+        w = w - lr * grad_f(w)
+        history.append(w)
+    return history</pre>
+
+    <p class="out-label">Output</p>
+    <div class="out">learning rate 0.05 reaches the minimum in about 64 steps
+learning rate 0.4 reaches the minimum in about 5 steps</div>
+
+    <p>Same destination, wildly different step counts — purely because of step size. A smaller learning rate isn't "more correct," just more cautious: both runs reach the exact same minimum. The cost of extra caution is time, not accuracy — at least on a landscape this forgiving. Later sections show what happens on something much less forgiving than a single parabola.</p>
+
+    <div class="widget">
+      <span class="widget-label">Interactive — gradient descent playground</span>
+      <p class="widget-note">Same function, <code>f(w) = (w − 3)²</code>, starting at w₀ = −5. Set a learning rate and watch where each step lands.</p>
+      <svg class="chart" id="gdChart" viewBox="0 0 560 230" role="img" aria-label="Chart showing gradient descent steps on the parabola f(w) = (w minus 3) squared, moving from the starting point toward the minimum at w = 3"></svg>
+      <div class="ctrl" style="margin-top:1em;">
+        <label for="gdLr">Learning rate <span class="val" id="gdLrVal">0.05</span></label>
+        <input type="range" id="gdLr" min="0.01" max="1.15" step="0.01" value="0.05">
+      </div>
+      <div class="btn-row">
+        <button class="btn" type="button" id="gdStep">Take one step</button>
+        <button class="btn secondary" type="button" id="gdRun">Run 40 steps</button>
+        <button class="btn secondary" type="button" id="gdReset">Reset</button>
+      </div>
+      <div class="readout">
+        <span>step <b id="gdStepN">0</b></span>
+        <span>w = <b id="gdW">-5.000</b></span>
+        <span>loss = <b id="gdLoss">64.000</b></span>
+      </div>
+      <div class="verdict-banner" id="gdBanner" style="display:none;"></div>
+    </div>
+
+    <div class="box note">
+      <p class="box-title"><span class="dot"></span>Try it — three regimes, one slider</p>
+      <p>A very small learning rate (around 0.02–0.05) barely moves each step — technically correct, painfully slow. A moderate one (around 0.1–0.9) reaches w = 3 cleanly in a handful of steps. Push past roughly 1.0 on this particular function and each step overshoots further than the last — the point doesn't converge, it diverges. The same three regimes — too low, about right, too high — reappear later on a real network, where "too high" doesn't just waste time, it breaks the numbers entirely.</p>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <span class="quiz-label">Check your understanding — 01</span>
+      <p class="quiz-q">Both lr = 0.05 and lr = 0.4 eventually reached the same minimum, but lr = 0.4 got there in about 5 steps while lr = 0.05 took about 64. What does this best tell us about the learning rate?</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt" data-correct="false">A smaller learning rate always finds a more accurate minimum, even if it takes far longer to get there.</button>
+        <button class="quiz-opt" data-correct="true">The learning rate sets how big a step we take each update, so a well-chosen value reaches the same minimum in far fewer steps.</button>
+        <button class="quiz-opt" data-correct="false">The learning rate only affects how the loss is calculated, not how quickly the weights actually change.</button>
+        <button class="quiz-opt" data-correct="false">A learning rate of 0.4 must be unstable here, since values above 0.1 usually cause gradient descent to diverge.</button>
+      </div>
+      <div class="quiz-exp">
+        <span class="verdict"></span>
+        <p>The learning rate scales each step toward the minimum, so a larger but still safe value like 0.4 covers the same distance in far fewer updates than a cautious 0.05. Both settings converged to the exact same point, which rules out the idea that smaller is more accurate — and 0.4 clearly didn't diverge here.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION: BACKPROP PART 1 ============ -->
+  <section id="backprop1" aria-labelledby="backprop1-h">
+    <p class="section-num">02 — Core concept</p>
+    <h2 id="backprop1-h">Backprop, part one: one layer</h2>
+    <p>Gradient descent says: take a step opposite the slope. But part one's <code>SimpleNeuron</code> had hand-picked weights. The actual slope of the loss with respect to each weight is needed — and the loss doesn't touch the weights directly. It goes through steps:</p>
+    <pre class="code">W  -->  Z = XW + b  -->  A = sigmoid(Z)  -->  Loss</pre>
+    <p>Finding how the loss changes with W needs the chain rule: multiply how each step changes the next.</p>
+    <pre class="code">dLoss/dW = dLoss/dZ * dZ/dW</pre>
+
+    <h3>The one result worth memorizing the shape of</h3>
+    <p>For sigmoid activation with binary cross-entropy loss, the messy calculus collapses into something remarkably simple:</p>
+    <pre class="code">dLoss/dZ = A - y</pre>
+    <p><strong>Prediction minus truth.</strong> That's the entire error signal.</p>
+
+    <div class="widget">
+      <span class="widget-label">Interactive — the error signal, dZ = A − y</span>
+      <div class="toggle-row">
+        <button class="toggle-btn active" data-label="1" type="button">True label = 1 (positive)</button>
+        <button class="toggle-btn" data-label="0" type="button">True label = 0 (negative)</button>
+      </div>
+      <div class="ctrl">
+        <label for="dzA">Predicted A <span class="val" id="dzAVal">0.30</span></label>
+        <input type="range" id="dzA" min="0" max="1" step="0.01" value="0.3">
+      </div>
+      <div class="readout">
+        <span>dZ = A − y = <span class="big" id="dzOut">-0.700</span></span>
+      </div>
+      <p id="dzInterp" style="margin-top:.8em; font-size:.92rem; color:var(--ink-soft);"></p>
+    </div>
+
+    <p>From dZ, two more steps finish the job: <code>dW = Xᵀ · dZ / N</code> (how much each weight contributed) and <code>db = mean(dZ)</code> (the bias gets the plain average error).</p>
+
+    <pre class="code">class SingleLayerNet:
+    def __init__(self, n_features, seed=0):
+        rng = np.random.RandomState(seed)
+        self.W = rng.randn(n_features, 1) * 0.01
+        self.b = np.zeros((1, 1))
+
+    def forward(self, X):
+        self.Z = X @ self.W + self.b
+        self.A = 1 / (1 + np.exp(-self.Z))
+        return self.A
+
+    def backward(self, X, y):
+        N = len(y)
+        self.dZ = (self.A - y) / N   <span class="c"># prediction minus truth, averaged</span>
+        self.dW = X.T @ self.dZ
+        self.db = np.sum(self.dZ, axis=0, keepdims=True)
+
+    def step(self, lr):
+        self.W -= lr * self.dW
+        self.b -= lr * self.db</pre>
+
+    <p>Trained for 500 epochs on a simple two-blob dataset:</p>
+    <p class="out-label">Output</p>
+    <div class="out">Loss went from 0.6857 to 0.0134
+Final accuracy: 100.00%</div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/243/466/original/29-2-3.png?1790701144" alt="Line chart of training loss dropping steeply from about 0.69 to near zero over 500 epochs for a single-layer network.">
+      <figcaption>A single layer, actually learning — for the first time, the weights are not hand-picked.</figcaption>
+    </figure>
+
+    <div class="box insight">
+      <p class="box-title"><span class="dot"></span>Why not just try this on the spiral?</p>
+      <p>Because a single layer's decision boundary is a straight line no matter how well it's trained — part one's hook already showed a linear-style boundary failing on a spiral. Training longer or better doesn't fix an architecture limitation. A decreasing loss confirms the <em>direction</em> of each update is right; it says nothing about whether the architecture is even capable of solving the actual problem.</p>
+    </div>
+
+    <details class="checkpoint">
+      <summary>Why does the gradient of sigmoid-plus-cross-entropy simplify to just "prediction minus truth"? <span class="chev">▾</span></summary>
+      <div class="checkpoint-body">
+        <p class="weak"><em>Common weak answer:</em> "It's just a formula you memorize."</p>
+        <p class="strong-label">Stronger answer</p>
+        <p>It's simple because cross-entropy loss and the sigmoid function were practically made for each other — when you chain-rule through both, the sigmoid's own derivative terms cancel out algebraically, leaving only the raw error. It's not a coincidence or an approximation; it's <em>why</em> this particular loss function is the standard pairing for this particular activation. The same cancellation happens for softmax with multi-class cross-entropy.</p>
+      </div>
+    </details>
+
+    <div class="quiz" data-quiz>
+      <span class="quiz-label">Check your understanding — 02</span>
+      <p class="quiz-q">For a single-layer network, dZ = A − y for one training example where the true label is 1, but the network predicted A = 0.3. What does dZ tell us to do?</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt" data-correct="false">dZ = 1.3, meaning the weights contributing to this prediction should increase to push the output even higher.</button>
+        <button class="quiz-opt" data-correct="false">dZ = 0.3, meaning the network was already mostly correct and only needs a tiny adjustment.</button>
+        <button class="quiz-opt" data-correct="false">dZ = −0.3, meaning the network should reduce its confidence in this prediction going forward.</button>
+        <button class="quiz-opt" data-correct="true">dZ = −0.7, meaning the weights contributing to this prediction should increase, since the network under-predicted the positive class.</button>
+      </div>
+      <div class="quiz-exp">
+        <span class="verdict"></span>
+        <p>dZ = A − y = 0.3 − 1 = −0.7: the network gave only 30% confidence to a case that should have been 100% positive, so the error is negative and fairly large. A negative dZ pushes the relevant weights up, not down — the options starting from 1.3 or 0.3 both use incorrect arithmetic.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION: BACKPROP PART 2 ============ -->
+  <section id="backprop2" aria-labelledby="backprop2-h">
+    <p class="section-num">03 — Core concept</p>
+    <h2 id="backprop2-h">Backprop, part two: adding a hidden layer</h2>
+    <p>One layer only draws a straight line. Solving the spiral needs a hidden layer. The chain gets one step longer:</p>
+    <pre class="code">W1  -->  Z1  -->  A1 = relu(Z1)  -->  W2  -->  Z2  -->  A2 = sigmoid(Z2)  -->  Loss</pre>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/243/467/original/29-2-4.png?1790701250" alt="Diagram of a two-layer network's computational graph, from inputs through a hidden ReLU layer to a sigmoid output and loss.">
+    </figure>
+
+    <p>The output-layer math is unchanged: <code>dZ2 = A2 − y</code>, <code>dW2 = A1ᵀ · dZ2</code>, <code>db2 = mean(dZ2)</code>. The new part is pushing the error signal one layer further back.</p>
+
+    <p><strong>Step 1</strong> — how much did the hidden layer's <em>output</em> (A1) contribute to the error?</p>
+    <pre class="code">dA1 = dZ2 . W2^T</pre>
+    <p>Each hidden neuron gets blamed in proportion to how strongly it's connected, through W2, to the output that was wrong.</p>
+
+    <p><strong>Step 2</strong> — how much did the hidden layer's <em>pre-activation</em> (Z1) contribute?</p>
+    <pre class="code">dZ1 = dA1 * relu_derivative(Z1)</pre>
+    <p>This is the genuinely new idea. <code>relu_derivative(Z1)</code> is 1 wherever a neuron fired during the forward pass, and exactly 0 wherever it didn't. A neuron that output 0 had zero influence on the prediction — so it gets zero blame for the error too, no matter how large dA1 is at that position. The error signal is <strong>gated</strong> by which neurons were actually switched on.</p>
+    <p>From there it's identical in shape to before: <code>dW1 = Xᵀ · dZ1</code>, <code>db1 = mean(dZ1)</code>.</p>
+
+    <div class="widget">
+      <span class="widget-label">Interactive — the gating gate</span>
+      <p class="widget-note">dZ1 = dA1 × relu_derivative(Z1). Set the hidden neuron's pre-activation and the incoming error, and watch what survives the gate.</p>
+      <div class="ctrl">
+        <label for="gateZ1">Pre-activation Z1 <span class="val" id="gateZ1Val">1.20</span></label>
+        <input type="range" id="gateZ1" min="-3" max="3" step="0.05" value="1.2">
+      </div>
+      <div class="ctrl">
+        <label for="gateDA1">Incoming error dA1 <span class="val" id="gateDA1Val">0.80</span></label>
+        <input type="range" id="gateDA1" min="-2" max="2" step="0.05" value="0.8">
+      </div>
+      <div class="readout">
+        <span>relu_derivative(Z1) = <b id="gateGrad">1</b></span>
+        <span>dZ1 = <span class="big" id="gateOut">0.800</span></span>
+      </div>
+      <div class="verdict-banner" id="gateBanner"></div>
+    </div>
+
+    <div class="box case">
+      <p class="box-title"><span class="dot"></span>Field note — a bug that never crashes</p>
+      <p>An AI coding assistant, asked to write the backward pass for a two-layer network, produced a hidden-layer gradient that used <code>dA1</code> directly as <code>dZ1</code> — skipping the <code>relu_derivative</code> gate entirely. The shapes still match, so nothing errors. It trains to some degree and plateaus well below what the gated version reaches:</p>
+    </div>
+
+    <pre class="code">dZ1 = dA1 if buggy else dA1 * relu_deriv(Z1)   <span class="c"># the AI's version skips the gate</span></pre>
+    <p class="out-label">Output</p>
+    <div class="out">AI's version, final accuracy: 65.33%
+With the relu_deriv gate restored, final accuracy: 98.67%
+AI's version was 65.33% -- the missing gate cost real accuracy, silently</div>
+
+    <p>Every hidden neuron gets blamed for the error whether or not it actually fired during the forward pass, producing gradients that are directionally noisy rather than outright broken. Some of the most costly real-world training bugs look exactly like this one: syntactically fine, numerically plausible, quietly worse. Comparing loss curves and accuracy — not just "did it run" — is part of debugging a network.</p>
+
+    <details class="checkpoint">
+      <summary>What happens to a hidden neuron's gradient if it never fires — Z1 stays negative — for every example in the dataset? <span class="chev">▾</span></summary>
+      <div class="checkpoint-body">
+        <p class="weak"><em>Common weak answer:</em> "It would get a very small gradient."</p>
+        <p class="strong-label">Stronger answer</p>
+        <p>Not small — exactly zero, every time, for every example. <code>relu_derivative(Z1)</code> is 0 wherever Z1 is negative, so that neuron's incoming error signal gets multiplied by 0 regardless of how large or informative dA1 is. Since the gradient is always exactly zero, the neuron's weights never update, and it stays dead forever unless something else about the network changes. This failure mode has a name — covered later in this read.</p>
+      </div>
+    </details>
+
+    <div class="quiz" data-quiz>
+      <span class="quiz-label">Check your understanding — 03</span>
+      <p class="quiz-q">In the two-layer backward pass, dZ1 = dA1 × relu_derivative(Z1). For a hidden neuron whose pre-activation Z1 was negative for a given input, what happens to that neuron's gradient for that input?</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt" data-correct="true">It becomes exactly zero, since relu_derivative(Z1) is 0 wherever Z1 is negative, so that neuron gets no credit or blame for this input.</button>
+        <button class="quiz-opt" data-correct="false">It becomes exactly equal to dA1, since a negative Z1 means the neuron passes its incoming error through unchanged.</button>
+        <button class="quiz-opt" data-correct="false">It becomes larger than dA1, since negative pre-activations amplify the error signal during backpropagation.</button>
+        <button class="quiz-opt" data-correct="false">It becomes undefined, since ReLU has no meaningful derivative for negative inputs at all.</button>
+      </div>
+      <div class="quiz-exp">
+        <span class="verdict"></span>
+        <p>relu_derivative(Z1) is 0 for any negative Z1, so multiplying dA1 by 0 zeroes out that neuron's gradient entirely — exactly what "a neuron that didn't fire gets no blame" means. Passing dA1 through unchanged is precisely the bug found in the AI-generated code above, and ReLU's derivative for negative inputs is a well-defined 0, not undefined.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION: BUILD & TRAIN ============ -->
+  <section id="train" aria-labelledby="train-h">
+    <p class="section-num">04 — Closing the loop</p>
+    <h2 id="train-h">Assembling the two-layer network</h2>
+    <p>Every piece is now in hand. Assembled into one clean, trainable network and run on the actual spiral — this is the exact network from the first few minutes of part one, same architecture shape, same dataset.</p>
+
+    <pre class="code">class TwoLayerNet:
+    '''Input -> hidden (ReLU) -> output (sigmoid).'''
+
+    def __init__(self, n_features, n_hidden, seed=0):
+        rng = np.random.RandomState(seed)
+        <span class="c"># He initialization: scaled for ReLU so neurons don't start saturated or dead</span>
+        self.W1 = rng.randn(n_features, n_hidden) * np.sqrt(2.0 / n_features)
+        self.b1 = np.zeros((1, n_hidden))
+        self.W2 = rng.randn(n_hidden, 1) * np.sqrt(2.0 / n_hidden)
+        self.b2 = np.zeros((1, 1))
+
+    def forward(self, X):
+        self.Z1 = X @ self.W1 + self.b1
+        self.A1 = relu(self.Z1)
+        self.Z2 = self.A1 @ self.W2 + self.b2
+        self.A2 = sigmoid(self.Z2)
+        return self.A2
+
+    def backward(self, X, y):
+        N = len(y)
+        self.dZ2 = (self.A2 - y) / N
+        self.dW2 = self.A1.T @ self.dZ2
+        self.db2 = np.sum(self.dZ2, axis=0, keepdims=True)
+        dA1 = self.dZ2 @ self.W2.T
+        self.dZ1 = dA1 * relu_deriv(self.Z1)
+        self.dW1 = X.T @ self.dZ1
+        self.db1 = np.sum(self.dZ1, axis=0, keepdims=True)
+
+    def step(self, lr):
+        self.W1 -= lr * self.dW1; self.b1 -= lr * self.db1
+        self.W2 -= lr * self.dW2; self.b2 -= lr * self.db2</pre>
+
+    <p class="out-label">Output — training for 6000 epochs, lr = 2.0, 128 hidden neurons</p>
+    <div class="out">epoch    0 | loss 0.6976 | accuracy 53.67%
+epoch 1500 | loss 0.1909 | accuracy 96.00%
+epoch 3000 | loss 0.1848 | accuracy 91.00%
+epoch 4500 | loss 0.2046 | accuracy 90.67%
+
+Final training accuracy: 98.67%</div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/243/468/original/29-2-5.png?1790701364" alt="Line chart of training loss dropping over 6000 epochs for the two-layer network, ending around 0.18 with visible noise along the way.">
+      <figcaption>The network from part one, built entirely by hand.</figcaption>
+    </figure>
+
+    <p>This is the moment the loop actually closes.</p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/243/472/original/29-2-6.png?1790702231" alt="Decision boundary plot of the hand-trained two-layer network on the spiral dataset, with a curved boundary following both spiral arms and a labeled accuracy of 98.7%.">
+      <figcaption>Trained from scratch — accuracy 98.7%.</figcaption>
+    </figure>
+
+    <p>Compared to part one's classical-ML plot — where Logistic Regression and Linear SVM both drew something close to a straight line through the middle — this boundary actually follows the spiral's arms. That's the hidden layer with a non-linear activation doing exactly the thing a single linear-style boundary can't.</p>
+
+    <div class="extlink-row">
+      <a class="extlink" href="https://shrijankumar1-maker.github.io/NN-visualiser/" target="_blank" rel="noopener">
+        <span class="t">Open the full network visualizer ↗</span>
+        <span class="arrow">visit</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ============ SECTION: LEARNING RATE ============ -->
+  <section id="lr" aria-labelledby="lr-h">
+    <p class="section-num">05 — Core concept</p>
+    <h2 id="lr-h">Learning rate sensitivity</h2>
+    <p>Same network, same architecture, same data across three runs below — only the learning rate changes: 0.001, 2.0, and 50.</p>
+
+    <p class="out-label">Output</p>
+    <div class="out">lr=0.001  -- loss after 3000 epochs: 0.6504
+lr=2.0    -- loss after 3000 epochs: 0.1849
+lr=50     -- loss after 2 steps: nan</div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/243/473/original/29-2-7.png?1790702293" alt="Line chart comparing training loss curves for learning rate 0.001, which stays nearly flat, against learning rate 2.0, which drops with some spikes toward a low loss.">
+      <figcaption>Same network, same data — only the learning rate changed.</figcaption>
+    </figure>
+
+    <p>lr = 0.001 barely moves — the loss stays close to where it started, the network essentially standing still. lr = 2.0 trends clearly downward and reaches a low loss, but the curve is spiky, with occasional sharp jumps upward before recovering — not a bug, but a learning rate aggressive enough to occasionally overshoot and briefly make things worse before correcting, while staying within the basin that converges. lr = 50 doesn't survive two full steps before the loss becomes NaN — the same NaN-loss failure mode from part one's loss-function section, now caused by something entirely different: a learning rate so large the weight updates overshoot catastrophically and the numbers blow up completely, rather than briefly.</p>
+
+    <div class="box note">
+      <p class="box-title"><span class="dot"></span>Degree, not kind</p>
+      <p>lr = 2.0's overshoots are large but survivable — the next few steps pull the loss back down. lr = 50's overshoot is so large the weights leave any recoverable region entirely, and there's no next step to pull anything back. "Too high" isn't a single cliff edge; it's a spectrum, and a spiky-but-working curve is a sign of being closer to that edge than a smooth one.</p>
+    </div>
+
+    <p>The gradient descent playground from the start of this read uses the exact same mechanics on a much simpler function — pushing its learning rate slider past about 1.0 reproduces this same divergence pattern on a parabola, where it's easier to see why it happens.</p>
+
+    <div class="box warn">
+      <p class="box-title"><span class="dot"></span>Industry note — the most common real training bug</p>
+      <p>A learning rate off by an order of magnitude in either direction. Too low looks like "the model isn't learning" — a slow, undramatic failure easy to mistake for a data or architecture problem. Too high looks like "the model broke" — fast, dramatic, usually in the first few steps. That's exactly why experienced practitioners watch the loss closely at the very start of training, not just at the end.</p>
+    </div>
+
+    <details class="checkpoint">
+      <summary>Training a new model and the loss is NaN within the first few steps — what's the first hypothesis, and how would you check it? <span class="chev">▾</span></summary>
+      <div class="checkpoint-body">
+        <p class="weak"><em>Common weak answer:</em> "There's a bug in the code somewhere."</p>
+        <p class="strong-label">Stronger answer</p>
+        <p>A NaN loss in the very first few steps is the classic signature of a learning rate that's too high for this architecture and data, not necessarily a code bug — the fix to try first is simply lowering the learning rate by 10x and re-running before assuming anything else is wrong. It's a cheap, fast hypothesis to test, and it's right often enough that it should be the first thing checked, not the last.</p>
+      </div>
+    </details>
+
+    <div class="quiz" data-quiz>
+      <span class="quiz-label">Check your understanding — 04</span>
+      <p class="quiz-q">The same network is trained twice. Run 1's loss barely moves after 3000 epochs. Run 2's loss becomes NaN after 2 epochs. What is the most likely explanation for each run, respectively?</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt" data-correct="false">Run 1 used too high a learning rate; Run 2 used too low a learning rate.</button>
+        <button class="quiz-opt" data-correct="false">Run 1 had a bug in the loss function; Run 2 had a bug in the data loading.</button>
+        <button class="quiz-opt" data-correct="true">Run 1 used too low a learning rate; Run 2 used too high a learning rate.</button>
+        <button class="quiz-opt" data-correct="false">Run 1 and Run 2 both used the same learning rate, and the difference is purely due to random initialization.</button>
+      </div>
+      <div class="quiz-exp">
+        <span class="verdict"></span>
+        <p>A barely-moving loss over thousands of epochs is the signature of too small a learning rate — tiny steps make barely any progress. A loss that reaches NaN within a couple of epochs is the signature of too large a learning rate — the steps overshoot so badly the weights blow up. Random initialization alone doesn't produce such categorically different failure modes.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION: OPTIMIZERS ============ -->
+  <section id="optimizers" aria-labelledby="optimizers-h">
+    <p class="section-num">06 — Core concept</p>
+    <h2 id="optimizers-h">Optimizers: SGD, momentum, Adam</h2>
+    <p>Everything so far has used the plainest possible update rule — and it's not what most real training actually uses. Every update so far has relied only on the <em>current</em> gradient, with no memory of previous steps. On bumpy or plateau-like loss surfaces, that means the same amount of hesitation every single step, even in a direction that's been consistently downhill for a while.</p>
+
+    <p><strong>Momentum</strong> fixes this with one small change: keep a running average of recent gradients, and step in that averaged direction instead of the raw current one.</p>
+    <pre class="code">velocity = momentum * velocity + gradient
+W = W - lr * velocity</pre>
+    <p>Consistent downhill directions build speed; noisy, conflicting directions cancel out. It's the same intuition as a ball rolling downhill picking up momentum, rather than a hiker who stops and re-measures the slope from scratch at every step.</p>
+
+    <div class="widget">
+      <span class="widget-label">Interactive — momentum on a bumpy landscape</span>
+      <p class="widget-note">An illustrative landscape with a plateau (not the spiral network's actual loss surface) — useful for seeing <em>why</em> momentum helps, not as real experiment data. Same learning rate both lines; momentum is the only difference.</p>
+      <svg class="chart" id="momChart" viewBox="0 0 560 220" role="img" aria-label="Chart comparing loss over steps for plain gradient descent, which plateaus early, versus gradient descent with momentum, which continues improving past the plateau"></svg>
+      <div class="ctrl" style="margin-top:1em;">
+        <label for="momSlider">Momentum <span class="val" id="momVal">0.90</span></label>
+        <input type="range" id="momSlider" min="0" max="0.97" step="0.01" value="0.9">
+      </div>
+      <div class="legend">
+        <span><i></i> with momentum</span>
+        <span><i class="alt"></i> plain gradient descent (momentum = 0)</span>
+      </div>
+      <div class="readout">
+        <span>plain, final loss ≈ <b id="momPlainFinal">—</b></span>
+        <span>momentum, final loss ≈ <b id="momFinal">—</b></span>
+      </div>
+    </div>
+
+    <p>On the real two-layer network, at the identical learning rate: plain gradient descent plateaus early and stays stuck, while momentum keeps making progress and reaches a noticeably lower loss over the same number of epochs.</p>
+    <p class="out-label">Output</p>
+    <div class="out">plain gradient descent, final loss: 0.5955
+with momentum, final loss: 0.2601</div>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/243/474/original/29-2-8.png?1790702375" alt="Line chart comparing loss over epochs for plain gradient descent, which plateaus near 0.6, against gradient descent with momentum, which continues falling toward about 0.26.">
+    </figure>
+
+    <p><strong>Adam</strong> goes one step further, and is the practical default in most modern training code: it keeps a running average of the gradient <em>and</em> a running average of the squared gradient, using the second to automatically shrink the effective step size for parameters getting noisy or large updates, and grow it for parameters getting small, consistent ones. The accounting gets fiddly fast — exactly the kind of thing a framework is built to absorb — but momentum alone already demonstrates the core idea.</p>
+
+    <div class="box warn">
+      <p class="box-title"><span class="dot"></span>Industry note — momentum and Adam aren't free</p>
+      <p>Adam in particular keeps two extra numbers in memory for every single parameter in the network — the running averages — which matters when a model has billions of parameters. For small networks the cost is irrelevant; at production scale, it's a real, deliberate trade-off between faster, more reliable convergence and extra memory and compute per step.</p>
+    </div>
+
+    <div class="extlink-row">
+      <a class="extlink" href="https://shrijankumar1-maker.github.io/Optimiser-visualiser/" target="_blank" rel="noopener">
+        <span class="t">Open the optimizer visualizer ↗</span>
+        <span class="arrow">visit</span>
+      </a>
+      <a class="extlink" href="https://shrijankumar1-maker.github.io/Gradient-descent-visualisationn/" target="_blank" rel="noopener">
+        <span class="t">Open the gradient descent visualizer ↗</span>
+        <span class="arrow">visit</span>
+      </a>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <span class="quiz-label">Check your understanding — 05</span>
+      <p class="quiz-q">At the exact same learning rate, plain gradient descent plateaued while adding momentum kept improving over the same number of epochs. What does this demonstrate about momentum?</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt" data-correct="false">Momentum works by using a larger effective learning rate than plain gradient descent, even though the number entered is identical.</button>
+        <button class="quiz-opt" data-correct="false">Momentum only helps when the learning rate is too high, so it mainly serves to prevent divergence rather than to speed up learning.</button>
+        <button class="quiz-opt" data-correct="false">Momentum replaces the need for gradient descent entirely, calculating weight updates through a completely different mechanism.</button>
+        <button class="quiz-opt" data-correct="true">Momentum accumulates a running average of past gradients, letting consistent downhill directions build speed.</button>
+      </div>
+      <div class="quiz-exp">
+        <span class="verdict"></span>
+        <p>Momentum keeps a running average of past gradients, so consistent downhill directions build speed while noisy ones cancel out — exactly what let it escape the plateau plain gradient descent got stuck in, at the identical learning rate. It isn't secretly a larger learning rate, and it's still gradient descent, just with accumulated direction.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION: OVERFITTING ============ -->
+  <section id="overfitting" aria-labelledby="overfitting-h">
+    <p class="section-num">07 — Core concept</p>
+    <h2 id="overfitting-h">Overfitting: when training loss stops telling the whole story</h2>
+    <p>Everything so far has judged the network only by training loss and training accuracy — an incomplete picture. A network can get <em>better</em> at the training set while getting <em>worse</em> at everything else. To see this honestly: a smaller training split, some corrupted labels mixed in, and a hidden layer oversized relative to how much clean signal is actually available — 512 hidden neurons for roughly 120 noisy training points, with 25% of training labels (not validation labels) deliberately flipped.</p>
+
+    <figure>
+      <img src="https://d2beiqkhq929f0.cloudfront.net/public_assets/assets/000/243/475/original/29-2-9.png?1790702450" alt="Line chart showing training loss continuing to fall across 6000 epochs while validation loss falls initially, bottoms out, and then rises back up.">
+      <figcaption>Training loss keeps falling — validation loss does not.</figcaption>
+    </figure>
+
+    <p class="out-label">Output</p>
+    <div class="out">validation loss bottomed out around epoch 1900</div>
+
+    <p>Training loss keeps falling for the full run. Validation loss falls for a while, bottoms out, then climbs back up — the network is increasingly memorizing the corrupted training labels rather than learning the spiral's actual shape, and that memorization actively hurts its performance on clean, unseen data.</p>
+
+    <div class="box insight">
+      <p class="box-title"><span class="dot"></span>What to actually do about it</p>
+      <p>Once validation loss starts climbing like this in production: stop training around where it bottoms out (<strong>early stopping</strong>), reduce the network's capacity, get more or cleaner training data, or add explicit regularization — not simply train for even longer.</p>
+    </div>
+
+    <div class="quiz" data-quiz>
+      <span class="quiz-label">Check your understanding — 06</span>
+      <p class="quiz-q">Training loss kept falling for all 6000 epochs, but validation loss stopped falling partway through and then started rising. What should happen at that point?</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt" data-correct="false">Keep training for many more epochs, since training loss is still falling and will eventually pull validation loss back down too.</button>
+        <button class="quiz-opt" data-correct="true">Stop training around where validation loss bottomed out, or add regularization, since the network is now overfitting.</button>
+        <button class="quiz-opt" data-correct="false">Increase the learning rate, since a rising validation loss usually means the network is converging too slowly.</button>
+        <button class="quiz-opt" data-correct="false">Switch the activation function from ReLU back to sigmoid, since sigmoid networks are less prone to this kind of divergence.</button>
+      </div>
+      <div class="quiz-exp">
+        <span class="verdict"></span>
+        <p>Training loss falling while validation loss rises is the classic overfitting signature — the network is increasingly memorizing quirks of the training set rather than learning patterns that generalize. Training longer would widen the gap, not close it, and neither the learning rate nor the activation function addresses the actual problem, which is capacity relative to clean signal in the data.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION: DYING RELU ============ -->
+  <section id="dyingrelu" aria-labelledby="dyingrelu-h">
+    <p class="section-num">08 — Core concept</p>
+    <h2 id="dyingrelu-h">Dying ReLU: a real diagnostic</h2>
+    <p>The gating idea from earlier — a neuron that never fires gets exactly zero gradient — isn't just theory. Running the exact diagnostic on the network trained in the "build &amp; train" section, nothing since has touched it:</p>
+
+    <pre class="code">Z1_check = X @ spiral_net.W1 + spiral_net.b1
+dead_neurons = np.all(Z1_check <= 0, axis=0)</pre>
+
+    <p class="out-label">Output</p>
+    <div class="out">54 out of 128 hidden neurons never fired for a single training example
+...and yet the network still reached 98.7% accuracy</div>
+
+    <div class="deadbar-track" role="img" aria-label="Bar showing 54 of 128 hidden neurons, about 42 percent, permanently dead with zero output and zero gradient, and 74 neurons, about 58 percent, still alive">
+      <div class="deadbar-dead" style="width:42.2%;">54 dead</div>
+      <div class="deadbar-alive" style="width:57.8%;">74 alive</div>
+    </div>
+
+    <p>A substantial fraction of hidden neurons — roughly 40% in this run — are completely dead: zero output, zero gradient, for every single training example. They contributed nothing and can never update again. The network still performed well because it had enough surviving neurons to compensate — luck of having 128 to spare, not a guarantee.</p>
+
+    <h3>Why this happens</h3>
+    <p>If a neuron's weights and bias happen to push its pre-activation below zero for <em>every</em> input in the dataset, <code>relu_derivative</code> is 0 everywhere it's ever evaluated for that neuron. Zero gradient means zero update, forever — the neuron is permanently stuck, no matter how much more training happens. This is <strong>dying ReLU</strong>.</p>
+
+    <h3>Leaky ReLU — the fix</h3>
+    <p>Leaky ReLU replaces the flat zero on the negative side with a small non-zero slope, usually written as alpha (commonly around 0.01):</p>
+    <pre class="code">leaky_relu(z) = z            if z > 0
+leaky_relu(z) = alpha * z    if z <= 0</pre>
+    <p>The gradient on the negative side is now alpha instead of exactly 0 — small, but no longer nothing. A neuron pushed into the negative region still gets a faint update signal instead of being stuck permanently.</p>
+
+    <div class="widget">
+      <span class="widget-label">Interactive — ReLU vs. Leaky ReLU</span>
+      <div class="chart-row" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div>
+          <p class="widget-note" style="margin-bottom:.4em;">f(z)</p>
+          <svg class="chart" id="reluFnChart" viewBox="0 0 260 150" role="img" aria-label="Chart comparing the ReLU and Leaky ReLU functions, identical for positive input and differing on the negative side"></svg>
+        </div>
+        <div>
+          <p class="widget-note" style="margin-bottom:.4em;">gradient on the negative side</p>
+          <svg class="chart" id="reluGradChart" viewBox="0 0 260 150" role="img" aria-label="Chart showing the gradient of ReLU is exactly zero for negative input while Leaky ReLU keeps a small non-zero gradient"></svg>
+        </div>
+      </div>
+      <div class="ctrl" style="margin-top:1em;">
+        <label for="reluZ">Pre-activation z <span class="val" id="reluZVal">-1.50</span></label>
+        <input type="range" id="reluZ" min="-3" max="3" step="0.05" value="-1.5">
+      </div>
+      <div class="legend">
+        <span><i></i> ReLU</span>
+        <span><i class="alt"></i> Leaky ReLU (α = 0.1, exaggerated for visibility)</span>
+      </div>
+      <div class="readout">
+        <span>ReLU gradient = <b id="reluGradOut">0</b></span>
+        <span>Leaky ReLU gradient = <b id="leakyGradOut">0.1</b></span>
+      </div>
+    </div>
+
+    <details class="checkpoint">
+      <summary>If dying ReLU only affects some neurons and the network can often still perform fine, why bother fixing it at all? <span class="chev">▾</span></summary>
+      <div class="checkpoint-body">
+        <p class="weak"><em>Common weak answer:</em> "It's best practice to always use Leaky ReLU instead of ReLU."</p>
+        <p class="strong-label">Stronger answer</p>
+        <p>It's a trade-off, not a strict upgrade — if only a small fraction of neurons die and the rest have enough capacity, performance may barely suffer, exactly what the diagnostic above shows. The risk is that it's silent and can compound: with a bad initialization, too high a learning rate early in training, or an unlucky combination of both, a much larger fraction of a network's neurons can die early and never recover, at which point there often isn't enough surviving capacity left to compensate. Leaky ReLU is a cheap insurance policy against that worse case, not a fix that's always necessary.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ SECTION: TAKEAWAYS ============ -->
+  <section id="takeaways" aria-labelledby="takeaways-h">
+    <p class="section-num">09 — Summary</p>
+    <h2 id="takeaways-h">Key takeaways</h2>
+    <ol class="takeaways">
+      <li><span class="n">01</span><span>Gradient descent is a search: the gradient gives direction, the learning rate gives step size, and both matter independently.</span></li>
+      <li><span class="n">02</span><span>For sigmoid plus cross-entropy, the entire error signal collapses to "prediction minus truth" — simple because of how the two functions were paired, not a coincidence.</span></li>
+      <li><span class="n">03</span><span>Extending backprop through a hidden layer adds exactly one new idea: gate the error by <code>relu_derivative</code>, so neurons that didn't fire get no blame.</span></li>
+      <li><span class="n">04</span><span>The network from part one's opening hook is no longer a mystery — it's the exact architecture built and trained by hand here.</span></li>
+      <li><span class="n">05</span><span>Learning rate has two failure modes, not one: too low stalls silently, too high explodes fast and loud. Both are diagnosable from the loss curve alone.</span></li>
+      <li><span class="n">06</span><span>Momentum and Adam don't replace gradient descent — they change how much memory an update has of previous steps, and that memory is what escapes plateaus plain gradient descent gets stuck in.</span></li>
+      <li><span class="n">07</span><span>Overfitting shows up as training and validation loss disagreeing, not as training loss alone looking bad. Dying ReLU shows up as neurons with a gradient of exactly zero, diagnosable directly on a trained network.</span></li>
+    </ol>
+
+    <h3>Self-check</h3>
+    <p>Six questions pulled from across this read — no new facts here, just a chance to retrieve what's already covered.</p>
+    <div class="selfcheck">
+      <details>
+        <summary>Why does the gradient of sigmoid-plus-cross-entropy simplify to "prediction minus truth"?</summary>
+        <p class="ans">Cross-entropy loss and sigmoid were practically made for each other — chain-ruling through both causes sigmoid's own derivative terms to cancel out algebraically, leaving only the raw error, A minus y.</p>
+      </details>
+      <details>
+        <summary>What does the relu_derivative gate actually do during backpropagation?</summary>
+        <p class="ans">It's 1 wherever a neuron fired (Z1 &gt; 0) and exactly 0 wherever it didn't, so a neuron with zero output gets zero blame for the error, no matter how large the incoming error signal is.</p>
+      </details>
+      <details>
+        <summary>What's the difference between a loss curve that's stalled versus one that's diverging?</summary>
+        <p class="ans">A stalled curve barely moves over thousands of epochs — the learning rate is too small. A diverging curve blows up toward NaN within a handful of steps — the learning rate is too large and updates overshoot catastrophically.</p>
+      </details>
+      <details>
+        <summary>Why does momentum help escape a plateau that plain gradient descent gets stuck on?</summary>
+        <p class="ans">Momentum keeps a running average of past gradients. A consistent downhill direction builds speed across steps, carrying the update through a flat region that a single current-step gradient alone would barely move through.</p>
+      </details>
+      <details>
+        <summary>What's the difference between training loss and validation loss telling different stories?</summary>
+        <p class="ans">Training loss falling while validation loss rises means the network is memorizing quirks of the training set rather than learning patterns that generalize — the overfitting signature, best addressed with early stopping, regularization, or more/cleaner data.</p>
+      </details>
+      <details>
+        <summary>How would you check a live network for dying ReLU, and what would you do about it?</summary>
+        <p class="ans">Run the training inputs through the first layer and check whether any hidden neuron's pre-activation is negative or zero for every single example — that neuron is permanently dead. Leaky ReLU, a small non-zero slope on the negative side, is the standard fix.</p>
+      </details>
+    </div>
+
+    <div class="box insight" style="margin-top:2em;">
+      <p class="box-title"><span class="dot"></span>What this closes</p>
+      <p>Part one built the machine: a neuron, stacked into a network, scored by a loss function. This read built the half that makes it learn: a gradient, a learning rate, backpropagation through a hidden layer, and the diagnostics — a bad learning rate, overfitting, dying ReLU — that show up the moment real training starts.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <p class="f-title">Neural Network 2 post read</p>
+    <p class="f-sub">The gradient, the chain rule, the learning rate, the optimizer — how the weights actually get there.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- scroll-spy TOC ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll("main section[id]"));
+  var tocLinks = Array.prototype.slice.call(document.querySelectorAll('#tocNav a'));
+  function setActive(id){
+    tocLinks.forEach(function(a){
+      a.classList.toggle("active", a.getAttribute("href") === "#" + id);
+    });
+  }
+  if ("IntersectionObserver" in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) setActive(e.target.id);
+      });
+    }, {rootMargin: "-20% 0px -70% 0px", threshold: 0});
+    sections.forEach(function(s){ io.observe(s); });
+  }
+  tocLinks.forEach(function(a){
+    a.addEventListener("click", function(){
+      setTimeout(function(){ setActive(a.getAttribute("href").slice(1)); }, 50);
+    });
+  });
+
+  /* ---------- quizzes ---------- */
+  document.querySelectorAll("[data-quiz]").forEach(function(q){
+    var opts = q.querySelectorAll(".quiz-opt");
+    var exp = q.querySelector(".quiz-exp");
+    var verdict = q.querySelector(".verdict");
+    var answered = false;
+    opts.forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if (answered) return;
+        answered = true;
+        var correct = btn.getAttribute("data-correct") === "true";
+        opts.forEach(function(b){
+          b.disabled = true;
+          if (b.getAttribute("data-correct") === "true"){
+            b.classList.add("correct");
+          } else if (b === btn && !correct){
+            b.classList.add("incorrect");
+          }
+        });
+        verdict.textContent = correct ? "Correct." : "Not quite.";
+        verdict.classList.add(correct ? "ok" : "no");
+        exp.classList.add("show");
+      });
+    });
+  });
+
+  /* ---------- gradient descent playground ---------- */
+  (function(){
+    var svg = document.getElementById("gdChart");
+    var lrSlider = document.getElementById("gdLr");
+    var lrVal = document.getElementById("gdLrVal");
+    var stepBtn = document.getElementById("gdStep");
+    var runBtn = document.getElementById("gdRun");
+    var resetBtn = document.getElementById("gdReset");
+    var stepNEl = document.getElementById("gdStepN");
+    var wEl = document.getElementById("gdW");
+    var lossEl = document.getElementById("gdLoss");
+    var banner = document.getElementById("gdBanner");
+    if (!svg) return;
+
+    var w = 560, h = 230, pad = 34;
+    var wDomain = [-7, 13];
+    var lossMax = 100;
+
+    function f(wv){ return (wv - 3) * (wv - 3); }
+    function gradF(wv){ return 2 * (wv - 3); }
+
+    function px(wv){ return pad + (wv - wDomain[0]) / (wDomain[1]-wDomain[0]) * (w - 2*pad); }
+    function py(loss){
+      var clamped = Math.min(Math.max(loss, 0), lossMax);
+      return h - pad - clamped/lossMax * (h - 2*pad);
+    }
+
+    var state = { w: -5.0, steps: 0, history: [-5.0], diverged: false };
+
+    function buildStatic(){
+      svg.innerHTML = "";
+      for (var i=0;i<=5;i++){
+        var gx = pad + i*(w-2*pad)/5;
+        var gl = document.createElementNS("http://www.w3.org/2000/svg","line");
+        gl.setAttribute("x1", gx); gl.setAttribute("x2", gx);
+        gl.setAttribute("y1", pad); gl.setAttribute("y2", h-pad);
+        gl.setAttribute("class","grid-line");
+        svg.appendChild(gl);
+      }
+      var axis = document.createElementNS("http://www.w3.org/2000/svg","line");
+      axis.setAttribute("x1", pad); axis.setAttribute("x2", w-pad);
+      axis.setAttribute("y1", h-pad); axis.setAttribute("y2", h-pad);
+      axis.setAttribute("class","axis-line");
+      svg.appendChild(axis);
+
+      var pts = [];
+      for (var i2=0;i2<=120;i2++){
+        var wv = wDomain[0] + (wDomain[1]-wDomain[0])*i2/120;
+        pts.push(px(wv).toFixed(1) + "," + py(f(wv)).toFixed(1));
+      }
+      var poly = document.createElementNS("http://www.w3.org/2000/svg","polyline");
+      poly.setAttribute("points", pts.join(" "));
+      poly.setAttribute("class","fn-path");
+      svg.appendChild(poly);
+
+      var minLine = document.createElementNS("http://www.w3.org/2000/svg","line");
+      minLine.setAttribute("x1", px(3)); minLine.setAttribute("x2", px(3));
+      minLine.setAttribute("y1", pad); minLine.setAttribute("y2", h-pad);
+      minLine.setAttribute("stroke", "#c97d8c"); minLine.setAttribute("stroke-dasharray","3 3");
+      svg.appendChild(minLine);
+      var minLabel = document.createElementNS("http://www.w3.org/2000/svg","text");
+      minLabel.setAttribute("x", px(3)); minLabel.setAttribute("y", pad-8);
+      minLabel.setAttribute("text-anchor","middle");
+      minLabel.setAttribute("font-family","IBM Plex Mono, monospace"); minLabel.setAttribute("font-size","9");
+      minLabel.setAttribute("fill","#8a7276");
+      minLabel.textContent = "minimum, w=3";
+      svg.appendChild(minLabel);
+
+      var pathG = document.createElementNS("http://www.w3.org/2000/svg","g");
+      pathG.setAttribute("id","gdPathG");
+      svg.appendChild(pathG);
+    }
+
+    function render(){
+      var pathG = document.getElementById("gdPathG");
+      pathG.innerHTML = "";
+      var visibleHistory = state.history.filter(function(wv){ return isFinite(wv); });
+      var trail = [];
+      visibleHistory.forEach(function(wv){
+        var loss = f(wv);
+        trail.push(px(wv).toFixed(1) + "," + py(loss).toFixed(1));
+      });
+      if (trail.length > 1){
+        var trailLine = document.createElementNS("http://www.w3.org/2000/svg","polyline");
+        trailLine.setAttribute("points", trail.join(" "));
+        trailLine.setAttribute("fill","none");
+        trailLine.setAttribute("stroke","#8a1c2e");
+        trailLine.setAttribute("stroke-width","1.2");
+        trailLine.setAttribute("stroke-dasharray","2 3");
+        pathG.appendChild(trailLine);
+      }
+      visibleHistory.forEach(function(wv, idx){
+        var loss = f(wv);
+        var dot = document.createElementNS("http://www.w3.org/2000/svg","circle");
+        dot.setAttribute("cx", px(wv).toFixed(1));
+        dot.setAttribute("cy", py(loss).toFixed(1));
+        dot.setAttribute("r", idx === visibleHistory.length-1 ? 5.5 : 2.8);
+        dot.setAttribute("fill", idx === visibleHistory.length-1 ? "#4e0f1a" : "#c97d8c");
+        pathG.appendChild(dot);
+      });
+
+      stepNEl.textContent = state.steps;
+      wEl.textContent = isFinite(state.w) ? state.w.toFixed(3) : "diverged";
+      lossEl.textContent = isFinite(state.w) ? f(state.w).toFixed(3) : "∞";
+
+      if (state.diverged){
+        banner.style.display = "block";
+        banner.className = "verdict-banner bad";
+        banner.textContent = "Diverged — the steps overshot further and further instead of settling. This learning rate is too high.";
+      } else if (Math.abs(state.w - 3) < 0.01 && state.steps > 0){
+        banner.style.display = "block";
+        banner.className = "verdict-banner ok";
+        banner.textContent = "Converged to w ≈ 3 in " + state.steps + " steps.";
+      } else {
+        banner.style.display = "none";
+      }
+    }
+
+    function takeStep(){
+      if (state.diverged) return;
+      var lr = parseFloat(lrSlider.value);
+      var g = gradF(state.w);
+      var nextW = state.w - lr * g;
+      state.steps++;
+      if (!isFinite(nextW) || Math.abs(nextW) > 1e4){
+        state.diverged = true;
+        state.w = NaN;
+      } else {
+        state.w = nextW;
+      }
+      state.history.push(state.w);
+      if (state.history.length > 60) state.history.shift();
+    }
+
+    stepBtn.addEventListener("click", function(){ takeStep(); render(); });
+    runBtn.addEventListener("click", function(){
+      for (var i=0;i<40;i++){
+        if (state.diverged || Math.abs(state.w - 3) < 0.0005) break;
+        takeStep();
+      }
+      render();
+    });
+    resetBtn.addEventListener("click", function(){
+      state = { w: -5.0, steps: 0, history: [-5.0], diverged: false };
+      render();
+    });
+    lrSlider.addEventListener("input", function(){
+      lrVal.textContent = parseFloat(lrSlider.value).toFixed(2);
+    });
+
+    buildStatic();
+    render();
+  })();
+
+  /* ---------- dZ calculator ---------- */
+  (function(){
+    var aSlider = document.getElementById("dzA");
+    var aVal = document.getElementById("dzAVal");
+    var out = document.getElementById("dzOut");
+    var interp = document.getElementById("dzInterp");
+    var toggles = document.querySelectorAll(".toggle-row .toggle-btn");
+    if (!aSlider) return;
+    var yTrue = 1;
+
+    toggles.forEach(function(btn){
+      btn.addEventListener("click", function(){
+        toggles.forEach(function(b){ b.classList.remove("active"); });
+        btn.classList.add("active");
+        yTrue = parseFloat(btn.getAttribute("data-label"));
+        update();
+      });
+    });
+
+    function update(){
+      var a = parseFloat(aSlider.value);
+      aVal.textContent = a.toFixed(2);
+      var dz = a - yTrue;
+      out.textContent = (dz>=0?"":"") + dz.toFixed(3);
+      var mag = Math.abs(dz) > 0.5 ? "a lot" : (Math.abs(dz) > 0.15 ? "a bit" : "barely");
+      if (Math.abs(dz) < 0.02){
+        interp.textContent = "Close to zero — the prediction already matches the truth closely. Little correction needed.";
+      } else if (dz < 0){
+        interp.textContent = "Negative dZ (" + dz.toFixed(3) + "): the network under-predicted the positive class " + mag + " — push the relevant weights up.";
+      } else {
+        interp.textContent = "Positive dZ (" + dz.toFixed(3) + "): the network over-predicted " + mag + " relative to the true label — push the relevant weights down.";
+      }
+    }
+    aSlider.addEventListener("input", update);
+    update();
+  })();
+
+  /* ---------- ReLU gate demo ---------- */
+  (function(){
+    var z1 = document.getElementById("gateZ1");
+    var z1Val = document.getElementById("gateZ1Val");
+    var da1 = document.getElementById("gateDA1");
+    var da1Val = document.getElementById("gateDA1Val");
+    var gradOut = document.getElementById("gateGrad");
+    var out = document.getElementById("gateOut");
+    var banner = document.getElementById("gateBanner");
+    if (!z1) return;
+
+    function update(){
+      var z = parseFloat(z1.value);
+      var d = parseFloat(da1.value);
+      z1Val.textContent = z.toFixed(2);
+      da1Val.textContent = (d>=0?"+":"") + d.toFixed(2);
+      var grad = z > 0 ? 1 : 0;
+      gradOut.textContent = grad;
+      var dz1 = d * grad;
+      out.textContent = (dz1>=0?"":"") + dz1.toFixed(3);
+      if (grad === 0){
+        banner.className = "verdict-banner bad";
+        banner.textContent = "Gated to zero — this neuron didn't fire (Z1 ≤ 0), so it gets no blame for the error, no matter how large dA1 is.";
+      } else {
+        banner.className = "verdict-banner ok";
+        banner.textContent = "Passed through unchanged — this neuron fired (Z1 > 0), so it gets its full share of the error signal.";
+      }
+    }
+    z1.addEventListener("input", update);
+    da1.addEventListener("input", update);
+    update();
+  })();
+
+  /* ---------- momentum demo ---------- */
+  (function(){
+    var svg = document.getElementById("momChart");
+    var slider = document.getElementById("momSlider");
+    var momVal = document.getElementById("momVal");
+    var plainFinalEl = document.getElementById("momPlainFinal");
+    var momFinalEl = document.getElementById("momFinal");
+    if (!svg) return;
+
+    var w = 560, h = 220, pad = 30;
+    var steps = 70;
+    var lr = 0.35;
+
+    // illustrative bumpy landscape with a plateau, not real experiment data
+    function landscape(x){
+      return 0.015*(x-11)*(x-11) + 1.1*Math.sin(x*0.9) + 1.3;
+    }
+    function gradLandscape(x){
+      var eps = 0.001;
+      return (landscape(x+eps) - landscape(x-eps)) / (2*eps);
+    }
+
+    function run(momentum){
+      var x = -2.5, v = 0;
+      var hist = [landscape(x)];
+      for (var i=0;i<steps;i++){
+        var g = gradLandscape(x);
+        v = momentum*v + g;
+        x = x - lr*v;
+        hist.push(Math.max(landscape(x), -1));
+      }
+      return hist;
+    }
+
+    function px(i){ return pad + i/steps * (w-2*pad); }
+    function py(val){
+      var yMin = -1, yMax = 6;
+      var clamped = Math.min(Math.max(val, yMin), yMax);
+      return h-pad - (clamped-yMin)/(yMax-yMin) * (h-2*pad);
+    }
+
+    function buildStatic(){
+      svg.innerHTML = "";
+      for (var i=0;i<=5;i++){
+        var gx = pad + i*(w-2*pad)/5;
+        var gl = document.createElementNS("http://www.w3.org/2000/svg","line");
+        gl.setAttribute("x1", gx); gl.setAttribute("x2", gx);
+        gl.setAttribute("y1", pad); gl.setAttribute("y2", h-pad);
+        gl.setAttribute("class","grid-line");
+        svg.appendChild(gl);
+      }
+      var axis = document.createElementNS("http://www.w3.org/2000/svg","line");
+      axis.setAttribute("x1", pad); axis.setAttribute("x2", w-pad);
+      axis.setAttribute("y1", h-pad); axis.setAttribute("y2", h-pad);
+      axis.setAttribute("class","axis-line");
+      svg.appendChild(axis);
+      var g = document.createElementNS("http://www.w3.org/2000/svg","g");
+      g.setAttribute("id","momLinesG");
+      svg.appendChild(g);
+    }
+
+    function render(){
+      var momentum = parseFloat(slider.value);
+      momVal.textContent = momentum.toFixed(2);
+      var plain = run(0);
+      var withMom = run(momentum);
+
+      var g = document.getElementById("momLinesG");
+      g.innerHTML = "";
+
+      function toPts(hist){
+        var pts = [];
+        hist.forEach(function(v, i){ pts.push(px(i).toFixed(1) + "," + py(v).toFixed(1)); });
+        return pts.join(" ");
+      }
+
+      var plainLine = document.createElementNS("http://www.w3.org/2000/svg","polyline");
+      plainLine.setAttribute("points", toPts(plain));
+      plainLine.setAttribute("class","fn-path alt");
+      g.appendChild(plainLine);
+
+      var momLine = document.createElementNS("http://www.w3.org/2000/svg","polyline");
+      momLine.setAttribute("points", toPts(withMom));
+      momLine.setAttribute("class","fn-path");
+      g.appendChild(momLine);
+
+      plainFinalEl.textContent = plain[plain.length-1].toFixed(2);
+      momFinalEl.textContent = withMom[withMom.length-1].toFixed(2);
+    }
+
+    buildStatic();
+    render();
+    slider.addEventListener("input", render);
+  })();
+
+  /* ---------- ReLU vs Leaky ReLU explorer ---------- */
+  (function(){
+    var fnChart = document.getElementById("reluFnChart");
+    var gradChart = document.getElementById("reluGradChart");
+    var zSlider = document.getElementById("reluZ");
+    var zVal = document.getElementById("reluZVal");
+    var reluGradOut = document.getElementById("reluGradOut");
+    var leakyGradOut = document.getElementById("leakyGradOut");
+    if (!fnChart) return;
+
+    var alpha = 0.1; // exaggerated for visual clarity
+
+    function relu(z){ return Math.max(0, z); }
+    function leaky(z){ return z > 0 ? z : alpha*z; }
+
+    function buildChart(svg, fns, yMin, yMax){
+      svg.innerHTML = "";
+      var w = 260, h = 150, pad = 16;
+      for (var gx=0; gx<=4; gx++){
+        var lx = pad + gx*(w-2*pad)/4;
+        var gl = document.createElementNS("http://www.w3.org/2000/svg","line");
+        gl.setAttribute("x1", lx); gl.setAttribute("x2", lx);
+        gl.setAttribute("y1", pad); gl.setAttribute("y2", h-pad);
+        gl.setAttribute("class","grid-line");
+        svg.appendChild(gl);
+      }
+      var zeroX = pad + (0-(-3))/6 * (w-2*pad);
+      var axisX = document.createElementNS("http://www.w3.org/2000/svg","line");
+      axisX.setAttribute("x1", zeroX); axisX.setAttribute("x2", zeroX);
+      axisX.setAttribute("y1", pad); axisX.setAttribute("y2", h-pad);
+      axisX.setAttribute("class","axis-line");
+      svg.appendChild(axisX);
+
+      fns.forEach(function(cfg){
+        var pts = [];
+        for (var i=0;i<=100;i++){
+          var z = -3 + 6*i/100;
+          var val = cfg.f(z);
+          var x = pad + (z+3)/6 * (w-2*pad);
+          var y = h-pad - (val-yMin)/(yMax-yMin) * (h-2*pad);
+          pts.push(x.toFixed(1) + "," + y.toFixed(1));
+        }
+        var poly = document.createElementNS("http://www.w3.org/2000/svg","polyline");
+        poly.setAttribute("points", pts.join(" "));
+        poly.setAttribute("class", "fn-path" + (cfg.alt ? " alt" : ""));
+        svg.appendChild(poly);
+      });
+      return {w:w, h:h, pad:pad, yMin:yMin, yMax:yMax};
+    }
+
+    var fnGeom, gradGeom;
+
+    function addDot(svg, geom, z, val, alt){
+      var x = geom.pad + (z+3)/6 * (geom.w-2*geom.pad);
+      var y = geom.h-geom.pad - (val-geom.yMin)/(geom.yMax-geom.yMin) * (geom.h-2*geom.pad);
+      var cls = "dot-" + (alt ? "alt" : "main");
+      var existing = svg.querySelector("." + cls);
+      if (existing) existing.remove();
+      var dot = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      dot.setAttribute("cx", x.toFixed(1));
+      dot.setAttribute("cy", Math.max(geom.pad, Math.min(geom.h-geom.pad, y)).toFixed(1));
+      dot.setAttribute("r", 4);
+      dot.setAttribute("class", "fn-dot " + cls + (alt ? " alt" : ""));
+      svg.appendChild(dot);
+    }
+
+    function render(){
+      fnGeom = buildChart(fnChart, [
+        {f: relu, alt:false},
+        {f: leaky, alt:true}
+      ], -0.6, 3);
+      gradGeom = buildChart(gradChart, [
+        {f: function(z){ return z>0?1:0; }, alt:false},
+        {f: function(z){ return z>0?1:alpha; }, alt:true}
+      ], -0.1, 1.15);
+      update();
+    }
+
+    function update(){
+      var z = parseFloat(zSlider.value);
+      zVal.textContent = z.toFixed(2);
+      reluGradOut.textContent = z>0 ? "1" : "0";
+      leakyGradOut.textContent = z>0 ? "1" : alpha.toFixed(2);
+      addDot(fnChart, fnGeom, z, relu(z), false);
+      addDot(fnChart, fnGeom, z, leaky(z), true);
+      addDot(gradChart, gradGeom, z, z>0?1:0, false);
+      addDot(gradChart, gradGeom, z, z>0?1:alpha, true);
+    }
+
+    zSlider.addEventListener("input", update);
+    render();
+  })();
+
+})();
+</script><!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Neural-Networks-2" target="_blank" rel="noopener">github.com/scaler-content/Neural-Networks-2</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
+</body>
+</html>

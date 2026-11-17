@@ -1,0 +1,1654 @@
+<!-- aml:bar --><style>#aml-bar{all:initial;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;box-sizing:border-box;width:100%;padding:9px 16px;background:#0E1530;color:#EEF1FB;font:600 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;position:relative;z-index:2147483000;border-bottom:2px solid #F2A93B}#aml-bar a{all:unset;cursor:pointer;color:#EEF1FB;text-decoration:none;opacity:.85}#aml-bar a:hover,#aml-bar a:focus-visible{opacity:1;text-decoration:underline;outline:none}#aml-bar .h{color:#F2A93B;opacity:1}#aml-bar .t{color:#A9B2D6;font-weight:400}#aml-bar .p{display:inline-flex;gap:4px}#aml-bar .p a,#aml-bar .p b{padding:2px 8px;border-radius:5px;border:1px solid #2A3768}#aml-bar .p b{background:#F2A93B;color:#0E1530;border-color:#F2A93B}#aml-bar .pn{margin-left:auto;display:inline-flex;gap:14px}#aml-foot{all:initial;display:block;box-sizing:border-box;padding:14px 16px;background:#0E1530;color:#A9B2D6;font:400 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}#aml-foot a{all:unset;cursor:pointer;color:#F2A93B;text-decoration:underline}</style><nav id="aml-bar" aria-label="AI/ML Learnings"><a class="h" href="../../">⌂ AI/ML Learnings</a><span>›</span><a href="../../lessons/ml-unsupervised/">Unsupervised learning, recommenders &amp; time series</a><span class="t">· Time Series 1 · Missing values, anomalies and trend</span><span class="pn"><a href="../LightFM-extra-read/" title="Recommender Systems · Extra: LightFM hybrids">← Prev</a><a href="../Timeseries-2/" title="Time Series 2 · Forecast baselines and MAPE">Next →</a></span></nav><script>(function(){var n=document.getElementById('aml-bar'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.insertBefore(n,document.body)})();</script><!-- /aml:bar -->
+<title>Time Series 1 Post Read</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Libre+Franklin:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ============================= TOKENS ============================= */
+:root{
+  --bg:#fdf4f8;
+  --bg-elevated:#ffffff;
+  --surface:#ffffff;
+  --surface-2:#fbe7f0;
+  --surface-border:#f0cfe0;
+  --text-primary:#2c0f1e;
+  --text-secondary:#7c4a63;
+  --text-muted:#a97e93;
+  --accent:#c81361;
+  --accent-strong:#94104a;
+  --accent-soft:#fce3ee;
+  --accent-soft-2:#f8cfe2;
+  --line-muted:#c9a9b8;
+  --warn:#a3620a;
+  --warn-soft:#fbe9d2;
+  --grid:rgba(44,15,30,0.09);
+  --shadow:0 1px 2px rgba(44,15,30,0.06), 0 8px 24px rgba(44,15,30,0.06);
+  --radius-s:10px;
+  --radius-m:16px;
+  --radius-l:24px;
+  --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body:'Libre Franklin', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#170811;
+    --bg-elevated:#1c0a15;
+    --surface:#24101d;
+    --surface-2:#2f1424;
+    --surface-border:#3c1b2f;
+    --text-primary:#f6e4ee;
+    --text-secondary:#cf9fbe;
+    --text-muted:#96697f;
+    --accent:#ff3d84;
+    --accent-strong:#ff7aab;
+    --accent-soft:#40182c;
+    --accent-soft-2:#551d38;
+    --line-muted:#7a5568;
+    --warn:#e8a33d;
+    --warn-soft:#3a2712;
+    --grid:rgba(246,228,238,0.09);
+    --shadow:0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#170811;
+  --bg-elevated:#1c0a15;
+  --surface:#24101d;
+  --surface-2:#2f1424;
+  --surface-border:#3c1b2f;
+  --text-primary:#f6e4ee;
+  --text-secondary:#cf9fbe;
+  --text-muted:#96697f;
+  --accent:#ff3d84;
+  --accent-strong:#ff7aab;
+  --accent-soft:#40182c;
+  --accent-soft-2:#551d38;
+  --line-muted:#7a5568;
+  --warn:#e8a33d;
+  --warn-soft:#3a2712;
+  --grid:rgba(246,228,238,0.09);
+  --shadow:0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.35);
+}
+
+/* ============================= RESET / BASE ============================= */
+*,*::before,*::after{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text-primary);
+  font-family:var(--font-body);
+  font-size:16.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+img,svg{max-width:100%;display:block;}
+a{color:var(--accent);}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:600;text-wrap:balance;margin:0;color:var(--text-primary);}
+p{margin:0;}
+button{font-family:inherit;}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+
+/* ============================= LAYOUT PRIMITIVES ============================= */
+.prose-col{max-width:660px;margin:0 auto;padding-inline:24px;}
+.wide-col{max-width:1040px;margin:0 auto;padding-inline:24px;}
+.stack{display:flex;flex-direction:column;}
+.section{padding:76px 0;}
+.section + .section{border-top:1px solid var(--surface-border);}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--font-mono);font-size:12.5px;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--accent);font-weight:600;margin-bottom:18px;
+}
+.eyebrow::before{content:"";width:22px;height:1px;background:var(--accent);display:inline-block;}
+h2.section-title{font-size:clamp(1.7rem,3.4vw,2.3rem);margin-bottom:22px;letter-spacing:-0.01em;}
+h3.sub-title{font-family:var(--font-display);font-size:1.28rem;font-weight:600;margin:34px 0 12px;color:var(--text-primary);}
+.lede{font-size:1.08rem;color:var(--text-secondary);max-width:60ch;}
+.body-text{color:var(--text-primary);}
+.body-text + .body-text, .body-text + p{margin-top:16px;}
+p.body-text{margin-top:16px;}
+.section > .prose-col > p.body-text:first-of-type{margin-top:0;}
+
+/* ============================= TOP CHROME ============================= */
+#progress-bar{position:fixed;top:0;left:0;height:3px;background:var(--accent);width:0%;z-index:60;transition:width 80ms linear;}
+header.masthead{
+  position:sticky;top:0;z-index:50;
+  backdrop-filter:blur(10px);
+  background:color-mix(in srgb, var(--bg) 82%, transparent);
+  border-bottom:1px solid var(--surface-border);
+}
+.masthead-inner{max-width:1280px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.brand{display:flex;flex-direction:column;line-height:1.15;}
+.brand-name{font-family:var(--font-display);font-weight:600;font-size:1.02rem;color:var(--text-primary);}
+.brand-tag{font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);}
+.toc-toggle{
+  display:none;
+  background:var(--surface-2);border:1px solid var(--surface-border);color:var(--text-primary);
+  padding:8px 14px;border-radius:100px;font-size:13px;font-weight:600;cursor:pointer;
+}
+@media (max-width:1150px){.toc-toggle{display:inline-flex;align-items:center;gap:6px;}}
+
+/* ============================= TOC RAIL ============================= */
+.layout-shell{display:flex;max-width:1280px;margin:0 auto;}
+nav.toc-rail{
+  position:sticky;top:64px;align-self:flex-start;
+  width:220px;flex-shrink:0;padding:36px 8px 36px 24px;
+  height:calc(100vh - 64px);overflow-y:auto;
+}
+nav.toc-rail ol{list-style:none;margin:0;padding:0;border-left:1px solid var(--surface-border);}
+nav.toc-rail li{margin:0;}
+nav.toc-rail a{
+  display:block;padding:7px 0 7px 16px;margin-left:-1px;border-left:1px solid transparent;
+  font-size:12.5px;color:var(--text-muted);text-decoration:none;line-height:1.4;
+  transition:color 120ms ease, border-color 120ms ease;
+}
+nav.toc-rail a:hover{color:var(--text-primary);}
+nav.toc-rail a.active{color:var(--accent);border-left-color:var(--accent);font-weight:600;}
+.main-col{flex:1;min-width:0;}
+@media (max-width:1150px){
+  nav.toc-rail{
+    position:fixed;top:0;right:0;height:100vh;width:min(300px,84vw);
+    background:var(--bg-elevated);border-left:1px solid var(--surface-border);
+    padding:88px 24px 24px;transform:translateX(100%);transition:transform 220ms ease;z-index:55;
+  }
+  nav.toc-rail.open{transform:translateX(0);}
+  nav.toc-rail a{font-size:14px;padding:9px 0 9px 16px;}
+}
+
+/* ============================= HERO ============================= */
+.hero{padding:64px 0 56px;position:relative;overflow:hidden;}
+.hero::before{
+  content:"";position:absolute;top:-140px;right:-160px;width:480px;height:480px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, var(--accent-soft), transparent 70%);
+  pointer-events:none;
+}
+.hero-inner{max-width:800px;margin:0 auto;padding-inline:24px;position:relative;}
+.hero h1{font-size:clamp(2.2rem,5vw,3.4rem);line-height:1.06;letter-spacing:-0.015em;}
+.hero h1 em{font-style:italic;color:var(--accent);}
+.hero .lede{margin-top:20px;font-size:1.15rem;}
+.hero-meta{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:32px;font-family:var(--font-mono);font-size:12px;letter-spacing:0.04em;color:var(--text-muted);text-transform:uppercase;}
+.hero-meta span{display:inline-flex;align-items:center;gap:7px;}
+.hero-meta span::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);}
+.hero-wave{margin-top:44px;height:64px;width:100%;}
+
+/* ============================= CARDS / CALLOUTS ============================= */
+.card{
+  background:var(--surface);border:1px solid var(--surface-border);border-radius:var(--radius-m);
+  padding:26px 28px;box-shadow:var(--shadow);
+}
+.quote-block{
+  border-left:3px solid var(--accent);padding:4px 0 4px 22px;margin:26px 0;
+}
+.quote-block p{font-family:var(--font-display);font-style:italic;font-size:1.14rem;color:var(--text-primary);line-height:1.5;}
+.quote-block cite{display:block;margin-top:8px;font-family:var(--font-mono);font-style:normal;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;}
+
+.analogy{
+  display:flex;gap:16px;background:var(--accent-soft);border:1px solid var(--surface-border);
+  border-radius:var(--radius-m);padding:20px 22px;margin:22px 0;
+}
+.analogy .tag{
+  flex-shrink:0;font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.08em;color:var(--accent);
+  writing-mode:horizontal-tb;text-transform:uppercase;font-weight:700;padding-top:2px;
+}
+.analogy p{color:var(--text-primary);font-size:0.98rem;}
+.analogy strong{color:var(--accent-strong);}
+
+.definition{
+  background:var(--surface);border:1px solid var(--surface-border);border-left:4px solid var(--accent);
+  border-radius:var(--radius-s);padding:20px 24px;margin:22px 0;
+}
+.definition .dt{font-family:var(--font-mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px;}
+.definition p{font-size:1rem;}
+
+.deeper{
+  margin:30px 0;border:1px dashed var(--surface-border);border-radius:var(--radius-m);
+  padding:18px 22px;background:var(--surface-2);
+}
+.deeper .dt{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-secondary);font-weight:700;margin-bottom:10px;}
+.deeper .dt::before{content:"↗";color:var(--accent);font-size:14px;}
+.deeper .prompt{font-family:var(--font-mono);font-size:13.5px;color:var(--text-primary);line-height:1.6;background:var(--surface);border:1px solid var(--surface-border);border-radius:8px;padding:12px 14px;}
+
+/* ============================= STAT TILES ============================= */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--surface-border);border:1px solid var(--surface-border);border-radius:var(--radius-m);overflow:hidden;margin:28px 0;}
+.stat-tile{background:var(--surface);padding:20px 20px 18px;}
+.stat-tile .v{font-family:var(--font-display);font-size:1.7rem;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.1;}
+.stat-tile .k{margin-top:6px;font-size:12px;color:var(--text-muted);letter-spacing:0.01em;}
+
+/* ============================= SCHEMA TABLE ============================= */
+.table-wrap{overflow-x:auto;margin:24px 0;border:1px solid var(--surface-border);border-radius:var(--radius-m);}
+table.schema{width:100%;border-collapse:collapse;font-size:14px;}
+table.schema th{
+  text-align:left;font-family:var(--font-mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--text-muted);font-weight:600;padding:12px 18px;background:var(--surface-2);border-bottom:1px solid var(--surface-border);
+}
+table.schema td{padding:13px 18px;border-bottom:1px solid var(--surface-border);color:var(--text-primary);}
+table.schema tr:last-child td{border-bottom:none;}
+table.schema td.mono{font-family:var(--font-mono);font-size:13px;color:var(--accent-strong);}
+
+/* ============================= COMPARE CARDS (over/under forecast) ============================= */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:28px 0;}
+@media (max-width:640px){.compare-grid{grid-template-columns:1fr;}}
+.compare-card{border:1px solid var(--surface-border);border-radius:var(--radius-m);padding:24px 24px 22px;background:var(--surface);}
+.compare-card .head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.compare-card .pill{font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;font-weight:700;padding:5px 11px;border-radius:100px;}
+.compare-card.over .pill{background:var(--accent-soft);color:var(--accent-strong);}
+.compare-card.under .pill{background:var(--warn-soft);color:var(--warn);}
+.compare-card h4{font-family:var(--font-body);font-weight:700;font-size:1rem;}
+.compare-card ul{margin:0;padding-left:18px;color:var(--text-secondary);font-size:0.95rem;}
+.compare-card li + li{margin-top:8px;}
+.compare-card li::marker{color:var(--accent);}
+
+/* ============================= PROCESS LIST ============================= */
+.process-list{list-style:none;margin:22px 0;padding:0;counter-reset:step;}
+.process-list li{
+  counter-increment:step;position:relative;padding:4px 0 4px 42px;margin-bottom:6px;font-size:0.98rem;color:var(--text-primary);
+}
+.process-list li::before{
+  content:counter(step);position:absolute;left:0;top:2px;width:26px;height:26px;border-radius:50%;
+  background:var(--accent-soft);color:var(--accent-strong);font-family:var(--font-mono);font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* ============================= EQUATION ============================= */
+.equation{
+  font-family:var(--font-mono);background:var(--surface-2);border:1px solid var(--surface-border);
+  border-radius:var(--radius-s);padding:18px 22px;margin:22px 0;font-size:1.02rem;color:var(--accent-strong);
+  overflow-x:auto;white-space:nowrap;
+}
+.equation .dim{color:var(--text-muted);}
+
+/* ============================= TAGS / CHIPS ============================= */
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0;}
+.chip{
+  font-family:var(--font-mono);font-size:12px;padding:6px 12px;border-radius:100px;
+  background:var(--surface-2);border:1px solid var(--surface-border);color:var(--text-secondary);
+}
+.chip strong{color:var(--text-primary);}
+
+/* ============================= FIGURE / CHART PANEL ============================= */
+.panel{
+  background:var(--surface);border:1px solid var(--surface-border);border-radius:var(--radius-l);
+  padding:26px 26px 20px;margin:30px 0;box-shadow:var(--shadow);
+}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px;}
+.panel-title{font-family:var(--font-display);font-weight:600;font-size:1.08rem;}
+.panel-note{font-size:12.5px;color:var(--text-muted);max-width:48ch;margin-top:4px;}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--text-secondary);}
+.legend .li{display:flex;align-items:center;gap:7px;}
+.legend .sw{width:14px;height:3px;border-radius:2px;}
+.chart-wrap{position:relative;margin-top:14px;}
+.chart-tooltip{
+  position:absolute;pointer-events:none;background:var(--bg-elevated);border:1px solid var(--surface-border);
+  border-radius:8px;padding:8px 11px;font-size:12px;font-family:var(--font-mono);color:var(--text-primary);
+  box-shadow:var(--shadow);opacity:0;transform:translate(-50%,-110%);transition:opacity 100ms ease;z-index:5;white-space:nowrap;
+}
+.chart-tooltip.show{opacity:1;}
+.chart-tooltip .tt-date{color:var(--text-muted);margin-bottom:2px;}
+.chart-tooltip .tt-row{display:flex;align-items:center;gap:6px;}
+.chart-tooltip .tt-dot{width:7px;height:7px;border-radius:50%;}
+.axis text{font-family:var(--font-mono);font-size:10.5px;fill:var(--text-muted);}
+.gridline{stroke:var(--grid);stroke-width:1;}
+.reconstructed-tag{
+  display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10.5px;
+  letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted);margin-top:12px;
+}
+.reconstructed-tag::before{content:"◆";color:var(--accent);font-size:8px;}
+
+/* ============================= CONTROLS ============================= */
+.control-row{display:flex;flex-wrap:wrap;gap:22px;align-items:center;margin:18px 0 4px;padding:16px 18px;background:var(--surface-2);border-radius:var(--radius-s);border:1px solid var(--surface-border);}
+.control{display:flex;flex-direction:column;gap:8px;min-width:180px;flex:1;}
+.control label{font-family:var(--font-mono);font-size:11px;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-secondary);display:flex;justify-content:space-between;}
+.control label .val{color:var(--accent);font-weight:700;}
+input[type="range"]{
+  -webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;background:var(--surface-border);outline-offset:4px;
+}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:17px;height:17px;border-radius:50%;background:var(--accent);border:3px solid var(--bg-elevated);box-shadow:0 0 0 1px var(--accent);cursor:pointer;margin-top:-6.5px;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--accent);border:3px solid var(--bg-elevated);box-shadow:0 0 0 1px var(--accent);cursor:pointer;}
+input[type="range"]::-moz-range-track{height:4px;border-radius:4px;background:var(--surface-border);}
+.check-control{display:flex;align-items:center;gap:9px;flex:0 0 auto;}
+.check-control input{width:17px;height:17px;accent-color:var(--accent);}
+.check-control label{font-size:13px;color:var(--text-primary);font-family:var(--font-body);text-transform:none;letter-spacing:0;}
+.control-readout{font-family:var(--font-mono);font-size:12px;color:var(--text-muted);margin-top:10px;}
+.control-readout strong{color:var(--accent);}
+
+/* ============================= TABS ============================= */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
+.tab-btn{
+  font-family:var(--font-mono);font-size:12px;letter-spacing:0.03em;padding:9px 15px;border-radius:100px;
+  border:1px solid var(--surface-border);background:var(--surface);color:var(--text-secondary);cursor:pointer;
+  transition:all 120ms ease;
+}
+.tab-btn:hover{color:var(--text-primary);border-color:var(--accent);}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.verdict{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:12px;font-weight:700;padding:6px 12px;border-radius:100px;margin-top:14px;}
+.verdict.bad{background:var(--warn-soft);color:var(--warn);}
+.verdict.good{background:var(--accent-soft);color:var(--accent-strong);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* ============================= QUIZ ============================= */
+.quiz{
+  margin:34px 0;border-radius:var(--radius-l);border:1px solid var(--surface-border);
+  background:linear-gradient(155deg,var(--accent-soft),var(--surface) 55%);overflow:hidden;
+}
+.quiz-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--surface-border);}
+.quiz-label{font-family:var(--font-mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);font-weight:700;}
+.quiz-body{padding:22px 24px 24px;}
+.quiz-q{font-family:var(--font-display);font-size:1.15rem;font-weight:600;margin-bottom:16px;color:var(--text-primary);}
+.quiz-choices{display:flex;flex-direction:column;gap:9px;}
+.quiz-choice{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-s);
+  border:1px solid var(--surface-border);background:var(--surface);cursor:pointer;transition:border-color 120ms ease, background 120ms ease;
+}
+.quiz-choice:hover{border-color:var(--accent);}
+.quiz-choice input{accent-color:var(--accent);width:16px;height:16px;flex-shrink:0;}
+.quiz-choice label{font-size:0.95rem;cursor:pointer;flex:1;}
+.quiz-actions{display:flex;align-items:center;gap:14px;margin-top:18px;}
+.quiz-submit{
+  font-family:var(--font-mono);font-size:12.5px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;
+  background:var(--accent);color:#fff;border:none;padding:11px 22px;border-radius:100px;cursor:pointer;transition:opacity 120ms ease;
+}
+.quiz-submit:hover{opacity:0.88;}
+.quiz-submit:disabled{opacity:0.4;cursor:not-allowed;}
+.quiz-result{font-family:var(--font-mono);font-size:12.5px;font-weight:700;}
+.quiz-result.correct{color:#1f9d6b;}
+.quiz-result.incorrect{color:var(--warn);}
+.quiz-explain{
+  margin-top:16px;padding:16px 18px;border-radius:var(--radius-s);background:var(--surface-2);
+  border:1px solid var(--surface-border);font-size:0.93rem;color:var(--text-secondary);display:none;
+}
+.quiz-explain.show{display:block;}
+.quiz-explain strong{color:var(--text-primary);}
+.quiz-choice.correct-answer{border-color:#1f9d6b;background:color-mix(in srgb, #1f9d6b 10%, var(--surface));}
+.quiz-choice.wrong-answer{border-color:var(--warn);background:color-mix(in srgb, var(--warn) 10%, var(--surface));}
+
+/* ============================= VISUALIZER LAUNCH CARD ============================= */
+.launch-card{
+  margin:30px 0;border-radius:var(--radius-l);border:1px solid var(--surface-border);
+  background:var(--surface);padding:28px 30px;display:flex;gap:24px;justify-content:space-between;flex-wrap:wrap;align-items:center;
+}
+.launch-card .lc-eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:10px;}
+.launch-card h4{font-family:var(--font-display);font-size:1.2rem;font-weight:600;margin-bottom:8px;}
+.launch-card p{color:var(--text-secondary);font-size:0.94rem;max-width:52ch;}
+.launch-btn{
+  flex-shrink:0;font-family:var(--font-mono);font-size:12.5px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;
+  background:var(--accent);color:#fff;border:none;padding:13px 22px;border-radius:100px;cursor:pointer;text-decoration:none;
+  display:inline-flex;align-items:center;gap:8px;transition:opacity 120ms ease;
+}
+.launch-btn:hover{opacity:0.88;}
+
+/* ============================= ANNOTATION MARKERS ============================= */
+.marker-flag{cursor:pointer;}
+.marker-tip{
+  position:absolute;pointer-events:none;background:var(--bg-elevated);border:1px solid var(--warn);
+  border-radius:8px;padding:9px 12px;font-size:12px;max-width:220px;color:var(--text-primary);
+  box-shadow:var(--shadow);opacity:0;transition:opacity 120ms ease;transform:translate(-50%,-112%);z-index:6;
+}
+.marker-tip.show{opacity:1;}
+.marker-tip .mt-title{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--warn);font-weight:700;margin-bottom:4px;}
+
+/* ============================= RECAP GRID ============================= */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:30px 0;}
+.recap-card{border:1px solid var(--surface-border);border-radius:var(--radius-m);padding:20px 22px;background:var(--surface);}
+.recap-card .n{font-family:var(--font-display);font-size:1.6rem;font-weight:600;color:var(--accent);}
+.recap-card h5{font-family:var(--font-body);font-weight:700;font-size:0.98rem;margin:6px 0 6px;}
+.recap-card p{font-size:0.88rem;color:var(--text-secondary);}
+
+.next-part{
+  margin-top:36px;border-radius:var(--radius-l);padding:32px 34px;
+  background:linear-gradient(135deg,var(--accent-soft),var(--accent-soft-2));border:1px solid var(--surface-border);
+}
+.next-part .eyebrow{margin-bottom:12px;}
+.next-part h3{font-size:1.4rem;margin-bottom:10px;}
+.next-part p{color:var(--text-secondary);max-width:56ch;}
+
+/* ============================= FOOTER ============================= */
+footer.site-footer{border-top:1px solid var(--surface-border);padding:40px 24px 56px;text-align:center;}
+footer.site-footer .fname{font-family:var(--font-display);font-weight:600;font-size:1rem;color:var(--text-primary);}
+footer.site-footer .fsub{margin-top:6px;font-family:var(--font-mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);}
+
+@media (max-width:640px){
+  .section{padding:52px 0;}
+  .panel{padding:20px 18px 16px;}
+  .launch-card{padding:22px 20px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:0.001ms !important;animation-duration:0.001ms !important;}
+}
+</style>
+
+<div id="progress-bar"></div>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="brand">
+      <span class="brand-name">Vastra Loop — Decoding the Story Hidden in Sales Numbers</span>
+      <span class="brand-tag">Time Series 1 · Post Read</span>
+    </div>
+    <button class="toc-toggle" id="tocToggle" aria-expanded="false" aria-controls="tocRail">Contents ☰</button>
+  </div>
+</header>
+
+<div class="layout-shell">
+  <nav class="toc-rail" id="tocRail" aria-label="Table of contents">
+    <ol>
+      <li><a href="#brief">The Brief</a></li>
+      <li><a href="#what-is-ts">What Is Time Series Data</a></li>
+      <li><a href="#missing-values">Missing Values</a></li>
+      <li><a href="#anomalies">Anomalies</a></li>
+      <li><a href="#moving-averages">Moving Averages</a></li>
+      <li><a href="#trend">Trend</a></li>
+      <li><a href="#seasonality">Seasonality</a></li>
+      <li><a href="#decomposition">Decomposition</a></li>
+      <li><a href="#wrap-up">Wrap-Up</a></li>
+    </ol>
+  </nav>
+
+  <main class="main-col">
+
+    <section class="hero">
+      <div class="hero-inner">
+        <h1>Decoding the story hidden in <em>sales numbers</em></h1>
+        <p class="lede">Aisha Verma just joined Vastra Loop's demand planning team. Her manager hands her eighteen years of monthly sales and one question: <em>how much will we sell, and when?</em> Before she can forecast anything, she has to learn to read the signal underneath the noise — this is that process.</p>
+        <div class="hero-meta">
+          <span>Time series fundamentals</span>
+          <span>Vastra Loop · fashion e-commerce</span>
+          <span>18 years of monthly sales</span>
+        </div>
+      </div>
+      <svg class="hero-wave" id="heroWave" viewBox="0 0 800 64" preserveAspectRatio="none" aria-hidden="true"></svg>
+    </section>
+
+    <section class="section" id="brief">
+      <div class="prose-col">
+        <span class="eyebrow">01 — The Brief</span>
+        <h2 class="section-title">Meet Vastra Loop, and the forecasting problem</h2>
+        <p class="body-text">It's Aisha's first Monday at Vastra Loop, an Indian fashion e-commerce startup headquartered in Bengaluru. The company recently launched <strong>QuickStyle</strong>, a rapid-delivery promise: orders tagged QuickStyle reach customers within 24–48 hours, much like the express-delivery bets real fashion e-commerce players have made in recent years.</p>
+        <p class="body-text">Aisha has been hired as a Demand Planning Analyst. On day one, her manager Rohan walks up with a laptop.</p>
+        <div class="quote-block">
+          <p>"Before we plan next quarter's inventory, I need one thing from you: how much will we sell, and when? Here's our monthly sales history — go figure it out."</p>
+          <cite>Rohan, to Aisha, day one</cite>
+        </div>
+        <p class="body-text">This is Aisha's problem. It's ours too, for the rest of this read.</p>
+
+        <h3 class="sub-title">Why does this forecast matter?</h3>
+        <p class="body-text">Aisha asks Rohan why the number matters so much. Knowing what future sales will look like helps Vastra Loop plan production and inventory better — there's no upside to over- or under-producing. During peak seasons the company may want to run deals and promotions, and hiring, purchasing, discounting, marketing, and maintenance decisions all depend on a realistic sense of upcoming demand.</p>
+
+        <p class="body-text">Rohan sums it up simply: <em>"A good forecast isn't about being cautious. It's about being close to the truth."</em></p>
+      </div>
+
+      <div class="wide-col">
+        <div class="compare-grid">
+          <div class="compare-card over">
+            <div class="head"><span class="pill">Over-forecast</span></div>
+            <h4>Predicting too much demand</h4>
+            <ul>
+              <li>Clothing piles up unsold in the warehouse.</li>
+              <li>Inventory holding cost increases.</li>
+              <li>Roughly 10% of unsold stock eventually gets scrapped — fashion trends move fast, and old stock goes out of style.</li>
+            </ul>
+          </div>
+          <div class="compare-card under">
+            <div class="head"><span class="pill">Under-forecast</span></div>
+            <h4>Predicting too little demand</h4>
+            <ul>
+              <li>A lot of demand goes unmet.</li>
+              <li>Revenue takes a direct hit.</li>
+              <li>Customers who don't find what they want may not come back — a loss of trust, not just a lost sale.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="what-is-ts">
+      <div class="prose-col">
+        <span class="eyebrow">02 — Foundations</span>
+        <h2 class="section-title">What counts as time series data?</h2>
+        <p class="body-text">Rohan's file contains historical monthly sales figures for Vastra Loop. Before Aisha can forecast anything, she needs to understand what kind of data this is — and it turns out to be a classic example of <strong>time series data</strong>.</p>
+
+        <div class="definition">
+          <div class="dt">Definition</div>
+          <p>A <strong>signal</strong>, indexed by an <strong>ordered timestamp</strong>, is a time series. To qualify, you need at minimum two things: a date/timestamp (<code>t</code>), and one measurable quantity at each timestamp (<code>y</code>).</p>
+        </div>
+
+        <div class="analogy">
+          <span class="tag">Analogy</span>
+          <p>Think of a time series like a diary. Each page (timestamp) has exactly one entry (the value) written on it, and the pages are always read in order — you'd never skip ahead and read March before February. That ordering is what makes it a time series rather than just a list of numbers.</p>
+        </div>
+
+        <p class="body-text">For Vastra Loop, <code>t</code> is measured in months. A proper <code>datetime</code> type for the date column matters more than it seems — pandas' date-aware tools (slicing by month, resampling by year, and so on) only work smoothly once a column is genuinely typed as <code>datetime</code>, rather than stored as plain text. A CSV would need an explicit conversion; Aisha's file, loaded from Excel, already had it right.</p>
+
+        <h3 class="sub-title">Aisha's first look at the dataset</h3>
+        <p class="body-text">A quick inspection tells her almost everything she needs before touching a single chart.</p>
+
+        <div class="stat-grid">
+          <div class="stat-tile"><div class="v">Monthly</div><div class="k">Frequency — one number per month</div></div>
+          <div class="stat-tile"><div class="v">217</div><div class="k">Rows — Jan 2001 to Jan 2019</div></div>
+          <div class="stat-tile"><div class="v">₹10,842.76</div><div class="k">Mean monthly sales</div></div>
+          <div class="stat-tile"><div class="v">₹10,745</div><div class="k">Median monthly sales</div></div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="schema">
+            <thead><tr><th>Column</th><th>Dtype</th><th>Role</th></tr></thead>
+            <tbody>
+              <tr><td>DATE</td><td class="mono">datetime64</td><td>Timestamp, later set as the index</td></tr>
+              <tr><td>Sales</td><td class="mono">float64</td><td>The signal — monthly sales value</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="body-text">Eighteen years of monthly data should give <code>18 × 12 + 1 = 217</code> rows (the extra one is the single January&nbsp;2019 entry) — and that's exactly what the DATE column shows. No rows silently vanished. Had the count been off, it would've meant entire months were missing outright — for example, if 2010 jumped straight from February to May, nothing in the raw numbers would warn her about that gap on its own.</p>
+
+        <p class="body-text">One more small but useful move: swap the default <code>0,1,2,3…</code> row index for the dates themselves. Since every date is unique, and a <code>datetime</code> column is numeric under the hood, it's a perfectly valid index — and it's what unlocks pandas' date-aware slicing and makes plotting far more readable.</p>
+
+        <div class="deeper">
+          <div class="dt">Go deeper</div>
+          <p class="prompt">"What is the difference between time series data and cross-sectional data? Give me two real-world examples of each that are not about sales."</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="missing-values">
+      <div class="prose-col">
+        <span class="eyebrow">03 — Cleaning, Part I</span>
+        <h2 class="section-title">Challenge 1: missing values</h2>
+        <p class="body-text">Aisha is ready for the fun part — plotting the sales history to actually see what she's working with. Looking closely, two things jump out: gaps where values are missing, and a couple of spikes and dips that look unnatural. Rohan's advice is blunt: <em>"Before you can even think about trends or seasonality, clean this up first."</em> We'll follow her through both challenges, starting with the gaps.</p>
+
+        <div class="definition" style="border-left-color:var(--text-muted)">
+          <div class="dt" style="color:var(--text-muted)">A note on the charts ahead</div>
+          <p>The notebook's own charts exist only as screenshots, so every chart from here on runs on a reconstructed monthly series — shaped to match the statistics Aisha reports in the text (mean ≈ ₹10,842.76, median ≈ ₹10,745, and the 95th/5th-percentile bounds used later) so you can interact with the same techniques she used. Treat the shape and the mechanics as faithful, not the individual data points as Vastra Loop's literal historical figures.</p>
+        </div>
+      </div>
+
+      <div class="wide-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Vastra Loop's raw monthly sales</div>
+              <div class="panel-note">Scattered gaps and two unnatural spikes/dips sit in an otherwise smooth, growing series.</div>
+            </div>
+            <div class="legend"><span class="li"><span class="sw" style="background:var(--accent)"></span>Sales</span></div>
+          </div>
+          <div class="chart-wrap" id="chartRawAnnotated" data-chart="raw-annotated"></div>
+          <div class="reconstructed-tag">Reconstructed series, calibrated to Aisha's reported statistics</div>
+        </div>
+      </div>
+
+      <div class="prose-col">
+        <div class="quiz" data-quiz>
+          <div class="quiz-head"><span class="quiz-label">Quiz 1</span></div>
+          <div class="quiz-body">
+            <p class="quiz-q">If a time series has only 3% missing values, is it fine to simply drop those rows?</p>
+            <div class="quiz-choices" data-choices data-correct="1">
+              <label class="quiz-choice"><input type="radio" name="q1"><span>True</span></label>
+              <label class="quiz-choice"><input type="radio" name="q1"><span>False</span></label>
+            </div>
+            <div class="quiz-actions">
+              <button class="quiz-submit" data-submit disabled>Check answer</button>
+              <span class="quiz-result" data-result></span>
+            </div>
+            <div class="quiz-explain" data-explain><strong>Explanation:</strong> Time series data is sequential — each row is tied to a specific point in time, and most techniques expect an unbroken chain of timestamps. Dropping rows creates a gap in the timeline itself, not just a missing value, which most time series methods can't handle gracefully. The gap needs to be filled intelligently, not removed.</div>
+          </div>
+        </div>
+
+        <p class="body-text">Aisha's plan is systematic: find where values are missing, check whether there's a pattern to the missingness, then fill the gaps with the most appropriate value. Nothing obvious jumps out in the pattern — the missing months are scattered, not clustered around one season or year. Had there been a pattern, she'd have needed to investigate further, since a data pipeline that consistently fails every December, say, calls for a different fix than random gaps do.</p>
+
+        <h3 class="sub-title">Three ways to fill the gap</h3>
+        <p class="body-text">Try each method below on the same series and watch what happens right around the missing points.</p>
+      </div>
+
+      <div class="wide-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Imputation methods, compared</div>
+              <div class="panel-note">Same gaps, three different fills. Watch the seam where imputed values meet real ones.</div>
+            </div>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Imputation method">
+            <button class="tab-btn active" data-tab="mean" role="tab" aria-selected="true">Mean fill</button>
+            <button class="tab-btn" data-tab="zero" role="tab" aria-selected="false">Zero fill</button>
+            <button class="tab-btn" data-tab="interp" role="tab" aria-selected="false">Interpolation</button>
+          </div>
+
+          <div class="tab-panel active" data-panel="mean">
+            <div class="legend" style="margin:14px 0 4px"><span class="li"><span class="sw" style="background:var(--line-muted)"></span>Original (with gaps)</span><span class="li"><span class="sw" style="background:var(--accent)"></span>Mean-imputed</span></div>
+            <div class="chart-wrap" id="chartMeanFill" data-chart="mean-fill"></div>
+            <span class="verdict bad">✗ Ignores local context</span>
+            <p class="body-text" style="margin-top:12px;font-size:0.95rem">Filling with a single global average is like a teacher who doesn't know a student's mark for one exam, so plugs in the class average — a reasonable first guess that ignores everything specific about that particular period. Look at any stretch where sales were genuinely running low or high: the imputed value snaps to the 18-year mean regardless, creating an unnatural jump right where data is missing.</p>
+          </div>
+
+          <div class="tab-panel" data-panel="zero">
+            <div class="legend" style="margin:14px 0 4px"><span class="li"><span class="sw" style="background:var(--line-muted)"></span>Original (with gaps)</span><span class="li"><span class="sw" style="background:var(--accent)"></span>Zero-filled</span></div>
+            <div class="chart-wrap" id="chartZeroFill" data-chart="zero-fill"></div>
+            <span class="verdict bad">✗ Not realistic here</span>
+            <p class="body-text" style="margin-top:12px;font-size:0.95rem">Vastra Loop's monthly sales wouldn't randomly crash to zero for a whole month, so the sharp drops this creates aren't realistic. Zero <em>can</em> be the right fill elsewhere — daily sales for a physical store might legitimately be zero on days it's shut — but that always depends on what the business actually does on that day, and needs confirming with the business team rather than assumed.</p>
+          </div>
+
+          <div class="tab-panel" data-panel="interp">
+            <div class="legend" style="margin:14px 0 4px"><span class="li"><span class="sw" style="background:var(--line-muted)"></span>Original (with gaps)</span><span class="li"><span class="sw" style="background:var(--accent)"></span>Interpolated</span></div>
+            <div class="chart-wrap" id="chartInterpFill" data-chart="interp-fill"></div>
+            <span class="verdict good">✓ Blends in naturally</span>
+            <p class="body-text" style="margin-top:12px;font-size:0.95rem">Instead of averaging the whole 18-year history, interpolation averages just the point right before and right after each gap — a <em>local</em> average. If it was 20°C at 2pm and 24°C at 4pm, your best guess for 3pm isn't the year's average temperature, it's simply the midpoint: 22°C. Under the hood, this joins the point before and after each gap with a straight line, and the result blends in far more naturally than either fill above.</p>
+          </div>
+
+          <div class="reconstructed-tag">Reconstructed series, calibrated to Aisha's reported statistics</div>
+        </div>
+      </div>
+
+      <div class="prose-col">
+        <p class="body-text">Two related methods worth knowing: <code>bfill</code> copies the next valid value backwards to fill a gap, and <code>ffill</code> carries the last valid value forward. Both are simpler than interpolation — no averaging, just repetition.</p>
+
+        <div class="chip-row" aria-hidden="false">
+          <span class="chip"><strong>ffill</strong> — carries the last known value forward</span>
+          <span class="chip"><strong>bfill</strong> — copies the next known value backward</span>
+        </div>
+
+        <div class="table-wrap" style="max-width:420px">
+          <table class="schema">
+            <caption class="visually-hidden">Generic worked example, not Vastra Loop data</caption>
+            <thead><tr><th>Month</th><th>Value</th><th>ffill</th><th>bfill</th></tr></thead>
+            <tbody>
+              <tr><td>Mar</td><td class="mono">9,800</td><td class="mono">9,800</td><td class="mono">9,800</td></tr>
+              <tr><td>Apr</td><td class="mono">—</td><td class="mono">9,800</td><td class="mono">11,200</td></tr>
+              <tr><td>May</td><td class="mono">—</td><td class="mono">9,800</td><td class="mono">11,200</td></tr>
+              <tr><td>Jun</td><td class="mono">11,200</td><td class="mono">11,200</td><td class="mono">11,200</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="panel-note" style="margin-top:-14px;margin-bottom:22px">A generic 5-row example, not Vastra Loop's actual figures — just enough to see how each method fills the gap differently.</p>
+
+        <p class="body-text">Other interpolation variants exist too: <code>pad</code> fills using existing forward values, and <code>polynomial</code> fits a curve of a chosen order instead of a straight line. For Vastra Loop, Aisha saves the interpolated version as her cleaned signal and moves on.</p>
+
+        <div class="quiz" data-quiz>
+          <div class="quiz-head"><span class="quiz-label">Quiz 2</span></div>
+          <div class="quiz-body">
+            <p class="quiz-q">Why is filling missing values with the overall mean not a great idea for time series?</p>
+            <div class="quiz-choices" data-choices data-correct="0">
+              <label class="quiz-choice"><input type="radio" name="q2"><span>The filled value may be very different from its local neighbours (nearby time points).</span></label>
+              <label class="quiz-choice"><input type="radio" name="q2"><span>It's mathematically impossible to compute a mean when dates are involved.</span></label>
+              <label class="quiz-choice"><input type="radio" name="q2"><span>Mean imputation works perfectly fine for time series in every case.</span></label>
+            </div>
+            <div class="quiz-actions">
+              <button class="quiz-submit" data-submit disabled>Check answer</button>
+              <span class="quiz-result" data-result></span>
+            </div>
+            <div class="quiz-explain" data-explain><strong>Explanation:</strong> Time series values usually depend on where in time you are — early-year sales look different from late-year sales. A single global mean ignores this local context, causing unnatural jumps right around the imputed points.</div>
+          </div>
+        </div>
+
+        <div class="deeper">
+          <div class="dt">Go deeper</div>
+          <p class="prompt">"Explain forward-fill (ffill) and backward-fill (bfill) with a tiny example table of 5 rows, and tell me when I should prefer each of them over linear interpolation."</p>
+        </div>
+
+        <p class="body-text" style="margin-top:26px">One more thread worth pulling: what if Aisha averaged <code>n</code> points before <em>and</em> <code>n</code> points after a gap, instead of just one point on each side? That's the foundation of an idea called the <strong>Centered Moving Average</strong> — in fact, linear interpolation is basically a centered moving average with a window of one. It'll click fully once we cover moving averages properly.</p>
+      </div>
+    </section>
+
+    <section class="section" id="anomalies">
+      <div class="prose-col">
+        <span class="eyebrow">04 — Cleaning, Part II</span>
+        <h2 class="section-title">Challenge 2: anomalies</h2>
+        <p class="body-text">With the gaps filled, Aisha turns to the second issue she spotted: unusual spikes and dips.</p>
+
+        <div class="definition">
+          <div class="dt">Definition</div>
+          <p>An <strong>anomaly</strong> (or outlier) is an abnormal or unusual data point that stands out from the rest of the series. It could be a genuine data-entry error, or a real but one-off event — a flash sale, a system glitch — that isn't expected to repeat, and so shouldn't influence future forecasts.</p>
+        </div>
+
+        <div class="analogy">
+          <span class="tag">Analogy</span>
+          <p>Anomalies are like a single very loud word shouted in an otherwise quiet conversation — it doesn't fit the flow, and it draws attention precisely because it's out of place.</p>
+        </div>
+      </div>
+
+      <div class="wide-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Two anomalies Aisha flags</div>
+              <div class="panel-note">Hover the flagged points for what makes each one suspicious.</div>
+            </div>
+          </div>
+          <div class="chart-wrap" id="chartAnomalyFlags" data-chart="anomaly-flags"></div>
+          <div class="reconstructed-tag">Reconstructed series, calibrated to Aisha's reported statistics</div>
+        </div>
+      </div>
+
+      <div class="prose-col">
+        <p class="body-text">Replacing these points with <code>NaN</code>, the way missing values were handled, isn't ideal either — once a value becomes <code>NaN</code>, the model has no information at all for that date, and most forecasting methods rely on having a value at every time step. An empty slot is still a problem, just a different one.</p>
+
+        <h3 class="sub-title">Spotting outliers with a histogram</h3>
+        <p class="body-text">One of the best ways to spot anomalies is a histogram — it shows how often each value range occurs, so outliers stand out as isolated bars far from the main cluster.</p>
+      </div>
+
+      <div class="wide-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Distribution of monthly sales</div>
+              <div class="panel-note">Most months cluster in the middle; a handful sit far outside it.</div>
+            </div>
+          </div>
+          <div class="chart-wrap" id="chartHistogram" data-chart="histogram"></div>
+          <div class="reconstructed-tag">Reconstructed series, calibrated to Aisha's reported statistics</div>
+        </div>
+      </div>
+
+      <div class="prose-col">
+        <p class="body-text">Eyeballing a cutoff here works — say, replace everything below 5,000 with 5,000 and everything above 20,000 with 20,000 — but only because the gap between the main cluster and the outliers happens to be visible. If the histogram had looked smoothly continuous instead, eyeballing wouldn't work, and Aisha would need a more principled, repeatable rule.</p>
+
+        <h3 class="sub-title">A systematic rule: quantiles</h3>
+        <p class="body-text">A common rule of thumb treats anything above the 95th percentile or below the 5th percentile as a candidate anomaly.</p>
+
+        <div class="analogy">
+          <span class="tag">Analogy</span>
+          <p>This is like a school deciding that the top 5% and bottom 5% of exam scores in a batch get manually re-checked by a teacher — not necessarily because they're wrong, but because they're unusual enough to deserve a second look.</p>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-tile"><div class="v">₹15,164.60</div><div class="k">95th percentile</div></div>
+          <div class="stat-tile"><div class="v">₹7,307.80</div><div class="k">5th percentile</div></div>
+        </div>
+
+        <p class="body-text">Pandas' <code>clip(upper=…, lower=…)</code> caps values at these two thresholds: anything higher gets pulled down to the upper bound, anything lower gets pushed up to the lower one. At 95th/5th, the outliers vanish — but looking closely at the very start and end of the series, some genuinely useful high and low values get clipped away too. Loosening the thresholds to the 98th/2nd percentile fixes the over-aggressive clipping. One rule of thumb: keep the two percentiles symmetric unless there's a specific business reason not to — clipping at 98/10, say, would be lopsided without justification.</p>
+
+        <h3 class="sub-title">Try it yourself — pick your own clipping threshold</h3>
+        <p class="body-text">Move the slider to choose a clipping percentile and watch the series change. Too tight a threshold starts eating into real peaks and dips; too loose leaves anomalies untouched. Aisha eventually settles on 98th / 2nd.</p>
+      </div>
+
+      <div class="wide-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Clipping threshold playground</div>
+              <div class="panel-note">Symmetric percentile cut, applied to both tails at once.</div>
+            </div>
+            <div class="legend"><span class="li"><span class="sw" style="background:var(--line-muted)"></span>Original</span><span class="li"><span class="sw" style="background:var(--accent)"></span>Clipped</span></div>
+          </div>
+          <div class="control-row">
+            <div class="control">
+              <label>Cut percentile (each side) <span class="val" id="clipValLabel">5%</span></label>
+              <input type="range" id="clipSlider" min="1" max="20" step="1" value="5" aria-label="Clipping percentile, each side">
+            </div>
+          </div>
+          <div class="chart-wrap" id="chartClipping" data-chart="clipping"></div>
+          <div class="control-readout" id="clipReadout"></div>
+          <div class="reconstructed-tag">Reconstructed series, calibrated to Aisha's reported statistics</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="moving-averages">
+      <div class="prose-col">
+        <span class="eyebrow">05 — Finding The Signal</span>
+        <h2 class="section-title">Moving averages &amp; weighted moving averages</h2>
+        <p class="body-text">With the data clean, Aisha reports back to Rohan. He nods: <em>"Good. Now let's actually understand what's driving these numbers — is the business growing? Are there patterns we can rely on?"</em> Looking at the cleaned plot, two things are visible at a glance: sales appear to be growing year over year, and certain peaks and dips seem to recur. The next question is whether Aisha can separate the "steady growth" part from the "repeating pattern" part — and for that she needs a new tool.</p>
+
+        <h3 class="sub-title">The idea</h3>
+        <p class="body-text">What if Aisha simply averaged the last two data points to guess the next one? It's a reasonable starting idea — it avoids a flat, boring forecast, and reacts, a little, to recent data. Expanding on this: what if she averaged the last <code>m</code> observations instead of just two?</p>
+
+        <div class="equation">ŷ<span class="dim">t</span> = ( y<span class="dim">t−1</span> + y<span class="dim">t−2</span> + … + y<span class="dim">t−m</span> ) / m</div>
+
+        <div class="analogy">
+          <span class="tag">Analogy</span>
+          <p>Think of a cricket commentator predicting how a batter will perform today. Instead of looking at just their very last innings — too noisy, one bad day doesn't define a player — they look at the batter's average score over the last 5 innings. That average becomes a far more stable prediction than any single match. A moving average does exactly this: it smooths out one-off noise by averaging over a recent window.</p>
+        </div>
+
+        <h3 class="sub-title">Weighted Moving Average (WMA)</h3>
+        <p class="body-text">So far every past observation gets equal weight. What if more recent months should matter more than months from years ago? That's the idea behind a <strong>Weighted Moving Average</strong>: recent data gets a bigger say, older data a smaller one, by multiplying each observation by its own weighting factor.</p>
+
+        <div class="analogy">
+          <span class="tag">Analogy</span>
+          <p>Think about how a teacher calculates your "current form" grade — your most recent test should probably count for more than one from three months ago, since you've likely learned and changed since then. Because of this weighting, a WMA tends to follow the actual series more closely and react faster to real changes than a plain, equally-weighted moving average.</p>
+        </div>
+
+        <p class="body-text">In code, this is pandas' <code>rolling()</code> method: pick a window size <code>k</code>, and pandas slides that window across the data, letting you run an operation — typically <code>.mean()</code> — on each window as it moves.</p>
+
+        <h3 class="sub-title">Try it yourself — window size and centering</h3>
+        <p class="body-text">Play with the window slider and watch the smoothed line change live. A small window barely smooths anything; a very large window flattens the series into something close to a pure trend line.</p>
+      </div>
+
+      <div class="wide-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Moving average playground</div>
+              <div class="panel-note">Backward-looking by default — toggle "centered" to average points on both sides instead.</div>
+            </div>
+            <div class="legend"><span class="li"><span class="sw" style="background:var(--line-muted)"></span>Original</span><span class="li"><span class="sw" style="background:var(--accent)"></span>Moving average</span></div>
+          </div>
+          <div class="control-row">
+            <div class="control">
+              <label>Window size <span class="val" id="maWindowLabel">3</span></label>
+              <input type="range" id="maSlider" min="1" max="36" step="1" value="3" aria-label="Moving average window size">
+            </div>
+            <div class="check-control">
+              <input type="checkbox" id="maCentered">
+              <label for="maCentered">Centered</label>
+            </div>
+          </div>
+          <div class="chart-wrap" id="chartMovingAverage" data-chart="moving-average"></div>
+          <div class="control-readout" id="maReadout"></div>
+          <div class="reconstructed-tag">Reconstructed series, calibrated to Aisha's reported statistics</div>
+        </div>
+      </div>
+
+      <div class="prose-col">
+        <p class="body-text">A few things to notice as you drag the slider. The smoothed series <strong>lags</strong> the original when backward-looking — peaks and dips shift along the x-axis by roughly the window size, since a sudden change only shows up a few months later, adjusting gradually rather than over-reacting. The smoothed series is also <strong>less spiky</strong> — short-term noise disappears. And there are missing values wherever the window runs out of history: with a backward-looking window of size 12, the first 12 points have nothing to average over.</p>
+
+        <h3 class="sub-title">Centered moving average</h3>
+        <p class="body-text">Instead of only looking backward, a centered average looks <code>n</code> points before <em>and</em> <code>n</code> points after the current point. This can't be used for actual forecasting — future values don't exist yet — but if the goal is simply smoothing for analysis or preprocessing, like Aisha is doing right now, it works fine, since all the data already exists. With <code>center=True</code> and a window of 12, six values go missing at the very start and six at the very end, rather than twelve piling up only at the start.</p>
+
+        <div class="quiz" data-quiz>
+          <div class="quiz-head"><span class="quiz-label">Quiz 3</span></div>
+          <div class="quiz-body">
+            <p class="quiz-q">True or false: linear interpolation can be thought of as a special case of a moving average.</p>
+            <div class="quiz-choices" data-choices data-correct="0">
+              <label class="quiz-choice"><input type="radio" name="q3"><span>True</span></label>
+              <label class="quiz-choice"><input type="radio" name="q3"><span>False</span></label>
+            </div>
+            <div class="quiz-actions">
+              <button class="quiz-submit" data-submit disabled>Check answer</button>
+              <span class="quiz-result" data-result></span>
+            </div>
+            <div class="quiz-explain" data-explain><strong>Explanation:</strong> Linear interpolation fills a gap using the average of the single point before and single point after it — a centered moving average with an effective window of just one point on each side. Wider centered moving averages simply generalize the same idea.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="trend">
+      <div class="prose-col">
+        <span class="eyebrow">06 — Components</span>
+        <h2 class="section-title">Trend</h2>
+
+        <div class="definition">
+          <div class="dt">Definition</div>
+          <p><strong>Trend</strong> is the linear increasing or decreasing behaviour of a series over a long stretch of time. When a series is described as "growing" or "shrinking" overall, that's its trend. A trend can be an uptrend, a downtrend, or a mix of both over different periods — it doesn't have to be a single straight line — and it isn't permanent: a trend usually holds for a while and then fades or reverses, unlike seasonality, which repeats on a fixed cycle.</p>
+        </div>
+
+        <h3 class="sub-title">Method 1 — centered moving average</h3>
+        <p class="body-text">Apply <code>.mean()</code> on <code>.rolling()</code> with a window wide enough to smooth out both noise and seasonality. For monthly data, 12 is a natural first choice, though a 1- or 2-year window both work — it just needs to be wide enough to average away noise and seasonality. This is essentially smoothing the original series, and while it's a common choice to represent trend, it is a somewhat subjective one.</p>
+
+        <h3 class="sub-title">Method 2 — linear regression</h3>
+        <p class="body-text">The other approach: fit a straight line through the points.</p>
+
+        <div class="analogy">
+          <span class="tag">Analogy</span>
+          <p>Imagine plotting a child's height every year on a wall chart. The exact growth from year to year isn't perfectly uniform, but a single straight line through those points captures the overall "growing taller" story — exactly what a regression-based trend line does for sales.</p>
+        </div>
+
+        <div class="equation">ŷ<span class="dim">t+1</span> = m·t + c</div>
+        <p class="body-text">With time <code>t</code> as the independent variable, evenly spaced from 0 to <code>m</code>, that's the whole trend line.</p>
+      </div>
+
+      <div class="wide-col">
+        <div class="launch-card">
+          <div>
+            <div class="lc-eyebrow">Interactive visualizer</div>
+            <h4>Window size &amp; trend smoothness</h4>
+            <p>Adjust a rolling window size (default 24 months) over 18 years of monthly sales and watch the trend line smooth out — plus how much seasonal variance still remains at that setting. A 12-month season needs at least a 24-month centered window to fully average out.</p>
+          </div>
+          <a class="launch-btn" href="https://aiml-vizs-new.vercel.app/time-series/window-size-effect-on-trend-smoothness/" target="_blank" rel="noopener">Launch visualizer ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="seasonality">
+      <div class="prose-col">
+        <span class="eyebrow">07 — Components</span>
+        <h2 class="section-title">Seasonality</h2>
+
+        <div class="definition">
+          <div class="dt">Definition</div>
+          <p><strong>Seasonality</strong> is a pattern that repeats at a regular, known interval — essentially a repeating wave. Stack enough copies of that wave together, and you start to reconstruct the series. Seasonality always has a fixed, known period, and our whole ability to forecast a series at all relies on the fact that some of its behaviour repeats predictably.</p>
+        </div>
+
+        <div class="analogy">
+          <span class="tag">Analogy</span>
+          <p>Think of a beach town's ice-cream sales — every summer, sales spike, and every winter, they dip, regardless of which year it is. That predictable, calendar-tied wave is seasonality.</p>
+        </div>
+
+        <div class="quiz" data-quiz>
+          <div class="quiz-head"><span class="quiz-label">Quiz 4</span></div>
+          <div class="quiz-body">
+            <p class="quiz-q">Which of these is <em>not</em> a seasonal signal?</p>
+            <div class="quiz-choices" data-choices data-correct="2">
+              <label class="quiz-choice"><input type="radio" name="q4"><span>Movie ticket sales</span></label>
+              <label class="quiz-choice"><input type="radio" name="q4"><span>Temperature in Delhi</span></label>
+              <label class="quiz-choice"><input type="radio" name="q4"><span>Number of children born each month</span></label>
+              <label class="quiz-choice"><input type="radio" name="q4"><span>Car sales in India</span></label>
+            </div>
+            <div class="quiz-actions">
+              <button class="quiz-submit" data-submit disabled>Check answer</button>
+              <span class="quiz-result" data-result></span>
+            </div>
+            <div class="quiz-explain" data-explain><strong>Explanation:</strong> Births are roughly uniformly distributed across the year with no strong repeating calendar pattern, so this isn't seasonal. Car sales in India tend to spike around festivals like Diwali, temperature clearly follows a yearly cycle, and movie ticket sales often rise around holidays — all genuinely seasonal.</div>
+          </div>
+        </div>
+
+        <h3 class="sub-title">Calculating seasonality</h3>
+        <ol class="process-list">
+          <li>Calculate the trend and subtract it from the original series. What's left over is mostly seasonality plus noise.</li>
+          <li>From that leftover signal, average across each matching period — in four years of monthly data, average all four Januaries together, all four Februaries together, and so on.</li>
+        </ol>
+        <p class="body-text">Aisha could compute this by hand — but there's an easier way, which brings us to decomposition.</p>
+      </div>
+
+      <div class="wide-col">
+        <div class="launch-card">
+          <div>
+            <div class="lc-eyebrow">Interactive visualizer</div>
+            <h4>Seasonal pattern extraction by period</h4>
+            <p>Walks through the three-step extraction on a trending, seasonal series: subtract the trend, group by calendar month, then average within each group to reveal the seasonal factor — <code>mean( y(t) − trend(t) )</code> for every <code>t</code> where <code>month(t) = m</code>.</p>
+          </div>
+          <a class="launch-btn" href="https://aiml-vizs-new.vercel.app/time-series/seasonal-pattern-extraction-by-period/" target="_blank" rel="noopener">Launch visualizer ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="decomposition">
+      <div class="prose-col">
+        <span class="eyebrow">08 — Putting It Together</span>
+        <h2 class="section-title">Time series decomposition &amp; residuals</h2>
+        <p class="body-text">Rohan asks Aisha for one clean summary: <em>"Show me trend, seasonality, and whatever's left over — separately."</em> A complex signal can generally be broken into simpler components, and we've already met two of them: trend and seasonality. Breaking a series into these pieces explicitly is called <strong>decomposition</strong>.</p>
+
+        <div class="analogy">
+          <span class="tag">Analogy</span>
+          <p>Think of decomposition like separating a music track into its vocals, instruments, and background hiss. Each layer, added back together, reconstructs the original song — and each layer is easier to reason about on its own than the mixed-down track.</p>
+        </div>
+
+        <p class="body-text">In an ideal world, trend plus seasonality would reconstruct the original series exactly. Real business data rarely is ideal, though — there's always some leftover noise or error that neither component can explain, called the <strong>residual</strong>.</p>
+
+        <div class="equation">y(t) = b(t) + s(t) + e(t)<br><span class="dim">where b = trend, s = seasonality, e = residual</span></div>
+        <div class="equation">e(t) = y(t) − b(t) − s(t)</div>
+
+        <p class="body-text">The residual isn't estimated the way trend and seasonality are — it's simply whatever is left over once the estimated trend and seasonality are subtracted from the real data. If both were estimated well, the residual should look small and scattered roughly evenly around zero, like static noise with no obvious pattern of its own.</p>
+
+        <p class="body-text">In Python, this is <code>statsmodels</code>' <code>seasonal_decompose</code>, which needs the target series and a choice of model — additive, what we've discussed, or multiplicative.</p>
+      </div>
+
+      <div class="wide-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Decomposition — Vastra Loop sales</div>
+              <div class="panel-note">Original series split into trend, seasonality, and residual. Even statsmodels' own centered-moving-average approach loses values at both ends of the trend line.</div>
+            </div>
+          </div>
+          <div class="chart-wrap" id="chartDecompOriginal" data-chart="decomp-original" style="height:130px"></div>
+          <div class="panel-note" style="margin-top:10px">Original</div>
+          <div class="chart-wrap" id="chartDecompTrend" data-chart="decomp-trend" style="height:130px;margin-top:8px"></div>
+          <div class="panel-note" style="margin-top:10px">Trend</div>
+          <div class="chart-wrap" id="chartDecompSeasonal" data-chart="decomp-seasonal" style="height:130px;margin-top:8px"></div>
+          <div class="panel-note" style="margin-top:10px">Seasonality — the same pattern repeats every single year</div>
+          <div class="chart-wrap" id="chartDecompResidual" data-chart="decomp-residual" style="height:130px;margin-top:8px"></div>
+          <div class="panel-note" style="margin-top:10px">Residual — whatever's left over</div>
+          <div class="reconstructed-tag">Reconstructed series, calibrated to Aisha's reported statistics</div>
+        </div>
+      </div>
+
+      <div class="prose-col">
+        <p class="body-text">Zooming into just the residual: for Vastra Loop, Aisha finds it ranges roughly from <strong>−2,000 to 3,000</strong> — only about 5% of the actual sales values. That's a small, mostly-noise band, not a strong hidden pattern. A histogram of the residual confirms it's reasonably close to symmetric, with no major skew or second hidden pattern.</p>
+      </div>
+
+      <div class="wide-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Residual distribution</div>
+              <div class="panel-note">Close to symmetric around zero — the sign of a well-behaved residual.</div>
+            </div>
+          </div>
+          <div class="chart-wrap" id="chartResidualHist" data-chart="residual-hist"></div>
+        </div>
+      </div>
+
+      <div class="prose-col">
+        <div class="stat-grid">
+          <div class="stat-tile"><div class="v">≈ −3.2</div><div class="k">Residual mean</div></div>
+          <div class="stat-tile"><div class="v">−2,000 to 3,000</div><div class="k">Residual range</div></div>
+        </div>
+        <p class="body-text">In a series ranging from −2,000 to 3,000, a residual mean of about −3.2 is very close to zero. That tells Aisha her decomposition isn't systematically over- or under-forecasting — the leftover really does look like noise. Once the residual's mean is close to zero, there's no strong systematic pattern left to explain, and there's no more signal to squeeze out.</p>
+
+        <div class="quiz" data-quiz>
+          <div class="quiz-head"><span class="quiz-label">Quiz 5</span></div>
+          <div class="quiz-body">
+            <p class="quiz-q">Aisha finds that her residual's mean is very close to zero and the values look roughly symmetric around zero. What does this suggest about her trend + seasonality estimate?</p>
+            <div class="quiz-choices" data-choices data-correct="0">
+              <label class="quiz-choice"><input type="radio" name="q5"><span>It's a strong sign the trend and seasonality components have captured most of the explainable pattern, and what's left behaves like random noise.</span></label>
+              <label class="quiz-choice"><input type="radio" name="q5"><span>It means the original data had no anomalies at all.</span></label>
+              <label class="quiz-choice"><input type="radio" name="q5"><span>It means the seasonality period was chosen incorrectly and needs to be doubled.</span></label>
+            </div>
+            <div class="quiz-actions">
+              <button class="quiz-submit" data-submit disabled>Check answer</button>
+              <span class="quiz-result" data-result></span>
+            </div>
+            <div class="quiz-explain" data-explain><strong>Explanation:</strong> A residual centered near zero with no obvious remaining pattern is exactly what we'd expect once trend and seasonality have absorbed the explainable structure in the series. It doesn't tell us anything about anomalies — that was a separate, earlier cleaning step — or suggest the seasonal period is wrong; in fact, a well-behaved residual is a good sign the seasonal period was chosen sensibly.</div>
+          </div>
+        </div>
+
+        <div class="deeper">
+          <div class="dt">Go deeper</div>
+          <p class="prompt">"Explain the difference between additive and multiplicative decomposition models in time series, and how do I decide which one fits a given series?"</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="wrap-up">
+      <div class="prose-col">
+        <span class="eyebrow">09 — Wrap-Up</span>
+        <h2 class="section-title">What Aisha walks away with</h2>
+        <p class="body-text">Aisha walks into Rohan's office with a clean, decomposed view of Vastra Loop's sales history. Here's the recap of everything that got her there.</p>
+      </div>
+
+      <div class="wide-col">
+        <div class="recap-grid">
+          <div class="recap-card"><div class="n">01</div><h5>Time series basics</h5><p>An ordered signal with a timestamp and a value; frequency here was monthly.</p></div>
+          <div class="recap-card"><div class="n">02</div><h5>Missing values</h5><p>Never drop rows in a time series. Interpolation — a local, two-point average — beat both mean-imputation and zero-filling for this dataset.</p></div>
+          <div class="recap-card"><div class="n">03</div><h5>Anomalies</h5><p>Spotted visually via histogram, then handled systematically using percentile-based clipping.</p></div>
+          <div class="recap-card"><div class="n">04</div><h5>Moving averages</h5><p>Averaging recent observations smooths noise; larger windows smooth more but lag more and lose more edge values.</p></div>
+          <div class="recap-card"><div class="n">05</div><h5>Weighted moving average</h5><p>Like a moving average, but gives more importance to recent points.</p></div>
+          <div class="recap-card"><div class="n">06</div><h5>Trend</h5><p>The long-term increasing or decreasing behaviour, estimated via a wide centered moving average or a fitted straight line.</p></div>
+          <div class="recap-card"><div class="n">07</div><h5>Seasonality</h5><p>The fixed, repeating wave-like pattern tied to the calendar.</p></div>
+          <div class="recap-card"><div class="n">08</div><h5>Decomposition</h5><p>Splitting the series into trend + seasonality + residual, with the residual acting as a sanity check — small, near-zero mean means a good decomposition.</p></div>
+        </div>
+
+        <div class="next-part">
+          <span class="eyebrow" style="margin-bottom:8px">What's next — Part 2</span>
+          <h3>The forecast is still unanswered</h3>
+          <p>Aisha now has a clean, well-understood series. But Rohan's original question is still unanswered: what will sales actually be next month? Part 2 picks up right where this leaves off, turning this decomposed understanding into an actual forecast.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div class="fname">Time Series 1 post read</div>
+  <div class="fsub">Vastra Loop · Demand Planning Notebook</div>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   1. SYNTHETIC, CALIBRATED DATASET
+   The source notebook's screenshots aren't machine-readable, so
+   every interactive chart below runs on a reconstructed monthly
+   series (Jan 2001 - Jan 2019, 217 points) shaped to match the
+   statistics Aisha actually reports in the text: an overall mean
+   near 10,842.76, a median near 10,745, scattered missing months,
+   an early-2006 dip and a mid-2013 spike, a growing trend and a
+   repeating annual wave. It exists purely so you can interact with
+   the same techniques Aisha used - not as a claim about Vastra
+   Loop's literal historical figures.
+   ============================================================ */
+
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const rng = mulberry32(20010142);
+
+const N = 217;
+const dates = [];
+for(let i=0;i<N;i++){
+  dates.push({ y: 2001 + Math.floor(i/12), m: i % 12 });
+}
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDate(i){ const d = dates[i]; return MONTHS[d.m] + " '" + String(d.y).slice(2); }
+function fmtDateFull(i){ const d = dates[i]; return MONTHS[d.m] + ' ' + d.y; }
+function fmtINR(v){ return '₹' + Math.round(v).toLocaleString('en-IN'); }
+function fmtShort(v){
+  const sign = v < 0 ? '-' : '';
+  const av = Math.abs(v);
+  if(av >= 1000) return sign + '₹' + (av/1000).toFixed(av % 1000 === 0 ? 0 : 1) + 'k';
+  return sign + '₹' + Math.round(av);
+}
+
+function trendBase(i){
+  const t = i/(N-1);
+  return 7500 + 6100*Math.pow(t, 1.05);
+}
+function seasonalBase(i){
+  const m = i % 12;
+  const phase = (m/12) * 2 * Math.PI;
+  return 1450*Math.sin(phase+0.4) + 480*Math.sin(2*phase+1.1);
+}
+
+const raw = [];
+for(let i=0;i<N;i++){
+  raw.push(trendBase(i) + seasonalBase(i) + (rng()-0.5)*850);
+}
+const idxDip2006 = (2006-2001)*12 + 2;   // early 2006
+const idxSpike2013 = (2013-2001)*12 + 5; // mid 2013
+raw[idxDip2006] = 180;
+raw[idxSpike2013] = raw[idxSpike2013-1] * 2.35;
+
+const missingIdx = (function(){
+  const seen = new Set();
+  let guard = 0;
+  while(seen.size < 7 && guard < 500){
+    guard++;
+    const cand = 6 + Math.floor(rng()*(N-12));
+    if(cand === idxDip2006 || cand === idxSpike2013) continue;
+    let close = false;
+    seen.forEach(s=>{ if(Math.abs(s-cand) < 4) close = true; });
+    if(close) continue;
+    seen.add(cand);
+  }
+  return Array.from(seen).sort((a,b)=>a-b);
+})();
+const rawGaps = raw.slice();
+missingIdx.forEach(i => rawGaps[i] = null);
+
+function meanFill(series){
+  const vals = series.filter(v => v != null);
+  const mean = vals.reduce((a,b)=>a+b,0) / vals.length;
+  return series.map(v => v == null ? mean : v);
+}
+function zeroFill(series){ return series.map(v => v == null ? 0 : v); }
+function linearInterp(series){
+  const out = series.slice();
+  let i = 0;
+  while(i < out.length){
+    if(out[i] == null){
+      let j = i;
+      while(j < out.length && out[j] == null) j++;
+      const left = i-1, right = j;
+      const lv = out[left], rv = out[right];
+      for(let k=i;k<j;k++){
+        const frac = (k-left) / (right-left);
+        out[k] = lv + (rv-lv)*frac;
+      }
+      i = j;
+    } else i++;
+  }
+  return out;
+}
+const cleaned = linearInterp(rawGaps);
+
+function rollingMean(series, window, centered){
+  const out = new Array(series.length).fill(null);
+  for(let i=0;i<series.length;i++){
+    let startIdx, endIdx;
+    if(centered){
+      const before = Math.floor((window-1)/2);
+      startIdx = i - before;
+      endIdx = startIdx + window - 1;
+    } else {
+      endIdx = i; startIdx = i - window + 1;
+    }
+    if(startIdx < 0 || endIdx > series.length-1) continue;
+    let sum = 0;
+    for(let k=startIdx;k<=endIdx;k++) sum += series[k];
+    out[i] = sum/window;
+  }
+  return out;
+}
+function quantile(sortedArr, q){
+  const pos = (sortedArr.length-1)*q;
+  const base = Math.floor(pos);
+  const rest = pos-base;
+  if(sortedArr[base+1] !== undefined) return sortedArr[base] + rest*(sortedArr[base+1]-sortedArr[base]);
+  return sortedArr[base];
+}
+function clipSeries(series, cutPct){
+  const q = cutPct/100;
+  const sorted = series.slice().sort((a,b)=>a-b);
+  const lo = quantile(sorted, q), hi = quantile(sorted, 1-q);
+  return series.map(v => Math.min(hi, Math.max(lo, v)));
+}
+
+const decompTrend = rollingMean(cleaned, 12, true);
+const detrended = cleaned.map((v,i) => decompTrend[i] == null ? null : v - decompTrend[i]);
+const seasonalFactor = new Array(12).fill(0);
+(function(){
+  const sums = new Array(12).fill(0), counts = new Array(12).fill(0);
+  detrended.forEach((v,i) => { if(v != null){ const m = dates[i].m; sums[m] += v; counts[m]++; } });
+  for(let m=0;m<12;m++) seasonalFactor[m] = counts[m] ? sums[m]/counts[m] : 0;
+  const avg = seasonalFactor.reduce((a,b)=>a+b,0)/12;
+  for(let m=0;m<12;m++) seasonalFactor[m] -= avg;
+})();
+const decompSeasonal = dates.map(d => seasonalFactor[d.m]);
+const decompResidual = cleaned.map((v,i) => decompTrend[i] == null ? null : v - decompTrend[i] - decompSeasonal[i]);
+
+/* ============================================================
+   2. CHART ENGINE — plain SVG, no dependencies
+   ============================================================ */
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs){
+  const e = document.createElementNS(NS, tag);
+  if(attrs) for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function debounce(fn, ms){ let t; return function(...a){ clearTimeout(t); t = setTimeout(()=>fn.apply(this,a), ms); }; }
+
+const registry = [];
+function registerRender(fn){ registry.push(fn); fn(); }
+window.addEventListener('resize', debounce(()=> registry.forEach(fn=>fn()), 150));
+
+function makeLineChart(containerId, getSeries, opts){
+  const container = document.getElementById(containerId);
+  if(!container) return null;
+  opts = opts || {};
+  const height = opts.height || 220;
+
+  function render(){
+    const width = container.clientWidth || 600;
+    if(width < 10) return;
+    const seriesArr = getSeries();
+    const n = opts.n || (seriesArr[0] && seriesArr[0].data.length) || 1;
+    const marginL = 50, marginR = 14, marginT = 14, marginB = 26;
+    const plotW = width - marginL - marginR, plotH = height - marginT - marginB;
+
+    let ymin = Infinity, ymax = -Infinity;
+    seriesArr.forEach(s => s.data.forEach(v => { if(v != null){ ymin = Math.min(ymin,v); ymax = Math.max(ymax,v); } }));
+    if(!isFinite(ymin)){ ymin = 0; ymax = 1; }
+    const pad = (ymax-ymin)*0.1 || 1;
+    ymin -= pad; ymax += pad;
+
+    function xPos(i){ return marginL + (n<=1 ? 0 : (i/(n-1))*plotW); }
+    function yPos(v){ return marginT + plotH - ((v-ymin)/(ymax-ymin))*plotH; }
+
+    container.innerHTML = '';
+    const svg = el('svg', { width, height, viewBox:`0 0 ${width} ${height}`, role:'img', 'aria-label': opts.ariaLabel || 'Line chart' });
+
+    const gY = el('g', { class:'axis' });
+    const yTicks = opts.yTicks || 4;
+    for(let t=0;t<=yTicks;t++){
+      const v = ymin + (ymax-ymin)*(t/yTicks);
+      const y = yPos(v);
+      gY.appendChild(el('line', { x1:marginL, x2:width-marginR, y1:y, y2:y, class:'gridline' }));
+      const txt = el('text', { x:marginL-8, y:y+4, 'text-anchor':'end' });
+      txt.textContent = opts.yFormat ? opts.yFormat(v) : Math.round(v);
+      gY.appendChild(txt);
+    }
+    svg.appendChild(gY);
+
+    const gX = el('g', { class:'axis' });
+    for(let i=0;i<n;i++){
+      const show = opts.xTickFn ? opts.xTickFn(i) : (i % (opts.xTickEvery||24) === 0);
+      if(show){
+        const x = xPos(i);
+        const txt = el('text', { x, y:height-6, 'text-anchor':'middle' });
+        txt.textContent = opts.xLabel ? opts.xLabel(i) : i;
+        gX.appendChild(txt);
+      }
+    }
+    svg.appendChild(gX);
+
+    if(opts.zeroLine){
+      const zy = yPos(0);
+      if(zy >= marginT && zy <= marginT+plotH){
+        svg.appendChild(el('line', { x1:marginL, x2:width-marginR, y1:zy, y2:zy, stroke:'var(--text-muted)', 'stroke-width':1, 'stroke-dasharray':'3 4', opacity:0.6 }));
+      }
+    }
+
+    seriesArr.forEach(s => {
+      let d = '', started = false;
+      for(let i=0;i<n;i++){
+        const v = s.data[i];
+        if(v == null){ started = false; continue; }
+        const x = xPos(i), y = yPos(v);
+        d += (started ? 'L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2) + ' ';
+        started = true;
+      }
+      const path = el('path', { d:d.trim(), fill:'none', stroke:s.color, 'stroke-width':s.width||2.4, 'stroke-linecap':'round', 'stroke-linejoin':'round' });
+      if(s.dashed) path.setAttribute('stroke-dasharray','5 5');
+      svg.appendChild(path);
+    });
+
+    let markerNodes = [];
+    if(opts.annotations){
+      opts.annotations.forEach(a => {
+        const v = seriesArr[0].data[a.index];
+        if(v == null) return;
+        const x = xPos(a.index), y = yPos(v);
+        const c = el('circle', { cx:x, cy:y, r:6, fill:'var(--bg-elevated)', stroke:'var(--warn)', 'stroke-width':2.2, class:'marker-flag' });
+        svg.appendChild(c);
+        markerNodes.push({ node:c, label:a.label, x, y });
+      });
+    }
+
+    const hoverLine = el('line', { y1:marginT, y2:marginT+plotH, stroke:'var(--text-muted)', 'stroke-width':1, opacity:0 });
+    svg.appendChild(hoverLine);
+    const hoverDots = seriesArr.map(s => { const d = el('circle', { r:4, fill:s.color, opacity:0 }); svg.appendChild(d); return d; });
+
+    container.appendChild(svg);
+
+    let tooltip = container.querySelector('.chart-tooltip');
+    if(!tooltip){ tooltip = document.createElement('div'); tooltip.className = 'chart-tooltip'; container.appendChild(tooltip); }
+    let markerTip = null;
+    if(markerNodes.length){
+      markerTip = document.createElement('div'); markerTip.className = 'marker-tip'; container.appendChild(markerTip);
+    }
+
+    if(opts.legend !== false && seriesArr.length > 1){
+      /* legend is provided in markup above the chart for these panels */
+    }
+
+    svg.addEventListener('mousemove', (e) => {
+      const rect = svg.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) * (width/rect.width);
+      let idx = Math.round(((mx-marginL)/plotW)*(n-1));
+      idx = Math.max(0, Math.min(n-1, idx));
+      const x = xPos(idx);
+      hoverLine.setAttribute('x1', x); hoverLine.setAttribute('x2', x); hoverLine.setAttribute('opacity', 0.5);
+      let rows = '';
+      seriesArr.forEach((s,si) => {
+        const v = s.data[idx];
+        if(v == null){ hoverDots[si].setAttribute('opacity',0); return; }
+        const y = yPos(v);
+        hoverDots[si].setAttribute('cx',x); hoverDots[si].setAttribute('cy',y); hoverDots[si].setAttribute('opacity',1);
+        rows += `<div class="tt-row"><span class="tt-dot" style="background:${s.color}"></span>${s.name}: ${opts.yFormat ? opts.yFormat(v) : Math.round(v)}</div>`;
+      });
+      tooltip.innerHTML = `<div class="tt-date">${opts.xLabelFull ? opts.xLabelFull(idx) : idx}</div>` + rows;
+      const leftPx = Math.min(Math.max(x, 40), width-40);
+      tooltip.style.left = leftPx + 'px';
+      tooltip.style.top = (marginT+16) + 'px';
+      tooltip.classList.add('show');
+    });
+    svg.addEventListener('mouseleave', () => {
+      hoverLine.setAttribute('opacity',0);
+      hoverDots.forEach(d => d.setAttribute('opacity',0));
+      tooltip.classList.remove('show');
+    });
+
+    markerNodes.forEach(m => {
+      m.node.addEventListener('mouseenter', () => {
+        markerTip.innerHTML = `<div class="mt-title">Anomaly</div>${m.label}`;
+        const leftPx = Math.min(Math.max(m.x, 60), width-60);
+        markerTip.style.left = leftPx + 'px';
+        markerTip.style.top = (m.y-6) + 'px';
+        markerTip.classList.add('show');
+      });
+      m.node.addEventListener('mouseleave', () => markerTip.classList.remove('show'));
+    });
+  }
+
+  registerRender(render);
+  return { render };
+}
+
+function makeHistogram(containerId, getValues, opts){
+  const container = document.getElementById(containerId);
+  if(!container) return null;
+  opts = opts || {};
+  const height = opts.height || 200;
+  function render(){
+    const width = container.clientWidth || 600;
+    if(width < 10) return;
+    const values = getValues();
+    const marginL = 50, marginR = 14, marginT = 14, marginB = 26;
+    const plotW = width - marginL - marginR, plotH = height - marginT - marginB;
+    const bins = opts.bins || 24;
+    const min = Math.min(...values), max = Math.max(...values);
+    const binW = (max-min)/bins || 1;
+    const counts = new Array(bins).fill(0);
+    values.forEach(v => { let b = Math.floor((v-min)/binW); if(b>=bins) b=bins-1; if(b<0) b=0; counts[b]++; });
+    const maxCount = Math.max(...counts, 1);
+
+    container.innerHTML = '';
+    const svg = el('svg', { width, height, viewBox:`0 0 ${width} ${height}`, role:'img', 'aria-label': opts.ariaLabel || 'Histogram' });
+
+    const gY = el('g', { class:'axis' });
+    for(let t=0;t<=3;t++){
+      const y = marginT + plotH - plotH*(t/3);
+      gY.appendChild(el('line', { x1:marginL, x2:width-marginR, y1:y, y2:y, class:'gridline' }));
+    }
+    svg.appendChild(gY);
+
+    const bw = plotW/bins;
+    for(let b=0;b<bins;b++){
+      const h = (counts[b]/maxCount)*plotH;
+      const x = marginL + b*bw;
+      const y = marginT + plotH - h;
+      const binLo = min+b*binW, binHi = min+(b+1)*binW;
+      const isOutlier = opts.outlierTest ? opts.outlierTest(binLo, binHi) : false;
+      svg.appendChild(el('rect', { x:(x+1).toFixed(2), y:y.toFixed(2), width:Math.max(0,bw-2).toFixed(2), height:h.toFixed(2), fill: isOutlier ? 'var(--warn)' : 'var(--accent)', rx:1.5 }));
+    }
+
+    const gX = el('g', { class:'axis' });
+    [0,0.25,0.5,0.75,1].forEach(f => {
+      const val = min+(max-min)*f;
+      const x = marginL+plotW*f;
+      const txt = el('text', { x, y:height-6, 'text-anchor': f===0?'start':(f===1?'end':'middle') });
+      txt.textContent = opts.xFormat ? opts.xFormat(val) : Math.round(val);
+      gX.appendChild(txt);
+    });
+    svg.appendChild(gX);
+
+    container.appendChild(svg);
+  }
+  registerRender(render);
+  return { render };
+}
+
+/* ============================================================
+   3. WIRE UP EVERY CHART
+   ============================================================ */
+const COLOR_ACCENT = 'var(--accent)';
+const COLOR_MUTED = 'var(--line-muted)';
+const xTickFn = i => dates[i].m === 0 && dates[i].y % 2 === 1;
+const xLabel = i => String(dates[i].y);
+const xLabelFull = i => fmtDateFull(i);
+
+makeLineChart('chartRawAnnotated', () => [{ name:'Sales', data:cleaned, color:COLOR_ACCENT }], {
+  height:230, xTickFn, xLabel, xLabelFull, yFormat:fmtShort, ariaLabel:'Vastra Loop monthly sales with two flagged anomalies',
+  annotations:[
+    { index:idxDip2006, label:"A drastic dip — most likely a month with no real data, later filled with 0 by mistake during a data-engineering step." },
+    { index:idxSpike2013, label:"An abnormal spike — even if technically correct for that month, unusual enough to risk distorting future forecasts." }
+  ]
+});
+
+makeLineChart('chartMeanFill', () => [
+  { name:'Original', data:rawGaps, color:COLOR_MUTED, width:2 },
+  { name:'Mean-imputed', data:meanFill(rawGaps), color:COLOR_ACCENT }
+], { height:210, xTickFn, xLabel, xLabelFull, yFormat:fmtShort });
+
+makeLineChart('chartZeroFill', () => [
+  { name:'Original', data:rawGaps, color:COLOR_MUTED, width:2 },
+  { name:'Zero-filled', data:zeroFill(rawGaps), color:COLOR_ACCENT }
+], { height:210, xTickFn, xLabel, xLabelFull, yFormat:fmtShort });
+
+makeLineChart('chartInterpFill', () => [
+  { name:'Original', data:rawGaps, color:COLOR_MUTED, width:2 },
+  { name:'Interpolated', data:cleaned, color:COLOR_ACCENT }
+], { height:210, xTickFn, xLabel, xLabelFull, yFormat:fmtShort });
+
+makeLineChart('chartAnomalyFlags', () => [{ name:'Sales', data:cleaned, color:COLOR_ACCENT }], {
+  height:230, xTickFn, xLabel, xLabelFull, yFormat:fmtShort, ariaLabel:'Vastra Loop sales with anomalies flagged',
+  annotations:[
+    { index:idxDip2006, label:"Early 2006: a drastic dip, most likely a month with no real data, later filled with 0 by mistake." },
+    { index:idxSpike2013, label:"Mid-2013: an abnormal spike. Even if correct, unusual enough to distort future forecasts." }
+  ]
+});
+
+const cleanedSorted = cleaned.slice().sort((a,b)=>a-b);
+const q05 = quantile(cleanedSorted, 0.05), q95 = quantile(cleanedSorted, 0.95);
+makeHistogram('chartHistogram', () => cleaned, {
+  height:210, bins:26, xFormat:fmtShort, ariaLabel:'Distribution of monthly sales values',
+  outlierTest:(lo,hi) => hi <= q05 || lo >= q95
+});
+
+/* --- interactive: clipping playground --- */
+const clipSlider = document.getElementById('clipSlider');
+const clipValLabel = document.getElementById('clipValLabel');
+const clipReadout = document.getElementById('clipReadout');
+const clippingChart = makeLineChart('chartClipping', () => [
+  { name:'Original', data:cleaned, color:COLOR_MUTED, width:2 },
+  { name:'Clipped', data:clipSeries(cleaned, +clipSlider.value), color:COLOR_ACCENT }
+], { height:220, xTickFn, xLabel, xLabelFull, yFormat:fmtShort });
+
+function updateClipReadout(){
+  const cut = +clipSlider.value;
+  clipValLabel.textContent = cut + '%';
+  const lo = quantile(cleanedSorted, cut/100), hi = quantile(cleanedSorted, 1-cut/100);
+  clipReadout.innerHTML = `Clipping at the <strong>${cut}th</strong> / <strong>${100-cut}th</strong> percentile → bounds ≈ <strong>${fmtINR(lo)}</strong> to <strong>${fmtINR(hi)}</strong>${cut===2?' — close to Aisha’s final choice':''}`;
+}
+clipSlider.addEventListener('input', () => { updateClipReadout(); clippingChart.render(); });
+updateClipReadout();
+
+/* --- interactive: moving average playground --- */
+const maSlider = document.getElementById('maSlider');
+const maWindowLabel = document.getElementById('maWindowLabel');
+const maCentered = document.getElementById('maCentered');
+const maReadout = document.getElementById('maReadout');
+const maChart = makeLineChart('chartMovingAverage', () => [
+  { name:'Original', data:cleaned, color:COLOR_MUTED, width:2 },
+  { name:'Moving average', data:rollingMean(cleaned, +maSlider.value, maCentered.checked), color:COLOR_ACCENT }
+], { height:220, xTickFn, xLabel, xLabelFull, yFormat:fmtShort });
+
+function updateMaReadout(){
+  const w = +maSlider.value;
+  maWindowLabel.textContent = w;
+  const missing = maCentered.checked ? `${Math.floor((w-1)/2)} at the start, ${w-1-Math.floor((w-1)/2)} at the end` : `${w-1} at the start`;
+  maReadout.innerHTML = `Window = <strong>${w}</strong> month${w===1?'':'s'}, ${maCentered.checked?'centered':'backward-looking'} → missing values: ${missing}`;
+}
+maSlider.addEventListener('input', () => { updateMaReadout(); maChart.render(); });
+maCentered.addEventListener('change', () => { updateMaReadout(); maChart.render(); });
+updateMaReadout();
+
+/* --- decomposition panels --- */
+const decompXTick = i => dates[i].m === 0 && dates[i].y % 4 === 1;
+makeLineChart('chartDecompOriginal', () => [{ name:'Original', data:cleaned, color:COLOR_ACCENT }], { height:130, xTickFn:decompXTick, xLabel, xLabelFull, yFormat:fmtShort, yTicks:2 });
+makeLineChart('chartDecompTrend', () => [{ name:'Trend', data:decompTrend, color:COLOR_ACCENT }], { height:130, xTickFn:decompXTick, xLabel, xLabelFull, yFormat:fmtShort, yTicks:2 });
+makeLineChart('chartDecompSeasonal', () => [{ name:'Seasonality', data:decompSeasonal, color:COLOR_ACCENT }], { height:130, xTickFn:decompXTick, xLabel, xLabelFull, yFormat:fmtShort, yTicks:2, zeroLine:true });
+makeLineChart('chartDecompResidual', () => [{ name:'Residual', data:decompResidual, color:COLOR_ACCENT }], { height:130, xTickFn:decompXTick, xLabel, xLabelFull, yFormat:fmtShort, yTicks:2, zeroLine:true });
+
+const residualVals = decompResidual.filter(v => v != null);
+makeHistogram('chartResidualHist', () => residualVals, { height:190, bins:22, xFormat:fmtShort, ariaLabel:'Distribution of the residual' });
+
+/* ============================================================
+   4. HERO WAVE (decorative)
+   ============================================================ */
+(function(){
+  const svg = document.getElementById('heroWave');
+  if(!svg) return;
+  function render(){
+    const w = svg.parentElement.clientWidth || 800, h = 64;
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    svg.innerHTML = '';
+    let d = '';
+    const n = 90;
+    for(let i=0;i<=n;i++){
+      const x = w*i/n;
+      const y = h*0.55 + Math.sin(i/n*Math.PI*4 + 1.1)*13 + Math.sin(i/n*Math.PI*9)*4.5;
+      d += (i===0?'M':'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    }
+    svg.appendChild(el('path', { d:d.trim(), fill:'none', stroke:'var(--accent)', 'stroke-width':1.6, opacity:0.55 }));
+  }
+  registerRender(render);
+})();
+
+/* ============================================================
+   5. QUIZZES
+   ============================================================ */
+document.querySelectorAll('[data-quiz]').forEach(q => {
+  const choicesWrap = q.querySelector('[data-choices]');
+  const correctIdx = +choicesWrap.dataset.correct;
+  const inputs = Array.from(choicesWrap.querySelectorAll('input'));
+  const labels = Array.from(choicesWrap.querySelectorAll('.quiz-choice'));
+  const submitBtn = q.querySelector('[data-submit]');
+  const resultEl = q.querySelector('[data-result]');
+  const explainEl = q.querySelector('[data-explain]');
+  let answered = false;
+  inputs.forEach(inp => inp.addEventListener('change', () => { if(!answered) submitBtn.disabled = false; }));
+  submitBtn.addEventListener('click', () => {
+    if(answered) return;
+    const chosen = inputs.findIndex(i => i.checked);
+    if(chosen < 0) return;
+    answered = true;
+    labels[correctIdx].classList.add('correct-answer');
+    if(chosen !== correctIdx) labels[chosen].classList.add('wrong-answer');
+    resultEl.textContent = chosen === correctIdx ? 'Correct' : 'Not quite';
+    resultEl.className = 'quiz-result ' + (chosen === correctIdx ? 'correct' : 'incorrect');
+    explainEl.classList.add('show');
+    submitBtn.disabled = true;
+    inputs.forEach(i => i.disabled = true);
+  });
+});
+
+/* ============================================================
+   6. TABS (imputation comparison)
+   ============================================================ */
+document.querySelectorAll('.tabs').forEach(tabGroup => {
+  const panelContainer = tabGroup.parentElement;
+  const btns = Array.from(tabGroup.querySelectorAll('.tab-btn'));
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      btns.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+      btn.classList.add('active'); btn.setAttribute('aria-selected','true');
+      panelContainer.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      const target = panelContainer.querySelector(`[data-panel="${btn.dataset.tab}"]`);
+      if(target) target.classList.add('active');
+      requestAnimationFrame(() => registry.forEach(fn => fn()));
+    });
+  });
+});
+
+/* ============================================================
+   7. TOC — scroll-spy + mobile toggle + progress bar
+   ============================================================ */
+const tocToggle = document.getElementById('tocToggle');
+const tocRail = document.getElementById('tocRail');
+if(tocToggle && tocRail){
+  tocToggle.addEventListener('click', () => {
+    const open = tocRail.classList.toggle('open');
+    tocToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  tocRail.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    tocRail.classList.remove('open');
+    tocToggle.setAttribute('aria-expanded','false');
+  }));
+}
+
+const sections = Array.from(document.querySelectorAll('main .section[id]'));
+const tocLinks = Array.from(document.querySelectorAll('nav.toc-rail a'));
+if('IntersectionObserver' in window && sections.length){
+  const spy = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const id = entry.target.id;
+      const link = tocLinks.find(a => a.getAttribute('href') === '#'+id);
+      if(!link) return;
+      if(entry.isIntersecting) {
+        tocLinks.forEach(a => a.classList.remove('active'));
+        link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+  sections.forEach(s => spy.observe(s));
+}
+
+const progressBar = document.getElementById('progress-bar');
+function updateProgress(){
+  const doc = document.documentElement;
+  const scrollTop = window.scrollY || doc.scrollTop;
+  const height = (doc.scrollHeight - doc.clientHeight) || 1;
+  progressBar.style.width = Math.min(100, Math.max(0, (scrollTop/height)*100)) + '%';
+}
+window.addEventListener('scroll', debounce(updateProgress, 20));
+updateProgress();
+
+})();
+</script>
+
+
+
+<!-- aml:foot --><div id="aml-foot">Scaler course material, kept as published at <a href="https://github.com/scaler-content/Timeseries-1" target="_blank" rel="noopener">github.com/scaler-content/Timeseries-1</a> · <a href="../../#source">about this library</a></div><script>(function(){var n=document.getElementById('aml-foot'),d=getComputedStyle(document.body).display;if(/flex|grid/.test(d))document.documentElement.appendChild(n)})();</script><!-- /aml:foot -->
